@@ -962,12 +962,9 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
     ASSERT_RET((pic_param->CurrPic.picture_id != VA_INVALID_SURFACE), VA_STATUS_ERROR_INVALID_PARAMETER);
     ASSERT_RET((pic_param->CurrPic.picture_id == decode_state->current_render_target), VA_STATUS_ERROR_INVALID_PARAMETER);
 
-    if ((h264_profile != VAProfileH264Baseline)) {
-        if (pic_param->num_slice_groups_minus1 ||
-            pic_param->pic_fields.bits.redundant_pic_cnt_present_flag) {
-            WARN_ONCE("Unsupported the FMO/ASO constraints!!!\n");
-            goto error;
-        }
+    if (pic_param->pic_fields.bits.redundant_pic_cnt_present_flag) {
+        WARN_ONCE("Unsupported the ASO constraints!!!\n");
+        goto error;
     }
 
     /* Fill in the reference objects array with the actual VA surface

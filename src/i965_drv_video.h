@@ -42,6 +42,8 @@
 #include <va/va_fei.h>
 #include <va/va_fei_h264.h>
 
+#include "va_backend_compat.h"
+
 #include "i965_mutext.h"
 #include "object_heap.h"
 #include "intel_driver.h"
