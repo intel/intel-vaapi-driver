@@ -40,6 +40,8 @@
 #include <va/va_backend.h>
 #include <va/va_backend_vpp.h>
 
+#include "va_backend_compat.h"
+
 #include "i965_mutext.h"
 #include "object_heap.h"
 #include "intel_driver.h"
