@@ -422,7 +422,7 @@ static void gen6_mfc_avc_directmode_state(VADriverContextP ctx, struct gen6_enco
 }
 
 static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
-                                     int intra_slice,
+                                     int slice_type,
                                      struct gen6_encoder_context *gen6_encoder_context)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
@@ -432,19 +432,16 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
 
     OUT_BCS_BATCH(batch, MFX_AVC_SLICE_STATE | (11 - 2) );
 
-    if ( intra_slice )
-        OUT_BCS_BATCH(batch, 2);			/*Slice Type: I Slice*/
-    else
-        OUT_BCS_BATCH(batch, 0);			/*Slice Type: P Slice*/
+	OUT_BCS_BATCH(batch, slice_type);			/*Slice Type: I:P:B Slice*/
 
-    if ( intra_slice )
+    if ( slice_type == SLICE_TYPE_I )
         OUT_BCS_BATCH(batch, 0);			/*no reference frames and pred_weight_table*/
     else 
         OUT_BCS_BATCH(batch, 0x00010000); 	/*1 reference frame*/
 
     OUT_BCS_BATCH(batch, (0<<24) |                /*Enable deblocking operation*/
                   (26<<16) | 			/*Slice Quantization Parameter*/
-                  0x0202 );
+                  0x0000 );
     OUT_BCS_BATCH(batch, 0);			/*First MB X&Y , the postion of current slice*/
     OUT_BCS_BATCH(batch, ( ((mfc_context->surface_state.height+15)/16) << 16) );
 
@@ -582,17 +579,23 @@ static void gen6_mfc_avc_ref_idx_state(VADriverContextP ctx, struct gen6_encoder
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     int i;
 
-    BEGIN_BCS_BATCH(batch, 10);
+	BEGIN_BCS_BATCH(batch, 10);
+	OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8); 
+	OUT_BCS_BATCH(batch, 0);                  //Select L0
+	OUT_BCS_BATCH(batch, 0x80808020);         //Only 1 reference
+	for(i = 0; i < 7; i++) {
+		OUT_BCS_BATCH(batch, 0x80808080);
+	}   
+	ADVANCE_BCS_BATCH(batch);
 
-    OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
-    OUT_BCS_BATCH(batch, 0);                  //Select L0
-
-    OUT_BCS_BATCH(batch, 0x80808000);         //Only 1 reference
-    for(i = 0; i < 7; i++) {
-        OUT_BCS_BATCH(batch, 0x80808080);
-    }
-
-    ADVANCE_BCS_BATCH(batch);
+	BEGIN_BCS_BATCH(batch, 10);
+	OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8); 
+	OUT_BCS_BATCH(batch, 1);                  //Select L1
+	OUT_BCS_BATCH(batch, 0x80808022);         //Only 1 reference
+	for(i = 0; i < 7; i++) {
+		OUT_BCS_BATCH(batch, 0x80808080);
+	}   
+	ADVANCE_BCS_BATCH(batch);
 }
 	
 static void
@@ -761,10 +764,10 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
-    VAEncSliceParameterBuffer *pSliceParameter = (VAEncSliceParameterBuffer *)encode_state->slice_params[0]->buffer; /* FIXME: multi slices */
+    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params[0]->buffer; /* FIXME: multi slices */
     unsigned int *msg = NULL, offset = 0;
     int emit_new_state = 1, object_len_in_bytes;
-    int is_intra = pSliceParameter->slice_flags.bits.is_intra;
+    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
     int x,y;
@@ -808,7 +811,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                 }
 
                 gen6_mfc_avc_ref_idx_state(ctx, gen6_encoder_context);
-                gen6_mfc_avc_slice_state(ctx, is_intra, gen6_encoder_context);
+                gen6_mfc_avc_slice_state(ctx, pSliceParameter->slice_type, gen6_encoder_context);
                 emit_new_state = 0;
             }
 
@@ -845,11 +848,12 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     struct object_surface *obj_surface;	
     struct object_buffer *obj_buffer;
     dri_bo *bo;
-    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param->buffer;
+    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param->buffer;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
+	int i;
 
     /*Setup all the input&output object*/
-    obj_surface = SURFACE(pPicParameter->reconstructed_picture);
+    obj_surface = SURFACE(pPicParameter->CurrPic.picture_id);
     assert(obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
 
@@ -861,19 +865,25 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     mfc_context->surface_state.w_pitch = obj_surface->width;
     mfc_context->surface_state.h_pitch = obj_surface->height;
 
-    obj_surface = SURFACE(pPicParameter->reference_picture);
-    assert(obj_surface);
-    if (obj_surface->bo != NULL) {
-        mfc_context->reference_surfaces[0].bo = obj_surface->bo;
-        dri_bo_reference(obj_surface->bo);
-    }
+    for(i = 0; i < MAX_MFC_REFERENCE_SURFACES; i++) {
+		if ( pPicParameter->ReferenceFrames[i].picture_id != VA_INVALID_ID ) { 
+			obj_surface = SURFACE(pPicParameter->ReferenceFrames[i].picture_id);
+			assert(obj_surface);
+			if (obj_surface->bo != NULL) {
+				mfc_context->reference_surfaces[i].bo = obj_surface->bo;
+				dri_bo_reference(obj_surface->bo);
+			}
+		} else {
+			break;
+		}
+	}
 	
     obj_surface = SURFACE(encode_state->current_render_target);
     assert(obj_surface && obj_surface->bo);
     mfc_context->uncompressed_picture_source.bo = obj_surface->bo;
     dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
 
-    obj_buffer = BUFFER (pPicParameter->coded_buf); /* FIXME: fix this later */
+    obj_buffer = BUFFER (pPicParameter->CodedBuf); /* FIXME: fix this later */
     bo = obj_buffer->buffer_store->bo;
     assert(bo);
     mfc_context->mfc_indirect_pak_bse_object.bo = bo;
