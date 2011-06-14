@@ -66,6 +66,10 @@ struct gen6_mfc_context
         dri_bo *bo;							  	
     } intra_row_store_scratch_buffer;					//INTERNAL:
 
+	struct {
+		dri_bo *bo;
+	} macroblock_status_buffer;							//INTERNAL:
+
     struct {
         dri_bo *bo;								
     } deblocking_filter_row_store_scratch_buffer;		//INTERNAL:
