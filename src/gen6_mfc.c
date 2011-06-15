@@ -684,7 +684,7 @@ static int gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     int len_in_dwords = 11;
     unsigned char target_mb_size = inter_mb_size_in_bits / 16;     //In Words
-    unsigned char max_mb_size = target_mb_size * 2 > 255? 255: target_mb_size * 2 ;
+    unsigned char max_mb_size = target_mb_size * 16 > 255? 255: target_mb_size * 16 ;
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
