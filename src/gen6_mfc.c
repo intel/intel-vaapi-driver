@@ -475,8 +475,8 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   mfc_context->mfc_indirect_pak_bse_object.offset);
 
-    OUT_BCS_BATCH(batch, (16<<24) |     /*Target QP + 16 is lowest QP*/ 
-                         (16<<16) |     /*Target QP + 16 is highest QP*/
+    OUT_BCS_BATCH(batch, (24<<24) |     /*Target QP - 24 is lowest QP*/ 
+                         (20<<16) |     /*Target QP + 20 is highest QP*/
                          (8<<12)  |
                          (8<<8)   |
                          (8<<4)   |
@@ -644,12 +644,7 @@ gen6_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, in
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     int len_in_dwords = 11;
     unsigned char target_mb_size = intra_mb_size_in_bits / 16;     //In Words
-    unsigned char max_mb_size = target_mb_size * 2;                //In Words
-
-    if ( max_mb_size > 128)
-        max_mb_size = 128;
-    if ( target_mb_size > 96)
-        target_mb_size = 96;
+    unsigned char max_mb_size = target_mb_size * 2 > 255? 255: target_mb_size * 2 ;
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
@@ -689,12 +684,7 @@ static int gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     int len_in_dwords = 11;
     unsigned char target_mb_size = inter_mb_size_in_bits / 16;     //In Words
-    unsigned char max_mb_size = target_mb_size * 2;                //In Words
-
-    if ( max_mb_size > 128)
-        max_mb_size = 128;
-    if ( target_mb_size > 96)
-        target_mb_size = 96;
+    unsigned char max_mb_size = target_mb_size * 2 > 255? 255: target_mb_size * 2 ;
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
@@ -827,8 +817,13 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     int intra_mb_size = inter_mb_size * 5.0;
     int qp = pPicParameter->pic_init_qp;
 
-    if ( rate_control_mode != 2)
+    if ( rate_control_mode != 2) {
         qp = 26;
+        if ( intra_mb_size > 384*8)         //ONE MB raw data is 384 bytes
+            intra_mb_size = 384*8;
+        if ( inter_mb_size > 256*8)
+            intra_mb_size = 256*8;
+    }
 
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000); 
     
