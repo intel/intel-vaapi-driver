@@ -722,7 +722,7 @@ static int gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int
 
     OUT_BCS_BATCH(batch, (0xFFFF<<16) | (y << 8) | x);        /* Code Block Pattern for Y*/
     OUT_BCS_BATCH(batch, 0x000F000F);                         /* Code Block Pattern */    
-    OUT_BCS_BATCH(batch, (0 << 27) | (end_mb << 26) | 26);	/* Last MB */
+    OUT_BCS_BATCH(batch, (0 << 27) | (end_mb << 26) | qp);	/* Last MB */
 
     /*Stuff for Inter MB*/
     OUT_BCS_BATCH(batch, 0x0);        
