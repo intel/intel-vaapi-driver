@@ -800,9 +800,9 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
-    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param->buffer;
-    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param->buffer;
-    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params[0]->buffer; /* FIXME: multi slices */
+    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
+    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer; /* FIXME: multi slices */
     
     unsigned int *msg = NULL, offset = 0;
     int emit_new_state = 1, object_len_in_bytes;
@@ -900,7 +900,7 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     struct object_surface *obj_surface;	
     struct object_buffer *obj_buffer;
     dri_bo *bo;
-    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param->buffer;
+    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param_ext->buffer;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
 	int i;
 
@@ -967,7 +967,7 @@ static VAStatus gen6_mfc_stop(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
 	
-    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param->buffer;
+    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param_ext->buffer;
 	
     struct object_surface *obj_surface = SURFACE(pPicParameter->reconstructed_picture);
     //struct object_surface *obj_surface = SURFACE(pPicParameter->reference_picture[0]);

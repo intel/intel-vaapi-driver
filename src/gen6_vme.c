@@ -255,8 +255,8 @@ gen6_vme_output_buffer_setup(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
     struct i965_surface_state *ss;
     dri_bo *bo;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
-    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params[0]->buffer;
+    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
+    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
@@ -311,7 +311,7 @@ static VAStatus gen6_vme_surface_setup(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
-    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param->buffer;
+    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param_ext->buffer;
 
     /*Setup surfaces state*/
     /* current picture for encoding */
@@ -492,9 +492,9 @@ gen7_vme_output_buffer_setup(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
     struct gen7_surface_state *ss;
     dri_bo *bo;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
-    VAEncSliceParameterBuffer *pSliceParameter = (VAEncSliceParameterBuffer *)encode_state->slice_params[0]->buffer;
-    int is_intra = pSliceParameter->slice_flags.bits.is_intra;
+    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
+    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer;
+    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
     int num_entries;
@@ -553,7 +553,7 @@ static VAStatus gen7_vme_surface_setup(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
-    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param->buffer;
+    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param_ext->buffer;
 
     /*Setup surfaces state*/
     /* current picture for encoding */
@@ -852,8 +852,8 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
                                          struct gen6_encoder_context *gen6_encoder_context)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
-    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params[0]->buffer;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
+    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer;
+    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
@@ -903,7 +903,7 @@ static VAStatus gen6_vme_prepare(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params[0]->buffer;
+    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
 	
     /*Setup all the memory object*/
