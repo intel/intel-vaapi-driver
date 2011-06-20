@@ -56,6 +56,7 @@ source_c = \
 	i965_avc_ildb.c		\
 	i965_drv_video.c	\
 	i965_encoder.c		\
+	i965_encoder_utils.c	\
 	i965_media.c		\
 	i965_media_h264.c	\
 	i965_media_mpeg2.c	\
@@ -79,6 +80,7 @@ source_h = \
 	i965_defines.h          \
 	i965_drv_video.h        \
 	i965_encoder.h		\
+	i965_encoder_utils.h	\
 	i965_media.h            \
 	i965_media_h264.h	\
 	i965_media_mpeg2.h      \
