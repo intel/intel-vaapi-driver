@@ -774,6 +774,11 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
         assert(obj_context->codec_state.encode.num_slice_params <= obj_context->codec_state.encode.max_slice_params);
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
         i965_release_buffer_store(&obj_context->codec_state.encode.seq_param);
+
+        for (i = 0; i < obj_context->codec_state.encode.num_slice_params; i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.slice_params[i]);
+
+        free(obj_context->codec_state.encode.slice_params);
     } else {
         assert(obj_context->codec_state.decode.num_slice_params <= obj_context->codec_state.decode.max_slice_params);
         assert(obj_context->codec_state.decode.num_slice_datas <= obj_context->codec_state.decode.max_slice_datas);
@@ -1150,6 +1155,7 @@ i965_BeginPicture(VADriverContextP ctx,
     struct object_config *obj_config;
     VAContextID config;
     VAStatus vaStatus;
+    int i;
 
     assert(obj_context);
     assert(obj_surface);
@@ -1182,10 +1188,30 @@ i965_BeginPicture(VADriverContextP ctx,
         break;
     }
 
-    if (obj_context->codec_type == CODEC_ENC)
+    if (obj_context->codec_type == CODEC_ENC) {
+        i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
+        i965_release_buffer_store(&obj_context->codec_state.encode.seq_param);
+
+        for (i = 0; i < obj_context->codec_state.encode.num_slice_params; i++) {
+            i965_release_buffer_store(&obj_context->codec_state.encode.slice_params[i]);
+        }
+
+        obj_context->codec_state.encode.num_slice_params = 0;
         obj_context->codec_state.encode.current_render_target = render_target;     /*This is input new frame*/
-    else
+    } else {
         obj_context->codec_state.decode.current_render_target = render_target;
+        i965_release_buffer_store(&obj_context->codec_state.decode.pic_param);
+        i965_release_buffer_store(&obj_context->codec_state.decode.iq_matrix);
+        i965_release_buffer_store(&obj_context->codec_state.decode.bit_plane);
+
+        for (i = 0; i < obj_context->codec_state.decode.num_slice_params; i++) {
+            i965_release_buffer_store(&obj_context->codec_state.decode.slice_params[i]);
+            i965_release_buffer_store(&obj_context->codec_state.decode.slice_datas[i]);
+        }
+
+        obj_context->codec_state.decode.num_slice_params = 0;
+        obj_context->codec_state.decode.num_slice_datas = 0;
+    }
 
     return vaStatus;
 }
@@ -1376,7 +1402,6 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
     struct object_context *obj_context = CONTEXT(context);
     struct object_config *obj_config;
     VAContextID config;
-    int i;
 
     assert(obj_context);
     config = obj_context->config_id;
@@ -1398,29 +1423,6 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
 
     assert(obj_context->hw_context->run);
     obj_context->hw_context->run(ctx, obj_config->profile, &obj_context->codec_state, obj_context->hw_context);
-
-    if (obj_context->codec_type == CODEC_ENC) {
-        obj_context->codec_state.encode.current_render_target = VA_INVALID_SURFACE;
-        obj_context->codec_state.encode.num_slice_params = 0;
-        i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
-        i965_release_buffer_store(&obj_context->codec_state.encode.seq_param);
-
-        for (i = 0; i < obj_context->codec_state.encode.num_slice_params; i++) {
-            i965_release_buffer_store(&obj_context->codec_state.encode.slice_params[i]);
-        }
-    } else {
-        obj_context->codec_state.decode.current_render_target = -1;
-        obj_context->codec_state.decode.num_slice_params = 0;
-        obj_context->codec_state.decode.num_slice_datas = 0;
-        i965_release_buffer_store(&obj_context->codec_state.decode.pic_param);
-        i965_release_buffer_store(&obj_context->codec_state.decode.iq_matrix);
-        i965_release_buffer_store(&obj_context->codec_state.decode.bit_plane);
-
-        for (i = 0; i < obj_context->codec_state.decode.num_slice_params; i++) {
-            i965_release_buffer_store(&obj_context->codec_state.decode.slice_params[i]);
-            i965_release_buffer_store(&obj_context->codec_state.decode.slice_datas[i]);
-        }
-    }
 
     return VA_STATUS_SUCCESS;
 }
