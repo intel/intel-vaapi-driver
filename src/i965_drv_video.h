@@ -107,8 +107,8 @@ struct encode_state
 
 union codec_state
 {
-    struct decode_state dec;
-    struct encode_state enc;
+    struct decode_state decode;
+    struct encode_state encode;
 };
 
 struct hw_context
