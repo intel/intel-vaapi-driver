@@ -277,7 +277,7 @@ i965_media_decode_picture(VADriverContextP ctx,
                           struct hw_context *hw_context)
 {
     struct i965_media_context *media_context = (struct i965_media_context *)hw_context;
-    struct decode_state *decode_state = &codec_state->dec;
+    struct decode_state *decode_state = &codec_state->decode;
 
     i965_media_decode_init(ctx, profile, decode_state, media_context);
     assert(media_context->media_states_setup);
