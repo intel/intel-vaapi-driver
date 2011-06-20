@@ -1969,7 +1969,7 @@ gen6_mfd_decode_picture(VADriverContextP ctx,
 
 {
     struct gen6_mfd_context *gen6_mfd_context = (struct gen6_mfd_context *)hw_context;
-    struct decode_state *decode_state = &codec_state->dec;
+    struct decode_state *decode_state = &codec_state->decode;
 
     assert(gen6_mfd_context);
 
