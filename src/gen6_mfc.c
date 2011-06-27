@@ -434,7 +434,8 @@ static void gen6_mfc_avc_directmode_state(VADriverContextP ctx, struct gen6_enco
 static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
                                      int slice_type,
                                      struct gen6_encoder_context *gen6_encoder_context,
-                                     int rate_control_enable)
+                                     int rate_control_enable,
+                                     int qp)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
@@ -451,7 +452,7 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
         OUT_BCS_BATCH(batch, 0x00010000); 	/*1 reference frame*/
 
     OUT_BCS_BATCH(batch, (0<<24) |                /*Enable deblocking operation*/
-                  (26<<16) | 			/*Slice Quantization Parameter*/
+                  (qp<<16) | 			/*Slice Quantization Parameter*/
                   0x0202 );
     OUT_BCS_BATCH(batch, 0);			/*First MB X&Y , the postion of current slice*/
     OUT_BCS_BATCH(batch, ( ((mfc_context->surface_state.height+15)/16) << 16) );
@@ -863,7 +864,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                 }
 
                 gen6_mfc_avc_ref_idx_state(ctx, gen6_encoder_context);
-                gen6_mfc_avc_slice_state(ctx, pSliceParameter->slice_type, gen6_encoder_context, rate_control_mode == 0);
+                gen6_mfc_avc_slice_state(ctx, pSliceParameter->slice_type, gen6_encoder_context, rate_control_mode == 0, qp);
                 emit_new_state = 0;
             }
 
