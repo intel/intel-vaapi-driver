@@ -469,7 +469,7 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
                   (0<<18) | 	/*BitstreamOutputFlag Compressed BitStream Output Disable Flag 0:enable 1:disable*/
                   (1<<17) |	    /*HeaderPresentFlag*/	
                   (1<<16) |	    /*SliceData PresentFlag*/
-                  (0<<15) |	    /*TailPresentFlag*/
+                  (1<<15) |	    /*TailPresentFlag*/
                   (1<<13) |	    /*RBSP NAL TYPE*/	
                   (0<<12) );    /*CabacZeroWordInsertionEnable*/
 	
@@ -636,7 +636,7 @@ gen6_mfc_avc_insert_object(VADriverContextP ctx, struct gen6_encoder_context *ge
                   (1 << 3) |    /* FIXME: ??? */
                   ((!!is_last_header) << 2) |
                   ((!!is_end_of_slice) << 1) |
-                  (1 << 0));    /* FIXME: ??? */
+                  (0 << 0));    /* FIXME: ??? */
 
     intel_batchbuffer_data(batch, insert_data, lenght_in_dws * 4);
     ADVANCE_BCS_BATCH(batch);
@@ -823,6 +823,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     int qp = pPicParameter->pic_init_qp;
     unsigned char *slice_header = NULL;
     int slice_header_length_in_bits = 0;
+    unsigned int tail_data[] = { 0x0 };
 
     if (encode_state->dec_ref_pic_marking)
         pDecRefPicMarking = (VAEncH264DecRefPicMarkingBuffer *)encode_state->dec_ref_pic_marking->buffer;
@@ -892,6 +893,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
             }
 
             if (intel_batchbuffer_check_free_space(batch, object_len_in_bytes) == 0) {
+                assert(0);
                 intel_batchbuffer_end_atomic(batch);
                 intel_batchbuffer_flush(batch);
                 emit_new_state = 1;
@@ -899,6 +901,10 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
             }
         }
     }
+
+    gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
+                               tail_data, sizeof(tail_data) >> 2, 32,
+                               sizeof(tail_data), 1, 1);
 
     if (is_intra)
         dri_bo_unmap(vme_context->vme_output.bo);
