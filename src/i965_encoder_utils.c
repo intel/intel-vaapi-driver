@@ -108,6 +108,9 @@ avc_bitstream_put_ui(avc_bitstream *bs, unsigned int val, int size_in_bits)
     if (!size_in_bits)
         return;
 
+    if (size_in_bits < 32)
+        val &= (( 1 << size_in_bits) - 1);
+
     bs->bit_offset += size_in_bits;
 
     if (bit_left > size_in_bits) {
@@ -278,7 +281,7 @@ slice_header(avc_bitstream *bs,
     if (pic_param->pic_fields.bits.deblocking_filter_control_present_flag) {
         avc_bitstream_put_ue(bs, slice_param->disable_deblocking_filter_idc);           /* disable_deblocking_filter_idc: 0 */
 
-        if (slice_param->disable_deblocking_filter_idc != 0) {
+        if (slice_param->disable_deblocking_filter_idc != 1) {
             avc_bitstream_put_se(bs, slice_param->slice_alpha_c0_offset_div2);          /* slice_alpha_c0_offset_div2: 2 */
             avc_bitstream_put_se(bs, slice_param->slice_beta_offset_div2);              /* slice_beta_offset_div2: 2 */
         }
@@ -316,5 +319,5 @@ build_avc_slice_header(VAEncSequenceParameterBufferH264Ext *sps_param,
     avc_bitstream_end(&bs);
     *slice_header_buffer = (unsigned char *)bs.buffer;
 
-    return ((bs.bit_offset + 7) >> 3);
+    return bs.bit_offset;
 }

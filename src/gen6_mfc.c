@@ -37,6 +37,7 @@
 #include "i965_structs.h"
 #include "i965_drv_video.h"
 #include "i965_encoder.h"
+#include "i965_encoder_utils.h"
 
 static void
 gen6_mfc_pipe_mode_select(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
@@ -466,7 +467,7 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
                   (0<<22) |     /*QP mode, don't modfiy CBP*/
                   (1<<19) |     /*IsLastSlice*/
                   (0<<18) | 	/*BitstreamOutputFlag Compressed BitStream Output Disable Flag 0:enable 1:disable*/
-                  (0<<17) |	    /*HeaderPresentFlag*/	
+                  (1<<17) |	    /*HeaderPresentFlag*/	
                   (1<<16) |	    /*SliceData PresentFlag*/
                   (0<<15) |	    /*TailPresentFlag*/
                   (1<<13) |	    /*RBSP NAL TYPE*/	
@@ -619,21 +620,25 @@ static void gen6_mfc_avc_ref_idx_state(VADriverContextP ctx, struct gen6_encoder
 }
 	
 static void
-gen6_mfc_avc_insert_object(VADriverContextP ctx, int flush_data, struct gen6_encoder_context *gen6_encoder_context)
+gen6_mfc_avc_insert_object(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context,
+                           unsigned int *insert_data, int lenght_in_dws, int data_bits_in_last_dw,
+                           int skip_emul_byte_count, int is_last_header, int is_end_of_slice)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
 
-    BEGIN_BCS_BATCH(batch, 4);
+    BEGIN_BCS_BATCH(batch, lenght_in_dws + 2);
 
-    OUT_BCS_BATCH(batch, MFC_AVC_INSERT_OBJECT | (4 -2 ) );
-    OUT_BCS_BATCH(batch, (32<<8) | 
-                  (1 << 3) |
-                  (1 << 2) |
-                  (flush_data << 1) |
-                  (1<<0) );
-    OUT_BCS_BATCH(batch, 0x00000003);
-    OUT_BCS_BATCH(batch, 0xABCD1234);
+    OUT_BCS_BATCH(batch, MFC_AVC_INSERT_OBJECT | (lenght_in_dws + 2 - 2));
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) |   /* always start at offset 0 */
+                  (data_bits_in_last_dw << 8) |
+                  (skip_emul_byte_count << 4) |
+                  (1 << 3) |    /* FIXME: ??? */
+                  ((!!is_last_header) << 2) |
+                  ((!!is_end_of_slice) << 1) |
+                  (1 << 0));    /* FIXME: ??? */
 
+    intel_batchbuffer_data(batch, insert_data, lenght_in_dws * 4);
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -804,7 +809,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
     VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer; /* FIXME: multi slices */
-    
+    VAEncH264DecRefPicMarkingBuffer *pDecRefPicMarking = NULL;
     unsigned int *msg = NULL, offset = 0;
     int emit_new_state = 1, object_len_in_bytes;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
@@ -813,10 +818,16 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     int x,y;
     int rate_control_mode = pSequenceParameter->rate_control_method; 
     float fps =  pSequenceParameter->time_scale * 0.5 / pSequenceParameter->num_units_in_tick ;
-
     int inter_mb_size = pSequenceParameter->bits_per_second * 1.0 / fps / width_in_mbs / height_in_mbs;
     int intra_mb_size = inter_mb_size * 5.0;
     int qp = pPicParameter->pic_init_qp;
+    unsigned char *slice_header = NULL;
+    int slice_header_length_in_bits = 0;
+
+    if (encode_state->dec_ref_pic_marking)
+        pDecRefPicMarking = (VAEncH264DecRefPicMarkingBuffer *)encode_state->dec_ref_pic_marking->buffer;
+
+    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, pDecRefPicMarking, &slice_header);
 
     if ( rate_control_mode != 2) {
         qp = 26;
@@ -865,6 +876,9 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
 
                 gen6_mfc_avc_ref_idx_state(ctx, gen6_encoder_context);
                 gen6_mfc_avc_slice_state(ctx, pSliceParameter->slice_type, gen6_encoder_context, rate_control_mode == 0, qp);
+                gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
+                                           (unsigned int *)slice_header, ALIGN(slice_header_length_in_bits, 32) >> 5, slice_header_length_in_bits & 0x1f,
+                                           5, 1, 0); /* first 5 bytes are start code + nal unit type */
                 emit_new_state = 0;
             }
 
@@ -888,7 +902,9 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
 
     if (is_intra)
         dri_bo_unmap(vme_context->vme_output.bo);
-	
+
+    free(slice_header);
+
     intel_batchbuffer_end_atomic(batch);
 }
 
