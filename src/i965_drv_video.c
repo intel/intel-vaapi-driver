@@ -993,6 +993,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
 
     if (type == VAEncCodedBufferType) {
         size += ALIGN(sizeof(VACodedBufferSegment), 64);
+        size += 0x1000; /* for upper bound check */
     }
 
     obj_buffer->max_num_elements = num_elements;
@@ -1121,7 +1122,7 @@ i965_MapBuffer(VADriverContextP ctx,
 
             coded_buffer_segment->buf = buffer = (unsigned char *)(obj_buffer->buffer_store->bo->virtual) + ALIGN(sizeof(VACodedBufferSegment), 64);
             
-            for (i = 0; i < obj_buffer->size_element - ALIGN(sizeof(VACodedBufferSegment), 64) - 3; i++) {
+            for (i = 0; i < obj_buffer->size_element - ALIGN(sizeof(VACodedBufferSegment), 64) - 3 - 0x1000; i++) {
                 if (!buffer[i] &&
                     !buffer[i + 1] &&
                     !buffer[i + 2] &&
@@ -1129,9 +1130,10 @@ i965_MapBuffer(VADriverContextP ctx,
                     break;
             }
 
-            if (i == obj_buffer->size_element - ALIGN(sizeof(VACodedBufferSegment), 64) - 3)
+            if (i == obj_buffer->size_element - ALIGN(sizeof(VACodedBufferSegment), 64) - 3 - 0x1000) {
                 coded_buffer_segment->status |= VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
-            
+            }
+
             coded_buffer_segment->size = i;
         }
 
