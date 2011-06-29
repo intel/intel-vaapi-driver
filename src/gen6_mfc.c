@@ -213,6 +213,7 @@ static void
 gen6_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
 
     BEGIN_BCS_BATCH(batch, 11);
@@ -228,8 +229,14 @@ gen6_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct gen6_encoder_conte
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     /*MFC Indirect PAK-BSE Object Base Address for Encoder*/	
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_RELOC(batch,
+                  mfc_context->mfc_indirect_pak_bse_object.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);
+    OUT_BCS_RELOC(batch,
+                  mfc_context->mfc_indirect_pak_bse_object.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  mfc_context->mfc_indirect_pak_bse_object.end_offset);
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -238,6 +245,7 @@ static void
 gen7_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
 
     BEGIN_BCS_BATCH(batch, 11);
@@ -253,8 +261,14 @@ gen7_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct gen6_encoder_conte
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     /*MFC Indirect PAK-BSE Object Base Address for Encoder*/	
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0x80000000); /* must set, up to 2G */
+    OUT_BCS_RELOC(batch,
+                  mfc_context->mfc_indirect_pak_bse_object.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);
+    OUT_BCS_RELOC(batch,
+                  mfc_context->mfc_indirect_pak_bse_object.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  mfc_context->mfc_indirect_pak_bse_object.end_offset);
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -473,9 +487,7 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
                   (1<<13) |	    /*RBSP NAL TYPE*/	
                   (0<<12) );    /*CabacZeroWordInsertionEnable*/
 	
-    OUT_BCS_RELOC(batch, mfc_context->mfc_indirect_pak_bse_object.bo,
-                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  mfc_context->mfc_indirect_pak_bse_object.offset);
+    OUT_BCS_BATCH(batch, mfc_context->mfc_indirect_pak_bse_object.offset);
 
     OUT_BCS_BATCH(batch, (24<<24) |     /*Target QP - 24 is lowest QP*/ 
                          (20<<16) |     /*Target QP + 20 is highest QP*/
@@ -963,6 +975,7 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     assert(bo);
     mfc_context->mfc_indirect_pak_bse_object.bo = bo;
     mfc_context->mfc_indirect_pak_bse_object.offset = ALIGN(sizeof(VACodedBufferSegment), 64);
+    mfc_context->mfc_indirect_pak_bse_object.end_offset = ALIGN (obj_buffer->size_element - 0x1000, 0x1000);
     dri_bo_reference(mfc_context->mfc_indirect_pak_bse_object.bo);
 
     /*Programing bcs pipeline*/
