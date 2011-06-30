@@ -969,9 +969,9 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncSequenceParameterBufferType:
     case VAEncPictureParameterBufferType:
     case VAEncSliceParameterBufferType:
-    case VAEncSequenceParameterBufferH264ExtType:
-    case VAEncPictureParameterBufferH264ExtType:
-    case VAEncSliceParameterBufferH264ExtType:
+    case VAEncSequenceParameterBufferExtType:
+    case VAEncPictureParameterBufferExtType:
+    case VAEncSliceParameterBufferExtType:
     case VAEncDecRefPicMarkingBufferH264Type:
     case VAEncPackedSequenceParameterBufferType:
     case VAEncPackedPictureParameterBufferType:
@@ -1429,15 +1429,15 @@ i965_encoder_render_picture(VADriverContextP ctx,
             vaStatus = I965_RENDER_ENCODE_BUFFER(iqmatrix);
             break;
 
-        case VAEncSequenceParameterBufferH264ExtType:
+        case VAEncSequenceParameterBufferExtType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(sequence_parameter_ext);
             break;
 
-        case VAEncPictureParameterBufferH264ExtType:
+        case VAEncPictureParameterBufferExtType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(picture_parameter_ext);
             break;
 
-        case VAEncSliceParameterBufferH264ExtType:
+        case VAEncSliceParameterBufferExtType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(slice_parameter_ext);
             break;
 
