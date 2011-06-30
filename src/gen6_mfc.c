@@ -637,7 +637,7 @@ static void gen6_mfc_avc_ref_idx_state(VADriverContextP ctx, struct gen6_encoder
 static void
 gen6_mfc_avc_insert_object(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context,
                            unsigned int *insert_data, int lenght_in_dws, int data_bits_in_last_dw,
-                           int skip_emul_byte_count, int is_last_header, int is_end_of_slice, int emulataion_flag)
+                           int skip_emul_byte_count, int is_last_header, int is_end_of_slice, int emulation_flag)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
 
@@ -648,7 +648,7 @@ gen6_mfc_avc_insert_object(VADriverContextP ctx, struct gen6_encoder_context *ge
                   (0 << 16) |   /* always start at offset 0 */
                   (data_bits_in_last_dw << 8) |
                   (skip_emul_byte_count << 4) |
-                  (emulataion_flag << 3) |
+                  (emulation_flag << 3) |
                   ((!!is_last_header) << 2) |
                   ((!!is_end_of_slice) << 1) |
                   (0 << 0));    /* FIXME: ??? */
