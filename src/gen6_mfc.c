@@ -637,7 +637,7 @@ static void gen6_mfc_avc_ref_idx_state(VADriverContextP ctx, struct gen6_encoder
 static void
 gen6_mfc_avc_insert_object(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context,
                            unsigned int *insert_data, int lenght_in_dws, int data_bits_in_last_dw,
-                           int skip_emul_byte_count, int is_last_header, int is_end_of_slice)
+                           int skip_emul_byte_count, int is_last_header, int is_end_of_slice, int emulataion_flag)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
 
@@ -648,7 +648,7 @@ gen6_mfc_avc_insert_object(VADriverContextP ctx, struct gen6_encoder_context *ge
                   (0 << 16) |   /* always start at offset 0 */
                   (data_bits_in_last_dw << 8) |
                   (skip_emul_byte_count << 4) |
-                  (1 << 3) |    /* FIXME: ??? */
+                  (emulataion_flag << 3) |
                   ((!!is_last_header) << 2) |
                   ((!!is_end_of_slice) << 1) |
                   (0 << 0));    /* FIXME: ??? */
@@ -819,6 +819,14 @@ static void gen6_mfc_init(VADriverContextP ctx, struct gen6_encoder_context *gen
     mfc_context->bsd_mpc_row_store_scratch_buffer.bo = bo;
 }
 
+struct packed_data_format
+{
+    unsigned int length_in_bits;
+    unsigned char flag;
+    unsigned char num_skip_bytes;
+    unsigned char pad[2];
+};
+
 void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                                       struct encode_state *encode_state,
                                       struct gen6_encoder_context *gen6_encoder_context)
@@ -845,9 +853,16 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     unsigned char *slice_header = NULL;
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0 };
+    struct packed_data_format *packed_sps = NULL, *packed_pps = NULL;
 
     if (encode_state->dec_ref_pic_marking)
         pDecRefPicMarking = (VAEncH264DecRefPicMarkingBuffer *)encode_state->dec_ref_pic_marking->buffer;
+
+    if (encode_state->packed_sps)
+        packed_sps = (struct packed_data_format *)encode_state->packed_sps->buffer;
+
+    if (encode_state->packed_pps)
+        packed_pps = (struct packed_data_format *)encode_state->packed_pps->buffer;
 
     slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, pDecRefPicMarking, &slice_header);
 
@@ -901,9 +916,23 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                 gen6_mfc_avc_slice_state(ctx, pSliceParameter->slice_type, 
                                          encode_state, gen6_encoder_context, 
                                          rate_control_mode == 0, qp);
+
+                if (packed_sps) {
+                    gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
+                                               (unsigned int *)(packed_sps + 1), ALIGN(packed_sps->length_in_bits, 32) >> 5, packed_sps->length_in_bits & 0x1f,
+                                               packed_sps->num_skip_bytes, 0, 0, !!(packed_sps->flag & 0x1));
+                }
+
+                if (packed_pps) {
+                    gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
+                                               (unsigned int *)(packed_pps + 1), ALIGN(packed_pps->length_in_bits, 32) >> 5, packed_pps->length_in_bits & 0x1f,
+                                               packed_pps->num_skip_bytes, 0, 0, !!(packed_pps->flag & 0x1));
+                }
+
                 gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
                                            (unsigned int *)slice_header, ALIGN(slice_header_length_in_bits, 32) >> 5, slice_header_length_in_bits & 0x1f,
-                                           5, 1, 0); /* first 5 bytes are start code + nal unit type */
+                                           5,  /* first 5 bytes are start code + nal unit type */
+                                           1, 0, 1);
                 emit_new_state = 0;
             }
 
@@ -928,7 +957,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
 
     gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
                                tail_data, sizeof(tail_data) >> 2, 32,
-                               sizeof(tail_data), 1, 1);
+                               sizeof(tail_data), 1, 1, 1);
 
     if (is_intra)
         dri_bo_unmap(vme_context->vme_output.bo);

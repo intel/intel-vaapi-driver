@@ -1013,10 +1013,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
             dri_bo_subdata(buffer_store->bo, 0, size * num_elements, data);
     } else if (type == VASliceDataBufferType || 
                type == VAImageBufferType || 
-               type == VAEncCodedBufferType ||
-               type == VAEncPackedSequenceParameterBufferType ||
-               type == VAEncPackedPictureParameterBufferType ||
-               type == VAEncPackedSliceParameterBufferType) {
+               type == VAEncCodedBufferType) {
         buffer_store->bo = dri_bo_alloc(i965->intel.bufmgr, 
                                         "Buffer", 
                                         size * num_elements, 64);
@@ -1037,7 +1034,15 @@ i965_create_buffer_internal(VADriverContextP ctx,
         }
 
     } else {
-        buffer_store->buffer = malloc(size * num_elements);
+        int msize = size;
+        
+        if (type == VAEncPackedSequenceParameterBufferType ||
+            type == VAEncPackedPictureParameterBufferType ||
+            type == VAEncPackedSliceParameterBufferType) {
+            msize = ALIGN(size, 4);
+        }
+
+        buffer_store->buffer = malloc(msize * num_elements);
         assert(buffer_store->buffer);
 
         if (data)
