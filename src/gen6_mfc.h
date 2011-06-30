@@ -39,6 +39,13 @@ struct encode_state;
 #define MAX_MFC_REFERENCE_SURFACES        16
 #define NUM_MFC_DMV_BUFFERS				  34
 
+struct gen6_mfc_avc_surface_aux
+{
+    dri_bo *dmv_top;
+    dri_bo *dmv_bottom;
+};
+
+
 struct gen6_mfc_context
 {
     struct {
