@@ -732,12 +732,16 @@ static int gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int
                   (0 << 0));      /* InterMbMode */
 
     OUT_BCS_BATCH(batch, (0xFFFF<<16) | (y << 8) | x);        /* Code Block Pattern for Y*/
-    OUT_BCS_BATCH(batch, 0x000F000F);                         /* Code Block Pattern */   
+    OUT_BCS_BATCH(batch, 0x000F000F);                         /* Code Block Pattern */  
+#if 0 
     if ( slice_type == SLICE_TYPE_B) {
         OUT_BCS_BATCH(batch, (0xF<<28) | (end_mb << 26) | qp);	/* Last MB */
     } else {
         OUT_BCS_BATCH(batch, (end_mb << 26) | qp);	/* Last MB */
     }
+#else
+    OUT_BCS_BATCH(batch, (end_mb << 26) | qp);	/* Last MB */
+#endif
 
 
     /*Stuff for Inter MB*/
