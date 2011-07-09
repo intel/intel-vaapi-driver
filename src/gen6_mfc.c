@@ -1202,5 +1202,11 @@ Bool gen6_mfc_context_destroy(struct gen6_mfc_context *mfc_context)
     dri_bo_unreference(mfc_context->bsd_mpc_row_store_scratch_buffer.bo);
     mfc_context->bsd_mpc_row_store_scratch_buffer.bo = NULL;
 
+
+    for (i = 0; i < MAX_MFC_REFERENCE_SURFACES; i++){
+        dri_bo_unreference(mfc_context->reference_surfaces[i].bo);
+        mfc_context->reference_surfaces[i].bo = NULL;  
+    }
+
     return True;
 }
