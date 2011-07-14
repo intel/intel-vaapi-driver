@@ -45,6 +45,8 @@ enum
 
 #define NUM_PP_MODULES                  5
 
+struct i965_post_processing_context;
+
 struct pp_load_save_context
 {
     int dest_w;
@@ -84,7 +86,7 @@ struct pp_module
     struct i965_kernel kernel;
     
     /* others */
-    void (*initialize)(VADriverContextP ctx, 
+    void (*initialize)(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                        VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                        const VARectangle *src_rect, const VARectangle *dst_rect);
 };
@@ -355,6 +357,14 @@ struct i965_post_processing_context
     int (*pp_x_steps)(void *private_context);
     int (*pp_y_steps)(void *private_context);
     int (*pp_set_block_parameter)(struct i965_post_processing_context *pp_context, int x, int y);
+
+    struct intel_batchbuffer *batch;
+};
+
+struct i965_proc_context
+{
+    struct hw_context base;
+    struct i965_post_processing_context pp_context;
 };
 
 VASurfaceID

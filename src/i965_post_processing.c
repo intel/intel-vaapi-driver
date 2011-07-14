@@ -65,19 +65,19 @@ static const uint32_t pp_nv12_dndi_gen5[][4] = {
 #include "shaders/post_processing/nv12_dndi_nv12.g4b.gen5"
 };
 
-static void pp_null_initialize(VADriverContextP ctx,
+static void pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                                const VARectangle *src_rect, const VARectangle *dst_rect);
-static void pp_nv12_avs_initialize(VADriverContextP ctx,
+static void pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                    VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                                    const VARectangle *src_rect, const VARectangle *dst_rect);
-static void pp_nv12_scaling_initialize(VADriverContextP ctx,
+static void pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                        VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                                        const VARectangle *src_rect, const VARectangle *dst_rect);
-static void pp_nv12_load_save_initialize(VADriverContextP ctx,
+static void pp_nv12_load_save_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                          VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                                          const VARectangle *src_rect, const VARectangle *dst_rect);
-static void pp_nv12_dndi_initialize(VADriverContextP ctx,
+static void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                     VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                                     const VARectangle *src_rect, const VARectangle *dst_rect);
 
@@ -385,11 +385,9 @@ ironlake_pp_upload_constants(struct i965_post_processing_context *pp_context)
 }
 
 static void
-ironlake_pp_states_setup(VADriverContextP ctx)
+ironlake_pp_states_setup(VADriverContextP ctx,
+                         struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
-
     ironlake_pp_surface_state(pp_context);
     ironlake_pp_binding_table(pp_context);
     ironlake_pp_interface_descriptor_table(pp_context);
@@ -398,10 +396,10 @@ ironlake_pp_states_setup(VADriverContextP ctx)
 }
 
 static void
-ironlake_pp_pipeline_select(VADriverContextP ctx)
+ironlake_pp_pipeline_select(VADriverContextP ctx,
+                            struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 1);
     OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_MEDIA);
@@ -409,10 +407,10 @@ ironlake_pp_pipeline_select(VADriverContextP ctx)
 }
 
 static void
-ironlake_pp_urb_layout(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+ironlake_pp_urb_layout(VADriverContextP ctx,
+                       struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
     unsigned int vfe_fence, cs_fence;
 
     vfe_fence = pp_context->urb.cs_start;
@@ -428,10 +426,10 @@ ironlake_pp_urb_layout(VADriverContextP ctx, struct i965_post_processing_context
 }
 
 static void
-ironlake_pp_state_base_address(VADriverContextP ctx)
+ironlake_pp_state_base_address(VADriverContextP ctx,
+                               struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 8);
     OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | 6);
@@ -446,10 +444,10 @@ ironlake_pp_state_base_address(VADriverContextP ctx)
 }
 
 static void
-ironlake_pp_state_pointers(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+ironlake_pp_state_pointers(VADriverContextP ctx,
+                           struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 3);
     OUT_BATCH(batch, CMD_MEDIA_STATE_POINTERS | 1);
@@ -459,10 +457,10 @@ ironlake_pp_state_pointers(VADriverContextP ctx, struct i965_post_processing_con
 }
 
 static void 
-ironlake_pp_cs_urb_layout(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+ironlake_pp_cs_urb_layout(VADriverContextP ctx,
+                          struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, CMD_CS_URB_STATE | 0);
@@ -473,10 +471,10 @@ ironlake_pp_cs_urb_layout(VADriverContextP ctx, struct i965_post_processing_cont
 }
 
 static void
-ironlake_pp_constant_buffer(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+ironlake_pp_constant_buffer(VADriverContextP ctx,
+                            struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, CMD_CONSTANT_BUFFER | (1 << 8) | (2 - 2));
@@ -487,10 +485,10 @@ ironlake_pp_constant_buffer(VADriverContextP ctx, struct i965_post_processing_co
 }
 
 static void
-ironlake_pp_object_walker(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+ironlake_pp_object_walker(VADriverContextP ctx,
+                          struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
     int x, x_steps, y, y_steps;
 
     x_steps = pp_context->pp_x_steps(&pp_context->private_context);
@@ -516,16 +514,15 @@ ironlake_pp_object_walker(VADriverContextP ctx, struct i965_post_processing_cont
 }
 
 static void
-ironlake_pp_pipeline_setup(VADriverContextP ctx)
+ironlake_pp_pipeline_setup(VADriverContextP ctx,
+                           struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
-    struct i965_post_processing_context *pp_context = i965->pp_context;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
     intel_batchbuffer_emit_mi_flush(batch);
-    ironlake_pp_pipeline_select(ctx);
-    ironlake_pp_state_base_address(ctx);
+    ironlake_pp_pipeline_select(ctx, pp_context);
+    ironlake_pp_state_base_address(ctx, pp_context);
     ironlake_pp_state_pointers(ctx, pp_context);
     ironlake_pp_urb_layout(ctx, pp_context);
     ironlake_pp_cs_urb_layout(ctx, pp_context);
@@ -553,13 +550,10 @@ pp_null_set_block_parameter(struct i965_post_processing_context *pp_context, int
 }
 
 static void
-pp_null_initialize(VADriverContextP ctx, 
+pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                    VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                    const VARectangle *src_rect, const VARectangle *dst_rect)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
-
     /* private function & data */
     pp_context->pp_x_steps = pp_null_x_steps;
     pp_context->pp_y_steps = pp_null_y_steps;
@@ -592,12 +586,11 @@ pp_load_save_set_block_parameter(struct i965_post_processing_context *pp_context
 }
 
 static void
-pp_nv12_load_save_initialize(VADriverContextP ctx,
+pp_nv12_load_save_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                              VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                              const VARectangle *src_rect, const VARectangle *dst_rect)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
     struct pp_load_save_context *pp_load_save_context = (struct pp_load_save_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
     struct i965_surface_state *ss;
@@ -779,12 +772,11 @@ pp_scaling_set_block_parameter(struct i965_post_processing_context *pp_context, 
 }
 
 static void
-pp_nv12_scaling_initialize(VADriverContextP ctx,
+pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                            VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                            const VARectangle *src_rect, const VARectangle *dst_rect)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
     struct pp_scaling_context *pp_scaling_context = (struct pp_scaling_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
     struct i965_sampler_state *sampler_state;
@@ -1080,12 +1072,11 @@ pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context, int 
 }
 
 static void
-pp_nv12_avs_initialize(VADriverContextP ctx,
+pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                        VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                        const VARectangle *src_rect, const VARectangle *dst_rect)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
     struct i965_surface_state *ss;
@@ -1447,12 +1438,11 @@ pp_dndi_set_block_parameter(struct i965_post_processing_context *pp_context, int
 }
 
 static 
-void pp_nv12_dndi_initialize(VADriverContextP ctx,
+void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                              VASurfaceID in_surface_id, VASurfaceID out_surface_id,
                              const VARectangle *src_rect, const VARectangle *dst_rect)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
     struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
     struct i965_surface_state *ss;
@@ -1721,6 +1711,7 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx,
 static void
 ironlake_pp_initialize(
     VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
     VASurfaceID        in_surface_id,
     VASurfaceID        out_surface_id,
     const VARectangle *src_rect,
@@ -1729,7 +1720,6 @@ ironlake_pp_initialize(
 )
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
     struct pp_module *pp_module;
     dri_bo *bo;
     int i;
@@ -1809,13 +1799,15 @@ ironlake_pp_initialize(
     pp_module = &pp_context->pp_modules[pp_index];
     
     if (pp_module->initialize)
-        pp_module->initialize(ctx, in_surface_id, out_surface_id,
+        pp_module->initialize(ctx, pp_context,
+                              in_surface_id, out_surface_id,
                               src_rect, dst_rect);
 }
 
 static void
 ironlake_post_processing(
     VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
     VASurfaceID        in_surface_id,
     VASurfaceID        out_surface_id,
     const VARectangle *src_rect,
@@ -1823,14 +1815,15 @@ ironlake_post_processing(
     int                pp_index
 )
 {
-    ironlake_pp_initialize(ctx, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
-    ironlake_pp_states_setup(ctx);
-    ironlake_pp_pipeline_setup(ctx);
+    ironlake_pp_initialize(ctx, pp_context, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
+    ironlake_pp_states_setup(ctx, pp_context);
+    ironlake_pp_pipeline_setup(ctx, pp_context);
 }
 
 static void
 gen6_pp_initialize(
     VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
     VASurfaceID        in_surface_id,
     VASurfaceID        out_surface_id,
     const VARectangle *src_rect,
@@ -1839,7 +1832,6 @@ gen6_pp_initialize(
 )
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
     struct pp_module *pp_module;
     dri_bo *bo;
     int i;
@@ -1919,7 +1911,8 @@ gen6_pp_initialize(
     pp_module = &pp_context->pp_modules[pp_index];
     
     if (pp_module->initialize)
-        pp_module->initialize(ctx, in_surface_id, out_surface_id,
+        pp_module->initialize(ctx, pp_context,
+                              in_surface_id, out_surface_id,
                               src_rect, dst_rect);
 }
 
@@ -2013,21 +2006,19 @@ gen6_pp_upload_constants(struct i965_post_processing_context *pp_context)
 }
 
 static void
-gen6_pp_states_setup(VADriverContextP ctx)
+gen6_pp_states_setup(VADriverContextP ctx,
+                     struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_post_processing_context *pp_context = i965->pp_context;
-
     gen6_pp_binding_table(pp_context);
     gen6_pp_interface_descriptor_table(pp_context);
     gen6_pp_upload_constants(pp_context);
 }
 
 static void
-gen6_pp_pipeline_select(VADriverContextP ctx)
+gen6_pp_pipeline_select(VADriverContextP ctx,
+                        struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 1);
     OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_MEDIA);
@@ -2035,10 +2026,10 @@ gen6_pp_pipeline_select(VADriverContextP ctx)
 }
 
 static void
-gen6_pp_state_base_address(VADriverContextP ctx)
+gen6_pp_state_base_address(VADriverContextP ctx,
+                           struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 10);
     OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (10 - 2));
@@ -2055,10 +2046,10 @@ gen6_pp_state_base_address(VADriverContextP ctx)
 }
 
 static void
-gen6_pp_vfe_state(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+gen6_pp_vfe_state(VADriverContextP ctx,
+                  struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 8);
     OUT_BATCH(batch, CMD_MEDIA_VFE_STATE | (8 - 2));
@@ -2077,10 +2068,10 @@ gen6_pp_vfe_state(VADriverContextP ctx, struct i965_post_processing_context *pp_
 }
 
 static void
-gen6_pp_curbe_load(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+gen6_pp_curbe_load(VADriverContextP ctx,
+                   struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     assert(pp_context->urb.size_cs_entry * pp_context->urb.num_cs_entries * 512 <= pp_context->curbe.bo->size);
 
@@ -2097,10 +2088,10 @@ gen6_pp_curbe_load(VADriverContextP ctx, struct i965_post_processing_context *pp
 }
 
 static void
-gen6_interface_descriptor_load(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+gen6_interface_descriptor_load(VADriverContextP ctx,
+                               struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     BEGIN_BATCH(batch, 4);
     OUT_BATCH(batch, CMD_MEDIA_INTERFACE_DESCRIPTOR_LOAD | (4 - 2));
@@ -2115,10 +2106,10 @@ gen6_interface_descriptor_load(VADriverContextP ctx, struct i965_post_processing
 }
 
 static void
-gen6_pp_object_walker(VADriverContextP ctx, struct i965_post_processing_context *pp_context)
+gen6_pp_object_walker(VADriverContextP ctx,
+                      struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
+    struct intel_batchbuffer *batch = pp_context->batch;
     int x, x_steps, y, y_steps;
 
     x_steps = pp_context->pp_x_steps(&pp_context->private_context);
@@ -2146,18 +2137,17 @@ gen6_pp_object_walker(VADriverContextP ctx, struct i965_post_processing_context 
 }
 
 static void
-gen6_pp_pipeline_setup(VADriverContextP ctx)
+gen6_pp_pipeline_setup(VADriverContextP ctx,
+                       struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
-    struct i965_post_processing_context *pp_context = i965->pp_context;
+    struct intel_batchbuffer *batch = pp_context->batch;
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
     intel_batchbuffer_emit_mi_flush(batch);
-    gen6_pp_pipeline_select(ctx);
+    gen6_pp_pipeline_select(ctx, pp_context);
     gen6_pp_curbe_load(ctx, pp_context);
     gen6_interface_descriptor_load(ctx, pp_context);
-    gen6_pp_state_base_address(ctx);
+    gen6_pp_state_base_address(ctx, pp_context);
     gen6_pp_vfe_state(ctx, pp_context);
     gen6_pp_object_walker(ctx, pp_context);
     intel_batchbuffer_end_atomic(batch);
@@ -2166,6 +2156,7 @@ gen6_pp_pipeline_setup(VADriverContextP ctx)
 static void
 gen6_post_processing(
     VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
     VASurfaceID        in_surface_id,
     VASurfaceID        out_surface_id,
     const VARectangle *src_rect,
@@ -2173,14 +2164,15 @@ gen6_post_processing(
     int                pp_index
 )
 {
-    gen6_pp_initialize(ctx, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
-    gen6_pp_states_setup(ctx);
-    gen6_pp_pipeline_setup(ctx);
+    gen6_pp_initialize(ctx, pp_context, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
+    gen6_pp_states_setup(ctx, pp_context);
+    gen6_pp_pipeline_setup(ctx, pp_context);
 }
 
 static void
 i965_post_processing_internal(
     VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
     VASurfaceID        in_surface_id,
     VASurfaceID        out_surface_id,
     const VARectangle *src_rect,
@@ -2192,9 +2184,9 @@ i965_post_processing_internal(
 
     if (IS_GEN6(i965->intel.device_id) ||
         IS_GEN7(i965->intel.device_id))
-        gen6_post_processing(ctx, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
+        gen6_post_processing(ctx, pp_context, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
     else
-        ironlake_post_processing(ctx, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
+        ironlake_post_processing(ctx, pp_context, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
 }
 
 VAStatus 
@@ -2239,7 +2231,7 @@ i965_post_processing(
                 assert(status == VA_STATUS_SUCCESS);
                 obj_surface = SURFACE(out_surface_id);
                 i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
-                i965_post_processing_internal(ctx,
+                i965_post_processing_internal(ctx, i965->pp_context,
                                               in_surface_id, out_surface_id,
                                               src_rect, dst_rect,
                                               PP_NV12_DNDI);
@@ -2261,7 +2253,7 @@ i965_post_processing(
                 assert(status == VA_STATUS_SUCCESS);
                 obj_surface = SURFACE(out_surface_id);
                 i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
-                i965_post_processing_internal(ctx,
+                i965_post_processing_internal(ctx, i965->pp_context,
                                               in_surface_id, out_surface_id,
                                               src_rect, dst_rect,
                                               PP_NV12_AVS);
@@ -2277,62 +2269,109 @@ i965_post_processing(
     return out_surface_id;
 }       
 
+static void
+i965_post_processing_context_finalize(struct i965_post_processing_context *pp_context)
+{
+    int i;
+
+    dri_bo_unreference(pp_context->curbe.bo);
+    pp_context->curbe.bo = NULL;
+
+    for (i = 0; i < MAX_PP_SURFACES; i++) {
+        dri_bo_unreference(pp_context->surfaces[i].ss_bo);
+        pp_context->surfaces[i].ss_bo = NULL;
+
+        dri_bo_unreference(pp_context->surfaces[i].s_bo);
+        pp_context->surfaces[i].s_bo = NULL;
+    }
+
+    dri_bo_unreference(pp_context->sampler_state_table.bo);
+    pp_context->sampler_state_table.bo = NULL;
+
+    dri_bo_unreference(pp_context->sampler_state_table.bo_8x8);
+    pp_context->sampler_state_table.bo_8x8 = NULL;
+
+    dri_bo_unreference(pp_context->sampler_state_table.bo_8x8_uv);
+    pp_context->sampler_state_table.bo_8x8_uv = NULL;
+
+    dri_bo_unreference(pp_context->binding_table.bo);
+    pp_context->binding_table.bo = NULL;
+
+    dri_bo_unreference(pp_context->idrt.bo);
+    pp_context->idrt.bo = NULL;
+    pp_context->idrt.num_interface_descriptors = 0;
+
+    dri_bo_unreference(pp_context->vfe_state.bo);
+    pp_context->vfe_state.bo = NULL;
+
+    dri_bo_unreference(pp_context->stmm.bo);
+    pp_context->stmm.bo = NULL;
+
+    for (i = 0; i < NUM_PP_MODULES; i++) {
+        struct pp_module *pp_module = &pp_context->pp_modules[i];
+
+        dri_bo_unreference(pp_module->kernel.bo);
+        pp_module->kernel.bo = NULL;
+    }
+
+}
+
 Bool
 i965_post_processing_terminate(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = i965->pp_context;
-    int i;
 
-    if (HAS_PP(i965)) {
-        if (pp_context) {
-            dri_bo_unreference(pp_context->curbe.bo);
-            pp_context->curbe.bo = NULL;
-
-            for (i = 0; i < MAX_PP_SURFACES; i++) {
-                dri_bo_unreference(pp_context->surfaces[i].ss_bo);
-                pp_context->surfaces[i].ss_bo = NULL;
-
-                dri_bo_unreference(pp_context->surfaces[i].s_bo);
-                pp_context->surfaces[i].s_bo = NULL;
-            }
-
-            dri_bo_unreference(pp_context->sampler_state_table.bo);
-            pp_context->sampler_state_table.bo = NULL;
-
-            dri_bo_unreference(pp_context->sampler_state_table.bo_8x8);
-            pp_context->sampler_state_table.bo_8x8 = NULL;
-
-            dri_bo_unreference(pp_context->sampler_state_table.bo_8x8_uv);
-            pp_context->sampler_state_table.bo_8x8_uv = NULL;
-
-            dri_bo_unreference(pp_context->binding_table.bo);
-            pp_context->binding_table.bo = NULL;
-
-            dri_bo_unreference(pp_context->idrt.bo);
-            pp_context->idrt.bo = NULL;
-            pp_context->idrt.num_interface_descriptors = 0;
-
-            dri_bo_unreference(pp_context->vfe_state.bo);
-            pp_context->vfe_state.bo = NULL;
-
-            dri_bo_unreference(pp_context->stmm.bo);
-            pp_context->stmm.bo = NULL;
-
-            for (i = 0; i < NUM_PP_MODULES; i++) {
-                struct pp_module *pp_module = &pp_context->pp_modules[i];
-
-                dri_bo_unreference(pp_module->kernel.bo);
-                pp_module->kernel.bo = NULL;
-            }
-
-            free(pp_context);
-        }
-
-        i965->pp_context = NULL;
+    if (pp_context) {
+        i965_post_processing_context_finalize(pp_context);
+        free(pp_context);
     }
 
+    i965->pp_context = NULL;
+
     return True;
+}
+
+static void
+i965_post_processing_context_init(VADriverContextP ctx,
+                                  struct i965_post_processing_context *pp_context,
+                                  struct intel_batchbuffer *batch)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int i;
+
+    pp_context->urb.size = URB_SIZE((&i965->intel));
+    pp_context->urb.num_vfe_entries = 32;
+    pp_context->urb.size_vfe_entry = 1;     /* in 512 bits unit */
+    pp_context->urb.num_cs_entries = 1;
+    pp_context->urb.size_cs_entry = 2;      /* in 512 bits unit */
+    pp_context->urb.vfe_start = 0;
+    pp_context->urb.cs_start = pp_context->urb.vfe_start + 
+        pp_context->urb.num_vfe_entries * pp_context->urb.size_vfe_entry;
+    assert(pp_context->urb.cs_start + 
+           pp_context->urb.num_cs_entries * pp_context->urb.size_cs_entry <= URB_SIZE((&i965->intel)));
+
+    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen5));
+    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
+
+    if (IS_GEN6(i965->intel.device_id) ||
+        IS_GEN7(i965->intel.device_id))
+        memcpy(pp_context->pp_modules, pp_modules_gen6, sizeof(pp_context->pp_modules));
+    else if (IS_IRONLAKE(i965->intel.device_id))
+        memcpy(pp_context->pp_modules, pp_modules_gen5, sizeof(pp_context->pp_modules));
+
+    for (i = 0; i < NUM_PP_MODULES; i++) {
+        struct pp_module *pp_module = &pp_context->pp_modules[i];
+        dri_bo_unreference(pp_module->kernel.bo);
+        pp_module->kernel.bo = dri_bo_alloc(i965->intel.bufmgr,
+                                            pp_module->kernel.name,
+                                            pp_module->kernel.size,
+                                            4096);
+        assert(pp_module->kernel.bo);
+        dri_bo_subdata(pp_module->kernel.bo, 0, pp_module->kernel.size, pp_module->kernel.bin);
+    }
+
+    pp_context->batch = batch;
 }
 
 Bool
@@ -2340,45 +2379,60 @@ i965_post_processing_init(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = i965->pp_context;
-    int i;
 
     if (HAS_PP(i965)) {
         if (pp_context == NULL) {
             pp_context = calloc(1, sizeof(*pp_context));
+            i965_post_processing_context_init(ctx, pp_context, i965->batch);
             i965->pp_context = pp_context;
-
-            pp_context->urb.size = URB_SIZE((&i965->intel));
-            pp_context->urb.num_vfe_entries = 32;
-            pp_context->urb.size_vfe_entry = 1;     /* in 512 bits unit */
-            pp_context->urb.num_cs_entries = 1;
-            pp_context->urb.size_cs_entry = 2;      /* in 512 bits unit */
-            pp_context->urb.vfe_start = 0;
-            pp_context->urb.cs_start = pp_context->urb.vfe_start + 
-                pp_context->urb.num_vfe_entries * pp_context->urb.size_vfe_entry;
-            assert(pp_context->urb.cs_start + 
-                   pp_context->urb.num_cs_entries * pp_context->urb.size_cs_entry <= URB_SIZE((&i965->intel)));
-
-            assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen5));
-            assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
-
-            if (IS_GEN6(i965->intel.device_id) ||
-                IS_GEN7(i965->intel.device_id))
-                memcpy(pp_context->pp_modules, pp_modules_gen6, sizeof(pp_context->pp_modules));
-            else if (IS_IRONLAKE(i965->intel.device_id))
-                memcpy(pp_context->pp_modules, pp_modules_gen5, sizeof(pp_context->pp_modules));
-
-            for (i = 0; i < NUM_PP_MODULES; i++) {
-                struct pp_module *pp_module = &pp_context->pp_modules[i];
-                dri_bo_unreference(pp_module->kernel.bo);
-                pp_module->kernel.bo = dri_bo_alloc(i965->intel.bufmgr,
-                                                    pp_module->kernel.name,
-                                                    pp_module->kernel.size,
-                                                    4096);
-                assert(pp_module->kernel.bo);
-                dri_bo_subdata(pp_module->kernel.bo, 0, pp_module->kernel.size, pp_module->kernel.bin);
-            }
         }
     }
 
     return True;
+}
+
+static void 
+i965_proc_picture(VADriverContextP ctx, 
+                  VAProfile profile, 
+                  union codec_state *codec_state,
+                  struct hw_context *hw_context)
+{
+    struct i965_proc_context *proc_context = (struct i965_proc_context *)hw_context;
+    struct proc_state *proc_state = &codec_state->proc;
+    VAProcPipelineParameterBuffer *pipeline_param = (VAProcPipelineParameterBuffer *)proc_state->pipeline_param->buffer;
+    VAProcInputParameterBuffer *input_param = (VAProcInputParameterBuffer *)proc_state->input_param->buffer;
+
+    assert(input_param->surface != VA_INVALID_ID);
+    assert(proc_state->current_render_target != VA_INVALID_ID);
+
+    i965_post_processing_internal(ctx, &proc_context->pp_context,
+                                  input_param->surface, proc_state->current_render_target,
+                                  &input_param->region, &pipeline_param->output_region,
+                                  PP_NV12_SCALING);
+
+    intel_batchbuffer_flush(hw_context->batch);
+}
+
+static void
+i965_proc_context_destroy(void *hw_context)
+{
+    struct i965_proc_context *proc_context = (struct i965_proc_context *)hw_context;
+
+    i965_post_processing_context_finalize(&proc_context->pp_context);
+    intel_batchbuffer_free(proc_context->base.batch);
+    free(proc_context);
+}
+
+struct hw_context *
+i965_proc_context_init(VADriverContextP ctx, VAProfile profile)
+{
+    struct intel_driver_data *intel = intel_driver_data(ctx);
+    struct i965_proc_context *proc_context = calloc(1, sizeof(struct i965_proc_context));
+
+    proc_context->base.destroy = i965_proc_context_destroy;
+    proc_context->base.run = i965_proc_picture;
+    proc_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    i965_post_processing_context_init(ctx, &proc_context->pp_context, proc_context->base.batch);
+
+    return (struct hw_context *)proc_context;
 }

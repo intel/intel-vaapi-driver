@@ -71,6 +71,10 @@
                                   IS_GEN6((ctx)->intel.device_id)) &&   \
                                  (ctx)->intel.has_bsd)
 
+#define HAS_VPP(ctx)    (IS_IRONLAKE((ctx)->intel.device_id) ||     \
+                         IS_GEN6((ctx)->intel.device_id) ||         \
+                         IS_GEN7((ctx)->intel.device_id))
+
 enum {
     I965_SURFACETYPE_RGBA = 1,
     I965_SURFACETYPE_YUV,
@@ -137,16 +141,19 @@ get_subpic_format(const VAImageFormat *va_format)
     return NULL;
 }
 
+extern struct hw_context *i965_proc_context_init(VADriverContextP, VAProfile);
 extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info g4x_hw_codec_info = {
     .dec_hw_context_init = g4x_dec_hw_context_init,
     .enc_hw_context_init = NULL,
+    .proc_hw_context_init = NULL,
 };
 
 extern struct hw_context *ironlake_dec_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info ironlake_hw_codec_info = {
     .dec_hw_context_init = ironlake_dec_hw_context_init,
     .enc_hw_context_init = NULL,
+    .proc_hw_context_init = i965_proc_context_init,
 };
 
 extern struct hw_context *gen6_dec_hw_context_init(VADriverContextP, VAProfile);
@@ -154,12 +161,14 @@ extern struct hw_context *gen6_enc_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info gen6_hw_codec_info = {
     .dec_hw_context_init = gen6_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
+    .proc_hw_context_init = i965_proc_context_init,
 };
 
 extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info gen7_hw_codec_info = {
     .dec_hw_context_init = gen7_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
+    .proc_hw_context_init = NULL,
 };
 
 VAStatus 
@@ -185,6 +194,10 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileVC1Simple;
         profile_list[i++] = VAProfileVC1Main;
         profile_list[i++] = VAProfileVC1Advanced;
+    }
+
+    if (HAS_VPP(i965)) {
+        profile_list[i++] = VAProfileNone;
     }
 
     /* If the assert fails then I965_MAX_PROFILES needs to be bigger */
@@ -226,6 +239,11 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
     case VAProfileVC1Advanced:
         if (HAS_VC1(i965))
             entrypoint_list[n++] = VAEntrypointVLD;
+        break;
+
+    case VAProfileNone:
+        if (HAS_VPP(i965))
+            entrypoint_list[n++] = VAEntrypointVideoProc;
         break;
 
     default:
@@ -348,6 +366,14 @@ i965_CreateConfig(VADriverContextP ctx,
 
         break;
 
+    case VAProfileNone:
+        if (HAS_VPP(i965) && VAEntrypointVideoProc == entrypoint) {
+            vaStatus = VA_STATUS_SUCCESS;
+        } else {
+            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+
+        break;
     default:
         vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         break;
@@ -770,7 +796,13 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
         obj_context->hw_context = NULL;
     }
 
-    if (obj_context->codec_type == CODEC_ENC) {
+    if (obj_context->codec_type == CODEC_PROC) {
+        i965_release_buffer_store(&obj_context->codec_state.proc.pipeline_param);
+        i965_release_buffer_store(&obj_context->codec_state.proc.input_param);
+
+        for (i = 0; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++)
+            i965_release_buffer_store(&obj_context->codec_state.proc.filter_param[i]);
+    } else if (obj_context->codec_type == CODEC_ENC) {
         assert(obj_context->codec_state.encode.num_slice_params <= obj_context->codec_state.encode.max_slice_params);
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
         i965_release_buffer_store(&obj_context->codec_state.encode.seq_param);
@@ -883,7 +915,13 @@ i965_CreateContext(VADriverContextP ctx,
     }
 
     if (VA_STATUS_SUCCESS == vaStatus) {
-        if (VAEntrypointEncSlice == obj_config->entrypoint ) { /*encode routin only*/
+        if (VAEntrypointVideoProc == obj_config->entrypoint) {
+            obj_context->codec_type = CODEC_PROC;
+            memset(&obj_context->codec_state.proc, 0, sizeof(obj_context->codec_state.proc));
+            obj_context->codec_state.proc.current_render_target = VA_INVALID_ID;
+            assert(i965->codec_info->proc_hw_context_init);
+            obj_context->hw_context = i965->codec_info->proc_hw_context_init(ctx, obj_config->profile);
+        } else if (VAEntrypointEncSlice == obj_config->entrypoint) { /*encode routin only*/
             obj_context->codec_type = CODEC_ENC;
             memset(&obj_context->codec_state.encode, 0, sizeof(obj_context->codec_state.encode));
             obj_context->codec_state.encode.current_render_target = VA_INVALID_ID;
@@ -1237,7 +1275,9 @@ i965_BeginPicture(VADriverContextP ctx,
         break;
     }
 
-    if (obj_context->codec_type == CODEC_ENC) {
+    if (obj_context->codec_type == CODEC_PROC) {
+        obj_context->codec_state.proc.current_render_target = render_target;
+    } else if (obj_context->codec_type == CODEC_ENC) {
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
         i965_release_buffer_store(&obj_context->codec_state.encode.seq_param);
 
@@ -1466,6 +1506,76 @@ i965_encoder_render_picture(VADriverContextP ctx,
     return vaStatus;
 }
 
+#define I965_RENDER_PROC_BUFFER(name) I965_RENDER_BUFFER(proc, name)
+
+#define DEF_RENDER_PROC_SINGLE_BUFFER_FUNC(name, member) DEF_RENDER_SINGLE_BUFFER_FUNC(proc, name, member)
+DEF_RENDER_PROC_SINGLE_BUFFER_FUNC(pipeline_parameter, pipeline_param)    
+DEF_RENDER_PROC_SINGLE_BUFFER_FUNC(input_parameter, input_param)
+
+static VAStatus
+i965_render_proc_filter_parameter_buffer(VADriverContextP ctx,
+                                         struct object_context *obj_context,
+                                         struct object_buffer *obj_buffer,
+                                         VAProcFilterType type)
+{
+    struct proc_state *proc = &obj_context->codec_state.proc;
+
+    assert(obj_buffer->buffer_store->bo == NULL);
+    assert(obj_buffer->buffer_store->buffer);
+    i965_release_buffer_store(&proc->filter_param[type]);
+    i965_reference_buffer_store(&proc->filter_param[type], obj_buffer->buffer_store);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus 
+i965_proc_render_picture(VADriverContextP ctx,
+                         VAContextID context,
+                         VABufferID *buffers,
+                         int num_buffers)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx); 
+    struct object_context *obj_context = CONTEXT(context);
+    VAStatus vaStatus;
+    int i;
+
+    for (i = 0; i < num_buffers; i++) {  
+        struct object_buffer *obj_buffer = BUFFER(buffers[i]);
+        assert(obj_buffer);
+
+        switch (obj_buffer->type) {
+        case VAProcPipelineParameterBufferType:
+            vaStatus = I965_RENDER_PROC_BUFFER(pipeline_parameter);
+            break;
+
+        case VAProcInputParameterBufferType:
+            vaStatus = I965_RENDER_PROC_BUFFER(input_parameter);
+            break;		
+
+        case VAProcFilterBaseParameterBufferType:
+        {
+            VAProcFilterBaseParameterBuffer *param = (VAProcFilterBaseParameterBuffer *)obj_buffer->buffer_store->buffer;
+            vaStatus = i965_render_proc_filter_parameter_buffer(ctx, obj_context, obj_buffer, param->filter);
+            break;
+        }
+
+        case VAProcFilterDeinterlacingParameterBufferType:
+            vaStatus = i965_render_proc_filter_parameter_buffer(ctx, obj_context, obj_buffer, VAProcFilterDeinterlacing);
+            break;
+
+        case VAProcFilterProcAmpParameterBufferType:
+            vaStatus = i965_render_proc_filter_parameter_buffer(ctx, obj_context, obj_buffer, VAProcFilterProcAmp);
+            break;
+
+        default:
+            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
+            break;
+        }
+    }
+
+    return vaStatus;
+}
+
 VAStatus 
 i965_RenderPicture(VADriverContextP ctx,
                    VAContextID context,
@@ -1485,7 +1595,9 @@ i965_RenderPicture(VADriverContextP ctx,
     obj_config = CONFIG(config);
     assert(obj_config);
 
-    if (VAEntrypointEncSlice == obj_config->entrypoint ){
+    if (VAEntrypointVideoProc == obj_config->entrypoint) {
+        vaStatus = i965_proc_render_picture(ctx, context, buffers, num_buffers);
+    } else if (VAEntrypointEncSlice == obj_config->entrypoint ) {
         vaStatus = i965_encoder_render_picture(ctx, context, buffers, num_buffers);
     } else {
         vaStatus = i965_decoder_render_picture(ctx, context, buffers, num_buffers);
@@ -1507,7 +1619,9 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
     obj_config = CONFIG(config);
     assert(obj_config);
 
-    if (obj_context->codec_type == CODEC_ENC) {
+    if (obj_context->codec_type == CODEC_PROC) {
+        assert(VAEntrypointVideoProc == obj_config->entrypoint);
+    } else if (obj_context->codec_type == CODEC_ENC) {
         assert(VAEntrypointEncSlice == obj_config->entrypoint);
 
         assert(obj_context->codec_state.encode.pic_param ||
@@ -1641,6 +1755,8 @@ i965_Init(VADriverContextP ctx)
     else
         return VA_STATUS_ERROR_UNKNOWN;
 
+    i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER);
+
     if (i965_post_processing_init(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;
 
@@ -1648,7 +1764,6 @@ i965_Init(VADriverContextP ctx)
         return VA_STATUS_ERROR_UNKNOWN;
 
     _i965InitMutex(&i965->render_mutex);
-    i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER);
 
     return VA_STATUS_SUCCESS;
 }
@@ -2505,6 +2620,35 @@ i965_UnlockSurface(
     return vaStatus;
 }
 
+/* 
+ * Query video processing pipeline 
+ */
+VAStatus i965_QueryVideoProcPipelineCap(
+    VADriverContextP ctx,
+    VAContextID context,
+    VAProcPipelineCap *pipeline_cap     /* out */
+    )
+{
+    int i;
+
+    for (i = 0; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++) {
+        pipeline_cap->filter_pipeline[i] = VAProcFilterNone;
+        pipeline_cap->bypass[i] = 1;
+    }
+
+    return VA_STATUS_SUCCESS;
+}
+
+VAStatus i965_QueryVideoProcFilterCap(
+    VADriverContextP ctx,
+    VAContextID context,
+    VAProcFilterType filter,
+    void *cap   /* out */
+    ) 
+{
+    return VA_STATUS_SUCCESS;
+}
+
 VAStatus DLL_EXPORT
 VA_DRIVER_INIT_FUNC(VADriverContextP ctx);
 
@@ -2568,6 +2712,9 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     vtable->vaBufferInfo = i965_BufferInfo;
     vtable->vaLockSurface = i965_LockSurface;
     vtable->vaUnlockSurface = i965_UnlockSurface;
+    vtable->vaQueryVideoProcPipelineCap = i965_QueryVideoProcPipelineCap;
+    vtable->vaQueryVideoProcFilterCap = i965_QueryVideoProcFilterCap;
+
     //    vtable->vaDbgCopySurfaceToBuffer = i965_DbgCopySurfaceToBuffer;
 
     i965 = (struct i965_driver_data *)calloc(1, sizeof(*i965));

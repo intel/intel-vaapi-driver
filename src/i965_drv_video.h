@@ -114,13 +114,24 @@ struct encode_state
     VASurfaceID current_render_target;
 };
 
+struct proc_state
+{
+    struct buffer_store *pipeline_param;
+    struct buffer_store *input_param;
+    struct buffer_store *filter_param[VA_PROC_PIPELINE_MAX_NUM_FILTERS];
+
+    VASurfaceID current_render_target;
+};
+
 #define CODEC_DEC       0
 #define CODEC_ENC       1
+#define CODEC_PROC      2
 
 union codec_state
 {
     struct decode_state decode;
     struct encode_state encode;
+    struct proc_state proc;
 };
 
 struct hw_context
@@ -212,6 +223,7 @@ struct hw_codec_info
 {
     struct hw_context *(*dec_hw_context_init)(VADriverContextP, VAProfile);
     struct hw_context *(*enc_hw_context_init)(VADriverContextP, VAProfile);
+    struct hw_context *(*proc_hw_context_init)(VADriverContextP, VAProfile);
 };
 
 
