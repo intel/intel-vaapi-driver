@@ -28,7 +28,7 @@ mov  (16) tmp_reg2.0<1>:UD      0x0:UD {align1};
 /* m0 */        
 mul  (2) tmp_reg0.8<1>:UW       orig_xy_ub<2,2,1>:UB 16:UW {align1};    /* Source =  (x, y) * 16 */
 mul  (2) tmp_reg0.0<1>:UW       orig_xy_ub<2,2,1>:UB 16:UW {align1};	
-add  (2) tmp_reg0.0<1>:W        tmp_reg0.0<2,2,1>:W -8:W {align1};		/* Reference = (x-8,y-8)-(x+24,y+24) */
+add  (2) tmp_reg0.0<1>:W        tmp_reg0.0<2,2,1>:W -16:W {align1};		/* Reference = (x-16,y-16)-(x+32,y+32) */
 mov  (1) tmp_reg0.12<1>:UD      INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};    /* 16x16 Source, 1/4 pixel, harr */
 
 mov  (1) tmp_reg0.20<1>:UB      thread_id_ub {align1};                  /* dispatch id */
@@ -74,7 +74,7 @@ mov  (1) tmp_reg3.20<1>:UB      thread_id_ub {align1};                  /* dispa
 mov  (8) msg_reg0.0<1>:UD       tmp_reg3.0<8,8,1>:UD {align1};
 
 mov  (2) tmp_reg3.0<1>:UW       vme_wb1.0<2,2,1>:UB  {align1};
-add  (2) tmp_reg3.0<1>:W        tmp_reg3.0<2,2,1>:W -32:W {align1}; 
+add  (2) tmp_reg3.0<1>:W        tmp_reg3.0<2,2,1>:W -64:W {align1}; 
         
 mov  (8) msg_reg1.0<1>:UD       tmp_reg3.0<8,8,0>:UD   {align1};
 

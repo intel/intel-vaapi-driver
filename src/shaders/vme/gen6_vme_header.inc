@@ -48,7 +48,7 @@ define(`INTRA_SAD_HAAR',                `0x00800000')
 
 define(`INTER_PART_MASK',               `0x7E000000')
 
-define(`REF_REGION_SIZE',               `0x2020:UW')
+define(`REF_REGION_SIZE',               `0x3030:UW')
 
 define(`BI_SUB_MB_PART_MASK',           `0x0c000000')
 define(`MAX_NUM_MV',                    `0x00000020')
