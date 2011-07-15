@@ -1014,6 +1014,11 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncPackedSequenceParameterBufferType:
     case VAEncPackedPictureParameterBufferType:
     case VAEncPackedSliceParameterBufferType:
+    case VAProcPipelineParameterBufferType:
+    case VAProcInputParameterBufferType:
+    case VAProcFilterBaseParameterBufferType:
+    case VAProcFilterDeinterlacingParameterBufferType:
+    case VAProcFilterProcAmpParameterBufferType:
 
         /* Ok */
         break;
@@ -1266,6 +1271,10 @@ i965_BeginPicture(VADriverContextP ctx,
     case VAProfileVC1Simple:
     case VAProfileVC1Main:
     case VAProfileVC1Advanced:
+        vaStatus = VA_STATUS_SUCCESS;
+        break;
+
+    case VAProfileNone:
         vaStatus = VA_STATUS_SUCCESS;
         break;
 

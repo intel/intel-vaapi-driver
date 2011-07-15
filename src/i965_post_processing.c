@@ -2397,14 +2397,18 @@ i965_proc_picture(VADriverContextP ctx,
                   union codec_state *codec_state,
                   struct hw_context *hw_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_proc_context *proc_context = (struct i965_proc_context *)hw_context;
     struct proc_state *proc_state = &codec_state->proc;
     VAProcPipelineParameterBuffer *pipeline_param = (VAProcPipelineParameterBuffer *)proc_state->pipeline_param->buffer;
     VAProcInputParameterBuffer *input_param = (VAProcInputParameterBuffer *)proc_state->input_param->buffer;
+    struct object_surface *obj_surface;
 
     assert(input_param->surface != VA_INVALID_ID);
     assert(proc_state->current_render_target != VA_INVALID_ID);
 
+    obj_surface = SURFACE(proc_state->current_render_target);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
     i965_post_processing_internal(ctx, &proc_context->pp_context,
                                   input_param->surface, proc_state->current_render_target,
                                   &input_param->region, &pipeline_param->output_region,
