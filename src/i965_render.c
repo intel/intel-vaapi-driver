@@ -975,26 +975,24 @@ i965_render_upload_vertex(
 }
 
 static void
-i965_render_upload_constants(VADriverContextP ctx)
+i965_render_upload_constants(VADriverContextP ctx,
+                             VASurfaceID surface)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
     unsigned short *constant_buffer;
-
-    if (render_state->curbe.upload)
-        return;
+    struct object_surface *obj_surface = SURFACE(surface);
 
     dri_bo_map(render_state->curbe.bo, 1);
     assert(render_state->curbe.bo->virtual);
     constant_buffer = render_state->curbe.bo->virtual;
 
-    if (render_state->interleaved_uv)
+    if (obj_surface->fourcc == VA_FOURCC('N','V','1','2'))
         *constant_buffer = 1;
     else
         *constant_buffer = 0;
 
     dri_bo_unmap(render_state->curbe.bo);
-    render_state->curbe.upload = 1;
 }
 
 static void
@@ -1014,7 +1012,7 @@ i965_surface_render_state_setup(
     i965_render_cc_viewport(ctx);
     i965_render_cc_unit(ctx);
     i965_render_upload_vertex(ctx, surface, src_rect, dst_rect);
-    i965_render_upload_constants(ctx);
+    i965_render_upload_constants(ctx, surface);
 }
 static void
 i965_subpic_render_state_setup(
@@ -1696,7 +1694,7 @@ gen6_render_setup_states(
     gen6_render_color_calc_state(ctx);
     gen6_render_blend_state(ctx);
     gen6_render_depth_stencil_state(ctx);
-    i965_render_upload_constants(ctx);
+    i965_render_upload_constants(ctx, surface);
     i965_render_upload_vertex(ctx, surface, src_rect, dst_rect);
 }
 
@@ -2288,7 +2286,7 @@ gen7_render_setup_states(
     gen7_render_color_calc_state(ctx);
     gen7_render_blend_state(ctx);
     gen7_render_depth_stencil_state(ctx);
-    i965_render_upload_constants(ctx);
+    i965_render_upload_constants(ctx, surface);
     i965_render_upload_vertex(ctx, surface, src_rect, dst_rect);
 }
 
@@ -2984,7 +2982,6 @@ i965_render_init(VADriverContextP ctx)
                       "constant buffer",
                       4096, 64);
     assert(render_state->curbe.bo);
-    render_state->curbe.upload = 0;
 
     return True;
 }
