@@ -67,7 +67,6 @@ struct i965_render_state
 
     struct {
         dri_bo *bo;
-        int upload;
     } curbe;
 
     unsigned short interleaved_uv;
