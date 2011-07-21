@@ -2412,7 +2412,7 @@ i965_proc_picture(VADriverContextP ctx,
     i965_post_processing_internal(ctx, &proc_context->pp_context,
                                   input_param->surface, proc_state->current_render_target,
                                   &input_param->region, &pipeline_param->output_region,
-                                  PP_NV12_SCALING);
+                                  PP_NV12_AVS);
 
     intel_batchbuffer_flush(hw_context->batch);
 }
