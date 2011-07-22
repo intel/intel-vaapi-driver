@@ -531,6 +531,91 @@ ironlake_pp_pipeline_setup(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
 }
 
+static void
+i965_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                          dri_bo *surf_bo, unsigned long surf_bo_offset,
+                          int width, int height, int pitch, int format, 
+                          int index, int is_target)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_surface_state *ss;
+    dri_bo *ss_bo;
+    unsigned int tiling;
+    unsigned int swizzle;
+
+    dri_bo_get_tiling(surf_bo, &tiling, &swizzle);
+    pp_context->surfaces[index].s_bo = surf_bo;
+    dri_bo_reference(pp_context->surfaces[index].s_bo);
+    ss_bo = dri_bo_alloc(i965->intel.bufmgr, 
+                         "surface state", 
+                         sizeof(struct i965_surface_state), 
+                         4096);
+    assert(ss_bo);
+    pp_context->surfaces[index].ss_bo = ss_bo;
+    dri_bo_map(ss_bo, True);
+    assert(ss_bo->virtual);
+    ss = ss_bo->virtual;
+    memset(ss, 0, sizeof(*ss));
+    ss->ss0.surface_type = I965_SURFACE_2D;
+    ss->ss0.surface_format = format;
+    ss->ss1.base_addr = surf_bo->offset + surf_bo_offset;
+    ss->ss2.width = width - 1;
+    ss->ss2.height = height - 1;
+    ss->ss3.pitch = pitch - 1;
+    pp_set_surface_tiling(ss, tiling);
+    dri_bo_emit_reloc(ss_bo,
+                      I915_GEM_DOMAIN_RENDER, is_target ? I915_GEM_DOMAIN_RENDER : 0,
+                      surf_bo_offset,
+                      offsetof(struct i965_surface_state, ss1),
+                      pp_context->surfaces[index].s_bo);
+    dri_bo_unmap(ss_bo);
+}
+
+static void
+i965_pp_set_surface2_state(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                           dri_bo *surf_bo, unsigned long surf_bo_offset,
+                           int width, int height, int wpitch,
+                           int xoffset, int yoffset,
+                           int format, int interleave_chroma,
+                           int index)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_surface_state2 *ss2;
+    dri_bo *ss2_bo;
+    unsigned int tiling;
+    unsigned int swizzle;
+
+    dri_bo_get_tiling(surf_bo, &tiling, &swizzle);
+    pp_context->surfaces[index].s_bo = surf_bo;
+    dri_bo_reference(pp_context->surfaces[index].s_bo);
+    ss2_bo = dri_bo_alloc(i965->intel.bufmgr, 
+                          "YUV surface state", 
+                          sizeof(struct i965_surface_state2), 
+                          4096);
+    assert(ss2_bo);
+    pp_context->surfaces[index].ss_bo = ss2_bo;
+    dri_bo_map(ss2_bo, True);
+    assert(ss2_bo->virtual);
+    ss2 = ss2_bo->virtual;
+    memset(ss2, 0, sizeof(*ss2));
+    ss2->ss0.surface_base_address = surf_bo->offset + surf_bo_offset;
+    ss2->ss1.cbcr_pixel_offset_v_direction = 0;
+    ss2->ss1.width = width - 1;
+    ss2->ss1.height = height - 1;
+    ss2->ss2.pitch = wpitch - 1;
+    ss2->ss2.interleave_chroma = interleave_chroma;
+    ss2->ss2.surface_format = format;
+    ss2->ss3.x_offset_for_cb = xoffset;
+    ss2->ss3.y_offset_for_cb = yoffset;
+    pp_set_surface2_tiling(ss2, tiling);
+    dri_bo_emit_reloc(ss2_bo,
+                      I915_GEM_DOMAIN_RENDER, 0,
+                      surf_bo_offset,
+                      offsetof(struct i965_surface_state2, ss0),
+                      surf_bo);
+    dri_bo_unmap(ss2_bo);
+}
+
 static int
 pp_null_x_steps(void *private_context)
 {
@@ -593,11 +678,8 @@ pp_nv12_load_save_initialize(VADriverContextP ctx, struct i965_post_processing_c
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_load_save_context *pp_load_save_context = (struct pp_load_save_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
-    struct i965_surface_state *ss;
-    dri_bo *bo;
-    int index, w, h;
+    int w, h;
     int orig_w, orig_h;
-    unsigned int tiling, swizzle;
 
     /* source surface */
     obj_surface = SURFACE(in_surface_id);
@@ -605,65 +687,18 @@ pp_nv12_load_save_initialize(VADriverContextP ctx, struct i965_post_processing_c
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
     h = obj_surface->height;
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     /* source Y surface index 1 */
-    index = 1;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset;
-    ss->ss2.width = orig_w / 4 - 1;
-    ss->ss2.height = orig_h - 1;
-    ss->ss3.pitch = w - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      0,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, 0,
+                              orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
+                              1, 0);
 
     /* source UV surface index 2 */
-    index = 2;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8G8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset + w * h;
-    ss->ss2.width = orig_w / 4 - 1;
-    ss->ss2.height = orig_h / 2 - 1;
-    ss->ss3.pitch = w - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      w * h,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, w * h,
+                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              2, 0);
 
     /* destination surface */
     obj_surface = SURFACE(out_surface_id);
@@ -671,65 +706,18 @@ pp_nv12_load_save_initialize(VADriverContextP ctx, struct i965_post_processing_c
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
     h = obj_surface->height;
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     /* destination Y surface index 7 */
-    index = 7;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset;
-    ss->ss2.width = orig_w / 4 - 1;
-    ss->ss2.height = orig_h - 1;
-    ss->ss3.pitch = w - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      0,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, 0,
+                              orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
+                              7, 1);
 
     /* destination UV surface index 8 */
-    index = 8;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8G8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset + w * h;
-    ss->ss2.width = orig_w / 4 - 1;
-    ss->ss2.height = orig_h / 2 - 1;
-    ss->ss3.pitch = w - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      w * h,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, w * h,
+                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              8, 1);
 
     /* private function & data */
     pp_context->pp_x_steps = pp_load_save_x_steps;
@@ -780,12 +768,8 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     struct pp_scaling_context *pp_scaling_context = (struct pp_scaling_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
     struct i965_sampler_state *sampler_state;
-    struct i965_surface_state *ss;
-    dri_bo *bo;
-    int index;
     int in_w, in_h, in_wpitch, in_hpitch;
     int out_w, out_h, out_wpitch, out_hpitch;
-    unsigned int tiling, swizzle;
 
     /* source surface */
     obj_surface = SURFACE(in_surface_id);
@@ -793,65 +777,18 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     in_h = obj_surface->orig_height;
     in_wpitch = obj_surface->width;
     in_hpitch = obj_surface->height;
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     /* source Y surface index 1 */
-    index = 1;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset;
-    ss->ss2.width = in_w - 1;
-    ss->ss2.height = in_h - 1;
-    ss->ss3.pitch = in_wpitch - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      0,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, 0,
+                              in_w, in_h, in_wpitch, I965_SURFACEFORMAT_R8_UNORM,
+                              1, 0);
 
     /* source UV surface index 2 */
-    index = 2;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8G8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset + in_wpitch * in_hpitch;
-    ss->ss2.width = in_w / 2 - 1;
-    ss->ss2.height = in_h / 2 - 1;
-    ss->ss3.pitch = in_wpitch - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      in_wpitch * in_hpitch,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, in_wpitch * in_hpitch,
+                              in_w / 2, in_h / 2, in_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
+                              2, 0);
 
     /* destination surface */
     obj_surface = SURFACE(out_surface_id);
@@ -859,65 +796,18 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     out_h = obj_surface->orig_height;
     out_wpitch = obj_surface->width;
     out_hpitch = obj_surface->height;
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     /* destination Y surface index 7 */
-    index = 7;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset;
-    ss->ss2.width = out_w / 4 - 1;
-    ss->ss2.height = out_h - 1;
-    ss->ss3.pitch = out_wpitch - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      0,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, 0,
+                              out_w / 4, out_h, out_wpitch, I965_SURFACEFORMAT_R8_UNORM,
+                              7, 1);
 
     /* destination UV surface index 8 */
-    index = 8;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8G8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset + out_wpitch * out_hpitch;
-    ss->ss2.width = out_w / 4 - 1;
-    ss->ss2.height = out_h / 2 - 1;
-    ss->ss3.pitch = out_wpitch - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      out_wpitch * out_hpitch,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, out_wpitch * out_hpitch,
+                              out_w / 4, out_h / 2, out_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
+                              8, 1);
 
     /* sampler state */
     dri_bo_map(pp_context->sampler_state_table.bo, True);
@@ -1079,15 +969,11 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
-    struct i965_surface_state *ss;
     struct i965_sampler_8x8 *sampler_8x8;
     struct i965_sampler_8x8_state *sampler_8x8_state;
-    struct i965_surface_state2 *ss_8x8;
-    dri_bo *bo;
     int index;
     int in_w, in_h, in_wpitch, in_hpitch;
     int out_w, out_h, out_wpitch, out_hpitch;
-    unsigned int tiling, swizzle;
 
     /* surface */
     obj_surface = SURFACE(in_surface_id);
@@ -1095,73 +981,22 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     in_h = obj_surface->orig_height;
     in_wpitch = obj_surface->width;
     in_hpitch = obj_surface->height;
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     /* source Y surface index 1 */
-    index = 1;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "Y surface state for sample_8x8", 
-                      sizeof(struct i965_surface_state2), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss_8x8 = bo->virtual;
-    memset(ss_8x8, 0, sizeof(*ss_8x8));
-    ss_8x8->ss0.surface_base_address = pp_context->surfaces[index].s_bo->offset;
-    ss_8x8->ss1.cbcr_pixel_offset_v_direction = 0;
-    ss_8x8->ss1.width = in_w - 1;
-    ss_8x8->ss1.height = in_h - 1;
-    ss_8x8->ss2.half_pitch_for_chroma = 0;
-    ss_8x8->ss2.pitch = in_wpitch - 1;
-    ss_8x8->ss2.interleave_chroma = 0;
-    ss_8x8->ss2.surface_format = SURFACE_FORMAT_Y8_UNORM;
-    ss_8x8->ss3.x_offset_for_cb = 0;
-    ss_8x8->ss3.y_offset_for_cb = 0;
-    pp_set_surface2_tiling(ss_8x8, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      0,
-                      offsetof(struct i965_surface_state2, ss0),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface2_state(ctx, pp_context,
+                               obj_surface->bo, 0,
+                               in_w, in_h, in_wpitch,
+                               0, 0,
+                               SURFACE_FORMAT_Y8_UNORM, 0,
+                               1);
 
     /* source UV surface index 2 */
-    index = 2;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "UV surface state for sample_8x8", 
-                      sizeof(struct i965_surface_state2), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss_8x8 = bo->virtual;
-    memset(ss_8x8, 0, sizeof(*ss_8x8));
-    ss_8x8->ss0.surface_base_address = pp_context->surfaces[index].s_bo->offset + in_wpitch * in_hpitch;
-    ss_8x8->ss1.cbcr_pixel_offset_v_direction = 0;
-    ss_8x8->ss1.width = in_w - 1;
-    ss_8x8->ss1.height = in_h - 1;
-    ss_8x8->ss2.half_pitch_for_chroma = 0;
-    ss_8x8->ss2.pitch = in_wpitch - 1;
-    ss_8x8->ss2.interleave_chroma = 1;
-    ss_8x8->ss2.surface_format = SURFACE_FORMAT_PLANAR_420_8;
-    ss_8x8->ss3.x_offset_for_cb = 0;
-    ss_8x8->ss3.y_offset_for_cb = 0;
-    pp_set_surface2_tiling(ss_8x8, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      in_wpitch * in_hpitch,
-                      offsetof(struct i965_surface_state2, ss0),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface2_state(ctx, pp_context,
+                               obj_surface->bo, in_wpitch * in_hpitch,
+                               in_w, in_h, in_wpitch,
+                               0, 0,
+                               SURFACE_FORMAT_PLANAR_420_8, 1,
+                               2);
 
     /* destination surface */
     obj_surface = SURFACE(out_surface_id);
@@ -1170,66 +1005,19 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     out_wpitch = obj_surface->width;
     out_hpitch = obj_surface->height;
     assert(out_w <= out_wpitch && out_h <= out_hpitch);
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     /* destination Y surface index 7 */
-    index = 7;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset;
-    ss->ss2.width = out_w / 4 - 1;
-    ss->ss2.height = out_h - 1;
-    ss->ss3.pitch = out_wpitch - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      0,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, 0,
+                              out_w / 4, out_h, out_wpitch, I965_SURFACEFORMAT_R8_UNORM,
+                              7, 1);
 
     /* destination UV surface index 8 */
-    index = 8;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8G8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset + out_wpitch * out_hpitch;
-    ss->ss2.width = out_w / 4 - 1;
-    ss->ss2.height = out_h / 2 - 1;
-    ss->ss3.pitch = out_wpitch - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      out_wpitch * out_hpitch,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
-    
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, out_wpitch * out_hpitch,
+                              out_w / 4, out_h / 2, out_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
+                              8, 1);
+
     /* sampler 8x8 state */
     dri_bo_map(pp_context->sampler_state_table.bo_8x8, True);
     assert(pp_context->sampler_state_table.bo_8x8->virtual);
@@ -1445,14 +1233,10 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
-    struct i965_surface_state *ss;
-    struct i965_surface_state2 *ss_dndi;
     struct i965_sampler_dndi *sampler_dndi;
-    dri_bo *bo;
     int index;
     int w, h;
     int orig_w, orig_h;
-    unsigned int tiling, swizzle;
 
     /* surface */
     obj_surface = SURFACE(in_surface_id);
@@ -1460,7 +1244,6 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
     h = obj_surface->height;
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     if (pp_context->stmm.bo == NULL) {
         pp_context->stmm.bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -1471,97 +1254,24 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     }
 
     /* source UV surface index 2 */
-    index = 2;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8G8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset + w * h;
-    ss->ss2.width = orig_w / 4 - 1;
-    ss->ss2.height = orig_h / 2 - 1;
-    ss->ss3.pitch = w - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      w * h,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, w * h,
+                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              2, 0);
 
     /* source YUV surface index 4 */
-    index = 4;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "YUV surface state for deinterlace ", 
-                      sizeof(struct i965_surface_state2), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss_dndi = bo->virtual;
-    memset(ss_dndi, 0, sizeof(*ss_dndi));
-    ss_dndi->ss0.surface_base_address = pp_context->surfaces[index].s_bo->offset;
-    ss_dndi->ss1.cbcr_pixel_offset_v_direction = 0;
-    ss_dndi->ss1.width = w - 1;
-    ss_dndi->ss1.height = h - 1;
-    ss_dndi->ss1.cbcr_pixel_offset_v_direction = 1;
-    ss_dndi->ss2.half_pitch_for_chroma = 0;
-    ss_dndi->ss2.pitch = w - 1;
-    ss_dndi->ss2.interleave_chroma = 1;
-    ss_dndi->ss2.surface_format = SURFACE_FORMAT_PLANAR_420_8;
-    ss_dndi->ss2.half_pitch_for_chroma = 0;
-    ss_dndi->ss2.tiled_surface = 0;
-    ss_dndi->ss3.x_offset_for_cb = 0;
-    ss_dndi->ss3.y_offset_for_cb = h;
-    pp_set_surface2_tiling(ss_dndi, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      0,
-                      offsetof(struct i965_surface_state2, ss0),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface2_state(ctx, pp_context,
+                               obj_surface->bo, 0,
+                               orig_w, orig_w, w,
+                               0, h,
+                               SURFACE_FORMAT_PLANAR_420_8, 1,
+                               4);
 
     /* source STMM surface index 20 */
-    index = 20;
-    pp_context->surfaces[index].s_bo = pp_context->stmm.bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "STMM surface state for deinterlace ", 
-                      sizeof(struct i965_surface_state2), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset;
-    ss->ss2.width = w - 1;
-    ss->ss2.height = h - 1;
-    ss->ss3.pitch = w - 1;
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      0,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              pp_context->stmm.bo, 0,
+                              orig_w, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
+                              20, 1);
 
     /* destination surface */
     obj_surface = SURFACE(out_surface_id);
@@ -1569,66 +1279,18 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
     h = obj_surface->height;
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     /* destination Y surface index 7 */
-    index = 7;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset;
-    ss->ss2.width = orig_w / 4 - 1;
-    ss->ss2.height = orig_h - 1;
-    ss->ss3.pitch = w - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      0,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, 0,
+                              orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
+                              7, 1);
 
     /* destination UV surface index 8 */
-    index = 8;
-    pp_context->surfaces[index].s_bo = obj_surface->bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
-                      sizeof(struct i965_surface_state), 
-                      4096);
-    assert(bo);
-    pp_context->surfaces[index].ss_bo = bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-    ss = bo->virtual;
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8G8_UNORM;
-    ss->ss1.base_addr = pp_context->surfaces[index].s_bo->offset + w * h;
-    ss->ss2.width = orig_w / 4 - 1;
-    ss->ss2.height = orig_h / 2 - 1;
-    ss->ss3.pitch = w - 1;
-    pp_set_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      I915_GEM_DOMAIN_RENDER,
-                      w * h,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
-    dri_bo_unmap(bo);
-
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, w * h,
+                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              8, 1);
     /* sampler dndi */
     dri_bo_map(pp_context->sampler_state_table.bo, True);
     assert(pp_context->sampler_state_table.bo->virtual);
