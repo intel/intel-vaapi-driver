@@ -611,8 +611,7 @@ i965_PutImage(VADriverContextP ctx,
         dest_y + dest_height > obj_surface->orig_height)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    if (!obj_surface->bo)
-        i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), obj_image->image.format.fourcc);
+    i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), VA_FOURCC('N', 'V', '1', '2'));
 
     src_surface.id = image;
     src_surface.flag = I965_SURFACE_IMAGE;
@@ -1977,8 +1976,10 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (obj_surface->bo)
+    if (obj_surface->bo) {
+        assert(obj_surface->fourcc);
         return;
+    }
 
     if (tiled) {
         uint32_t tiling_mode = I915_TILING_Y; /* always uses Y-tiled format */
@@ -2016,13 +2017,15 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     VAImageID image_id;
     unsigned int w_pitch, h_pitch;
     unsigned int data_size;
-    VAStatus va_status;
+    VAStatus va_status = VA_STATUS_ERROR_OPERATION_FAILED;
 
     out_image->image_id = VA_INVALID_ID;
     obj_surface = SURFACE(surface);
 
     if (!obj_surface)
         return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), VA_FOURCC('N', 'V', '1', '2'));
 
     w_pitch = obj_surface->width;
     h_pitch = obj_surface->height;
@@ -2054,42 +2057,43 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     image->height = obj_surface->orig_height;
     image->data_size = data_size;
 
-    if (!render_state->inited) {
-            image->format.fourcc = VA_FOURCC('Y','V','1','2');
-            image->format.byte_order = VA_LSB_FIRST;
-            image->format.bits_per_pixel = 12;
-            image->num_planes = 3;
-            image->pitches[0] = w_pitch;
-            image->offsets[0] = 0;
-            image->pitches[1] = w_pitch / 2;
-            image->offsets[1] = w_pitch * h_pitch;
-            image->pitches[2] = w_pitch / 2;
-            image->offsets[2] = w_pitch * h_pitch + (w_pitch / 2) * (h_pitch / 2);
-    } else {
-        if (render_state->interleaved_uv) {
-            image->format.fourcc = VA_FOURCC('N','V','1','2');
-            image->format.byte_order = VA_LSB_FIRST;
-            image->format.bits_per_pixel = 12;
-            image->num_planes = 2;
-            image->pitches[0] = w_pitch;
-            image->offsets[0] = 0;
-            image->pitches[1] = w_pitch;
-            image->offsets[1] = w_pitch * h_pitch;
-        } else {
-            image->format.fourcc = VA_FOURCC('I','4','2','0');
-            image->format.byte_order = VA_LSB_FIRST;
-            image->format.bits_per_pixel = 12;
-            image->num_planes = 3;
-            image->pitches[0] = w_pitch;
-            image->offsets[0] = 0;
-            image->pitches[1] = w_pitch / 2;
-            image->offsets[1] = w_pitch * h_pitch;
-            image->pitches[2] = w_pitch / 2;
-            image->offsets[2] = w_pitch * h_pitch + (w_pitch / 2) * (h_pitch / 2);
-        }
+    image->format.fourcc = obj_surface->fourcc;
+    image->format.byte_order = VA_LSB_FIRST;
+    image->format.bits_per_pixel = 12;
+
+    switch (image->format.fourcc) {
+    case VA_FOURCC('Y', 'V', '1', '2'):
+        image->num_planes = 3;
+        image->pitches[0] = w_pitch; /* Y */
+        image->offsets[0] = 0;
+        image->pitches[1] = w_pitch / 2; /* V */
+        image->offsets[1] = w_pitch * h_pitch;
+        image->pitches[2] = w_pitch / 2; /* U */
+        image->offsets[2] = w_pitch * h_pitch + (w_pitch / 2) * (h_pitch / 2);
+        break;
+
+    case VA_FOURCC('N', 'V', '1', '2'):
+        image->num_planes = 2;
+        image->pitches[0] = w_pitch; /* Y */
+        image->offsets[0] = 0;
+        image->pitches[1] = w_pitch; /* UV */
+        image->offsets[1] = w_pitch * h_pitch;
+        break;
+
+    case VA_FOURCC('I', '4', '2', '0'):
+        image->num_planes = 3;
+        image->pitches[0] = w_pitch; /* Y */
+        image->offsets[0] = 0;
+        image->pitches[1] = w_pitch / 2; /* U */
+        image->offsets[1] = w_pitch * h_pitch;
+        image->pitches[2] = w_pitch / 2; /* V */
+        image->offsets[2] = w_pitch * h_pitch + (w_pitch / 2) * (h_pitch / 2);
+        break;
+
+    default:
+        goto error;
     }
 
-    i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), image->format.fourcc);
     va_status = i965_create_buffer_internal(ctx, 0, VAImageBufferType,
                                             obj_surface->size, 1, NULL, obj_surface->bo, &image->buf);
     if (va_status != VA_STATUS_SUCCESS)
