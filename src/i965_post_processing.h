@@ -37,13 +37,16 @@
 enum
 {
     PP_NULL = 0,
-    PP_NV12_LOAD_SAVE,
+    PP_NV12_LOAD_SAVE_N12,
+    PP_NV12_LOAD_SAVE_PL3,
+    PP_PL3_LOAD_SAVE_N12,
+    PP_PL3_LOAD_SAVE_PL3,
     PP_NV12_SCALING,
     PP_NV12_AVS,
     PP_NV12_DNDI,
 };
 
-#define NUM_PP_MODULES                  5
+#define NUM_PP_MODULES                  8
 
 struct i965_post_processing_context;
 
@@ -87,8 +90,10 @@ struct pp_module
     
     /* others */
     void (*initialize)(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                       VASurfaceID in_surface_id, VASurfaceID out_surface_id,
-                       const VARectangle *src_rect, const VARectangle *dst_rect);
+                       const struct i965_surface *src_surface,
+                       const VARectangle *src_rect,
+                       const struct i965_surface *dst_surface,
+                       const VARectangle *dst_rect);
 };
 
 struct pp_static_parameter
@@ -376,6 +381,13 @@ i965_post_processing(
     unsigned int       flags,
     int                *has_done_scaling 
 );
+
+VAStatus
+i965_image_processing(VADriverContextP ctx,
+                      const struct i965_surface *src_surface,
+                      const VARectangle *src_rect,
+                      const struct i965_surface *dst_surface,
+                      const VARectangle *dst_rect);
 
 Bool
 i965_post_processing_terminate(VADriverContextP ctx);

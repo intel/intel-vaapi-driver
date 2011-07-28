@@ -47,6 +47,15 @@
 #define INTEL_STR_DRIVER_VENDOR                 "Intel"
 #define INTEL_STR_DRIVER_NAME                   "i965"
 
+#define I965_SURFACE_IMAGE      0
+#define I965_SURFACE_SURFACE    1
+
+struct i965_surface
+{
+    VAGenericID id;
+    int flag;
+};
+
 struct i965_kernel 
 {
     char *name;
