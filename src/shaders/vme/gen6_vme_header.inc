@@ -46,7 +46,7 @@ define(`INTER_SAD_HAAR',                `0x00200000')
 define(`INTRA_SAD_NONE',                `0x00000000')
 define(`INTRA_SAD_HAAR',                `0x00800000')
 
-define(`INTER_PART_MASK',               `0x7E000000')
+define(`INTER_PART_MASK',               `0x70000000')
 
 define(`REF_REGION_SIZE',               `0x2830:UW')
 

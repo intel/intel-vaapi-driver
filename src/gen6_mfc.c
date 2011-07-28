@@ -698,7 +698,7 @@ gen6_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, in
     return len_in_dwords;
 }
 
-static int gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, int qp, unsigned int offset,
+static int gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, int qp, unsigned int *msg, unsigned int offset,
                                          struct gen6_encoder_context *gen6_encoder_context,
                                          int inter_mb_size_in_bits, int slice_type)
 {
@@ -713,26 +713,31 @@ static int gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int
 
     OUT_BCS_BATCH(batch, 32);         /* 32 MV*/
     OUT_BCS_BATCH(batch, offset);
+    
+    if ( (msg[8] & 0x04) ) {    /*FIXME can't apply SKIP directly */
+        OUT_BCS_BATCH(batch, 
+                (0 << 24) |     /* PackedMvNum, Debug*/
+                (4 << 20) |     /* 8 MV, SNB don't use it*/
+                (0 << 19) |     /* CbpDcY */
+                (0 << 18) |     /* CbpDcU */
+                (0 << 17) |     /* CbpDcV */
+                (0x0100) );  
+        OUT_BCS_BATCH(batch, (0x0000<<16) | (y << 8) | x);        /* Code Block Pattern for Y*/
+        OUT_BCS_BATCH(batch, 0x00000000);                         /* Code Block Pattern */  
+    }
+    else {
+        OUT_BCS_BATCH(batch, 
+                (1 << 24) |     /* PackedMvNum, Debug*/
+                (4 << 20) |     /* 8 MV, SNB don't use it*/
+                (1 << 19) |     /* CbpDcY */
+                (1 << 18) |     /* CbpDcU */
+                (1 << 17) |     /* CbpDcV */
+                (msg[8] & 0xFFFF) );  
+        OUT_BCS_BATCH(batch, (0xFFFF<<16) | (y << 8) | x);        /* Code Block Pattern for Y*/
 
-    OUT_BCS_BATCH(batch, 
-                  (1 << 24) |     /* PackedMvNum, Debug*/
-                  (4 << 20) |     /* 8 MV, SNB don't use it*/
-                  (1 << 19) |     /* CbpDcY */
-                  (1 << 18) |     /* CbpDcU */
-                  (1 << 17) |     /* CbpDcV */
-                  (0 << 15) |     /* Transform8x8Flag = 0*/
-                  (0 << 14) |     /* Frame based*/
-                  (0 << 13) |     /* Inter MB */
-                  (1 << 8)  |     /* MbType = P_L0_16x16 */   
-                  (0 << 7)  |     /* MBZ for frame */
-                  (0 << 6)  |     /* MBZ */
-                  (2 << 4)  |     /* MBZ for inter*/
-                  (0 << 3)  |     /* MBZ */
-                  (0 << 2)  |     /* SkipMbFlag */
-                  (0 << 0));      /* InterMbMode */
+        OUT_BCS_BATCH(batch, 0x000F000F);                         /* Code Block Pattern */  
 
-    OUT_BCS_BATCH(batch, (0xFFFF<<16) | (y << 8) | x);        /* Code Block Pattern for Y*/
-    OUT_BCS_BATCH(batch, 0x000F000F);                         /* Code Block Pattern */  
+    }
 #if 0 
     if ( slice_type == SLICE_TYPE_B) {
         OUT_BCS_BATCH(batch, (0xF<<28) | (end_mb << 26) | qp);	/* Last MB */
@@ -880,10 +885,8 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
 
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000); 
     
-    if (is_intra) {
-        dri_bo_map(vme_context->vme_output.bo , 1);
-        msg = (unsigned int *)vme_context->vme_output.bo->virtual;
-    }
+    dri_bo_map(vme_context->vme_output.bo , 1);
+    msg = (unsigned int *)vme_context->vme_output.bo->virtual;
 
     for (y = 0; y < height_in_mbs; y++) {
         for (x = 0; x < width_in_mbs; x++) { 
@@ -945,8 +948,9 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                 object_len_in_bytes = gen6_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, gen6_encoder_context, intra_mb_size);
                 msg += 4;
             } else {
-                object_len_in_bytes = gen6_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, offset, gen6_encoder_context, inter_mb_size, pSliceParameter->slice_type);
+                object_len_in_bytes = gen6_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, gen6_encoder_context, inter_mb_size, pSliceParameter->slice_type);
                 offset += 64;
+                msg += 16;
             }
 
             if (intel_batchbuffer_check_free_space(batch, object_len_in_bytes) == 0) {
@@ -963,8 +967,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                                tail_data, sizeof(tail_data) >> 2, 32,
                                sizeof(tail_data), 1, 1, 1);
 
-    if (is_intra)
-        dri_bo_unmap(vme_context->vme_output.bo);
+    dri_bo_unmap(vme_context->vme_output.bo);
 
     free(slice_header);
 

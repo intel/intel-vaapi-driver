@@ -677,8 +677,11 @@ static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,
     vme_state_message[13] = 0x01010100;
 
     for(i = 14; i < 32; i++) {
-        vme_state_message[i] = 0x00000000;
+        vme_state_message[i] = 0x11111111;
     }
+     
+    vme_state_message[18] = 0x41312111;
+    vme_state_message[19] = 0x81716151;
 
     //vme_state_message[16] = 0x42424242;			//cost function LUT set 0 for Intra
 
