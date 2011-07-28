@@ -2077,74 +2077,78 @@ i965_post_processing(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VASurfaceID in_surface_id = surface;
     VASurfaceID out_surface_id = VA_INVALID_ID;
+    
+    *has_done_scaling = 0;
 
     if (HAS_PP(i965)) {
+        struct object_surface *obj_surface;
+        VAStatus status;
+        struct i965_surface src_surface;
+        struct i965_surface dst_surface;
+
+        obj_surface = SURFACE(in_surface_id);
+
         /* Currently only support post processing for NV12 surface */
-        if (i965->render_state.interleaved_uv) {
-            struct object_surface *obj_surface;
-            VAStatus status;
-            struct i965_surface src_surface;
-            struct i965_surface dst_surface;
+        if (obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2'))
+            return out_surface_id;
 
-            if (flags & I965_PP_FLAG_DEINTERLACING) {
-                obj_surface = SURFACE(in_surface_id);
-                status = i965_CreateSurfaces(ctx,
-                                             obj_surface->orig_width,
-                                             obj_surface->orig_height,
-                                             VA_RT_FORMAT_YUV420,
-                                             1,
-                                             &out_surface_id);
-                assert(status == VA_STATUS_SUCCESS);
-                obj_surface = SURFACE(out_surface_id);
-                i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+        if (flags & I965_PP_FLAG_DEINTERLACING) {
+            status = i965_CreateSurfaces(ctx,
+                                         obj_surface->orig_width,
+                                         obj_surface->orig_height,
+                                         VA_RT_FORMAT_YUV420,
+                                         1,
+                                         &out_surface_id);
+            assert(status == VA_STATUS_SUCCESS);
+            obj_surface = SURFACE(out_surface_id);
+            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
 
-                src_surface.id = in_surface_id;
-                src_surface.flag = I965_SURFACE_SURFACE;
-                dst_surface.id = out_surface_id;
-                dst_surface.flag = I965_SURFACE_SURFACE;
+            src_surface.id = in_surface_id;
+            src_surface.flag = I965_SURFACE_SURFACE;
+            dst_surface.id = out_surface_id;
+            dst_surface.flag = I965_SURFACE_SURFACE;
 
-                i965_post_processing_internal(ctx, i965->pp_context,
-                                              &src_surface,
-                                              src_rect,
-                                              &dst_surface,
-                                              dst_rect,
-                                              PP_NV12_DNDI);
-            }
+            i965_post_processing_internal(ctx, i965->pp_context,
+                                          &src_surface,
+                                          src_rect,
+                                          &dst_surface,
+                                          dst_rect,
+                                          PP_NV12_DNDI);
+        }
 
-            if (flags & I965_PP_FLAG_AVS) {
-                struct i965_render_state *render_state = &i965->render_state;
-                struct intel_region *dest_region = render_state->draw_region;
+        if (flags & I965_PP_FLAG_AVS) {
+            struct i965_render_state *render_state = &i965->render_state;
+            struct intel_region *dest_region = render_state->draw_region;
 
-                if (out_surface_id != VA_INVALID_ID)
-                    in_surface_id = out_surface_id;
+            if (out_surface_id != VA_INVALID_ID)
+                in_surface_id = out_surface_id;
 
-                status = i965_CreateSurfaces(ctx,
-                                             dest_region->width,
-                                             dest_region->height,
-                                             VA_RT_FORMAT_YUV420,
-                                             1,
-                                             &out_surface_id);
-                assert(status == VA_STATUS_SUCCESS);
-                obj_surface = SURFACE(out_surface_id);
-                i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+            status = i965_CreateSurfaces(ctx,
+                                         dest_region->width,
+                                         dest_region->height,
+                                         VA_RT_FORMAT_YUV420,
+                                         1,
+                                         &out_surface_id);
+            assert(status == VA_STATUS_SUCCESS);
+            obj_surface = SURFACE(out_surface_id);
+            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
 
-                src_surface.id = in_surface_id;
-                src_surface.flag = I965_SURFACE_SURFACE;
-                dst_surface.id = out_surface_id;
-                dst_surface.flag = I965_SURFACE_SURFACE;
+            src_surface.id = in_surface_id;
+            src_surface.flag = I965_SURFACE_SURFACE;
+            dst_surface.id = out_surface_id;
+            dst_surface.flag = I965_SURFACE_SURFACE;
 
-                i965_post_processing_internal(ctx, i965->pp_context,
-                                              &src_surface,
-                                              src_rect,
-                                              &dst_surface,
-                                              dst_rect,
-                                              PP_NV12_AVS);
+            i965_post_processing_internal(ctx, i965->pp_context,
+                                          &src_surface,
+                                          src_rect,
+                                          &dst_surface,
+                                          dst_rect,
+                                          PP_NV12_AVS);
 
-                if (in_surface_id != surface)
-                    i965_DestroySurfaces(ctx, &in_surface_id, 1);
+            if (in_surface_id != surface)
+                i965_DestroySurfaces(ctx, &in_surface_id, 1);
                 
-                *has_done_scaling = 1;
-            }
+            *has_done_scaling = 1;
         }
     }
 
