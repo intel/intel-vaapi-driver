@@ -93,7 +93,8 @@ struct pp_module
                        const struct i965_surface *src_surface,
                        const VARectangle *src_rect,
                        const struct i965_surface *dst_surface,
-                       const VARectangle *dst_rect);
+                       const VARectangle *dst_rect,
+                       void *filter_param);
 };
 
 struct pp_static_parameter
