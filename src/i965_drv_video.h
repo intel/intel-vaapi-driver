@@ -113,12 +113,12 @@ struct encode_state
     struct buffer_store *seq_param_ext;
     struct buffer_store *pic_param_ext;
     struct buffer_store *dec_ref_pic_marking;
-    struct buffer_store *packed_sps;
-    struct buffer_store *packed_pps;
-    struct buffer_store *packed_slice_header;
+    struct buffer_store *packed_header_param[4];
+    struct buffer_store *packed_header_data[4];
     struct buffer_store **slice_params_ext;
     int max_slice_params_ext;
     int num_slice_params_ext;
+    int last_packed_header_type;
 
     VASurfaceID current_render_target;
 };

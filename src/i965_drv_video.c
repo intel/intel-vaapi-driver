@@ -863,9 +863,12 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param_ext);
         i965_release_buffer_store(&obj_context->codec_state.encode.seq_param_ext);
         i965_release_buffer_store(&obj_context->codec_state.encode.dec_ref_pic_marking);
-        i965_release_buffer_store(&obj_context->codec_state.encode.packed_sps);
-        i965_release_buffer_store(&obj_context->codec_state.encode.packed_pps);
-        i965_release_buffer_store(&obj_context->codec_state.encode.packed_slice_header);
+
+        for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.packed_header_param); i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_param[i]);
+
+        for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.packed_header_data); i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_data[i]);
 
         for (i = 0; i < obj_context->codec_state.encode.num_slice_params_ext; i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.slice_params_ext[i]);
@@ -1058,9 +1061,8 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncPictureParameterBufferExtType:
     case VAEncSliceParameterBufferExtType:
     case VAEncDecRefPicMarkingBufferH264Type:
-    case VAEncPackedSequenceParameterBufferType:
-    case VAEncPackedPictureParameterBufferType:
-    case VAEncPackedSliceParameterBufferType:
+    case VAEncPackedHeaderParameterBufferType:
+    case VAEncPackedHeaderDataBufferType:
     case VAProcPipelineParameterBufferType:
     case VAProcInputParameterBufferType:
     case VAProcFilterBaseParameterBufferType:
@@ -1123,12 +1125,36 @@ i965_create_buffer_internal(VADriverContextP ctx,
             dri_bo_subdata(buffer_store->bo, 0, size * num_elements, data);
         }
 
+    } else if (type == VAEncPackedHeaderParameterBufferType) {
+        VAEncPackedHeaderParameterBuffer *param;
+        int msize;
+
+        assert(data);
+        assert(num_elements == 1);
+        assert(size == sizeof(*param));
+
+        param = (VAEncPackedHeaderParameterBuffer *)data;
+        msize = ALIGN(size, 32) + param->num_headers * sizeof(int) * 2;
+        buffer_store->buffer = malloc(msize);
+        assert(buffer_store->buffer);
+
+        memcpy(buffer_store->buffer,
+               data, 
+               size);
+        memcpy((unsigned char *)buffer_store->buffer + ALIGN(size, 32),
+               param->length_in_bits,
+               param->num_headers * sizeof(int));
+        memcpy((unsigned char *)buffer_store->buffer + ALIGN(size, 32) + param->num_headers * sizeof(int),
+               param->offset_in_bytes,
+               param->num_headers * sizeof(int));
+
+        param = (VAEncPackedHeaderParameterBuffer *)buffer_store->buffer;
+        param->length_in_bits = (unsigned int *)((unsigned char *)buffer_store->buffer + ALIGN(size, 32));
+        param->offset_in_bytes = (unsigned int *)((unsigned char *)buffer_store->buffer + ALIGN(size, 32) + param->num_headers * sizeof(int));
     } else {
         int msize = size;
         
-        if (type == VAEncPackedSequenceParameterBufferType ||
-            type == VAEncPackedPictureParameterBufferType ||
-            type == VAEncPackedSliceParameterBufferType) {
+        if (type == VAEncPackedHeaderDataBufferType) {
             msize = ALIGN(size, 4);
         }
 
@@ -1347,16 +1373,20 @@ i965_BeginPicture(VADriverContextP ctx,
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param_ext);
         i965_release_buffer_store(&obj_context->codec_state.encode.seq_param_ext);
         i965_release_buffer_store(&obj_context->codec_state.encode.dec_ref_pic_marking);
-        i965_release_buffer_store(&obj_context->codec_state.encode.packed_sps);
-        i965_release_buffer_store(&obj_context->codec_state.encode.packed_pps);
-        i965_release_buffer_store(&obj_context->codec_state.encode.packed_slice_header);
+
+
+        for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.packed_header_param); i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_param[i]);
+
+        for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.packed_header_data); i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_data[i]);
 
         for (i = 0; i < obj_context->codec_state.encode.num_slice_params_ext; i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.slice_params_ext[i]);
 
         obj_context->codec_state.encode.num_slice_params_ext = 0;
-
         obj_context->codec_state.encode.current_render_target = render_target;     /*This is input new frame*/
+        obj_context->codec_state.encode.last_packed_header_type = 0;
     } else {
         obj_context->codec_state.decode.current_render_target = render_target;
         i965_release_buffer_store(&obj_context->codec_state.decode.pic_param);
@@ -1477,13 +1507,42 @@ DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(iqmatrix, iq_matrix)
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(sequence_parameter_ext, seq_param_ext)
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_parameter_ext, pic_param_ext)
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(dec_ref_pic_marking, dec_ref_pic_marking)
-DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(packed_sps, packed_sps)
-DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(packed_pps, packed_pps)
-DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(packed_slice_header, packed_slice_header)
 
 #define DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(name, member) DEF_RENDER_MULTI_BUFFER_FUNC(encode, name, member)
 DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
 DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter_ext, slice_params_ext)
+
+static VAStatus
+i965_encoder_render_packed_header_parameter_buffer(VADriverContextP ctx,
+                                                   struct object_context *obj_context,
+                                                   struct object_buffer *obj_buffer,
+                                                   VAEncPackedHeaderType type)
+{
+    struct encode_state *encode = &obj_context->codec_state.encode;
+
+    assert(obj_buffer->buffer_store->bo == NULL);
+    assert(obj_buffer->buffer_store->buffer);
+    i965_release_buffer_store(&encode->packed_header_param[type]);
+    i965_reference_buffer_store(&encode->packed_header_param[type], obj_buffer->buffer_store);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+i965_encoder_render_packed_header_data_buffer(VADriverContextP ctx,
+                                              struct object_context *obj_context,
+                                              struct object_buffer *obj_buffer,
+                                              VAEncPackedHeaderType type)
+{
+    struct encode_state *encode = &obj_context->codec_state.encode;
+
+    assert(obj_buffer->buffer_store->bo == NULL);
+    assert(obj_buffer->buffer_store->buffer);
+    i965_release_buffer_store(&encode->packed_header_data[type]);
+    i965_reference_buffer_store(&encode->packed_header_data[type], obj_buffer->buffer_store);
+
+    return VA_STATUS_SUCCESS;
+}
 
 static VAStatus 
 i965_encoder_render_picture(VADriverContextP ctx,
@@ -1541,17 +1600,32 @@ i965_encoder_render_picture(VADriverContextP ctx,
             vaStatus = I965_RENDER_ENCODE_BUFFER(dec_ref_pic_marking);
             break;
 
-        case VAEncPackedSequenceParameterBufferType:
-            vaStatus = I965_RENDER_ENCODE_BUFFER(packed_sps);
-            break;
+        case VAEncPackedHeaderParameterBufferType:
+        {
+            struct encode_state *encode = &obj_context->codec_state.encode;
+            VAEncPackedHeaderParameterBuffer *param = (VAEncPackedHeaderParameterBuffer *)obj_buffer->buffer_store->buffer;
+            encode->last_packed_header_type = param->type;
 
-        case VAEncPackedPictureParameterBufferType:
-            vaStatus = I965_RENDER_ENCODE_BUFFER(packed_pps);
+            vaStatus = i965_encoder_render_packed_header_parameter_buffer(ctx,
+                                                                          obj_context,
+                                                                          obj_buffer,
+                                                                          encode->last_packed_header_type);
             break;
-            
-        case VAEncPackedSliceParameterBufferType:
-            vaStatus = I965_RENDER_ENCODE_BUFFER(packed_slice_header);
-            break;
+        }
+
+        case VAEncPackedHeaderDataBufferType:
+        {
+            struct encode_state *encode = &obj_context->codec_state.encode;
+
+            assert(encode->last_packed_header_type == VAEncPackedHeaderSPS ||
+                   encode->last_packed_header_type == VAEncPackedHeaderPPS ||
+                   encode->last_packed_header_type == VAEncPackedHeaderSlice);
+            vaStatus = i965_encoder_render_packed_header_data_buffer(ctx, 
+                                                                     obj_context,
+                                                                     obj_buffer,
+                                                                     encode->last_packed_header_type);
+            break;       
+        }
 
         default:
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;

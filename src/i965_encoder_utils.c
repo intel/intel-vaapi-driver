@@ -196,7 +196,7 @@ slice_header(avc_bitstream *bs,
              VAEncSliceParameterBufferH264Ext *slice_param,
              VAEncH264DecRefPicMarkingBuffer *dec_ref_pic_marking_param)
 {
-    int first_mb_in_slice = sps_param->picture_width_in_mbs * slice_param->start_row_number;
+    int first_mb_in_slice = slice_param->starting_macroblock_address;
 
     avc_bitstream_put_ue(bs, first_mb_in_slice);        /* first_mb_in_slice: 0 */
     avc_bitstream_put_ue(bs, slice_param->slice_type);  /* slice_type */

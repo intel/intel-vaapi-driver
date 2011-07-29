@@ -648,7 +648,7 @@ gen6_mfc_avc_insert_object(VADriverContextP ctx, struct gen6_encoder_context *ge
                   (0 << 16) |   /* always start at offset 0 */
                   (data_bits_in_last_dw << 8) |
                   (skip_emul_byte_count << 4) |
-                  (emulation_flag << 3) |
+                  (!!emulation_flag << 3) |
                   ((!!is_last_header) << 2) |
                   ((!!is_end_of_slice) << 1) |
                   (0 << 0));    /* FIXME: ??? */
@@ -823,14 +823,6 @@ static void gen6_mfc_init(VADriverContextP ctx, struct gen6_encoder_context *gen
     mfc_context->bsd_mpc_row_store_scratch_buffer.bo = bo;
 }
 
-struct packed_data_format
-{
-    unsigned int length_in_bits;
-    unsigned char flag;
-    unsigned char num_skip_bytes;
-    unsigned char pad[2];
-};
-
 void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                                       struct encode_state *encode_state,
                                       struct gen6_encoder_context *gen6_encoder_context)
@@ -857,16 +849,9 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     unsigned char *slice_header = NULL;
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0 };
-    struct packed_data_format *packed_sps = NULL, *packed_pps = NULL;
 
     if (encode_state->dec_ref_pic_marking)
         pDecRefPicMarking = (VAEncH264DecRefPicMarkingBuffer *)encode_state->dec_ref_pic_marking->buffer;
-
-    if (encode_state->packed_sps)
-        packed_sps = (struct packed_data_format *)encode_state->packed_sps->buffer;
-
-    if (encode_state->packed_pps)
-        packed_pps = (struct packed_data_format *)encode_state->packed_pps->buffer;
 
     slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, pDecRefPicMarking, &slice_header);
 
@@ -921,16 +906,44 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                                          encode_state, gen6_encoder_context, 
                                          rate_control_mode == 0, qp);
 
-                if (packed_sps) {
-                    gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
-                                               (unsigned int *)(packed_sps + 1), ALIGN(packed_sps->length_in_bits, 32) >> 5, packed_sps->length_in_bits & 0x1f,
-                                               packed_sps->num_skip_bytes, 0, 0, !!(packed_sps->flag & 0x1));
+                if (encode_state->packed_header_data[VAEncPackedHeaderSPS]) {
+                    VAEncPackedHeaderParameterBuffer *param = NULL;
+                    unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderSPS]->buffer;
+                    unsigned int length_in_bits;
+
+                    assert(encode_state->packed_header_param[VAEncPackedHeaderSPS]);
+                    param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderSPS]->buffer;
+                    length_in_bits = param->length_in_bits[0];
+
+                    gen6_mfc_avc_insert_object(ctx, 
+                                               gen6_encoder_context,
+                                               header_data,
+                                               ALIGN(length_in_bits, 32) >> 5,
+                                               length_in_bits & 0x1f,
+                                               param->skip_emulation_check_count,
+                                               0,
+                                               0,
+                                               param->insert_emulation_bytes);
                 }
 
-                if (packed_pps) {
-                    gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
-                                               (unsigned int *)(packed_pps + 1), ALIGN(packed_pps->length_in_bits, 32) >> 5, packed_pps->length_in_bits & 0x1f,
-                                               packed_pps->num_skip_bytes, 0, 0, !!(packed_pps->flag & 0x1));
+                if (encode_state->packed_header_data[VAEncPackedHeaderPPS]) {
+                    VAEncPackedHeaderParameterBuffer *param = NULL;
+                    unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderPPS]->buffer;
+                    unsigned int length_in_bits;
+
+                    assert(encode_state->packed_header_param[VAEncPackedHeaderPPS]);
+                    param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderPPS]->buffer;
+                    length_in_bits = param->length_in_bits[0];
+
+                    gen6_mfc_avc_insert_object(ctx, 
+                                               gen6_encoder_context,
+                                               header_data,
+                                               ALIGN(length_in_bits, 32) >> 5,
+                                               length_in_bits & 0x1f,
+                                               param->skip_emulation_check_count,
+                                               0,
+                                               0,
+                                               param->insert_emulation_bytes);
                 }
 
                 gen6_mfc_avc_insert_object(ctx, gen6_encoder_context,
