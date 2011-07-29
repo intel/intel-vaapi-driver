@@ -2784,6 +2784,20 @@ VAStatus i965_QueryVideoProcFilterCap(
     return VA_STATUS_SUCCESS;
 }
 
+VAStatus i965_QueryVideoProcReferenceFramesCap(
+    VADriverContextP ctx,
+    VAContextID context,
+    unsigned int *num_forward_reference, /* out */
+    unsigned int *num_backward_reference /* out */
+    )
+{
+
+    *num_forward_reference = 0;
+    *num_backward_reference = 0;
+
+    return VA_STATUS_SUCCESS;
+}
+
 VAStatus DLL_EXPORT
 VA_DRIVER_INIT_FUNC(VADriverContextP ctx);
 
@@ -2849,6 +2863,7 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     vtable->vaUnlockSurface = i965_UnlockSurface;
     vtable->vaQueryVideoProcPipelineCap = i965_QueryVideoProcPipelineCap;
     vtable->vaQueryVideoProcFilterCap = i965_QueryVideoProcFilterCap;
+    vtable->vaQueryVideoProcReferenceFramesCap = i965_QueryVideoProcReferenceFramesCap;
 
     //    vtable->vaDbgCopySurfaceToBuffer = i965_DbgCopySurfaceToBuffer;
 
