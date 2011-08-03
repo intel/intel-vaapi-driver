@@ -277,6 +277,12 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             attrib_list[i].value = VA_RC_VBR;
             break;
 
+        case VAConfigAttribEncHeaderPacking:
+            if (entrypoint == VAEntrypointEncSlice) {
+                attrib_list[i].value = VA_ENC_HEADER_PACKING_SLICE;
+                break;
+            }
+
         default:
             /* Do nothing */
             attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
