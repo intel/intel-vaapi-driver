@@ -2764,9 +2764,17 @@ VAStatus i965_QueryVideoProcPipelineCap(
     VAProcPipelineCap *pipeline_cap     /* out */
     )
 {
-    int i;
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    int i = 0;
 
-    for (i = 0; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++) {
+    if (HAS_VPP(i965)) {
+        pipeline_cap->filter_pipeline[i] = VAProcFilterNoiseReduction;
+        pipeline_cap->bypass[i++] = 1;
+        pipeline_cap->filter_pipeline[i] = VAProcFilterDeinterlacing;
+        pipeline_cap->bypass[i++] = 1;
+    }
+
+    for (; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++) {
         pipeline_cap->filter_pipeline[i] = VAProcFilterNone;
         pipeline_cap->bypass[i] = 1;
     }
