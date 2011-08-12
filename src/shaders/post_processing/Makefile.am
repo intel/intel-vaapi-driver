@@ -1,1 +1,1 @@
-SUBDIRS = gen5_6
+SUBDIRS = gen5_6 gen7
