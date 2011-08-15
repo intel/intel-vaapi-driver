@@ -1904,9 +1904,9 @@ gen6_pp_pipeline_setup(VADriverContextP ctx,
     intel_batchbuffer_start_atomic(batch, 0x1000);
     intel_batchbuffer_emit_mi_flush(batch);
     gen6_pp_pipeline_select(ctx, pp_context);
+    gen6_pp_state_base_address(ctx, pp_context);
     gen6_pp_curbe_load(ctx, pp_context);
     gen6_interface_descriptor_load(ctx, pp_context);
-    gen6_pp_state_base_address(ctx, pp_context);
     gen6_pp_vfe_state(ctx, pp_context);
     gen6_pp_object_walker(ctx, pp_context);
     intel_batchbuffer_end_atomic(batch);
