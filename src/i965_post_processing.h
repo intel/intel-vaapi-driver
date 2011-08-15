@@ -310,16 +310,11 @@ struct i965_post_processing_context
 
     struct {
         dri_bo *bo;
-    } curbe;
-
-    struct {
-        dri_bo *ss_bo;
-        dri_bo *s_bo;
-    } surfaces[MAX_PP_SURFACES];
+    } surface_state_binding_table;
 
     struct {
         dri_bo *bo;
-    } binding_table;
+    } curbe;
 
     struct {
         dri_bo *bo;
