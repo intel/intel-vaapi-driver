@@ -46,6 +46,14 @@
                      IS_GEN6((ctx)->intel.device_id) ||         \
                      IS_GEN7((ctx)->intel.device_id))
 
+#define SURFACE_STATE_PADDED_SIZE_0_I965        ALIGN(sizeof(struct i965_surface_state), 32)
+#define SURFACE_STATE_PADDED_SIZE_1_I965        ALIGN(sizeof(struct i965_surface_state2), 32)
+#define SURFACE_STATE_PADDED_SIZE_I965          MAX(SURFACE_STATE_PADDED_SIZE_0_I965, SURFACE_STATE_PADDED_SIZE_1_I965)
+
+#define SURFACE_STATE_PADDED_SIZE               SURFACE_STATE_PADDED_SIZE_I965
+#define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
+#define BINDING_TABLE_OFFSET                    SURFACE_STATE_OFFSET(MAX_PP_SURFACES)
+
 static const uint32_t pp_null_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/null.g4b.gen5"
 };
@@ -391,12 +399,6 @@ pp_set_surface2_tiling(struct i965_surface_state2 *ss, unsigned int tiling)
 }
 
 static void
-ironlake_pp_surface_state(struct i965_post_processing_context *pp_context)
-{
-
-}
-
-static void
 ironlake_pp_interface_descriptor_table(struct i965_post_processing_context *pp_context)
 {
     struct i965_interface_descriptor *desc;
@@ -415,8 +417,7 @@ ironlake_pp_interface_descriptor_table(struct i965_post_processing_context *pp_c
     desc->desc2.sampler_state_pointer = pp_context->sampler_state_table.bo->offset >> 5;
     desc->desc2.sampler_count = 0;
     desc->desc3.binding_table_entry_count = 0;
-    desc->desc3.binding_table_pointer = 
-        pp_context->binding_table.bo->offset >> 5; /*reloc */
+    desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
 
     dri_bo_emit_reloc(bo,
                       I915_GEM_DOMAIN_INSTRUCTION, 0,
@@ -430,43 +431,8 @@ ironlake_pp_interface_descriptor_table(struct i965_post_processing_context *pp_c
                       offsetof(struct i965_interface_descriptor, desc2),
                       pp_context->sampler_state_table.bo);
 
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_INSTRUCTION, 0,
-                      desc->desc3.binding_table_entry_count,
-                      offsetof(struct i965_interface_descriptor, desc3),
-                      pp_context->binding_table.bo);
-
     dri_bo_unmap(bo);
     pp_context->idrt.num_interface_descriptors++;
-}
-
-static void
-ironlake_pp_binding_table(struct i965_post_processing_context *pp_context)
-{
-    unsigned int *binding_table;
-    dri_bo *bo = pp_context->binding_table.bo;
-    int i;
-
-    dri_bo_map(bo, 1);
-    assert(bo->virtual);
-    binding_table = bo->virtual;
-    memset(binding_table, 0, bo->size);
-
-    for (i = 0; i < MAX_PP_SURFACES; i++) {
-        if (pp_context->surfaces[i].ss_bo) {
-            assert(pp_context->surfaces[i].s_bo);
-
-            binding_table[i] = pp_context->surfaces[i].ss_bo->offset;
-            dri_bo_emit_reloc(bo,
-                              I915_GEM_DOMAIN_INSTRUCTION, 0,
-                              0,
-                              i * sizeof(*binding_table),
-                              pp_context->surfaces[i].ss_bo);
-        }
-    
-    }
-
-    dri_bo_unmap(bo);
 }
 
 static void
@@ -512,8 +478,6 @@ static void
 ironlake_pp_states_setup(VADriverContextP ctx,
                          struct i965_post_processing_context *pp_context)
 {
-    ironlake_pp_surface_state(pp_context);
-    ironlake_pp_binding_table(pp_context);
     ironlake_pp_interface_descriptor_table(pp_context);
     ironlake_pp_vfe_state(pp_context);
     ironlake_pp_upload_constants(pp_context);
@@ -558,7 +522,7 @@ ironlake_pp_state_base_address(VADriverContextP ctx,
     BEGIN_BATCH(batch, 8);
     OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | 6);
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_RELOC(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
@@ -661,24 +625,18 @@ i965_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_cont
                           int width, int height, int pitch, int format, 
                           int index, int is_target)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_surface_state *ss;
     dri_bo *ss_bo;
     unsigned int tiling;
     unsigned int swizzle;
 
     dri_bo_get_tiling(surf_bo, &tiling, &swizzle);
-    pp_context->surfaces[index].s_bo = surf_bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    ss_bo = dri_bo_alloc(i965->intel.bufmgr, 
-                         "surface state", 
-                         sizeof(struct i965_surface_state), 
-                         4096);
+    ss_bo = pp_context->surface_state_binding_table.bo;
     assert(ss_bo);
-    pp_context->surfaces[index].ss_bo = ss_bo;
+
     dri_bo_map(ss_bo, True);
     assert(ss_bo->virtual);
-    ss = ss_bo->virtual;
+    ss = (struct i965_surface_state *)((char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index));
     memset(ss, 0, sizeof(*ss));
     ss->ss0.surface_type = I965_SURFACE_2D;
     ss->ss0.surface_format = format;
@@ -690,8 +648,9 @@ i965_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_cont
     dri_bo_emit_reloc(ss_bo,
                       I915_GEM_DOMAIN_RENDER, is_target ? I915_GEM_DOMAIN_RENDER : 0,
                       surf_bo_offset,
-                      offsetof(struct i965_surface_state, ss1),
-                      pp_context->surfaces[index].s_bo);
+                      SURFACE_STATE_OFFSET(index) + offsetof(struct i965_surface_state, ss1),
+                      surf_bo);
+    ((unsigned int *)((char *)ss_bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
     dri_bo_unmap(ss_bo);
 }
 
@@ -703,24 +662,18 @@ i965_pp_set_surface2_state(VADriverContextP ctx, struct i965_post_processing_con
                            int format, int interleave_chroma,
                            int index)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_surface_state2 *ss2;
     dri_bo *ss2_bo;
     unsigned int tiling;
     unsigned int swizzle;
 
     dri_bo_get_tiling(surf_bo, &tiling, &swizzle);
-    pp_context->surfaces[index].s_bo = surf_bo;
-    dri_bo_reference(pp_context->surfaces[index].s_bo);
-    ss2_bo = dri_bo_alloc(i965->intel.bufmgr, 
-                          "YUV surface state", 
-                          sizeof(struct i965_surface_state2), 
-                          4096);
+    ss2_bo = pp_context->surface_state_binding_table.bo;
     assert(ss2_bo);
-    pp_context->surfaces[index].ss_bo = ss2_bo;
+
     dri_bo_map(ss2_bo, True);
     assert(ss2_bo->virtual);
-    ss2 = ss2_bo->virtual;
+    ss2 = (struct i965_surface_state2 *)((char *)ss2_bo->virtual + SURFACE_STATE_OFFSET(index));
     memset(ss2, 0, sizeof(*ss2));
     ss2->ss0.surface_base_address = surf_bo->offset + surf_bo_offset;
     ss2->ss1.cbcr_pixel_offset_v_direction = 0;
@@ -735,8 +688,9 @@ i965_pp_set_surface2_state(VADriverContextP ctx, struct i965_post_processing_con
     dri_bo_emit_reloc(ss2_bo,
                       I915_GEM_DOMAIN_RENDER, 0,
                       surf_bo_offset,
-                      offsetof(struct i965_surface_state2, ss0),
+                      SURFACE_STATE_OFFSET(index) + offsetof(struct i965_surface_state2, ss0),
                       surf_bo);
+    ((unsigned int *)((char *)ss2_bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
     dri_bo_unmap(ss2_bo);
 }
 
@@ -1578,7 +1532,14 @@ ironlake_pp_initialize(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_module *pp_module;
     dri_bo *bo;
-    int i;
+
+    dri_bo_unreference(pp_context->surface_state_binding_table.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "surface state & binding table",
+                      (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_PP_SURFACES,
+                      4096);
+    assert(bo);
+    pp_context->surface_state_binding_table.bo = bo;
 
     dri_bo_unreference(pp_context->curbe.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -1587,14 +1548,6 @@ ironlake_pp_initialize(
                       4096);
     assert(bo);
     pp_context->curbe.bo = bo;
-
-    dri_bo_unreference(pp_context->binding_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "binding table",
-                      sizeof(unsigned int), 
-                      4096);
-    assert(bo);
-    pp_context->binding_table.bo = bo;
 
     dri_bo_unreference(pp_context->idrt.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr, 
@@ -1640,14 +1593,6 @@ ironlake_pp_initialize(
     assert(bo);
     pp_context->vfe_state.bo = bo;
     
-    for (i = 0; i < MAX_PP_SURFACES; i++) {
-        dri_bo_unreference(pp_context->surfaces[i].ss_bo);
-        pp_context->surfaces[i].ss_bo = NULL;
-
-        dri_bo_unreference(pp_context->surfaces[i].s_bo);
-        pp_context->surfaces[i].s_bo = NULL;
-    }
-
     memset(&pp_static_parameter, 0, sizeof(pp_static_parameter));
     memset(&pp_inline_parameter, 0, sizeof(pp_inline_parameter));
     assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
@@ -1692,7 +1637,14 @@ gen6_pp_initialize(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_module *pp_module;
     dri_bo *bo;
-    int i;
+
+    dri_bo_unreference(pp_context->surface_state_binding_table.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "surface state & binding table",
+                      (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_PP_SURFACES,
+                      4096);
+    assert(bo);
+    pp_context->surface_state_binding_table.bo = bo;
 
     dri_bo_unreference(pp_context->curbe.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -1701,14 +1653,6 @@ gen6_pp_initialize(
                       4096);
     assert(bo);
     pp_context->curbe.bo = bo;
-
-    dri_bo_unreference(pp_context->binding_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "binding table",
-                      sizeof(unsigned int), 
-                      4096);
-    assert(bo);
-    pp_context->binding_table.bo = bo;
 
     dri_bo_unreference(pp_context->idrt.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr, 
@@ -1754,14 +1698,6 @@ gen6_pp_initialize(
     assert(bo);
     pp_context->vfe_state.bo = bo;
     
-    for (i = 0; i < MAX_PP_SURFACES; i++) {
-        dri_bo_unreference(pp_context->surfaces[i].ss_bo);
-        pp_context->surfaces[i].ss_bo = NULL;
-
-        dri_bo_unreference(pp_context->surfaces[i].s_bo);
-        pp_context->surfaces[i].s_bo = NULL;
-    }
-
     memset(&pp_static_parameter, 0, sizeof(pp_static_parameter));
     memset(&pp_inline_parameter, 0, sizeof(pp_inline_parameter));
     assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
@@ -1774,35 +1710,6 @@ gen6_pp_initialize(
                               src_rect,
                               dst_surface,
                               dst_rect);
-}
-
-static void
-gen6_pp_binding_table(struct i965_post_processing_context *pp_context)
-{
-    unsigned int *binding_table;
-    dri_bo *bo = pp_context->binding_table.bo;
-    int i;
-
-    dri_bo_map(bo, 1);
-    assert(bo->virtual);
-    binding_table = bo->virtual;
-    memset(binding_table, 0, bo->size);
-
-    for (i = 0; i < MAX_PP_SURFACES; i++) {
-        if (pp_context->surfaces[i].ss_bo) {
-            assert(pp_context->surfaces[i].s_bo);
-
-            binding_table[i] = pp_context->surfaces[i].ss_bo->offset;
-            dri_bo_emit_reloc(bo,
-                              I915_GEM_DOMAIN_INSTRUCTION, 0,
-                              0,
-                              i * sizeof(*binding_table),
-                              pp_context->surfaces[i].ss_bo);
-        }
-    
-    }
-
-    dri_bo_unmap(bo);
 }
 
 static void
@@ -1825,8 +1732,7 @@ gen6_pp_interface_descriptor_table(struct i965_post_processing_context *pp_conte
     desc->desc2.sampler_state_pointer = 
         pp_context->sampler_state_table.bo->offset >> 5;
     desc->desc3.binding_table_entry_count = 0;
-    desc->desc3.binding_table_pointer = 
-        pp_context->binding_table.bo->offset >> 5; /*reloc */
+    desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
     desc->desc4.constant_urb_entry_read_offset = 0;
     desc->desc4.constant_urb_entry_read_length = 4; /* grf 1-4 */
 
@@ -1841,12 +1747,6 @@ gen6_pp_interface_descriptor_table(struct i965_post_processing_context *pp_conte
                       desc->desc2.sampler_count << 2,
                       offsetof(struct gen6_interface_descriptor_data, desc2),
                       pp_context->sampler_state_table.bo);
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_INSTRUCTION, 0,
-                      desc->desc3.binding_table_entry_count,
-                      offsetof(struct gen6_interface_descriptor_data, desc3),
-                      pp_context->binding_table.bo);
 
     dri_bo_unmap(bo);
     pp_context->idrt.num_interface_descriptors++;
@@ -1869,7 +1769,6 @@ static void
 gen6_pp_states_setup(VADriverContextP ctx,
                      struct i965_post_processing_context *pp_context)
 {
-    gen6_pp_binding_table(pp_context);
     gen6_pp_interface_descriptor_table(pp_context);
     gen6_pp_upload_constants(pp_context);
 }
@@ -1894,7 +1793,7 @@ gen6_pp_state_base_address(VADriverContextP ctx,
     BEGIN_BATCH(batch, 10);
     OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (10 - 2));
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_RELOC(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
@@ -2288,16 +2187,11 @@ i965_post_processing_context_finalize(struct i965_post_processing_context *pp_co
 {
     int i;
 
+    dri_bo_unreference(pp_context->surface_state_binding_table.bo);
+    pp_context->surface_state_binding_table.bo = NULL;
+
     dri_bo_unreference(pp_context->curbe.bo);
     pp_context->curbe.bo = NULL;
-
-    for (i = 0; i < MAX_PP_SURFACES; i++) {
-        dri_bo_unreference(pp_context->surfaces[i].ss_bo);
-        pp_context->surfaces[i].ss_bo = NULL;
-
-        dri_bo_unreference(pp_context->surfaces[i].s_bo);
-        pp_context->surfaces[i].s_bo = NULL;
-    }
 
     dri_bo_unreference(pp_context->sampler_state_table.bo);
     pp_context->sampler_state_table.bo = NULL;
@@ -2307,9 +2201,6 @@ i965_post_processing_context_finalize(struct i965_post_processing_context *pp_co
 
     dri_bo_unreference(pp_context->sampler_state_table.bo_8x8_uv);
     pp_context->sampler_state_table.bo_8x8_uv = NULL;
-
-    dri_bo_unreference(pp_context->binding_table.bo);
-    pp_context->binding_table.bo = NULL;
 
     dri_bo_unreference(pp_context->idrt.bo);
     pp_context->idrt.bo = NULL;
