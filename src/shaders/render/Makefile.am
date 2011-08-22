@@ -12,6 +12,8 @@ INTEL_G4A =				\
 	exa_wm_yuv_rgb.g4a		\
 	exa_wm_write.g4a
 
+INTEL_G4S = $(INTEL_G4A:%.g4a=%.g4s)
+
 INTEL_G4B =				\
 	exa_sf.g4b			\
 	exa_wm_xy.g4b			\
@@ -30,17 +32,14 @@ INTEL_G4B_GEN5 =				\
 	exa_wm_yuv_rgb.g4b.gen5			\
 	exa_wm_write.g4b.gen5
 
-EXTRA_DIST = $(INTEL_G4I)	\
-	     $(INTEL_G4A)       \
-	     $(INTEL_G4B)    	\
-	     $(INTEL_G4B_GEN5)
-
 INTEL_G6A =				\
 	exa_wm_src_affine.g6a 		\
 	exa_wm_src_sample_argb.g6a 	\
 	exa_wm_src_sample_planar.g6a 	\
 	exa_wm_write.g6a 		\
 	exa_wm_yuv_rgb.g6a
+
+INTEL_G6S = $(INTEL_G6A:%.g6a=%.g6s)
 
 INTEL_G6B =				\
 	exa_wm_src_affine.g6b 		\
@@ -56,6 +55,8 @@ INTEL_G7A =				\
 	exa_wm_write.g7a 		\
 	exa_wm_yuv_rgb.g7a
 
+INTEL_G7S = $(INTEL_G7A:%.g7a=%.g7s)
+
 INTEL_G7B =				\
 	exa_wm_src_affine.g7b 		\
 	exa_wm_src_sample_argb.g7b 	\
@@ -63,30 +64,54 @@ INTEL_G7B =				\
 	exa_wm_write.g7b 		\
 	exa_wm_yuv_rgb.g7b
 
+TARGETS  =
 if HAVE_GEN4ASM
+TARGETS += $(INTEL_G4B)
+TARGETS += $(INTEL_G4B_GEN5)
+TARGETS += $(INTEL_G6B)
+TARGETS += $(INTEL_G7B)
+endif
 
-SUFFIXES = .g4a .g4b .g6a .g6b .g7a .g7b
-.g4a.g4b:
-	m4 $*.g4a > $*.g4m && intel-gen4asm -o $@ $*.g4m && intel-gen4asm -g 5 -o $@.gen5 $*.g4m && rm $*.g4m
+all-local: $(TARGETS)
 
-.g6a.g6b:
-	m4 -I$(srcdir) -s $< > $*.g6m && intel-gen4asm -g 6 -o $@ $*.g6m && rm $*.g6m
+SUFFIXES = .g4a .g4s .g4b .g6a .g6s .g6b .g7a .g7s .g7b
 
-.g7a.g7b:
-	m4 -I$(srcdir) -s $< > $*.g7m && intel-gen4asm -g 7 -o $@ $*.g7m && rm $*.g7m
+$(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
+.g4a.g4s:
+	m4 $< > $@
+.g4s.g4b:
+	intel-gen4asm -o $@ $<
+.g4s.g4b.gen5:
+	intel-gen4asm -g 5 -o $@ $<
 
-$(INTEL_G4B): $(INTEL_G4I)
-$(INTEL_G6B): $(INTEL_G4I)
-$(INTEL_G7B): $(INTEL_G4I)
+$(INTEL_G6S): $(INTEL_G6A) $(INTEL_G6I)
+.g6a.g6s:
+	m4 $< > $@
+.g6s.g6b:
+	intel-gen4asm -g 6 -o $@ $<
 
-BUILT_SOURCES= $(INTEL_G4B) $(INTEL_G6B) $(INTEL_G7B)
+$(INTEL_G7S): $(INTEL_G7A) $(INTEL_G7I)
+.g7a.g7s:
+	m4 $< > $@
+.g7s.g7b:
+	intel-gen4asm -g 7 -o $@ $<
 
-clean-local:
-	-rm -f $(INTEL_G4B)
-	-rm -f $(INTEL_G4B_GEN5)
-	-rm -f $(INTEL_G6B)
-	-rm -f $(INTEL_G7B)
-endif    
+CLEANFILES = \
+	$(INTEL_G4S)		\
+	$(INTEL_G6S)		\
+	$(INTEL_G7S)		\
+	$(NULL)
+
+EXTRA_DIST = \
+	$(INTEL_G4A)		\
+	$(INTEL_G4B)		\
+	$(INTEL_G4B_GEN5)	\
+	$(INTEL_G4I)		\
+	$(INTEL_G6A)		\
+	$(INTEL_G6B)		\
+	$(INTEL_G7A)		\
+	$(INTEL_G7B)		\
+	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in

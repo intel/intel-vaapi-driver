@@ -82,6 +82,7 @@ AC_OUTPUT([
     src/Makefile
     src/shaders/Makefile
     src/shaders/h264/Makefile
+    src/shaders/h264/ildb/Makefile
     src/shaders/h264/mc/Makefile
     src/shaders/mpeg2/Makefile
     src/shaders/mpeg2/vld/Makefile

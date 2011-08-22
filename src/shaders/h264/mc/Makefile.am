@@ -7,8 +7,10 @@ INTEL_G4B = null.g4b
 
 INTEL_G4B_GEN5 = null.g4b.gen5
 
-INTEL_MC_G4B_GEN5 = avc_mc.g4b.gen5
-INTEL_MC_EXPORT_GEN5 = export.inc.gen5
+INTEL_MC_G4B		= avc_mc.g4b
+INTEL_MC_G4B_GEN5	= avc_mc.g4b.gen5
+INTEL_MC_EXPORT		= export.inc
+INTEL_MC_EXPORT_GEN5	= export.inc.gen5
 
 INTEL_MC_ASM =	\
 	add_Error_16x16_Y.asm	\
@@ -68,6 +70,18 @@ INTEL_MC_ASM =	\
 	writeRecon_C_8x4.asm	\
 	writeRecon_Y_16x8.asm	\
 	writeRecon_YC.asm
+
+INTEL_MC_INC = \
+	AllAVC_Build.inc			\
+	AllAVC_Export.inc			\
+	export.inc				\
+	header.inc				\
+	HwmcOnlyHeader.inc			\
+	inter_Header.inc			\
+	intra_Header.inc			\
+	Scoreboard_header.inc			\
+	SetHWScoreboard_header.inc		\
+	$(NULL)
 
 INTEL_ILDB_ASM = \
 	../ildb/AVC_ILDB_Child_Field_UV.asm	\
@@ -152,36 +166,50 @@ INTEL_ILDB_ASM = \
 	../ildb/writeURB_UV_Child.asm	\
 	../ildb/writeURB_Y_Child.asm
 
-EXTRA_DIST = $(INTEL_G4I)	\
-	     $(INTEL_G4A)       \
-	     $(INTEL_G4B)    	\
-	     $(INTEL_G4B_GEN5)
+INTEL_MC_GEN5_ASM = avc_mc.gen5.asm
 
+TARGETS  =
 if HAVE_GEN4ASM
+TARGETS += $(INTEL_MC_G4B_GEN5)
+endif
 
-SUFFIXES = .g4a .g4b
+all-local: $(TARGETS)
+
+SUFFIXES = .g4a .g4b .gen5.asm
+
 .g4a.g4b:
-	m4 $*.g4a > $*.g4m && intel-gen4asm -o $@ $*.g4m && intel-gen4asm -g 5 -o $@.gen5 $*.g4m && rm $*.g4m
+	m4 $*.g4a > $*.g4m			&& \
+	intel-gen4asm -o $@ $*.g4m		&& \
+	intel-gen4asm -g 5 -o $@.gen5 $*.g4m	&& \
+	rm $*.g4m
 
-$(INTEL_MC_G4B_GEN5): $(INTEL_MC_ASM) $(INTEL_ILDB_ASM)
-	@cpp -D DEV_ILK -I ../ildb/ AllAVC.asm > a.asm; \
-	../../gpp.py a.asm avc_mc.asm; \
-	intel-gen4asm -l list -a -e _export.inc -o $@ -g 5 avc_mc.asm; \
-	cpp -D DEV_ILK -I ../ildb/ AllAVC.asm > a.asm; \
-	../../gpp.py a.asm avc_mc.asm; \
-	intel-gen4asm -l list -a -e _export.inc -o $@ -g 5 avc_mc.asm; \
-	cat _export.inc | sed "s/_IP/_IP_GEN5/g" > $(INTEL_MC_EXPORT_GEN5); \
-	rm a.asm avc_mc.asm _export.inc
+$(INTEL_MC_GEN5_ASM): $(INTEL_MC_ASM) $(INTEL_MC_INC) $(INTEL_ILDB_ASM)
+	cpp -D DEV_ILK -I ../ildb/ AllAVC.asm > _mc.$@; \
+	../../gpp.py _mc.$@ $@ ; \
+	rm _mc.$@
+
+$(INTEL_MC_G4B_GEN5): $(INTEL_MC_GEN5_ASM)
+	intel-gen4asm -l list -a -e _export.inc.gen5 -o $@ -g 5 $<; \
+	cat _export.inc.gen5 | sed "s/_IP/_IP_GEN5/g" > $(INTEL_MC_EXPORT_GEN5); \
+	rm _export.inc.gen5
 
 $(INTEL_G4B): $(INTEL_G4I)
 
-BUILT_SOURCES= $(INTEL_G4B) $(INTEL_MC_G4B) $(INTEL_MC_G4B_GEN5)
+CLEANFILES = $(INTEL_MC_GEN5_ASM)
 
-clean-local:
-	-rm -f $(INTEL_G4B)
-	-rm -f $(INTEL_G4B_GEN5)
-	-rm -f $(INTEL_MC_G4B_GEN5) $(INTEL_MC_EXPORT_GEN5)
-endif    
+EXTRA_DIST = \
+	$(INTEL_G4A)		\
+	$(INTEL_G4B)    	\
+	$(INTEL_G4B_GEN5)	\
+	$(INTEL_G4I)		\
+	$(INTEL_MC_ASM)		\
+	$(INTEL_MC_EXPORT)	\
+	$(INTEL_MC_EXPORT_GEN5)	\
+	$(INTEL_MC_G4B)		\
+	$(INTEL_MC_G4B_GEN5)	\
+	$(INTEL_MC_INC)		\
+	list			\
+	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in

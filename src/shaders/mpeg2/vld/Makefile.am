@@ -1,23 +1,42 @@
-INTEL_G4I = addidct.g4i               \
-	    do_iq_intra.g4i           \
-	    do_iq_non_intra.g4i       \
-	    idct.g4i                  \
-	    iq_intra.g4i              \
-	    iq_non_intra.g4i          \
-	    motion_field_uv.g4i       \
-	    motion_field_y.g4i        \
-	    motion_frame_uv.g4i       \
-	    motion_frame_y.g4i        \
-	    read_field_x0y0_uv.g4i    \
-	    read_field_x0y0_y.g4i     \
-	    read_field_x0y1_y.g4i     \
-	    read_field_x1y0_y.g4i     \
-	    read_field_x1y1_y.g4i     \
-	    read_frame_x0y0_uv.g4i    \
-	    read_frame_x0y0_y.g4i     \
-	    read_frame_x0y1_y.g4i     \
-	    read_frame_x1y0_y.g4i     \
-	    read_frame_x1y1_y.g4i
+INTEL_G4I =					\
+	addidct.g4i				\
+	do_iq_intra.g4i				\
+	do_iq_non_intra.g4i			\
+	field_addidct.g4i			\
+	field_motion_uv.g4i			\
+	field_motion_y.g4i			\
+	field_read_x0y0_uv.g4i			\
+	field_read_x0y0_y.g4i			\
+	field_read_x0y1_uv.g4i			\
+	field_read_x0y1_y.g4i			\
+	field_read_x1y0_uv.g4i			\
+	field_read_x1y0_y.g4i			\
+	field_read_x1y1_uv.g4i			\
+	field_read_x1y1_y.g4i			\
+	idct.g4i				\
+	iq_intra.g4i				\
+	iq_non_intra.g4i			\
+	motion_field_uv.g4i			\
+	motion_field_y.g4i			\
+	motion_frame_uv.g4i			\
+	motion_frame_y.g4i			\
+	read_field_x0y0_uv.g4i			\
+	read_field_x0y0_y.g4i			\
+	read_field_x0y1_uv.g4i			\
+	read_field_x0y1_y.g4i			\
+	read_field_x1y0_uv.g4i			\
+	read_field_x1y0_y.g4i			\
+	read_field_x1y1_uv.g4i			\
+	read_field_x1y1_y.g4i			\
+	read_frame_x0y0_uv.g4i			\
+	read_frame_x0y0_y.g4i			\
+	read_frame_x0y1_uv.g4i			\
+	read_frame_x0y1_y.g4i			\
+	read_frame_x1y0_uv.g4i			\
+	read_frame_x1y0_y.g4i			\
+	read_frame_x1y1_uv.g4i			\
+	read_frame_x1y1_y.g4i			\
+	$(NULL)
 
 INTEL_G4A = frame_intra.g4a 			\
 	    frame_frame_pred_forward.g4a	\
@@ -35,6 +54,8 @@ INTEL_G4A = frame_intra.g4a 			\
 	    field_bidirect.g4a			\
 	    field_bidirect_16x8.g4a		\
 	    null.g4a
+
+INTEL_G4S = $(INTEL_G4A:%.g4a=%.g4s)
 
 INTEL_G4B = frame_intra.g4b 			\
 	    frame_frame_pred_forward.g4b	\
@@ -68,25 +89,32 @@ INTEL_G4B_GEN5 = frame_intra.g4b.gen5 		\
 	    field_bidirect.g4b.gen5		\
 	    field_bidirect_16x8.g4b.gen5
 
-EXTRA_DIST = $(INTEL_G4I)	\
-	     $(INTEL_G4A)       \
-	     $(INTEL_G4B)    	\
-	     $(INTEL_G4B_GEN5)
-
+TARGETS  =
 if HAVE_GEN4ASM
+TARGETS += $(INTEL_G4B)
+TARGETS += $(INTEL_G4B_GEN5)
+endif
 
-SUFFIXES = .g4a .g4b
-.g4a.g4b:
-	m4 $*.g4a > $*.g4m && intel-gen4asm -o $@ $*.g4m && intel-gen4asm -g 5 -o $@.gen5 $*.g4m && rm $*.g4m
+all-local: $(TARGETS)
 
-$(INTEL_G4B): $(INTEL_G4I)
+SUFFIXES = .g4a .g4s .g4b .g4b.gen5
 
-BUILT_SOURCES= $(INTEL_G4B)
+$(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
+.g4a.g4s:
+	m4 $< > $@
+.g4s.g4b:
+	intel-gen4asm -o $@ $<
+.g4s.g4b.gen5:
+	intel-gen4asm -g 5 -o $@ $<
 
-clean-local:
-	-rm -f $(INTEL_G4B)
-	-rm -f $(INTEL_G4B_GEN5)
-endif    
+CLEANFILES = $(INTEL_G4S)
+
+EXTRA_DIST = \
+	$(INTEL_G4A)		\
+	$(INTEL_G4B)		\
+	$(INTEL_G4B_GEN5)	\
+	$(INTEL_G4I)		\
+	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in
