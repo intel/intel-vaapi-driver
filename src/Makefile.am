@@ -23,11 +23,9 @@
 SUBDIRS = shaders
 
 INCLUDES = \
-	-I$(top_srcdir)		\
-	-I$(top_srcdir)/va	\
-	-I$(top_srcdir)/va/x11	\
 	-DPTHREADS		\
 	$(DRM_CFLAGS)		\
+	$(LIBVA_DEPS_CFLAGS)	\
 	$(NULL)
 
 driver_cflags = \
@@ -39,7 +37,13 @@ driver_ldflags = \
 	-module -avoid-version	\
 	-no-undefined		\
 	-Wl,--no-undefined	\
+	$(NULL)
+
+driver_libs = \
+	-lpthread		\
 	$(DRM_LIBS) -ldrm_intel	\
+	$(LIBVA_DEPS_LIBS)	\
+	$(LIBVA_X11_DEPS_LIBS)	\
 	$(NULL)
 
 source_c = \
@@ -94,6 +98,9 @@ i965_drv_video_la_LTLIBRARIES	= i965_drv_video.la
 i965_drv_video_ladir		= $(LIBVA_DRIVERS_PATH)
 i965_drv_video_la_CFLAGS	= $(driver_cflags)
 i965_drv_video_la_LDFLAGS	= $(driver_ldflags)
-i965_drv_video_la_LIBADD	= $(top_builddir)/va/libva-x11.la -lpthread
+i965_drv_video_la_LIBADD	= $(driver_libs)
 i965_drv_video_la_SOURCES	= $(source_c)
 noinst_HEADERS			= $(source_h)
+
+# Extra clean files so that maintainer-clean removes *everything*
+MAINTAINERCLEANFILES = Makefile.in config.h.in

@@ -182,3 +182,6 @@ clean-local:
 	-rm -f $(INTEL_G4B_GEN5)
 	-rm -f $(INTEL_MC_G4B_GEN5) $(INTEL_MC_EXPORT_GEN5)
 endif    
+
+# Extra clean files so that maintainer-clean removes *everything*
+MAINTAINERCLEANFILES = Makefile.in

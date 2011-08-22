@@ -35,3 +35,6 @@ clean-local:
 	-rm -f $(INTEL_G7B)
 
 endif    
+
+# Extra clean files so that maintainer-clean removes *everything*
+MAINTAINERCLEANFILES = Makefile.in

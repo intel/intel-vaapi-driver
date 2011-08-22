@@ -1,4 +1,3 @@
-
 INTEL_G4I = addidct.g4i               \
 	    do_iq_intra.g4i           \
 	    do_iq_non_intra.g4i       \
@@ -88,3 +87,6 @@ clean-local:
 	-rm -f $(INTEL_G4B)
 	-rm -f $(INTEL_G4B_GEN5)
 endif    
+
+# Extra clean files so that maintainer-clean removes *everything*
+MAINTAINERCLEANFILES = Makefile.in

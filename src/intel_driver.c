@@ -29,7 +29,7 @@
 
 #include <assert.h>
 
-#include "va_dricommon.h"
+#include <va/va_dricommon.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_memman.h"

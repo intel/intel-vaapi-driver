@@ -140,3 +140,6 @@ clean-local:
 	-rm -f $(INTEL_PP_G6B)
 
 endif    
+
+# Extra clean files so that maintainer-clean removes *everything*
+MAINTAINERCLEANFILES = Makefile.in
