@@ -41,7 +41,20 @@
   #define HW_SCOREBOARD		// HW Scoreboard should be enabled for ILK and beyond
   #undef SW_SCOREBOARD		// SW Scoreboard should be disabled for ILK and beyond
 #endif	// DEV_CTG
-#include "export.inc"
+#ifdef BOOTSTRAP
+#  ifdef ENABLE_ILDB
+#    define ALL_SPAWNED_UV_ILDB_FRAME_IP	0
+#    define SLEEP_ENTRY_UV_ILDB_FRAME_IP	0
+#    define POST_SLEEP_UV_ILDB_FRAME_IP	        0
+#    define ALL_SPAWNED_Y_ILDB_FRAME_IP	        0
+#    define SLEEP_ENTRY_Y_ILDB_FRAME_IP	        0
+#    define POST_SLEEP_Y_ILDB_FRAME_IP	        0
+#  endif
+#elif defined(DEV_ILK)
+# include "export.inc.gen5"
+#elif defined(DEV_CTG)
+# include "export.inc"
+#endif
 #if defined(_EXPORT)
 	#include "AllAVC_Export.inc"
 #elif defined(_BUILD)

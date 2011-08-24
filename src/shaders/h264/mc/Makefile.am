@@ -184,14 +184,21 @@ SUFFIXES = .g4a .g4b .gen5.asm
 	rm $*.g4m
 
 $(INTEL_MC_GEN5_ASM): $(INTEL_MC_ASM) $(INTEL_MC_INC) $(INTEL_ILDB_ASM)
-	cpp -D DEV_ILK -I ../ildb/ AllAVC.asm > _mc.$@; \
-	../../gpp.py _mc.$@ $@ ; \
-	rm _mc.$@
+	cpp -DDEV_ILK -DBOOTSTRAP -I ../ildb/ AllAVC.asm > _mc0.$@	&& \
+	../../gpp.py _mc0.$@ $@						&& \
+	intel-gen4asm -l list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $@	   \
+		-o /dev/null						&& \
+	mv tmp.$(INTEL_MC_EXPORT_GEN5) $(INTEL_MC_EXPORT_GEN5)		&& \
+	cpp -DDEV_ILK -I ../ildb/ AllAVC.asm > _mc1.$@			&& \
+	../../gpp.py _mc1.$@ $@						&& \
+	rm _mc0.$@ _mc1.$@
 
 $(INTEL_MC_G4B_GEN5): $(INTEL_MC_GEN5_ASM)
-	intel-gen4asm -l list -a -e _export.inc.gen5 -o $@ -g 5 $<; \
-	cat _export.inc.gen5 | sed "s/_IP/_IP_GEN5/g" > $(INTEL_MC_EXPORT_GEN5); \
-	rm _export.inc.gen5
+	intel-gen4asm -l list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $<	   \
+		-o $@							&& \
+	cat tmp.$(INTEL_MC_EXPORT_GEN5) | sed "s/_IP/_IP_GEN5/g"	   \
+		> $(INTEL_MC_EXPORT_GEN5)				&& \
+	rm tmp.$(INTEL_MC_EXPORT_GEN5)
 
 $(INTEL_G4B): $(INTEL_G4I)
 
