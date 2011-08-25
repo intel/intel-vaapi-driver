@@ -28,6 +28,7 @@
  */
 
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -2540,7 +2541,6 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     ctx->max_image_formats = I965_MAX_IMAGE_FORMATS;
     ctx->max_subpic_formats = I965_MAX_SUBPIC_FORMATS;
     ctx->max_display_attributes = I965_MAX_DISPLAY_ATTRIBUTES;
-    ctx->str_vendor = I965_STR_VENDOR;
 
     vtable->vaTerminate = i965_Terminate;
     vtable->vaQueryConfigEntrypoints = i965_QueryConfigEntrypoints;
@@ -2621,6 +2621,19 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
                               sizeof(struct object_subpic), 
                               SUBPIC_ID_OFFSET);
     assert(result == 0);
-    
+
+    sprintf(i965->va_vendor, "%s %s driver - %d.%d.%d",
+            INTEL_STR_DRIVER_VENDOR,
+            INTEL_STR_DRIVER_NAME,
+            INTEL_DRIVER_MAJOR_VERSION,
+            INTEL_DRIVER_MINOR_VERSION,
+            INTEL_DRIVER_MICRO_VERSION);
+
+    if (INTEL_DRIVER_PRE_VERSION > 0) {
+        const int len = strlen(i965->va_vendor);
+        sprintf(&i965->va_vendor[len], ".pre%d", INTEL_DRIVER_PRE_VERSION);
+    }
+    ctx->str_vendor = i965->va_vendor;
+
     return i965_Init(ctx);
 }
