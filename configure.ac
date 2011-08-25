@@ -9,6 +9,12 @@ m4_if(intel_driver_pre_version, [0], [], [
 m4_append([intel_driver_version], intel_driver_pre_version, [.pre])
 ])
 
+# libva minimum version requirement
+m4_define([libva_package_version], [1.0.14])
+
+# libdrm minimum version requirement
+m4_define([libdrm_version], [2.4.23])
+
 AC_PREREQ([2.57])
 AC_INIT([intel_driver], [intel_driver_version], [haihao.xiang@intel.com],
         [libva-driver-intel])
@@ -43,8 +49,13 @@ AC_C_BIGENDIAN
 AC_HEADER_STDC
 AC_SYS_LARGEFILE
 
+LIBVA_PACKAGE_VERSION=libva_package_version
+AC_SUBST(LIBVA_PACKAGE_VERSION)
+
 dnl Check for recent enough DRM
-PKG_CHECK_MODULES([DRM], [libdrm >= 2.4.23])
+LIBDRM_VERSION=libdrm_version
+PKG_CHECK_MODULES([DRM], [libdrm >= $LIBDRM_VERSION])
+AC_SUBST(LIBDRM_VERSION)
 
 dnl Check for gen4asm
 PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.2], [gen4asm=yes], [gen4asm=no])
@@ -79,6 +90,7 @@ AC_SUBST(LIBVA_DRIVERS_PATH)
 
 AC_OUTPUT([
     Makefile
+    debian.upstream/Makefile 
     src/Makefile
     src/shaders/Makefile
     src/shaders/h264/Makefile
