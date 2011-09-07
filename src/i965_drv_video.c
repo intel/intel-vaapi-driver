@@ -71,6 +71,9 @@
                                   IS_GEN6((ctx)->intel.device_id)) &&   \
                                  (ctx)->intel.has_bsd)
 
+#define HAS_JPEG(ctx)   (IS_GEN7((ctx)->intel.device_id) &&     \
+                         (ctx)->intel.has_bsd)
+
 enum {
     I965_SURFACETYPE_RGBA = 1,
     I965_SURFACETYPE_YUV,
@@ -187,6 +190,10 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileVC1Advanced;
     }
 
+    if (HAS_JPEG(i965)) {
+        profile_list[i++] = VAProfileJPEGBaseline;
+    }
+
     /* If the assert fails then I965_MAX_PROFILES needs to be bigger */
     assert(i <= I965_MAX_PROFILES);
     *num_profiles = i;
@@ -225,6 +232,11 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
     case VAProfileVC1Main:
     case VAProfileVC1Advanced:
         if (HAS_VC1(i965))
+            entrypoint_list[n++] = VAEntrypointVLD;
+        break;
+
+    case VAProfileJPEGBaseline:
+        if (HAS_JPEG(i965))
             entrypoint_list[n++] = VAEntrypointVLD;
         break;
 
@@ -341,6 +353,15 @@ i965_CreateConfig(VADriverContextP ctx,
     case VAProfileVC1Main:
     case VAProfileVC1Advanced:
         if (HAS_VC1(i965) && VAEntrypointVLD == entrypoint) {
+            vaStatus = VA_STATUS_SUCCESS;
+        } else {
+            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+
+        break;
+
+    case VAProfileJPEGBaseline:
+        if (HAS_JPEG(i965) && VAEntrypointVLD == entrypoint) {
             vaStatus = VA_STATUS_SUCCESS;
         } else {
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -486,7 +507,6 @@ i965_CreateSurfaces(VADriverContextP ctx,
             obj_surface->height = ALIGN(obj_surface->orig_height, 16);
         }
 
-        obj_surface->size = SIZE_YUV420(obj_surface->width, obj_surface->height);
         obj_surface->flags = SURFACE_REFERENCED;
         obj_surface->fourcc = 0;
         obj_surface->bo = NULL;
@@ -956,6 +976,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncSequenceParameterBufferType:
     case VAEncPictureParameterBufferType:
     case VAEncSliceParameterBufferType:
+    case VAHuffmanTableBufferType:
         /* Ok */
         break;
 
@@ -1256,6 +1277,7 @@ i965_BeginPicture(VADriverContextP ctx,
 DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(picture_parameter, pic_param)
 DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(iq_matrix, iq_matrix)
 DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(bit_plane, bit_plane)
+DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(huffman_table, huffman_table)
 
 #define DEF_RENDER_DECODE_MULTI_BUFFER_FUNC(name, member) DEF_RENDER_MULTI_BUFFER_FUNC(decode, name, member)
 DEF_RENDER_DECODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
@@ -1295,6 +1317,10 @@ i965_decoder_render_picture(VADriverContextP ctx,
 
         case VASliceDataBufferType:
             vaStatus = I965_RENDER_DECODE_BUFFER(slice_data);
+            break;
+
+        case VAHuffmanTableBufferType:
+            vaStatus = I965_RENDER_DECODE_BUFFER(huffman_table);
             break;
 
         default:
@@ -1703,17 +1729,32 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (obj_surface->bo)
+    if (obj_surface->bo) {
+        assert(obj_surface->fourcc);
+        assert(obj_surface->fourcc == fourcc);
         return;
+
+    if (fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
+        fourcc == VA_FOURCC('I', 'M', 'C', '3'))
+        obj_surface->size = ALIGN(obj_surface->width * obj_surface->height * 2, 0x1000);
+    else 
+        obj_surface->size = ALIGN(obj_surface->width * obj_surface->height * 3 / 2, 0x1000);
 
     if (tiled) {
         uint32_t tiling_mode = I915_TILING_Y; /* always uses Y-tiled format */
         unsigned long pitch;
+        unsigned long height;
+
+        if (fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
+            fourcc == VA_FOURCC('I', 'M', 'C', '3'))
+            height = ALIGN(obj_surface->height, 32) + ALIGN(obj_surface->height / 2, 32) * 2;
+        else
+            height = ALIGN(obj_surface->height, 32) + ALIGN(obj_surface->height / 2, 32);
 
         obj_surface->bo = drm_intel_bo_alloc_tiled(i965->intel.bufmgr, 
                                                    "vaapi surface",
-                                                   obj_surface->width, 
-                                                   obj_surface->height + obj_surface->height / 2,
+                                                   obj_surface->width,
+                                                   height,
                                                    1,
                                                    &tiling_mode,
                                                    &pitch,

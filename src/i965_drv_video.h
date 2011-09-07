@@ -81,6 +81,7 @@ struct decode_state
     struct buffer_store **slice_params;
     struct buffer_store *iq_matrix;
     struct buffer_store *bit_plane;
+    struct buffer_store *huffman_table;
     struct buffer_store **slice_datas;
     VASurfaceID current_render_target;
     int max_slice_params;

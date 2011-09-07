@@ -314,6 +314,11 @@
 
 #define MFD_VC1_BSD_OBJECT                      MFX(2, 2, 1, 8)
 
+#define MFX_JPEG_PIC_STATE                      MFX(2, 7, 0, 0)
+#define MFX_JPEG_HUFF_TABLE_STATE               MFX(2, 7, 0, 2)
+
+#define MFD_JPEG_BSD_OBJECT                     MFX(2, 7, 1, 8)
+
 #define I965_DEPTHFORMAT_D32_FLOAT              1
 
 #define BASE_ADDRESS_MODIFY             (1 << 0)
@@ -689,6 +694,10 @@
 #define MFX_QM_JPEG_LUMA_Y_QUANTIZER_MATRIX     0
 #define MFX_QM_JPEG_CHROMA_CB_QUANTIZER_MATRIX  1
 #define MFX_QM_JPEG_CHROMA_CR_QUANTIZER_MATRIX  2
+#define MFX_QM_JPEG_ALPHA_QUANTIZER_MATRIX      3 /* for new device */
+
+#define MFX_HUFFTABLE_ID_Y                      0
+#define MFX_HUFFTABLE_ID_UV                     1 /* UV on Ivybridge */
 
 #define MFD_MODE_VLD            0
 #define MFD_MODE_IT             1

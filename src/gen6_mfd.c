@@ -975,8 +975,8 @@ gen6_mfd_avc_decode_init(VADriverContextP ctx,
     assert(obj_surface);
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
-    gen6_mfd_init_avc_surface(ctx, pic_param, obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    gen6_mfd_init_avc_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen6_mfd_context->post_deblocking_output.bo);
     gen6_mfd_context->post_deblocking_output.bo = obj_surface->bo;
@@ -1445,8 +1445,8 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
     /* Current decoded picture */
     obj_surface = SURFACE(decode_state->current_render_target);
     assert(obj_surface);
-    gen6_mfd_init_vc1_surface(ctx, pic_param, obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    gen6_mfd_init_vc1_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen6_mfd_context->post_deblocking_output.bo);
     gen6_mfd_context->post_deblocking_output.bo = obj_surface->bo;
