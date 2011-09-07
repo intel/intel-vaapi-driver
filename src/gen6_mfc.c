@@ -1049,9 +1049,8 @@ static void gen6_mfc_bit_rate_control_context_init(struct encode_state *encode_s
     mfc_context->bit_rate_control_context[0].TargetSizeInWord = (intra_mb_size + 16)/ 16;
     mfc_context->bit_rate_control_context[1].TargetSizeInWord = (inter_mb_size + 16)/ 16;
 
-    mfc_context->bit_rate_control_context[0].MaxSizeInWord = mfc_context->bit_rate_control_context[0].TargetSizeInWord * 2;
-    mfc_context->bit_rate_control_context[1].MaxSizeInWord = mfc_context->bit_rate_control_context[1].TargetSizeInWord * 2;
-
+    mfc_context->bit_rate_control_context[0].MaxSizeInWord = mfc_context->bit_rate_control_context[0].TargetSizeInWord * 1.5;
+    mfc_context->bit_rate_control_context[1].MaxSizeInWord = mfc_context->bit_rate_control_context[1].TargetSizeInWord * 1.5;
 }
 
 static int gen6_mfc_bit_rate_control_context_update(struct encode_state *encode_state, 
@@ -1060,23 +1059,37 @@ static int gen6_mfc_bit_rate_control_context_update(struct encode_state *encode_
 {
     VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer; 
     int control_index = 1 - (pSliceParameter->slice_type == SLICE_TYPE_I);
-    
+    int oldQp = mfc_context->bit_rate_control_context[control_index].QpPrimeY;
+
     /*
     printf("conrol_index = %d, start_qp = %d, result = %d, target = %d\n", control_index, 
             mfc_context->bit_rate_control_context[control_index].QpPrimeY, current_frame_size,
             mfc_context->bit_rate_control_context[control_index].target_frame_size );
     */
-    if ( current_frame_size > mfc_context->bit_rate_control_context[control_index].target_frame_size * 1.20 ) {
+
+    if ( current_frame_size > mfc_context->bit_rate_control_context[control_index].target_frame_size * 4.0 ) {
+        mfc_context->bit_rate_control_context[control_index].QpPrimeY += 4;
+    } else if ( current_frame_size > mfc_context->bit_rate_control_context[control_index].target_frame_size * 2.0 ) {
+        mfc_context->bit_rate_control_context[control_index].QpPrimeY += 3;
+    } else if ( current_frame_size > mfc_context->bit_rate_control_context[control_index].target_frame_size * 1.50 ) {
+        mfc_context->bit_rate_control_context[control_index].QpPrimeY += 2;
+    } else if ( current_frame_size > mfc_context->bit_rate_control_context[control_index].target_frame_size * 1.20 ) {
         mfc_context->bit_rate_control_context[control_index].QpPrimeY ++;
-        if ( mfc_context->bit_rate_control_context[control_index].QpPrimeY > 51)
-            mfc_context->bit_rate_control_context[control_index].QpPrimeY = 51;
-        return 0;
+    } else if (current_frame_size < mfc_context->bit_rate_control_context[control_index].target_frame_size * 0.30 )  {
+         mfc_context->bit_rate_control_context[control_index].QpPrimeY -= 3;
+    } else if (current_frame_size < mfc_context->bit_rate_control_context[control_index].target_frame_size * 0.50 )  {
+         mfc_context->bit_rate_control_context[control_index].QpPrimeY -= 2;
     } else if (current_frame_size < mfc_context->bit_rate_control_context[control_index].target_frame_size * 0.80 )  {
          mfc_context->bit_rate_control_context[control_index].QpPrimeY --;
-        if ( mfc_context->bit_rate_control_context[control_index].QpPrimeY < 1)
-            mfc_context->bit_rate_control_context[control_index].QpPrimeY = 1;
-        return 0;
     }
+    
+    if ( mfc_context->bit_rate_control_context[control_index].QpPrimeY > 51)
+        mfc_context->bit_rate_control_context[control_index].QpPrimeY = 51;
+    if ( mfc_context->bit_rate_control_context[control_index].QpPrimeY < 1)
+        mfc_context->bit_rate_control_context[control_index].QpPrimeY = 1;
+ 
+    if ( mfc_context->bit_rate_control_context[control_index].QpPrimeY != oldQp)
+        return 0;
 
     return 1;
 }
@@ -1241,7 +1254,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     int rate_control_mode = pSequenceParameter->rate_control_method;  
-    int MAX_CBR_INTERATE = 5;
+    int MAX_CBR_INTERATE = 4;
     int current_frame_bits_size;
     int i;
  
