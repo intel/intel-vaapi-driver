@@ -53,6 +53,15 @@ struct gen7_avc_surface
 #define GEN7_VC1_ADVANCED_PROFILE       2
 #define GEN7_VC1_RESERVED_PROFILE       3
 
+#define GEN7_YUV400                     0
+#define GEN7_YUV420                     1
+#define GEN7_YUV422H_2Y                 2
+#define GEN7_YUV444                     3
+#define GEN7_YUV411                     4
+#define GEN7_YUV422V_2Y                 5
+#define GEN7_YUV422H_4Y                 6
+#define GEN7_YUV422V_4Y                 7
+
 struct gen7_vc1_surface
 {
     dri_bo *dmv;

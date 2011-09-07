@@ -120,7 +120,7 @@ gen7_mfd_avc_frame_store_index(VADriverContextP ctx,
             struct object_surface *obj_surface = SURFACE(ref_pic->picture_id);
             
             assert(obj_surface);
-            i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+            i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
             for (frame_idx = 0; frame_idx < ARRAY_ELEMS(gen7_mfd_context->reference_surface); frame_idx++) {
                 for (j = 0; j < ARRAY_ELEMS(gen7_mfd_context->reference_surface); j++) {
@@ -234,7 +234,7 @@ gen7_mfd_pipe_mode_select(VADriverContextP ctx,
            standard_select == MFX_FORMAT_VC1 ||
            standard_select == MFX_FORMAT_JPEG);
 
-    BEGIN_BCS_BATCH(batch, 5); /* FIXME: 5 ??? */
+    BEGIN_BCS_BATCH(batch, 5);
     OUT_BCS_BATCH(batch, MFX_PIPE_MODE_SELECT | (5 - 2));
     OUT_BCS_BATCH(batch,
                   (MFX_LONG_MODE << 17) | /* Currently only support long format */
@@ -265,8 +265,14 @@ gen7_mfd_surface_state(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface = SURFACE(decode_state->current_render_target);
+    unsigned int y_cb_offset;
+    unsigned int y_cr_offset;
+
     assert(obj_surface);
-    
+
+    y_cb_offset = obj_surface->y_cb_offset;
+    y_cr_offset = obj_surface->y_cr_offset;
+
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFX_SURFACE_STATE | (6 - 2));
     OUT_BCS_BATCH(batch, 0);
@@ -275,16 +281,18 @@ gen7_mfd_surface_state(VADriverContextP ctx,
                   ((obj_surface->orig_width - 1) << 4));
     OUT_BCS_BATCH(batch,
                   (MFX_SURFACE_PLANAR_420_8 << 28) | /* 420 planar YUV surface */
-                  (1 << 27) | /* FIXME: set to 0 for JPEG */
-                  (0 << 22) | /* surface object control state, FIXME??? */
+                  ((standard_select != MFX_FORMAT_JPEG) << 27) | /* interleave chroma, set to 0 for JPEG */
+                  (0 << 22) | /* surface object control state, ignored */
                   ((obj_surface->width - 1) << 3) | /* pitch */
-                  (0 << 2)  | /* must be 0 for interleave U/V */
+                  (0 << 2)  | /* must be 0 */
                   (1 << 1)  | /* must be tiled */
                   (I965_TILEWALK_YMAJOR << 0));  /* tile walk, must be 1 */
     OUT_BCS_BATCH(batch,
-                  (0 << 16) | /* FIXME: fix it for JPEG */
-                  (obj_surface->height)); /* FIXME: fix it for JPEG */
-    OUT_BCS_BATCH(batch, 0); /* FIXME: fix it for JPEG */
+                  (0 << 16) | /* X offset for U(Cb), must be 0 */
+                  (y_cb_offset << 0)); /* Y offset for U(Cb) */
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) | /* X offset for V(Cr), must be 0 */
+                  (y_cr_offset << 0)); /* Y offset for V(Cr), must be 0 for video codec, non-zoro for JPEG */
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -903,8 +911,8 @@ gen7_mfd_avc_decode_init(VADriverContextP ctx,
     assert(obj_surface);
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
     gen7_mfd_init_avc_surface(ctx, pic_param, obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
     gen7_mfd_context->post_deblocking_output.bo = obj_surface->bo;
@@ -1052,7 +1060,7 @@ gen7_mfd_mpeg2_decode_init(VADriverContextP ctx,
     /* Current decoded picture */
     obj_surface = SURFACE(decode_state->current_render_target);
     assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
     dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
@@ -1381,8 +1389,8 @@ gen7_mfd_vc1_decode_init(VADriverContextP ctx,
     /* Current decoded picture */
     obj_surface = SURFACE(decode_state->current_render_target);
     assert(obj_surface);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
     gen7_mfd_init_vc1_surface(ctx, pic_param, obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
     gen7_mfd_context->post_deblocking_output.bo = obj_surface->bo;

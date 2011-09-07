@@ -477,22 +477,15 @@ i965_CreateSurfaces(VADriverContextP ctx,
         obj_surface->orig_width = width;
         obj_surface->orig_height = height;
 
-        if (IS_GEN6(i965->intel.device_id) ||
-            IS_GEN7(i965->intel.device_id)) {
-            obj_surface->width = ALIGN(obj_surface->orig_width, 128);
-            obj_surface->height = ALIGN(obj_surface->orig_height, 32);
-        } else {
-            obj_surface->width = ALIGN(obj_surface->orig_width, 16);
-            obj_surface->height = ALIGN(obj_surface->orig_height, 16);
-        }
-
-        obj_surface->size = SIZE_YUV420(obj_surface->width, obj_surface->height);
+        obj_surface->width = ALIGN(width, 16);
+        obj_surface->height = ALIGN(height, 16);
         obj_surface->flags = SURFACE_REFERENCED;
         obj_surface->fourcc = 0;
         obj_surface->bo = NULL;
         obj_surface->locked_image_id = VA_INVALID_ID;
         obj_surface->private_data = NULL;
         obj_surface->free_private_data = NULL;
+        obj_surface->subsampling = SUBSAMPLE_YUV420;
     }
 
     /* Error recovery */
@@ -1699,12 +1692,129 @@ void
 i965_check_alloc_surface_bo(VADriverContextP ctx,
                             struct object_surface *obj_surface,
                             int tiled,
-                            unsigned int fourcc)
+                            unsigned int fourcc,
+                            unsigned int subsampling)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int region_width, region_height;
 
-    if (obj_surface->bo)
+    if (obj_surface->bo) {
+        assert(obj_surface->fourcc);
+        assert(obj_surface->fourcc == fourcc);
+        assert(obj_surface->subsampling == subsampling);
         return;
+    }
+
+    obj_surface->x_cb_offset = 0; /* X offset is always 0 */
+    obj_surface->x_cr_offset = 0;
+
+    if (tiled) {
+        assert(fourcc == VA_FOURCC('N', 'V', '1', '2') ||
+               fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
+               fourcc == VA_FOURCC('I', 'M', 'C', '3'));
+
+        obj_surface->width = ALIGN(obj_surface->orig_width, 128);
+        obj_surface->height = ALIGN(obj_surface->orig_height, 32);
+        obj_surface->cb_cr_pitch = obj_surface->width;
+        region_width = obj_surface->width;
+        region_height = obj_surface->height;
+
+        if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+            assert(subsampling == SUBSAMPLE_YUV420);
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->height;
+            obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32);
+        } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
+                   fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
+            switch (subsampling) {
+            case SUBSAMPLE_YUV400:
+                obj_surface->cb_cr_width = 0;
+                obj_surface->cb_cr_height = 0;
+                break;
+
+            case SUBSAMPLE_YUV420:
+                obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+                obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+                break;
+
+            case SUBSAMPLE_YUV422H:
+                obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+                obj_surface->cb_cr_height = obj_surface->orig_height;
+                break;
+
+            case SUBSAMPLE_YUV422V:
+                obj_surface->cb_cr_width = obj_surface->orig_width;
+                obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+                break;
+
+            case SUBSAMPLE_YUV444:
+                obj_surface->cb_cr_width = obj_surface->orig_width;
+                obj_surface->cb_cr_height = obj_surface->orig_height;
+                break;
+
+            case SUBSAMPLE_YUV411:
+                obj_surface->cb_cr_width = obj_surface->orig_width / 4;
+                obj_surface->cb_cr_height = obj_surface->orig_height;
+                break;
+
+            default:
+                assert(0);
+                break;
+            }
+
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
+
+            if (fourcc == VA_FOURCC('I', 'M', 'C', '1')) {
+                obj_surface->y_cr_offset = obj_surface->height;
+                obj_surface->y_cb_offset = obj_surface->y_cr_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            } else {
+                obj_surface->y_cb_offset = obj_surface->height;
+                obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            }
+        }
+    } else {
+        assert(fourcc != VA_FOURCC('I', 'M', 'C', '1') &&
+               fourcc != VA_FOURCC('I', 'M', 'C', '3'));
+        assert(subsampling == SUBSAMPLE_YUV420);
+
+        region_width = obj_surface->width;
+        region_height = obj_surface->height;
+
+        switch (fourcc) {
+        case VA_FOURCC('N', 'V', '1', '2'):
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->height;
+            obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            region_height = obj_surface->height + obj_surface->height / 2;
+            break;
+
+        case VA_FOURCC('Y', 'V', '1', '2'):
+        case VA_FOURCC('I', '4', '2', '0'):
+            if (fourcc == VA_FOURCC('Y', 'V', '1', '2')) {
+                obj_surface->y_cr_offset = obj_surface->height;
+                obj_surface->y_cb_offset = obj_surface->height + obj_surface->height / 4;
+            } else {
+                obj_surface->y_cb_offset = obj_surface->height;
+                obj_surface->y_cr_offset = obj_surface->height + obj_surface->height / 4;
+            }
+
+            obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            obj_surface->cb_cr_pitch = obj_surface->width / 2;
+            region_height = obj_surface->height + obj_surface->height / 2;
+            break;
+
+        default:
+            assert(0);
+            break;
+        }
+    }
+
+    obj_surface->size = ALIGN(region_width * region_height, 0x1000);
 
     if (tiled) {
         uint32_t tiling_mode = I915_TILING_Y; /* always uses Y-tiled format */
@@ -1712,8 +1822,8 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         obj_surface->bo = drm_intel_bo_alloc_tiled(i965->intel.bufmgr, 
                                                    "vaapi surface",
-                                                   obj_surface->width, 
-                                                   obj_surface->height + obj_surface->height / 2,
+                                                   region_width,
+                                                   region_height,
                                                    1,
                                                    &tiling_mode,
                                                    &pitch,
@@ -1728,6 +1838,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
     }
 
     obj_surface->fourcc = fourcc;
+    obj_surface->subsampling = subsampling;
     assert(obj_surface->bo);
 }
 
@@ -1812,7 +1923,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         }
     }
 
-    i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), image->format.fourcc);
+    i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), image->format.fourcc, SUBSAMPLE_YUV420);
     va_status = i965_create_buffer_internal(ctx, 0, VAImageBufferType,
                                             obj_surface->size, 1, NULL, obj_surface->bo, &image->buf);
     if (va_status != VA_STATUS_SUCCESS)
