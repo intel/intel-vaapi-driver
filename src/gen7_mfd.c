@@ -235,7 +235,7 @@ gen7_mfd_pipe_mode_select(VADriverContextP ctx,
            standard_select == MFX_FORMAT_VC1 ||
            standard_select == MFX_FORMAT_JPEG);
 
-    BEGIN_BCS_BATCH(batch, 5); /* FIXME: 5 ??? */
+    BEGIN_BCS_BATCH(batch, 5);
     OUT_BCS_BATCH(batch, MFX_PIPE_MODE_SELECT | (5 - 2));
     OUT_BCS_BATCH(batch,
                   (MFX_LONG_MODE << 17) | /* Currently only support long format */
@@ -266,7 +266,21 @@ gen7_mfd_surface_state(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface = SURFACE(decode_state->current_render_target);
+    unsigned int y_cb_offset;
+    unsigned int y_cr_offset;
+
     assert(obj_surface);
+
+    if (obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '1')) {
+        y_cb_offset = ALIGN(obj_surface->height, 32) + ALIGN(obj_surface->height / 2, 32);
+        y_cr_offset = ALIGN(obj_surface->height, 32);
+    } else if (obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
+        y_cb_offset = ALIGN(obj_surface->height, 32);
+        y_cr_offset = ALIGN(obj_surface->height, 32) + ALIGN(obj_surface->height / 2, 32);
+    } else {
+        y_cb_offset = ALIGN(obj_surface->height, 32);
+        y_cr_offset = 0;
+    }
     
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFX_SURFACE_STATE | (6 - 2));
@@ -276,16 +290,18 @@ gen7_mfd_surface_state(VADriverContextP ctx,
                   ((obj_surface->orig_width - 1) << 4));
     OUT_BCS_BATCH(batch,
                   (MFX_SURFACE_PLANAR_420_8 << 28) | /* 420 planar YUV surface */
-                  (1 << 27) | /* FIXME: set to 0 for JPEG */
-                  (0 << 22) | /* surface object control state, FIXME??? */
+                  ((standard_select != MFX_FORMAT_JPEG) << 27) | /* interleave chroma, set to 0 for JPEG */
+                  (0 << 22) | /* surface object control state, ignored */
                   ((obj_surface->width - 1) << 3) | /* pitch */
-                  (0 << 2)  | /* must be 0 for interleave U/V */
+                  (0 << 2)  | /* must be 0 */
                   (1 << 1)  | /* must be tiled */
                   (I965_TILEWALK_YMAJOR << 0));  /* tile walk, must be 1 */
     OUT_BCS_BATCH(batch,
-                  (0 << 16) | /* FIXME: fix it for JPEG */
-                  (obj_surface->height)); /* FIXME: fix it for JPEG */
-    OUT_BCS_BATCH(batch, 0); /* FIXME: fix it for JPEG */
+                  (0 << 16) | /* X offset for U(Cb), must be 0 */
+                  (y_cb_offset << 0)); /* Y offset for U(Cb) */
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) | /* X offset for V(Cr), must be 0 */
+                  (y_cr_offset << 0)); /* Y offset for V(Cr), must be 0 for video codec, non-zoro for JPEG */
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -987,8 +1003,8 @@ gen7_mfd_avc_decode_init(VADriverContextP ctx,
     assert(obj_surface);
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
-    gen7_mfd_init_avc_surface(ctx, pic_param, obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    gen7_mfd_init_avc_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
     gen7_mfd_context->post_deblocking_output.bo = obj_surface->bo;
@@ -1468,8 +1484,8 @@ gen7_mfd_vc1_decode_init(VADriverContextP ctx,
     /* Current decoded picture */
     obj_surface = SURFACE(decode_state->current_render_target);
     assert(obj_surface);
-    gen7_mfd_init_vc1_surface(ctx, pic_param, obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    gen7_mfd_init_vc1_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
     gen7_mfd_context->post_deblocking_output.bo = obj_surface->bo;
@@ -1983,6 +1999,293 @@ gen7_mfd_vc1_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_flush(batch);
 }
 
+static void
+gen7_mfd_jpeg_decode_init(VADriverContextP ctx,
+                          struct decode_state *decode_state,
+                          struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface;
+
+    /* Current decoded picture */
+    obj_surface = SURFACE(decode_state->current_render_target);
+    assert(obj_surface);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('I','M','C','1'));
+
+    dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
+    gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
+    dri_bo_reference(gen7_mfd_context->pre_deblocking_output.bo);
+    gen7_mfd_context->pre_deblocking_output.valid = 1;
+
+    gen7_mfd_context->post_deblocking_output.bo = NULL;
+    gen7_mfd_context->post_deblocking_output.valid = 0;
+
+    gen7_mfd_context->intra_row_store_scratch_buffer.bo = NULL;
+    gen7_mfd_context->intra_row_store_scratch_buffer.valid = 0;
+
+    gen7_mfd_context->deblocking_filter_row_store_scratch_buffer.bo = NULL;
+    gen7_mfd_context->deblocking_filter_row_store_scratch_buffer.valid = 0;
+
+    gen7_mfd_context->bsd_mpc_row_store_scratch_buffer.bo = NULL;
+    gen7_mfd_context->bsd_mpc_row_store_scratch_buffer.valid = 0;
+
+    gen7_mfd_context->mpr_row_store_scratch_buffer.bo = NULL;
+    gen7_mfd_context->mpr_row_store_scratch_buffer.valid = 0;
+
+    gen7_mfd_context->bitplane_read_buffer.bo = NULL;
+    gen7_mfd_context->bitplane_read_buffer.valid = 0;
+}
+
+static const int va_to_gen7_jpeg_rotation[4] = {
+    GEN7_JPEG_ROTATION_0,
+    GEN7_JPEG_ROTATION_90,
+    GEN7_JPEG_ROTATION_180,
+    GEN7_JPEG_ROTATION_270
+};
+
+static void
+gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
+                        struct decode_state *decode_state,
+                        struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+    VAPictureParameterBufferJPEG *pic_param;
+    int chroma_type = GEN7_YUV400;
+    int frame_width_in_blks;
+    int frame_height_in_blks;
+
+    assert(decode_state->pic_param && decode_state->pic_param->buffer);
+    pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
+
+    assert(pic_param->type == VA_JPEG_SOF0); /* only support BASELINE on Ivybridge */
+
+    if (pic_param->num_components == 1)
+        chroma_type = GEN7_YUV400;
+    else if (pic_param->num_components == 3) {
+        int h1 = pic_param->components[0].h_sampling_factor;
+        int h2 = pic_param->components[1].h_sampling_factor;
+        int h3 = pic_param->components[2].h_sampling_factor;
+        int v1 = pic_param->components[0].v_sampling_factor;
+        int v2 = pic_param->components[1].v_sampling_factor;
+        int v3 = pic_param->components[2].v_sampling_factor;
+
+        if (h1 == 2 && h2 == 1 && h3 == 1 &&
+            v1 == 2 && v2 == 1 && v3 == 1)
+            chroma_type = GEN7_YUV420;
+        else if (h1 == 2 && h2 == 1 && h3 == 1 &&
+                 v1 == 1 && v2 == 1 && v3 == 1)
+            chroma_type = GEN7_YUV422H_2Y;
+        else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+                 v1 == 1 && v2 == 1 && v3 == 1)
+            chroma_type = GEN7_YUV444;
+        else if (h1 == 4 && h2 == 1 && h3 == 1 &&
+                 v1 == 1 && v2 == 1 && v3 == 1)
+            chroma_type = GEN7_YUV411;
+        else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+                 v1 == 2 && v2 == 1 && v3 == 1)
+            chroma_type = GEN7_YUV422V_2Y;
+        else if (h1 == 2 && h2 == 1 && h3 == 1 &&
+                 v1 == 2 && v2 == 2 && v3 == 2)
+            chroma_type = GEN7_YUV422H_4Y;
+        else if (h2 == 2 && h2 == 2 && h3 == 2 &&
+                 v1 == 2 && v2 == 1 && v3 == 1)
+            chroma_type = GEN7_YUV422V_4Y;
+        else
+            assert(0);
+    }
+
+    if (chroma_type == GEN7_YUV400 &&
+        chroma_type == GEN7_YUV444 &&
+        chroma_type == GEN7_YUV422V_2Y) {
+        frame_width_in_blks = ((pic_param->image_width + 7) / 8);
+        frame_height_in_blks = ((pic_param->image_height + 7) / 8);
+    } else if (chroma_type == GEN7_YUV411) {
+        frame_width_in_blks = ((pic_param->image_width + 31) / 32) * 4;
+        frame_height_in_blks = ((pic_param->image_height + 31) / 32) * 4;
+    } else {
+        frame_width_in_blks = ((pic_param->image_width + 15) / 16) * 2;
+        frame_height_in_blks = ((pic_param->image_height + 15) / 16) * 2;
+    }
+
+    BEGIN_BCS_BATCH(batch, 3);
+    OUT_BCS_BATCH(batch, MFX_JPEG_PIC_STATE | (3 - 2));
+    OUT_BCS_BATCH(batch,
+                  (va_to_gen7_jpeg_rotation[pic_param->rotation] << 4) |    /* rotation */
+                  (chroma_type << 0));
+    OUT_BCS_BATCH(batch,
+                  ((frame_height_in_blks - 1) << 16) |   /* FrameHeightInBlks */
+                  ((frame_width_in_blks - 1) << 0));    /* FrameWidthInBlks */
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static const int va_to_gen7_jpeg_hufftable[2] = {
+    MFX_HUFFTABLE_ID_Y,
+    MFX_HUFFTABLE_ID_UV
+};
+
+static void
+gen7_mfd_jpeg_huff_table_state(VADriverContextP ctx,
+                               struct decode_state *decode_state,
+                               struct gen7_mfd_context *gen7_mfd_context)
+{
+    VAHuffmanTableBufferJPEG *huffman_table;
+    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+    int index;
+
+    if (!decode_state->huffman_table || !decode_state->huffman_table->buffer)
+        return;
+
+    huffman_table = (VAHuffmanTableBufferJPEG *)decode_state->huffman_table->buffer;
+
+    for (index = 0; index < 2; index++) {
+        if (huffman_table->huffman_table_mask & (1 << index)) {
+            int id = va_to_gen7_jpeg_hufftable[index];
+            BEGIN_BCS_BATCH(batch, 53);
+            OUT_BCS_BATCH(batch, MFX_JPEG_HUFF_TABLE_STATE | (53 - 2));
+            OUT_BCS_BATCH(batch, id);
+            intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_bits, 12);
+            intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_huffval, 12);
+            intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_bits, 16);
+            intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_huffval, 164);
+            ADVANCE_BCS_BATCH(batch);
+        }
+    }
+}
+
+static const int va_to_gen7_jpeg_qm[4] = {
+    MFX_QM_JPEG_LUMA_Y_QUANTIZER_MATRIX,
+    MFX_QM_JPEG_CHROMA_CB_QUANTIZER_MATRIX,
+    MFX_QM_JPEG_CHROMA_CR_QUANTIZER_MATRIX,
+    MFX_QM_JPEG_ALPHA_QUANTIZER_MATRIX
+};
+
+static void
+gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
+                       struct decode_state *decode_state,
+                       struct gen7_mfd_context *gen7_mfd_context)
+{
+    VAIQMatrixBufferJPEG *iq_matrix;
+    int index;
+
+    if (!decode_state->iq_matrix || !decode_state->iq_matrix->buffer)
+        return;
+
+    iq_matrix = (VAIQMatrixBufferJPEG *)decode_state->iq_matrix->buffer;
+
+    for (index = 0; index < 3; index++) {
+        if (iq_matrix->quantizer_matrix_mask & (1 << index)) {
+            int qm_type = va_to_gen7_jpeg_qm[index];
+            unsigned char *qm = iq_matrix->quantizer_matrix[index];
+
+            gen7_mfd_qm_state(ctx, qm_type, qm, 64, gen7_mfd_context);
+        }
+    }
+}
+
+static void
+gen7_mfd_jpeg_bsd_object(VADriverContextP ctx,
+                         VAPictureParameterBufferJPEG *pic_param,
+                         VASliceParameterBufferJPEG *slice_param,
+                         VASliceParameterBufferJPEG *next_slice_param,
+                         dri_bo *slice_data_bo,
+                         struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+    int scan_component_mask = 0;
+    int i;
+
+    assert(slice_param->num_components > 0);
+    assert(slice_param->num_components < 4);
+    assert(slice_param->num_components <= pic_param->num_components);
+
+    for (i = 0; i < slice_param->num_components; i++) {
+        switch (pic_param->components[slice_param->components[i].index].component_id) {
+        case VA_JPEG_COMPONENT_ID_Y:
+            scan_component_mask |= (1 << 0);
+            break;
+        case VA_JPEG_COMPONENT_ID_U:
+            scan_component_mask |= (1 << 1);
+            break;
+        case VA_JPEG_COMPONENT_ID_V:
+            scan_component_mask |= (1 << 2);
+            break;
+        default:
+            assert(0);
+            break;
+        }
+    }
+
+    BEGIN_BCS_BATCH(batch, 6);
+    OUT_BCS_BATCH(batch, MFD_JPEG_BSD_OBJECT | (6 - 2));
+    OUT_BCS_BATCH(batch, 
+                  slice_param->slice_data_size);
+    OUT_BCS_BATCH(batch, 
+                  slice_param->slice_data_offset);
+    OUT_BCS_BATCH(batch,
+                  slice_param->slice_horizontal_position << 16 |
+                  slice_param->slice_vertical_position << 0);
+    OUT_BCS_BATCH(batch,
+                  ((slice_param->num_components != 1) << 30) |  /* interleaved */
+                  (scan_component_mask << 27) |                 /* scan components */
+                  (0 << 26) |   /* disable interrupt allowed */
+                  (slice_param->count_in_mcus << 0));    /* MCU count */
+    OUT_BCS_BATCH(batch,
+                  (slice_param->restart_interval << 0));    /* RestartInterval */
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
+                             struct decode_state *decode_state,
+                             struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+    VAPictureParameterBufferJPEG *pic_param;
+    VASliceParameterBufferJPEG *slice_param, *next_slice_param, *next_slice_group_param;
+    dri_bo *slice_data_bo;
+    int i, j;
+
+    assert(decode_state->pic_param && decode_state->pic_param->buffer);
+    pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
+
+    gen7_mfd_jpeg_decode_init(ctx, decode_state, gen7_mfd_context);
+    intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
+    intel_batchbuffer_emit_mi_flush(batch);
+    gen7_mfd_pipe_mode_select(ctx, decode_state, MFX_FORMAT_JPEG, gen7_mfd_context);
+    gen7_mfd_surface_state(ctx, decode_state, MFX_FORMAT_JPEG, gen7_mfd_context);
+    gen7_mfd_pipe_buf_addr_state(ctx, decode_state, MFX_FORMAT_JPEG, gen7_mfd_context);
+    gen7_mfd_jpeg_pic_state(ctx, decode_state, gen7_mfd_context);
+    gen7_mfd_jpeg_qm_state(ctx, decode_state, gen7_mfd_context);
+    gen7_mfd_jpeg_huff_table_state(ctx, decode_state, gen7_mfd_context);
+
+    for (j = 0; j < decode_state->num_slice_params; j++) {
+        assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
+        slice_param = (VASliceParameterBufferJPEG *)decode_state->slice_params[j]->buffer;
+        slice_data_bo = decode_state->slice_datas[j]->bo;
+        gen7_mfd_ind_obj_base_addr_state(ctx, slice_data_bo, MFX_FORMAT_JPEG, gen7_mfd_context);
+
+        if (j == decode_state->num_slice_params - 1)
+            next_slice_group_param = NULL;
+        else
+            next_slice_group_param = (VASliceParameterBufferJPEG *)decode_state->slice_params[j + 1]->buffer;
+
+        for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
+            assert(slice_param->slice_data_flag == VA_SLICE_DATA_FLAG_ALL);
+
+            if (i < decode_state->slice_params[j]->num_elements - 1)
+                next_slice_param = slice_param + 1;
+            else
+                next_slice_param = next_slice_group_param;
+
+            gen7_mfd_jpeg_bsd_object(ctx, pic_param, slice_param, next_slice_param, slice_data_bo, gen7_mfd_context);
+            slice_param++;
+        }
+    }
+
+    intel_batchbuffer_end_atomic(batch);
+    intel_batchbuffer_flush(batch);
+}
+
 static void 
 gen7_mfd_decode_picture(VADriverContextP ctx, 
                         VAProfile profile, 
@@ -2011,6 +2314,10 @@ gen7_mfd_decode_picture(VADriverContextP ctx,
     case VAProfileVC1Main:
     case VAProfileVC1Advanced:
         gen7_mfd_vc1_decode_picture(ctx, decode_state, gen7_mfd_context);
+        break;
+
+    case VAProfileJPEGBaseline:
+        gen7_mfd_jpeg_decode_picture(ctx, decode_state, gen7_mfd_context);
         break;
 
     default:

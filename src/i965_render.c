@@ -781,18 +781,30 @@ i965_render_src_surfaces_state(VADriverContextP ctx,
         i965_render_src_surface_state(ctx, u4, region, w * h, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);
         i965_render_src_surface_state(ctx, v5, region, w * h + w * h / 4, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);     /* V */
         i965_render_src_surface_state(ctx, v6, region, w * h + w * h / 4, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);
+    } else if (obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '1')) {
+        int u3 = 5, u4 = 6, v5 = 3, v6 = 4;
+
+        i965_render_src_surface_state(ctx, u3, region, w * h, rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8_UNORM); /* U */
+        i965_render_src_surface_state(ctx, u4, region, w * h, rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8_UNORM);
+        i965_render_src_surface_state(ctx, v5, region, w * h + w * ALIGN(h / 2, 32), rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8_UNORM);     /* V */
+        i965_render_src_surface_state(ctx, v6, region, w * h + w * ALIGN(h / 2, 32), rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8_UNORM);
+    } else if (obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
+        int u3 = 3, u4 = 4, v5 = 5, v6 = 6;
+
+        i965_render_src_surface_state(ctx, u3, region, w * h, rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8_UNORM); /* U */
+        i965_render_src_surface_state(ctx, u4, region, w * h, rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8_UNORM);
+        i965_render_src_surface_state(ctx, v5, region, w * h + w * ALIGN(h / 2, 32), rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8_UNORM);     /* V */
+        i965_render_src_surface_state(ctx, v6, region, w * h + w * ALIGN(h / 2, 32), rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8_UNORM);
+    } else if (obj_surface->fourcc == VA_FOURCC('N','V','1','2')) {
+        i965_render_src_surface_state(ctx, 3, region, w * h, rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8G8_UNORM); /* UV */
+        i965_render_src_surface_state(ctx, 4, region, w * h, rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8G8_UNORM);
     } else {
-        if (obj_surface->fourcc == VA_FOURCC('N','V','1','2')) {
-            i965_render_src_surface_state(ctx, 3, region, w * h, rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8G8_UNORM); /* UV */
-            i965_render_src_surface_state(ctx, 4, region, w * h, rw / 2, rh / 2, w, I965_SURFACEFORMAT_R8G8_UNORM);
-        } else {
-            int u3 = 3, u4 = 4, v5 = 5, v6 = 6;
-            
-            i965_render_src_surface_state(ctx, u3, region, w * h, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM); /* U */
-            i965_render_src_surface_state(ctx, u4, region, w * h, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);
-            i965_render_src_surface_state(ctx, v5, region, w * h + w * h / 4, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);     /* V */
-            i965_render_src_surface_state(ctx, v6, region, w * h + w * h / 4, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);
-        }
+        int u3 = 3, u4 = 4, v5 = 5, v6 = 6;
+        
+        i965_render_src_surface_state(ctx, u3, region, w * h, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM); /* U */
+        i965_render_src_surface_state(ctx, u4, region, w * h, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);
+        i965_render_src_surface_state(ctx, v5, region, w * h + w * h / 4, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);     /* V */
+        i965_render_src_surface_state(ctx, v6, region, w * h + w * h / 4, rw / 2, rh / 2, w / 2, I965_SURFACEFORMAT_R8_UNORM);
     }
 }
 
