@@ -392,6 +392,8 @@ i965_CreateConfig(VADriverContextP ctx,
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
 
+        break;
+
     case VAProfileJPEGBaseline:
         if (HAS_JPEG(i965) && VAEntrypointVLD == entrypoint) {
             vaStatus = VA_STATUS_SUCCESS;
