@@ -46,35 +46,35 @@
                      IS_GEN7((ctx)->intel.device_id))
 
 static const uint32_t pp_null_gen5[][4] = {
-#include "shaders/post_processing/null.g4b.gen5"
+#include "shaders/post_processing/gen5_6/null.g4b.gen5"
 };
 
 static const uint32_t pp_nv12_load_save_nv12_gen5[][4] = {
-#include "shaders/post_processing/nv12_load_save_nv12.g4b.gen5"
+#include "shaders/post_processing/gen5_6/nv12_load_save_nv12.g4b.gen5"
 };
 
 static const uint32_t pp_nv12_load_save_pl3_gen5[][4] = {
-#include "shaders/post_processing/nv12_load_save_pl3.g4b.gen5"
+#include "shaders/post_processing/gen5_6/nv12_load_save_pl3.g4b.gen5"
 };
 
 static const uint32_t pp_pl3_load_save_nv12_gen5[][4] = {
-#include "shaders/post_processing/pl3_load_save_nv12.g4b.gen5"
+#include "shaders/post_processing/gen5_6/pl3_load_save_nv12.g4b.gen5"
 };
 
 static const uint32_t pp_pl3_load_save_pl3_gen5[][4] = {
-#include "shaders/post_processing/pl3_load_save_pl3.g4b.gen5"
+#include "shaders/post_processing/gen5_6/pl3_load_save_pl3.g4b.gen5"
 };
 
 static const uint32_t pp_nv12_scaling_gen5[][4] = {
-#include "shaders/post_processing/nv12_scaling_nv12.g4b.gen5"
+#include "shaders/post_processing/gen5_6/nv12_scaling_nv12.g4b.gen5"
 };
 
 static const uint32_t pp_nv12_avs_gen5[][4] = {
-#include "shaders/post_processing/nv12_avs_nv12.g4b.gen5"
+#include "shaders/post_processing/gen5_6/nv12_avs_nv12.g4b.gen5"
 };
 
 static const uint32_t pp_nv12_dndi_gen5[][4] = {
-#include "shaders/post_processing/nv12_dndi_nv12.g4b.gen5"
+#include "shaders/post_processing/gen5_6/nv12_dndi_nv12.g4b.gen5"
 };
 
 static void pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
@@ -207,35 +207,35 @@ static struct pp_module pp_modules_gen5[] = {
 };
 
 static const uint32_t pp_null_gen6[][4] = {
-#include "shaders/post_processing/null.g6b"
+#include "shaders/post_processing/gen5_6/null.g6b"
 };
 
 static const uint32_t pp_nv12_load_save_nv12_gen6[][4] = {
-#include "shaders/post_processing/nv12_load_save_nv12.g6b"
+#include "shaders/post_processing/gen5_6/nv12_load_save_nv12.g6b"
 };
 
 static const uint32_t pp_nv12_load_save_pl3_gen6[][4] = {
-#include "shaders/post_processing/nv12_load_save_pl3.g6b"
+#include "shaders/post_processing/gen5_6/nv12_load_save_pl3.g6b"
 };
 
 static const uint32_t pp_pl3_load_save_nv12_gen6[][4] = {
-#include "shaders/post_processing/pl3_load_save_nv12.g6b"
+#include "shaders/post_processing/gen5_6/pl3_load_save_nv12.g6b"
 };
 
 static const uint32_t pp_pl3_load_save_pl3_gen6[][4] = {
-#include "shaders/post_processing/pl3_load_save_pl3.g6b"
+#include "shaders/post_processing/gen5_6/pl3_load_save_pl3.g6b"
 };
 
 static const uint32_t pp_nv12_scaling_gen6[][4] = {
-#include "shaders/post_processing/nv12_scaling_nv12.g6b"
+#include "shaders/post_processing/gen5_6/nv12_scaling_nv12.g6b"
 };
 
 static const uint32_t pp_nv12_avs_gen6[][4] = {
-#include "shaders/post_processing/nv12_avs_nv12.g6b"
+#include "shaders/post_processing/gen5_6/nv12_avs_nv12.g6b"
 };
 
 static const uint32_t pp_nv12_dndi_gen6[][4] = {
-#include "shaders/post_processing/nv12_dndi_nv12.g6b"
+#include "shaders/post_processing/gen5_6/nv12_dndi_nv12.g6b"
 };
 
 static struct pp_module pp_modules_gen6[] = {
