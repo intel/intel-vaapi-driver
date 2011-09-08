@@ -105,6 +105,24 @@ struct gen6_mfc_context
     struct {
         dri_bo *bo;
     }direct_mv_buffers[NUM_MFC_DMV_BUFFERS];				//INTERNAL:	0-31 as input,32 and 33 as output
+
+    //Bit rate tracking context
+    struct {
+        unsigned int QpPrimeY;
+        unsigned int MaxQpNegModifier;
+        unsigned int MaxQpPosModifier;
+        unsigned char MaxSizeInWord;
+        unsigned char TargetSizeInWord;
+        unsigned char Correct[6];
+        unsigned char GrowInit;
+        unsigned char GrowResistance;
+        unsigned char ShrinkInit;
+        unsigned char ShrinkResistance; 
+
+        unsigned int target_mb_size;
+        unsigned int target_frame_size;
+    }bit_rate_control_context[2];                       //INTERNAL: 0 for intra frames, 1 for inter frames.
+
 };
 
 VAStatus 
