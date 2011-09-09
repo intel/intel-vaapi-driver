@@ -2835,6 +2835,16 @@ VAStatus i965_QueryVideoProcFilterCap(
     void *cap   /* out */
     ) 
 {
+    assert(cap);
+
+    if (filter == VAProcFilterNoiseReduction) {
+        VAProcFilterCapBase *base_cap = cap;
+        base_cap->range.min = 0.0;
+        base_cap->range.max = 1.0;
+        base_cap->range.default_value = 0.5;
+        base_cap->range.step = 0.1;
+    }
+
     return VA_STATUS_SUCCESS;
 }
 

@@ -1391,9 +1391,23 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
     struct i965_sampler_dndi *sampler_dndi;
+    VAProcFilterBaseParameterBuffer *dndi_filter_param = filter_param;
     int index;
     int w, h;
     int orig_w, orig_h;
+    int dn_strength = 15;
+
+    if (dndi_filter_param) {
+        int value = dndi_filter_param->value;
+        
+        if (value > 1.0)
+            value = 1.0;
+        
+        if (value < 0.0)
+            value = 0.0;
+
+        dn_strength = (int)(value * 31.0F);
+    }
 
     /* surface */
     obj_surface = SURFACE(src_surface->id);
@@ -1467,7 +1481,7 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     sampler_dndi[index].dw1.low_temporal_difference_threshold = 8;
     sampler_dndi[index].dw1.temporal_difference_threshold = 16;
 
-    sampler_dndi[index].dw2.block_noise_estimate_noise_threshold = 15;   // 0-31
+    sampler_dndi[index].dw2.block_noise_estimate_noise_threshold = dn_strength;   // 0-31
     sampler_dndi[index].dw2.block_noise_estimate_edge_threshold = 7;    // 0-15
     sampler_dndi[index].dw2.denoise_edge_threshold = 7;                 // 0-15
     sampler_dndi[index].dw2.good_neighbor_threshold = 7;                // 0-63
