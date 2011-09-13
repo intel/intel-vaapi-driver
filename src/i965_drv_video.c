@@ -2842,7 +2842,7 @@ VAStatus i965_QueryVideoProcFilterCap(
         base_cap->range.min = 0.0;
         base_cap->range.max = 1.0;
         base_cap->range.default_value = 0.5;
-        base_cap->range.step = 0.1;
+        base_cap->range.step = 0.03125; /* 1.0 / 32 */
     }
 
     return VA_STATUS_SUCCESS;
