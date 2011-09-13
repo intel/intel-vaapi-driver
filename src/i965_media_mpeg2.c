@@ -801,9 +801,9 @@ i965_media_mpeg2_upload_constants(VADriverContextP ctx,
                                   struct i965_media_context *media_context)
 {
     struct i965_mpeg2_context *i965_mpeg2_context = (struct i965_mpeg2_context *)media_context->private_context;
-    int i, j;
+    VAIQMatrixBufferMPEG2 * const gen_iq_matrix = &i965_mpeg2_context->iq_matrix;
+    int i;
     unsigned char *constant_buffer;
-    unsigned char *qmx;
     unsigned int *lib_reloc;
     int lib_reloc_offset = 0;
 
@@ -813,30 +813,36 @@ i965_media_mpeg2_upload_constants(VADriverContextP ctx,
 
     /* iq_matrix */
     if (decode_state->iq_matrix && decode_state->iq_matrix->buffer) {
-        VAIQMatrixBufferMPEG2 *iq_matrix = (VAIQMatrixBufferMPEG2 *)decode_state->iq_matrix->buffer;
+        VAIQMatrixBufferMPEG2 * const iq_matrix =
+            (VAIQMatrixBufferMPEG2 *)decode_state->iq_matrix->buffer;
 
-        /* Upload quantisation matrix in row-major order. The mplayer vaapi
-         * patch passes quantisation matrix in zig-zag order to va library.
-         * Do we need a flag in VAIQMatrixBufferMPEG2 to specify the order
-         * of the quantisation matrix?
-         */
-        qmx = constant_buffer;
+        gen_iq_matrix->load_intra_quantiser_matrix =
+            iq_matrix->load_intra_quantiser_matrix;
         if (iq_matrix->load_intra_quantiser_matrix) {
-            for (i = 0; i < 64; i++) {
-                j = zigzag_direct[i];
-                qmx[j] = iq_matrix->intra_quantiser_matrix[i];
-            }
+            for (i = 0; i < 64; i++)
+                gen_iq_matrix->intra_quantiser_matrix[zigzag_direct[i]] =
+                    iq_matrix->intra_quantiser_matrix[i];
         }
 
-        qmx = constant_buffer + 64;
+        gen_iq_matrix->load_non_intra_quantiser_matrix =
+            iq_matrix->load_non_intra_quantiser_matrix;
         if (iq_matrix->load_non_intra_quantiser_matrix) {
-            for (i = 0; i < 64; i++) {
-                j = zigzag_direct[i];
-                qmx[j] = iq_matrix->non_intra_quantiser_matrix[i];
-            }
+            for (i = 0; i < 64; i++)
+                gen_iq_matrix->non_intra_quantiser_matrix[zigzag_direct[i]] =
+                    iq_matrix->non_intra_quantiser_matrix[i];
         }
 
         /* no chroma quantisation matrices for 4:2:0 data */
+    }
+
+    if (gen_iq_matrix->load_intra_quantiser_matrix) {
+        unsigned char * const qm = constant_buffer;
+        memcpy(qm, gen_iq_matrix->intra_quantiser_matrix, 64);
+    }
+
+    if (gen_iq_matrix->load_non_intra_quantiser_matrix) {
+        unsigned char * const qm = constant_buffer + 64;
+        memcpy(qm, gen_iq_matrix->non_intra_quantiser_matrix, 64);
     }
 
     /* idct table */

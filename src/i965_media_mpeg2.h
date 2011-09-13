@@ -43,6 +43,7 @@ struct i965_media_context;
 struct i965_mpeg2_context
 {
     struct i965_kernel vld_kernels[NUM_MPEG2_VLD_KERNELS];
+    VAIQMatrixBufferMPEG2 iq_matrix;
 };
 
 void i965_media_mpeg2_decode_init(VADriverContextP ctx, struct decode_state * decode_state, struct i965_media_context *media_context);

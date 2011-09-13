@@ -65,6 +65,10 @@ struct gen7_mfd_context
 {
     struct hw_context base;
 
+    union {
+        VAIQMatrixBufferMPEG2 mpeg2;
+    } iq_matrix;
+
     struct {
         VASurfaceID surface_id;
         int frame_store_id;
