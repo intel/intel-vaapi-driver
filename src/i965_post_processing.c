@@ -85,6 +85,10 @@ static const uint32_t pp_nv12_dndi_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/nv12_dndi_nv12.g4b.gen5"
 };
 
+static const uint32_t pp_nv12_dn_gen5[][4] = {
+#include "shaders/post_processing/gen5_6/nv12_dn_nv12.g4b.gen5"
+};
+
 static void pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                const struct i965_surface *src_surface,
                                const VARectangle *src_rect,
@@ -115,6 +119,12 @@ static void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_proce
                                     const struct i965_surface *dst_surface,
                                     const VARectangle *dst_rect,
                                     void *filter_param);
+static void pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                                  const struct i965_surface *src_surface,
+                                  const VARectangle *src_rect,
+                                  const struct i965_surface *dst_surface,
+                                  const VARectangle *dst_rect,
+                                  void *filter_param);
 
 static struct pp_module pp_modules_gen5[] = {
     {
@@ -212,6 +222,18 @@ static struct pp_module pp_modules_gen5[] = {
 
         pp_nv12_dndi_initialize,
     },
+
+    {
+        {
+            "NV12 DN module",
+            PP_NV12_DN,
+            pp_nv12_dn_gen5,
+            sizeof(pp_nv12_dn_gen5),
+            NULL,
+        },
+
+        pp_nv12_dn_initialize,
+    },
 };
 
 static const uint32_t pp_null_gen6[][4] = {
@@ -244,6 +266,10 @@ static const uint32_t pp_nv12_avs_gen6[][4] = {
 
 static const uint32_t pp_nv12_dndi_gen6[][4] = {
 #include "shaders/post_processing/gen5_6/nv12_dndi_nv12.g6b"
+};
+
+static const uint32_t pp_nv12_dn_gen6[][4] = {
+#include "shaders/post_processing/gen5_6/nv12_dn_nv12.g6b"
 };
 
 static struct pp_module pp_modules_gen6[] = {
@@ -341,6 +367,18 @@ static struct pp_module pp_modules_gen6[] = {
         },
 
         pp_nv12_dndi_initialize,
+    },
+
+    {
+        {
+            "NV12 DN module",
+            PP_NV12_DN,
+            pp_nv12_dn_gen6,
+            sizeof(pp_nv12_dn_gen6),
+            NULL,
+        },
+
+        pp_nv12_dn_initialize,
     },
 };
 
@@ -1391,23 +1429,9 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->private_context;
     struct object_surface *obj_surface;
     struct i965_sampler_dndi *sampler_dndi;
-    VAProcFilterBaseParameterBuffer *dndi_filter_param = filter_param;
     int index;
     int w, h;
     int orig_w, orig_h;
-    int dn_strength = 15;
-
-    if (dndi_filter_param) {
-        int value = dndi_filter_param->value;
-        
-        if (value > 1.0)
-            value = 1.0;
-        
-        if (value < 0.0)
-            value = 0.0;
-
-        dn_strength = (int)(value * 31.0F);
-    }
 
     /* surface */
     obj_surface = SURFACE(src_surface->id);
@@ -1481,7 +1505,7 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     sampler_dndi[index].dw1.low_temporal_difference_threshold = 8;
     sampler_dndi[index].dw1.temporal_difference_threshold = 16;
 
-    sampler_dndi[index].dw2.block_noise_estimate_noise_threshold = dn_strength;   // 0-31
+    sampler_dndi[index].dw2.block_noise_estimate_noise_threshold = 15;   // 0-31
     sampler_dndi[index].dw2.block_noise_estimate_edge_threshold = 7;    // 0-15
     sampler_dndi[index].dw2.denoise_edge_threshold = 7;                 // 0-15
     sampler_dndi[index].dw2.good_neighbor_threshold = 7;                // 0-63
@@ -1539,6 +1563,191 @@ void pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
 
     pp_dndi_context->dest_w = w;
     pp_dndi_context->dest_h = h;
+}
+
+static int
+pp_dn_x_steps(void *private_context)
+{
+    return 1;
+}
+
+static int
+pp_dn_y_steps(void *private_context)
+{
+    struct pp_dn_context *pp_dn_context = private_context;
+
+    return pp_dn_context->dest_h / 8;
+}
+
+static int
+pp_dn_set_block_parameter(struct i965_post_processing_context *pp_context, int x, int y)
+{
+    pp_inline_parameter.grf5.destination_block_horizontal_origin = x * 16;
+    pp_inline_parameter.grf5.destination_block_vertical_origin = y * 8;
+
+    return 0;
+}
+
+static 
+void pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                           const struct i965_surface *src_surface,
+                           const VARectangle *src_rect,
+                           const struct i965_surface *dst_surface,
+                           const VARectangle *dst_rect,
+                           void *filter_param)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct pp_dn_context *pp_dn_context = (struct pp_dn_context *)&pp_context->private_context;
+    struct object_surface *obj_surface;
+    struct i965_sampler_dndi *sampler_dndi;
+    VAProcFilterBaseParameterBuffer *dn_filter_param = filter_param;
+    int index;
+    int w, h;
+    int orig_w, orig_h;
+    int dn_strength = 15;
+
+    if (dn_filter_param) {
+        int value = dn_filter_param->value;
+        
+        if (value > 1.0)
+            value = 1.0;
+        
+        if (value < 0.0)
+            value = 0.0;
+
+        dn_strength = (int)(value * 31.0F);
+    }
+
+    /* surface */
+    obj_surface = SURFACE(src_surface->id);
+    orig_w = obj_surface->orig_width;
+    orig_h = obj_surface->orig_height;
+    w = obj_surface->width;
+    h = obj_surface->height;
+
+    if (pp_context->stmm.bo == NULL) {
+        pp_context->stmm.bo = dri_bo_alloc(i965->intel.bufmgr,
+                                           "STMM surface",
+                                           w * h,
+                                           4096);
+        assert(pp_context->stmm.bo);
+    }
+
+    /* source UV surface index 2 */
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, w * h,
+                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              2, 0);
+
+    /* source YUV surface index 4 */
+    i965_pp_set_surface2_state(ctx, pp_context,
+                               obj_surface->bo, 0,
+                               orig_w, orig_w, w,
+                               0, h,
+                               SURFACE_FORMAT_PLANAR_420_8, 1,
+                               4);
+
+    /* source STMM surface index 20 */
+    i965_pp_set_surface_state(ctx, pp_context,
+                              pp_context->stmm.bo, 0,
+                              orig_w, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
+                              20, 1);
+
+    /* destination surface */
+    obj_surface = SURFACE(dst_surface->id);
+    orig_w = obj_surface->orig_width;
+    orig_h = obj_surface->orig_height;
+    w = obj_surface->width;
+    h = obj_surface->height;
+
+    /* destination Y surface index 7 */
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, 0,
+                              orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
+                              7, 1);
+
+    /* destination UV surface index 8 */
+    i965_pp_set_surface_state(ctx, pp_context,
+                              obj_surface->bo, w * h,
+                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              8, 1);
+    /* sampler dn */
+    dri_bo_map(pp_context->sampler_state_table.bo, True);
+    assert(pp_context->sampler_state_table.bo->virtual);
+    assert(sizeof(*sampler_dndi) == sizeof(int) * 8);
+    sampler_dndi = pp_context->sampler_state_table.bo->virtual;
+
+    /* sample dndi index 1 */
+    index = 0;
+    sampler_dndi[index].dw0.denoise_asd_threshold = 0;
+    sampler_dndi[index].dw0.denoise_history_delta = 8;          // 0-15, default is 8
+    sampler_dndi[index].dw0.denoise_maximum_history = 128;      // 128-240
+    sampler_dndi[index].dw0.denoise_stad_threshold = 0;
+
+    sampler_dndi[index].dw1.denoise_threshold_for_sum_of_complexity_measure = 64;
+    sampler_dndi[index].dw1.denoise_moving_pixel_threshold = 0;
+    sampler_dndi[index].dw1.stmm_c2 = 0;
+    sampler_dndi[index].dw1.low_temporal_difference_threshold = 8;
+    sampler_dndi[index].dw1.temporal_difference_threshold = 16;
+
+    sampler_dndi[index].dw2.block_noise_estimate_noise_threshold = dn_strength;   // 0-31
+    sampler_dndi[index].dw2.block_noise_estimate_edge_threshold = 7;    // 0-15
+    sampler_dndi[index].dw2.denoise_edge_threshold = 7;                 // 0-15
+    sampler_dndi[index].dw2.good_neighbor_threshold = 7;                // 0-63
+
+    sampler_dndi[index].dw3.maximum_stmm = 128;
+    sampler_dndi[index].dw3.multipler_for_vecm = 2;
+    sampler_dndi[index].dw3.blending_constant_across_time_for_small_values_of_stmm = 0;
+    sampler_dndi[index].dw3.blending_constant_across_time_for_large_values_of_stmm = 64;
+    sampler_dndi[index].dw3.stmm_blending_constant_select = 0;
+
+    sampler_dndi[index].dw4.sdi_delta = 8;
+    sampler_dndi[index].dw4.sdi_threshold = 128;
+    sampler_dndi[index].dw4.stmm_output_shift = 7;                      // stmm_max - stmm_min = 2 ^ stmm_output_shift
+    sampler_dndi[index].dw4.stmm_shift_up = 0;
+    sampler_dndi[index].dw4.stmm_shift_down = 0;
+    sampler_dndi[index].dw4.minimum_stmm = 0;
+
+    sampler_dndi[index].dw5.fmd_temporal_difference_threshold = 0;
+    sampler_dndi[index].dw5.sdi_fallback_mode_2_constant = 0;
+    sampler_dndi[index].dw5.sdi_fallback_mode_1_t2_constant = 0;
+    sampler_dndi[index].dw5.sdi_fallback_mode_1_t1_constant = 0;
+
+    sampler_dndi[index].dw6.dn_enable = 1;
+    sampler_dndi[index].dw6.di_enable = 0;
+    sampler_dndi[index].dw6.di_partial = 0;
+    sampler_dndi[index].dw6.dndi_top_first = 1;
+    sampler_dndi[index].dw6.dndi_stream_id = 1;
+    sampler_dndi[index].dw6.dndi_first_frame = 1;
+    sampler_dndi[index].dw6.progressive_dn = 0;
+    sampler_dndi[index].dw6.fmd_tear_threshold = 32;
+    sampler_dndi[index].dw6.fmd2_vertical_difference_threshold = 32;
+    sampler_dndi[index].dw6.fmd1_vertical_difference_threshold = 32;
+
+    sampler_dndi[index].dw7.fmd_for_1st_field_of_current_frame = 2;
+    sampler_dndi[index].dw7.fmd_for_2nd_field_of_previous_frame = 1;
+    sampler_dndi[index].dw7.vdi_walker_enable = 0;
+    sampler_dndi[index].dw7.column_width_minus1 = w / 16;
+
+    dri_bo_unmap(pp_context->sampler_state_table.bo);
+
+    /* private function & data */
+    pp_context->pp_x_steps = pp_dn_x_steps;
+    pp_context->pp_y_steps = pp_dn_y_steps;
+    pp_context->pp_set_block_parameter = pp_dn_set_block_parameter;
+
+    pp_static_parameter.grf1.statistics_surface_picth = w / 2;
+    pp_static_parameter.grf1.r1_6.di.top_field_first = 0;
+    pp_static_parameter.grf4.r4_2.di.motion_history_coefficient_m2 = 64;
+    pp_static_parameter.grf4.r4_2.di.motion_history_coefficient_m1 = 192;
+
+    pp_inline_parameter.grf5.block_count_x = w / 16;   /* 1 x N */
+    pp_inline_parameter.grf5.number_blocks = w / 16;
+    pp_inline_parameter.grf5.block_vertical_mask = 0xff;
+    pp_inline_parameter.grf5.block_horizontal_mask = 0xffff;
+
+    pp_dn_context->dest_w = w;
+    pp_dn_context->dest_h = h;
 }
 
 static void
@@ -2318,7 +2527,7 @@ static const int procfilter_to_pp_flag[10] = {
     PP_NULL,    /* VAProcFilterNone */
     PP_NULL,    /* VAProcFilterDering */
     PP_NULL,    /* VAProcFilterDeblocking */
-    PP_NV12_DNDI, /* VAProcFilterNoiseReduction */
+    PP_NV12_DN, /* VAProcFilterNoiseReduction */
     PP_NV12_DNDI, /* VAProcFilterDeinterlacing */
     PP_NULL,    /* VAProcFilterSharpening */
     PP_NULL,    /* VAProcFilterColorEnhancement */

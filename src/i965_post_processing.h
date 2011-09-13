@@ -44,9 +44,10 @@ enum
     PP_NV12_SCALING,
     PP_NV12_AVS,
     PP_NV12_DNDI,
+    PP_NV12_DN,
 };
 
-#define NUM_PP_MODULES                  8
+#define NUM_PP_MODULES                  9
 
 struct i965_post_processing_context;
 
@@ -79,6 +80,12 @@ struct pp_avs_context
 };
 
 struct pp_dndi_context
+{
+    int dest_w;
+    int dest_h;
+};
+
+struct pp_dn_context
 {
     int dest_w;
     int dest_h;
@@ -353,6 +360,7 @@ struct i965_post_processing_context
         struct pp_scaling_context pp_scaling_context;
         struct pp_avs_context pp_avs_context;
         struct pp_dndi_context pp_dndi_context;
+        struct pp_dn_context pp_dn_context;
     } private_context;
 
     int (*pp_x_steps)(void *private_context);
