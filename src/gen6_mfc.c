@@ -860,7 +860,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     int rate_control_mode = pSequenceParameter->rate_control_method; 
     unsigned char target_mb_size = mfc_context->bit_rate_control_context[1-is_intra].TargetSizeInWord;
     unsigned char max_mb_size = mfc_context->bit_rate_control_context[1-is_intra].MaxSizeInWord;
-    int qp = pPicParameter->pic_init_qp;
+    int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
     unsigned char *slice_header = NULL;
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0 };
@@ -915,7 +915,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                 gen6_mfc_avc_ref_idx_state(ctx, gen6_encoder_context);
                 gen6_mfc_avc_slice_state(ctx, pSliceParameter->slice_type, 
                                          encode_state, gen6_encoder_context, 
-                                         rate_control_mode == 0, pPicParameter->pic_init_qp);
+                                         rate_control_mode == 0, pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta);
 
                 if (encode_state->packed_header_data[VAEncPackedHeaderSPS]) {
                     VAEncPackedHeaderParameterBuffer *param = NULL;
