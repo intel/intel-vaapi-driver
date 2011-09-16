@@ -7,6 +7,7 @@
 #include "SetupVPKernel.asm"
 #include "Multiple_Loop_Head.asm"
 #include "PL2_AVS_IEF_16x8.asm"
+#include "PL16x8_PL8x4.asm"        
 #include "PL8x4_Save_NV12.asm"
 #include "Multiple_Loop.asm"
 
