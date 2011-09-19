@@ -641,14 +641,16 @@ i965_PutImage(VADriverContextP ctx,
     i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), VA_FOURCC('N', 'V', '1', '2'));
 
     src_surface.id = image;
-    src_surface.flag = I965_SURFACE_IMAGE;
+    src_surface.type = I965_SURFACE_TYPE_IMAGE;
+    src_surface.flags = I965_SURFACE_FLAG_FRAME;
     src_rect.x = src_x;
     src_rect.y = src_y;
     src_rect.width = src_width;
     src_rect.height = src_height;
 
     dst_surface.id = surface;
-    dst_surface.flag = I965_SURFACE_SURFACE;
+    dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+    dst_surface.flags = I965_SURFACE_FLAG_FRAME;
     dst_rect.x = dest_x;
     dst_rect.y = dest_y;
     dst_rect.width = dest_width;
@@ -2581,8 +2583,10 @@ i965_PutSurface(VADriverContextP ctx,
     if ((flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC)
         pp_flag |= I965_PP_FLAG_AVS;
 
-    if (flags & (VA_BOTTOM_FIELD | VA_TOP_FIELD))
-        pp_flag |= I965_PP_FLAG_DEINTERLACING;
+    if (flags & VA_TOP_FIELD)
+        pp_flag |= I965_PP_FLAG_DEINTERLACING_TOP_FISRT;
+    else if (flags & VA_BOTTOM_FIELD)
+        pp_flag |= I965_PP_FLAG_DEINTERLACING_BOTTOM_FIRST;
 
     src_rect.x      = srcx;
     src_rect.y      = srcy;

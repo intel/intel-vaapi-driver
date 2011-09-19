@@ -31,8 +31,11 @@
 
 #define MAX_PP_SURFACES 32
 
-#define I965_PP_FLAG_DEINTERLACING      1
-#define I965_PP_FLAG_AVS                2
+#define I965_PP_FLAG_DEINTERLACING_TOP_FISRT    1
+#define I965_PP_FLAG_DEINTERLACING_BOTTOM_FIRST 2
+#define I965_PP_FLAG_AVS                        4
+
+#define I965_PP_FLAG_DEINTERLACING              (I965_PP_FLAG_DEINTERLACING_TOP_FISRT | I965_PP_FLAG_DEINTERLACING_BOTTOM_FIRST)
 
 enum
 {
@@ -96,12 +99,12 @@ struct pp_module
     struct i965_kernel kernel;
     
     /* others */
-    void (*initialize)(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                       const struct i965_surface *src_surface,
-                       const VARectangle *src_rect,
-                       const struct i965_surface *dst_surface,
-                       const VARectangle *dst_rect,
-                       void *filter_param);
+    VAStatus (*initialize)(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                           const struct i965_surface *src_surface,
+                           const VARectangle *src_rect,
+                           struct i965_surface *dst_surface,
+                           const VARectangle *dst_rect,
+                           void *filter_param);
 };
 
 struct pp_static_parameter
@@ -390,7 +393,7 @@ VAStatus
 i965_image_processing(VADriverContextP ctx,
                       const struct i965_surface *src_surface,
                       const VARectangle *src_rect,
-                      const struct i965_surface *dst_surface,
+                      struct i965_surface *dst_surface,
                       const VARectangle *dst_rect);
 
 Bool
