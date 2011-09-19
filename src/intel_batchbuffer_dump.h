@@ -50,6 +50,10 @@
 #define OPCODE_MI_FLUSH                 0x04
 #define OPCODE_MI_BATCH_BUFFER_END      0x0A
 
+#ifdef I965_DEBUG
+
 int intel_batchbuffer_dump(unsigned int *data, unsigned int offset, int count, unsigned int device);
+
+#endif
 
 #endif /* _INTEL_BATCHBUFFER_DUMP_H_ */

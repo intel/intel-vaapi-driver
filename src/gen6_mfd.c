@@ -413,6 +413,7 @@ gen6_mfd_bsp_buf_base_addr_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+#if 0
 static void
 gen6_mfd_aes_state(VADriverContextP ctx,
                    struct decode_state *decode_state,
@@ -433,6 +434,7 @@ gen6_mfd_wait(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_WAIT | (1 << 8));
     ADVANCE_BCS_BATCH(batch);
 }
+#endif
 
 static void
 gen6_mfd_avc_img_state(VADriverContextP ctx,

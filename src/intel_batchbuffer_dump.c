@@ -6,6 +6,8 @@
 #include "intel_driver.h"
 #include "intel_batchbuffer_dump.h"
 
+#ifdef I965_DEBUG
+
 #define BUFFER_FAIL(_count, _len, _name) do {			\
     fprintf(gout, "Buffer size too small in %s (%d < %d)\n",	\
 	    (_name), (_count), (_len));				\
@@ -769,3 +771,5 @@ int intel_batchbuffer_dump(unsigned int *data, unsigned int offset, int count, u
 
     return failures;
 }
+
+#endif

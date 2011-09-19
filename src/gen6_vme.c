@@ -634,11 +634,11 @@ static VAStatus gen6_vme_constant_setup(VADriverContextP ctx,
                                         struct gen6_encoder_context *gen6_encoder_context)
 {
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
-    unsigned char *constant_buffer;
+    // unsigned char *constant_buffer;
 
     dri_bo_map(vme_context->curbe.bo, 1);
     assert(vme_context->curbe.bo->virtual);
-    constant_buffer = vme_context->curbe.bo->virtual;
+    // constant_buffer = vme_context->curbe.bo->virtual;
 	
     /*TODO copy buffer into CURB*/
 

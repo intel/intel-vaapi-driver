@@ -1488,7 +1488,7 @@ i965_decoder_render_picture(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_context *obj_context = CONTEXT(context);
-    VAStatus vaStatus;
+    VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
     int i;
 
     for (i = 0; i < num_buffers; i++) {
@@ -1586,7 +1586,7 @@ i965_encoder_render_picture(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_context *obj_context = CONTEXT(context);
-    VAStatus vaStatus;
+    VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
     int i;
 
     for (i = 0; i < num_buffers; i++) {  
@@ -1700,7 +1700,7 @@ i965_proc_render_picture(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_context *obj_context = CONTEXT(context);
-    VAStatus vaStatus;
+    VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
     int i;
 
     for (i = 0; i < num_buffers; i++) {  
@@ -2133,7 +2133,6 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
                           VAImage *out_image)        /* out */
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_render_state *render_state = &i965->render_state;
     struct object_image *obj_image;
     struct object_surface *obj_surface; 
     VAImageID image_id;

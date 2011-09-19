@@ -426,6 +426,7 @@ gen7_mfd_bsp_buf_base_addr_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+#if 0
 static void
 gen7_mfd_aes_state(VADriverContextP ctx,
                    struct decode_state *decode_state,
@@ -433,6 +434,7 @@ gen7_mfd_aes_state(VADriverContextP ctx,
 {
     /* FIXME */
 }
+#endif
 
 static void
 gen7_mfd_qm_state(VADriverContextP ctx,
@@ -453,6 +455,8 @@ gen7_mfd_qm_state(VADriverContextP ctx,
     intel_batchbuffer_data(batch, qm_buffer, 16 * 4);
     ADVANCE_BCS_BATCH(batch);
 }
+
+#if 0
 static void
 gen7_mfd_wait(VADriverContextP ctx,
               struct decode_state *decode_state,
@@ -465,6 +469,7 @@ gen7_mfd_wait(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_WAIT | (1 << 8));
     ADVANCE_BCS_BATCH(batch);
 }
+#endif
 
 static void
 gen7_mfd_avc_img_state(VADriverContextP ctx,
@@ -472,7 +477,6 @@ gen7_mfd_avc_img_state(VADriverContextP ctx,
                        struct gen7_mfd_context *gen7_mfd_context)
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-    int qm_present_flag;
     int img_struct;
     int mbaff_frame_flag;
     unsigned int width_in_mbs, height_in_mbs;
@@ -481,11 +485,6 @@ gen7_mfd_avc_img_state(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
     assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
-
-    if (decode_state->iq_matrix && decode_state->iq_matrix->buffer)
-        qm_present_flag = 1;
-    else
-        qm_present_flag = 0; /* built-in QM matrices */
 
     if (pic_param->CurrPic.flags & VA_PICTURE_H264_TOP_FIELD)
         img_struct = 1;
