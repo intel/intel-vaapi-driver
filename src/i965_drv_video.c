@@ -1861,7 +1861,6 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     struct object_surface *obj_surface; 
     VAImageID image_id;
     unsigned int w_pitch, h_pitch;
-    unsigned int data_size;
     VAStatus va_status;
 
     out_image->image_id = VA_INVALID_ID;
@@ -1872,8 +1871,6 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
 
     w_pitch = obj_surface->width;
     h_pitch = obj_surface->height;
-    data_size = obj_surface->orig_width * obj_surface->orig_height +
-        2 * (((obj_surface->orig_width + 1) / 2) * ((obj_surface->orig_height + 1) / 2));
 
     image_id = NEW_IMAGE_ID();
 
@@ -1898,7 +1895,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     image->entry_bytes = 0;
     image->width = obj_surface->orig_width;
     image->height = obj_surface->orig_height;
-    image->data_size = data_size;
+    image->data_size = obj_surface->size;
 
     if (!render_state->inited) {
             image->format.fourcc = VA_FOURCC('Y','V','1','2');
