@@ -1253,42 +1253,50 @@ gen6_mfd_mpeg2_qm_state(VADriverContextP ctx,
                         struct gen6_mfd_context *gen6_mfd_context)
 {
     struct intel_batchbuffer *batch = gen6_mfd_context->base.batch;
-    VAIQMatrixBufferMPEG2 *iq_matrix;
-    int i;
+    VAIQMatrixBufferMPEG2 * const gen_iq_matrix = &gen6_mfd_context->iq_matrix.mpeg2;
+    int i, j;
 
-    if (!decode_state->iq_matrix || !decode_state->iq_matrix->buffer)
-        return;
+    /* Update internal QM state */
+    if (decode_state->iq_matrix && decode_state->iq_matrix->buffer) {
+        VAIQMatrixBufferMPEG2 * const iq_matrix =
+            (VAIQMatrixBufferMPEG2 *)decode_state->iq_matrix->buffer;
 
-    iq_matrix = (VAIQMatrixBufferMPEG2 *)decode_state->iq_matrix->buffer;
+        gen_iq_matrix->load_intra_quantiser_matrix =
+            iq_matrix->load_intra_quantiser_matrix;
+        if (iq_matrix->load_intra_quantiser_matrix) {
+            for (j = 0; j < 64; j++)
+                gen_iq_matrix->intra_quantiser_matrix[zigzag_direct[j]] =
+                    iq_matrix->intra_quantiser_matrix[j];
+        }
 
+        gen_iq_matrix->load_non_intra_quantiser_matrix =
+            iq_matrix->load_non_intra_quantiser_matrix;
+        if (iq_matrix->load_non_intra_quantiser_matrix) {
+            for (j = 0; j < 64; j++)
+                gen_iq_matrix->non_intra_quantiser_matrix[zigzag_direct[j]] =
+                    iq_matrix->non_intra_quantiser_matrix[j];
+        }
+    }
+
+    /* Commit QM state to HW */
     for (i = 0; i < 2; i++) {
-        int k, m;
         unsigned char *qm = NULL;
-        unsigned char qmx[64];
 
         if (i == 0) {
-            if (iq_matrix->load_intra_quantiser_matrix)
-                qm = iq_matrix->intra_quantiser_matrix;
+            if (gen_iq_matrix->load_intra_quantiser_matrix)
+                qm = gen_iq_matrix->intra_quantiser_matrix;
         } else {
-            if (iq_matrix->load_non_intra_quantiser_matrix)
-                qm = iq_matrix->non_intra_quantiser_matrix;
+            if (gen_iq_matrix->load_non_intra_quantiser_matrix)
+                qm = gen_iq_matrix->non_intra_quantiser_matrix;
         }
 
         if (!qm)
             continue;
 
-        /* Upload quantisation matrix in raster order. The mplayer vaapi
-         * patch passes quantisation matrix in zig-zag order to va library.
-         */
-        for (k = 0; k < 64; k++) {
-            m = zigzag_direct[k];
-            qmx[m] = qm[k];
-        }
-
         BEGIN_BCS_BATCH(batch, 18);
         OUT_BCS_BATCH(batch, MFX_MPEG2_QM_STATE | (18 - 2));
         OUT_BCS_BATCH(batch, i);
-        intel_batchbuffer_data(batch, qmx, 64);
+        intel_batchbuffer_data(batch, qm, 64);
         ADVANCE_BCS_BATCH(batch);
     }
 }
