@@ -1343,7 +1343,7 @@ gen7_mfd_mpeg2_decode_picture(VADriverContextP ctx,
             if (i < decode_state->slice_params[j]->num_elements - 1)
                 next_slice_param = slice_param + 1;
             else
-                next_slice_param = NULL;
+                next_slice_param = next_slice_group_param;
 
             gen7_mfd_mpeg2_bsd_object(ctx, pic_param, slice_param, next_slice_param, gen7_mfd_context);
             slice_param++;
