@@ -1435,17 +1435,6 @@ static const int va_to_gen6_vc1_profile[4] = {
     GEN6_VC1_ADVANCED_PROFILE
 };
 
-static const int va_to_gen6_vc1_ttfrm[8] = {
-    0,  /* 8x8 */
-    1,  /* 8x4 bottom */
-    1,  /* 8x4 top */
-    1,  /* 8x4 */
-    2,  /* 4x8 bottom */
-    2,  /* 4x8 top */
-    2,  /* 4x8 */
-    3,  /* 4x4 */
-};
-
 static void 
 gen6_mfd_free_vc1_surface(void **data)
 {
@@ -1811,7 +1800,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                   pic_param->mv_fields.bits.mv_table << 20 |
                   pic_param->mv_fields.bits.four_mv_block_pattern_table << 18 |
                   pic_param->mv_fields.bits.two_mv_block_pattern_table << 16 |
-                  va_to_gen6_vc1_ttfrm[pic_param->transform_fields.bits.frame_level_transform_type] << 12 |
+                  pic_param->transform_fields.bits.frame_level_transform_type << 12 |
                   pic_param->transform_fields.bits.mb_level_transform_type_flag << 11 |
                   pic_param->mb_mode_table << 8 |
                   trans_ac_y << 6 |
