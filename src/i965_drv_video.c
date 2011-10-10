@@ -1086,9 +1086,6 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncSequenceParameterBufferType:
     case VAEncPictureParameterBufferType:
     case VAEncSliceParameterBufferType:
-    case VAEncSequenceParameterBufferExtType:
-    case VAEncPictureParameterBufferExtType:
-    case VAEncSliceParameterBufferExtType:
     case VAEncDecRefPicMarkingBufferH264Type:
     case VAEncPackedHeaderParameterBufferType:
     case VAEncPackedHeaderDataBufferType:
@@ -1594,22 +1591,6 @@ i965_encoder_render_picture(VADriverContextP ctx,
         assert(obj_buffer);
 
         switch (obj_buffer->type) {
-        case VAEncSequenceParameterBufferType:
-            vaStatus = I965_RENDER_ENCODE_BUFFER(sequence_parameter);
-            break;
-
-        case VAEncPictureParameterBufferType:
-            vaStatus = I965_RENDER_ENCODE_BUFFER(picture_parameter);
-            break;		
-
-        case VAEncSliceParameterBufferType:
-            vaStatus = I965_RENDER_ENCODE_BUFFER(slice_parameter);
-            break;
-
-        case VAPictureParameterBufferType:
-            vaStatus = I965_RENDER_ENCODE_BUFFER(picture_control);
-            break;
-
         case VAQMatrixBufferType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(qmatrix);
             break;
@@ -1618,15 +1599,15 @@ i965_encoder_render_picture(VADriverContextP ctx,
             vaStatus = I965_RENDER_ENCODE_BUFFER(iqmatrix);
             break;
 
-        case VAEncSequenceParameterBufferExtType:
+        case VAEncSequenceParameterBufferType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(sequence_parameter_ext);
             break;
 
-        case VAEncPictureParameterBufferExtType:
+        case VAEncPictureParameterBufferType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(picture_parameter_ext);
             break;
 
-        case VAEncSliceParameterBufferExtType:
+        case VAEncSliceParameterBufferType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(slice_parameter_ext);
             break;
 

@@ -191,9 +191,9 @@ static void nal_header(avc_bitstream *bs, int nal_ref_idc, int nal_unit_type)
 
 static void 
 slice_header(avc_bitstream *bs,
-             VAEncSequenceParameterBufferH264Ext *sps_param,
-             VAEncPictureParameterBufferH264Ext *pic_param,
-             VAEncSliceParameterBufferH264Ext *slice_param,
+             VAEncSequenceParameterBufferH264 *sps_param,
+             VAEncPictureParameterBufferH264 *pic_param,
+             VAEncSliceParameterBufferH264 *slice_param,
              VAEncH264DecRefPicMarkingBuffer *dec_ref_pic_marking_param)
 {
     int first_mb_in_slice = slice_param->starting_macroblock_address;
@@ -293,9 +293,9 @@ slice_header(avc_bitstream *bs,
 }
 
 int 
-build_avc_slice_header(VAEncSequenceParameterBufferH264Ext *sps_param,
-                       VAEncPictureParameterBufferH264Ext *pic_param,
-                       VAEncSliceParameterBufferH264Ext *slice_param,
+build_avc_slice_header(VAEncSequenceParameterBufferH264 *sps_param,
+                       VAEncPictureParameterBufferH264 *pic_param,
+                       VAEncSliceParameterBufferH264 *slice_param,
                        VAEncH264DecRefPicMarkingBuffer *dec_ref_pic_marking_param,
                        unsigned char **slice_header_buffer)
 {

@@ -297,7 +297,7 @@ gen6_mfc_avc_img_state(VADriverContextP ctx,struct encode_state *encode_state,
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
-    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
 
@@ -452,7 +452,7 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
-    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer; /* TODO: multi slices support */
+    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; /* TODO: multi slices support */
     int bit_rate_control_target;
     if ( slice_type == SLICE_TYPE_I )
         bit_rate_control_target = 0;
@@ -847,9 +847,9 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
-    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
-    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param_ext->buffer;
-    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer; /* FIXME: multi slices */
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; /* FIXME: multi slices */
     VAEncH264DecRefPicMarkingBuffer *pDecRefPicMarking = NULL;
     unsigned int *msg = NULL, offset = 0;
     int emit_new_state = 1, object_len_in_bytes;
@@ -1015,7 +1015,7 @@ gen6_mfc_free_avc_surface(void **data)
 static void gen6_mfc_bit_rate_control_context_init(struct encode_state *encode_state, 
                                                    struct gen6_mfc_context *mfc_context) 
 {
-    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
@@ -1057,7 +1057,7 @@ static int gen6_mfc_bit_rate_control_context_update(struct encode_state *encode_
                                                    struct gen6_mfc_context *mfc_context,
                                                    int current_frame_size) 
 {
-    VAEncSliceParameterBufferH264Ext *pSliceParameter = (VAEncSliceParameterBufferH264Ext *)encode_state->slice_params_ext[0]->buffer; 
+    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; 
     int control_index = 1 - (pSliceParameter->slice_type == SLICE_TYPE_I);
     int oldQp = mfc_context->bit_rate_control_context[control_index].QpPrimeY;
 
@@ -1104,7 +1104,7 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     struct object_buffer *obj_buffer;
     struct gen6_mfc_avc_surface_aux* gen6_avc_surface;
     dri_bo *bo;
-    VAEncPictureParameterBufferH264Ext *pPicParameter = (VAEncPictureParameterBufferH264Ext *)encode_state->pic_param_ext->buffer;
+    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
 	int i;
 
@@ -1251,7 +1251,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
                             struct encode_state *encode_state,
                             struct gen6_encoder_context *gen6_encoder_context)
 {
-    VAEncSequenceParameterBufferH264Ext *pSequenceParameter = (VAEncSequenceParameterBufferH264Ext *)encode_state->seq_param_ext->buffer;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     int rate_control_mode = pSequenceParameter->rate_control_method;  
     int MAX_CBR_INTERATE = 4;
