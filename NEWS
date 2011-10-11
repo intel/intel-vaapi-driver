@@ -5,6 +5,7 @@ Version 1.0.15 - DD.Oct.2011
 * Fix VC-1 decoding (TTFRM packing)
 * Fix MPEG-2 decoding on Ivy Bridge
 * Fix MPEG-2 decoding with sparse QM matrices updates
+* Fix slice-param & slice-data buffer memory leaks
 
 Version 1.0.14 - 28.Jul.2011
 * Add H.264 encoding support to Ivy Bridge

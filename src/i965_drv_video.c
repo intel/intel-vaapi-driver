@@ -1532,8 +1532,6 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
         }
     } else {
         obj_context->codec_state.dec.current_render_target = -1;
-        obj_context->codec_state.dec.num_slice_params = 0;
-        obj_context->codec_state.dec.num_slice_datas = 0;
         i965_release_buffer_store(&obj_context->codec_state.dec.pic_param);
         i965_release_buffer_store(&obj_context->codec_state.dec.iq_matrix);
         i965_release_buffer_store(&obj_context->codec_state.dec.bit_plane);
@@ -1542,6 +1540,8 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
             i965_release_buffer_store(&obj_context->codec_state.dec.slice_params[i]);
             i965_release_buffer_store(&obj_context->codec_state.dec.slice_datas[i]);
         }
+        obj_context->codec_state.dec.num_slice_params = 0;
+        obj_context->codec_state.dec.num_slice_datas = 0;
     }
 
     return VA_STATUS_SUCCESS;
