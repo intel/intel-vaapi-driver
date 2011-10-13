@@ -96,6 +96,7 @@ define(`w_in_mb_uw',            `inline_reg0.2')
 define(`orig_xy_ub',            `inline_reg0.0')
 define(`orig_x_ub',             `inline_reg0.0')    /* in macroblock */    
 define(`orig_y_ub',             `inline_reg0.1')
+define(`transform_8x8_ub',      `inline_reg0.4')
 
 /*
  * GRF 6~11 -- reserved

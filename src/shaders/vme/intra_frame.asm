@@ -51,7 +51,8 @@ mov  (1) tmp_reg0.20<1>:UB      thread_id_ub {align1};                  /* dispa
 mov  (8) vme_msg_0.0<1>:UD      tmp_reg0.0<8,8,1>:UD {align1};
 
 /* m1 */
-mov  (1) intra_part_mask_ub<1>:UB LUMA_INTRA_8x8_DISABLE + LUMA_INTRA_4x4_DISABLE {align1};
+cmp.nz.f0.0 (1) null<1>:UW transform_8x8_ub<0,1,0>:UB 1:UW {align1};
+(f0.0) mov  (1) intra_part_mask_ub<1>:UB  LUMA_INTRA_8x8_DISABLE + LUMA_INTRA_4x4_DISABLE {align1};
 
 cmp.nz.f0.0 (1) null<1>:UW orig_x_ub<0,1,0>:UB 0:UW {align1};                                                   /* X != 0 */
 (f0.0) add (1) mb_intra_struct_ub<1>:UB mb_intra_struct_ub<0,1,0>:UB INTRA_PRED_AVAIL_FLAG_AE {align1};         /* A */

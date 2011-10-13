@@ -298,6 +298,7 @@ gen6_mfc_avc_img_state(VADriverContextP ctx,struct encode_state *encode_state,
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
 
@@ -328,7 +329,7 @@ gen6_mfc_avc_img_state(VADriverContextP ctx,struct encode_state *encode_state,
                   (0 << 6)  |   /*Only valid for VLD decoding mode*/
                   (0 << 5)  |   /*Constrained Intra Predition Flag, from PPS*/
                   (pSequenceParameter->direct_8x8_inference_flag << 4)  |   /*Direct 8x8 inference flag*/
-                  (0 << 3)  |   /*Only 8x8 IDCT Transform Mode Flag*/
+                  (pPicParameter->pic_fields.bits.transform_8x8_mode_flag << 3)  |   /*8x8 or 4x4 IDCT Transform Mode Flag*/
                   (1 << 2)  |   /*Frame MB only flag*/
                   (0 << 1)  |   /*MBAFF mode is in active*/
                   (0 << 0) );   /*Field picture flag*/
@@ -817,7 +818,7 @@ static void gen6_mfc_init(VADriverContextP ctx, struct gen6_encoder_context *gen
     dri_bo_unreference(mfc_context->macroblock_status_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "Buffer",
-                      8*9600,
+                      128*128*16,
                       64);
     assert(bo);
     mfc_context->macroblock_status_buffer.bo = bo;

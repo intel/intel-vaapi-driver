@@ -786,8 +786,9 @@ static int gen6_vme_media_object(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct object_surface *obj_surface = SURFACE(encode_state->current_render_target);
+    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     int mb_width = ALIGN(obj_surface->orig_width, 16) / 16;
-    int len_in_dowrds = 6 + 1;
+    int len_in_dowrds = 6 + 2;      /*6 + n: n is number of inline data*/
 
     BEGIN_BATCH(batch, len_in_dowrds);
     
@@ -800,6 +801,8 @@ static int gen6_vme_media_object(VADriverContextP ctx,
    
     /*inline data */
     OUT_BATCH(batch, mb_width << 16 | mb_y << 8 | mb_x);			/*M0.0 Refrence0 X,Y, not used in Intra*/
+    OUT_BATCH(batch, pPicParameter->pic_fields.bits.transform_8x8_mode_flag);   /* Enabling or disabling 8x8,4x4 Intra mode,
+                                                                                   more control flags will added here.*/
     ADVANCE_BATCH(batch);
 
     return len_in_dowrds * 4;
