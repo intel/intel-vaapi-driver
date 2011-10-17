@@ -22,15 +22,15 @@ SUFFIXES = .g6a .g6b .g7a .g7b .gen6.asm .gen7.asm
 
 $(INTEL_GEN6_ASM): $(VME_CORE) $(INTEL_GEN6_INC)
 .g6a.gen6.asm:
-	m4 $< > $@
+	$(AM_V_GEN)m4 $< > $@
 .gen6.asm.g6b:
-	$(GEN4ASM) -g 6 -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -g 6 -o $@ $<
 
 $(INTEL_GEN7_ASM): $(VME_CORE) $(INTEL_GEN7_INC)
 .g7a.gen7.asm:
-	m4 $< > $@
+	$(AM_V_GEN)m4 $< > $@
 .gen7.asm.g7b:
-	$(GEN4ASM) -g 7 -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -g 7 -o $@ $<
 
 CLEANFILES = $(INTEL_GEN6_ASM) $(INTEL_GEN7_ASM)
 

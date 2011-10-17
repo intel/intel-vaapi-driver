@@ -178,13 +178,13 @@ all-local: $(TARGETS)
 SUFFIXES = .g4a .g4b .gen5.asm
 
 .g4a.g4b:
-	m4 $*.g4a > $*.g4m			&& \
-	$(GEN4ASM) -o $@ $*.g4m			&& \
-	$(GEN4ASM) -g 5 -o $@.gen5 $*.g4m	&& \
+	$(AM_V_GEN)m4 $*.g4a > $*.g4m			&& \
+	$(AM_V_GEN)$(GEN4ASM) -o $@ $*.g4m		&& \
+	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@.gen5 $*.g4m	&& \
 	rm $*.g4m
 
 $(INTEL_MC_GEN5_ASM): $(INTEL_MC_ASM) $(INTEL_MC_INC) $(INTEL_ILDB_ASM)
-	cpp -DDEV_ILK -DBOOTSTRAP -I ../ildb/ AllAVC.asm > _mc0.$@	&& \
+	$(AM_V_GEN)cpp -DDEV_ILK -DBOOTSTRAP -I ../ildb/ AllAVC.asm > _mc0.$@	&& \
 	../../gpp.py _mc0.$@ $@						&& \
 	$(GEN4ASM) -l list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $@	   \
 		-o /dev/null						&& \
@@ -194,7 +194,7 @@ $(INTEL_MC_GEN5_ASM): $(INTEL_MC_ASM) $(INTEL_MC_INC) $(INTEL_ILDB_ASM)
 	rm _mc0.$@ _mc1.$@
 
 $(INTEL_MC_G4B_GEN5): $(INTEL_MC_GEN5_ASM)
-	$(GEN4ASM) -l list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $<	   \
+	$(AM_V_GEN)$(GEN4ASM) -l list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $<	   \
 		-o $@							&& \
 	cat tmp.$(INTEL_MC_EXPORT_GEN5) | sed "s/_IP/_IP_GEN5/g"	   \
 		> $(INTEL_MC_EXPORT_GEN5)				&& \

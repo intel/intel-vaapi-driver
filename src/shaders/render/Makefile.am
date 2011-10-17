@@ -78,23 +78,23 @@ SUFFIXES = .g4a .g4s .g4b .g6a .g6s .g6b .g7a .g7s .g7b
 
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 .g4a.g4s:
-	m4 $< > $@
+	$(AM_V_GEN)m4 $< > $@
 .g4s.g4b:
-	$(GEN4ASM) -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -o $@ $<
 .g4s.g4b.gen5:
-	$(GEN4ASM) -g 5 -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@ $<
 
 $(INTEL_G6S): $(INTEL_G6A) $(INTEL_G6I)
 .g6a.g6s:
-	m4 $< > $@
+	$(AM_V_GEN)m4 $< > $@
 .g6s.g6b:
-	$(GEN4ASM) -g 6 -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -g 6 -o $@ $<
 
 $(INTEL_G7S): $(INTEL_G7A) $(INTEL_G7I)
 .g7a.g7s:
-	m4 $< > $@
+	$(AM_V_GEN)m4 $< > $@
 .g7s.g7b:
-	$(GEN4ASM) -g 7 -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -g 7 -o $@ $<
 
 CLEANFILES = \
 	$(INTEL_G4S)		\

@@ -101,11 +101,11 @@ SUFFIXES = .g4a .g4s .g4b .g4b.gen5
 
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 .g4a.g4s:
-	m4 $< > $@
+	$(AM_V_GEN)m4 $< > $@
 .g4s.g4b:
-	$(GEN4ASM) -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -o $@ $<
 .g4s.g4b.gen5:
-	$(GEN4ASM) -g 5 -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@ $<
 
 CLEANFILES = $(INTEL_G4S)
 
