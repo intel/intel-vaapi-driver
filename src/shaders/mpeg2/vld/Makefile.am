@@ -103,9 +103,9 @@ $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 .g4a.g4s:
 	m4 $< > $@
 .g4s.g4b:
-	intel-gen4asm -o $@ $<
+	$(GEN4ASM) -o $@ $<
 .g4s.g4b.gen5:
-	intel-gen4asm -g 5 -o $@ $<
+	$(GEN4ASM) -g 5 -o $@ $<
 
 CLEANFILES = $(INTEL_G4S)
 

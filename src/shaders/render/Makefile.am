@@ -80,21 +80,21 @@ $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 .g4a.g4s:
 	m4 $< > $@
 .g4s.g4b:
-	intel-gen4asm -o $@ $<
+	$(GEN4ASM) -o $@ $<
 .g4s.g4b.gen5:
-	intel-gen4asm -g 5 -o $@ $<
+	$(GEN4ASM) -g 5 -o $@ $<
 
 $(INTEL_G6S): $(INTEL_G6A) $(INTEL_G6I)
 .g6a.g6s:
 	m4 $< > $@
 .g6s.g6b:
-	intel-gen4asm -g 6 -o $@ $<
+	$(GEN4ASM) -g 6 -o $@ $<
 
 $(INTEL_G7S): $(INTEL_G7A) $(INTEL_G7I)
 .g7a.g7s:
 	m4 $< > $@
 .g7s.g7b:
-	intel-gen4asm -g 7 -o $@ $<
+	$(GEN4ASM) -g 7 -o $@ $<
 
 CLEANFILES = \
 	$(INTEL_G4S)		\

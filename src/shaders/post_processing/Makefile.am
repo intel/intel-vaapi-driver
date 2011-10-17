@@ -144,13 +144,13 @@ SUFFIXES = .g4a .g4b .g6a .g6b .g5s .g6s .asm
 
 .g4a.g4b:
 	m4 $*.g4a > $*.g4m			&& \
-	intel-gen4asm -o $@ $*.g4m		&& \
-	intel-gen4asm -g 5 -o $@.gen5 $*.g4m	&& \
+	$(GEN4ASM) -o $@ $*.g4m		&& \
+	$(GEN4ASM) -g 5 -o $@.gen5 $*.g4m	&& \
 	rm $*.g4m
 
 .g6a.g6b:
 	m4 $< > $*.g6m				&& \
-	intel-gen4asm -g 6 -o $@ $*.g6m		&& \
+	$(GEN4ASM) -g 6 -o $@ $*.g6m		&& \
 	rm $*.g6m
 
 $(INTEL_G4B): $(INTEL_G4I)
@@ -161,7 +161,7 @@ $(INTEL_PP_GEN5_ASM): $(INTEL_PP_ASM)
 	../gpp.py _pp0.$@ $@; \
 	rm _pp0.$@
 .g5s.g4b.gen5:
-	intel-gen4asm -a -o $@ -g 5 $<
+	$(GEN4ASM) -a -o $@ -g 5 $<
 
 $(INTEL_PP_GEN6_ASM): $(INTEL_PP_ASM)
 .asm.g6s:
@@ -169,7 +169,7 @@ $(INTEL_PP_GEN6_ASM): $(INTEL_PP_ASM)
 	../gpp.py _pp0.$@ $@; \
 	rm _pp0.$@
 .g6s.g6b:
-	intel-gen4asm -a -o $@ -g 6 $<
+	$(GEN4ASM) -a -o $@ -g 6 $<
 
 CLEANFILES = $(INTEL_PP_GEN5_ASM) $(INTEL_PP_GEN6_ASM)
 

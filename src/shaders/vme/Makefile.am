@@ -24,13 +24,13 @@ $(INTEL_GEN6_ASM): $(VME_CORE) $(INTEL_GEN6_INC)
 .g6a.gen6.asm:
 	m4 $< > $@
 .gen6.asm.g6b:
-	intel-gen4asm -g 6 -o $@ $<
+	$(GEN4ASM) -g 6 -o $@ $<
 
 $(INTEL_GEN7_ASM): $(VME_CORE) $(INTEL_GEN7_INC)
 .g7a.gen7.asm:
 	m4 $< > $@
 .gen7.asm.g7b:
-	intel-gen4asm -g 7 -o $@ $<
+	$(GEN4ASM) -g 7 -o $@ $<
 
 CLEANFILES = $(INTEL_GEN6_ASM) $(INTEL_GEN7_ASM)
 
