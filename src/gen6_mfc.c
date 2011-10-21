@@ -325,7 +325,7 @@ gen6_mfc_avc_img_state(VADriverContextP ctx,struct encode_state *encode_state,
                   (0 << 13) |   /*CABAC 0 word insertion test enable*/
                   (1 << 12) |   /*MVUnpackedEnable,compliant to DXVA*/
                   (1 << 10) |   /*Chroma Format IDC, 4:2:0*/
-                  (1 << 7)  |   /*0:CAVLC encoding mode,1:CABAC*/
+                  (pPicParameter->pic_fields.bits.entropy_coding_mode_flag << 7)  |   /*0:CAVLC encoding mode,1:CABAC*/
                   (0 << 6)  |   /*Only valid for VLD decoding mode*/
                   (0 << 5)  |   /*Constrained Intra Predition Flag, from PPS*/
                   (pSequenceParameter->direct_8x8_inference_flag << 4)  |   /*Direct 8x8 inference flag*/
@@ -355,10 +355,12 @@ gen6_mfc_avc_img_state(VADriverContextP ctx,struct encode_state *encode_state,
 }
 
 static void
-gen7_mfc_avc_img_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+gen7_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,  
+                       struct gen6_encoder_context *gen6_encoder_context)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
+    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
 
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
@@ -387,7 +389,7 @@ gen7_mfc_avc_img_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_e
                   (1 << 12) |   /* MVUnpackedEnable,compliant to DXVA */
                   (1 << 10) |   /* Chroma Format IDC, 4:2:0 */
                   (0 << 9)  |   /* FIXME: MbMvFormatFlag */
-                  (1 << 7)  |   /* 0:CAVLC encoding mode,1:CABAC */
+                  (pPicParameter->pic_fields.bits.entropy_coding_mode_flag << 7)  |   /*0:CAVLC encoding mode,1:CABAC*/
                   (0 << 6)  |   /* Only valid for VLD decoding mode */
                   (0 << 5)  |   /* Constrained Intra Predition Flag, from PPS */
                   (0 << 4)  |   /* Direct 8x8 inference flag */
@@ -903,7 +905,7 @@ void gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                 gen6_mfc_bsp_buf_base_addr_state(ctx, gen6_encoder_context);
 
                 if (IS_GEN7(i965->intel.device_id)) {
-                    gen7_mfc_avc_img_state(ctx, gen6_encoder_context);
+                    gen7_mfc_avc_img_state(ctx, encode_state, gen6_encoder_context);
                     gen7_mfc_avc_qm_state(ctx, gen6_encoder_context);
                     gen7_mfc_avc_fqm_state(ctx, gen6_encoder_context);
                 } else {
