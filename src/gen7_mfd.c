@@ -2224,7 +2224,7 @@ gen7_mfd_jpeg_bsd_object(VADriverContextP ctx,
                   ((slice_param->num_components != 1) << 30) |  /* interleaved */
                   (scan_component_mask << 27) |                 /* scan components */
                   (0 << 26) |   /* disable interrupt allowed */
-                  (slice_param->count_in_mcus << 0));    /* MCU count */
+                  (slice_param->num_mcus << 0));                /* MCU count */
     OUT_BCS_BATCH(batch,
                   (slice_param->restart_interval << 0));    /* RestartInterval */
     ADVANCE_BCS_BATCH(batch);
