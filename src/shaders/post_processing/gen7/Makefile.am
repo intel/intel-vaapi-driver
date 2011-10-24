@@ -45,7 +45,7 @@ all-local: $(TARGETS)
 
 SUFFIXES = .g7b .g7s .asm
 
-$(INTEL_PP_GEN7_ASM): $(INTEL_PP_ASM)
+$(INTEL_PP_GEN7_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G4A)
 .asm.g7s:
 	cpp $< > _pp0.$@;		\
 	../../gpp.py _pp0.$@ $@;	\

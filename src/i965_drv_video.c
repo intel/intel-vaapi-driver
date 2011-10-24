@@ -172,7 +172,7 @@ extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info gen7_hw_codec_info = {
     .dec_hw_context_init = gen7_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
-    .proc_hw_context_init = NULL,
+    .proc_hw_context_init = i965_proc_context_init,
 };
 
 VAStatus 
