@@ -3694,15 +3694,20 @@ i965_proc_picture(VADriverContextP ctx,
     int i;
     VASurfaceID tmp_surfaces[VA_PROC_PIPELINE_MAX_NUM_FILTERS];
     int num_tmp_surfaces = 0;
+    unsigned int tiling = 0, swizzle = 0;
+    int in_width, in_height;
 
     assert(input_param->surface != VA_INVALID_ID);
     assert(proc_state->current_render_target != VA_INVALID_ID);
 
-    obj_surface = SURFACE(proc_state->current_render_target);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
-
     obj_surface = SURFACE(input_param->surface);
     assert(obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'));
+    in_width = obj_surface->orig_width;
+    in_height = obj_surface->orig_height;
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+
+    obj_surface = SURFACE(proc_state->current_render_target);
+    i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'));
 
     src_surface.id = input_param->surface;
     src_surface.type = I965_SURFACE_TYPE_SURFACE;
@@ -3718,15 +3723,15 @@ i965_proc_picture(VADriverContextP ctx,
                 filter_param = proc_state->filter_param[filter_type]->buffer;
 
             status = i965_CreateSurfaces(ctx,
-                                         obj_surface->orig_width,
-                                         obj_surface->orig_height,
+                                         in_width,
+                                         in_height,
                                          VA_RT_FORMAT_YUV420,
                                          1,
                                          &out_surface_id);
             assert(status == VA_STATUS_SUCCESS);
             tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
             obj_surface = SURFACE(out_surface_id);
-            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+            i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'));
             dst_surface.id = out_surface_id;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
             status = i965_post_processing_internal(ctx, &proc_context->pp_context,
