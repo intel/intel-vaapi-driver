@@ -1468,6 +1468,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     int index;
     int in_w, in_h, in_wpitch, in_hpitch;
     int out_w, out_h, out_wpitch, out_hpitch;
+    int i;
 
     /* surface */
     obj_surface = SURFACE(src_surface->id);
@@ -1487,9 +1488,9 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     /* source UV surface index 2 */
     i965_pp_set_surface2_state(ctx, pp_context,
                                obj_surface->bo, in_wpitch * in_hpitch,
-                               in_w, in_h, in_wpitch,
+                               in_w / 2, in_h / 2, in_wpitch,
                                0, 0,
-                               SURFACE_FORMAT_PLANAR_420_8, 1,
+                               SURFACE_FORMAT_R8B8_UNORM, 0,
                                2);
 
     /* destination surface */
@@ -1518,6 +1519,44 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     assert(sizeof(*sampler_8x8_state) == sizeof(int) * 138);
     sampler_8x8_state = pp_context->sampler_state_table.bo_8x8->virtual;
     memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
+
+    for (i = 0; i < 17; i++) {
+        /* for Y channel, currently ignore */
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c0 = 0x00;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c1 = 0x00;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c2 = 0x08;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c3 = 0x18;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c4 = 0x18;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c5 = 0x08;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c6 = 0x00;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c7 = 0x00;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c0 = 0x00;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c1 = 0x00;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c2 = 0x10;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c3 = 0x10;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c4 = 0x10;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c5 = 0x10;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c6 = 0x00;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c7 = 0x00;
+        /* for U/V channel, 0.25 */
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c2 = 0x10;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c3 = 0x10;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c4 = 0x10;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c5 = 0x10;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c7 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c2 = 0x10;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c3 = 0x10;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c4 = 0x10;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c5 = 0x10;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c7 = 0x0;
+    }
+
     sampler_8x8_state->dw136.default_sharpness_level = 0;
     sampler_8x8_state->dw137.adaptive_filter_for_all_channel = 1;
     sampler_8x8_state->dw137.bypass_y_adaptive_filtering = 1;
@@ -1534,7 +1573,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     index = 1;
     memset(&sampler_8x8[index], 0, sizeof(*sampler_8x8));
     sampler_8x8[index].dw0.avs_filter_type = AVS_FILTER_ADAPTIVE_8_TAP;
-    sampler_8x8[index].dw0.ief_bypass = 0;
+    sampler_8x8[index].dw0.ief_bypass = 1;
     sampler_8x8[index].dw0.ief_filter_type = IEF_FILTER_DETAIL;
     sampler_8x8[index].dw0.ief_filter_size = IEF_FILTER_SIZE_5X5;
     sampler_8x8[index].dw1.sampler_8x8_state_pointer = pp_context->sampler_state_table.bo_8x8->offset >> 5;
@@ -1594,25 +1633,14 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
                       sizeof(*sampler_8x8) * index + offsetof(struct i965_sampler_8x8, dw1),
                       pp_context->sampler_state_table.bo_8x8);
 
-    dri_bo_map(pp_context->sampler_state_table.bo_8x8_uv, True);
-    assert(pp_context->sampler_state_table.bo_8x8_uv->virtual);
-    assert(sizeof(*sampler_8x8_state) == sizeof(int) * 138);
-    sampler_8x8_state = pp_context->sampler_state_table.bo_8x8_uv->virtual;
-    memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
-    sampler_8x8_state->dw136.default_sharpness_level = 0;
-    sampler_8x8_state->dw137.adaptive_filter_for_all_channel = 0;
-    sampler_8x8_state->dw137.bypass_y_adaptive_filtering = 1;
-    sampler_8x8_state->dw137.bypass_x_adaptive_filtering = 1;
-    dri_bo_unmap(pp_context->sampler_state_table.bo_8x8_uv);
-
     /* sample_8x8 UV index 2 */
     index = 2;
     memset(&sampler_8x8[index], 0, sizeof(*sampler_8x8));
-    sampler_8x8[index].dw0.avs_filter_type = AVS_FILTER_NEAREST;
-    sampler_8x8[index].dw0.ief_bypass = 0;
+    sampler_8x8[index].dw0.avs_filter_type = AVS_FILTER_ADAPTIVE_8_TAP;
+    sampler_8x8[index].dw0.ief_bypass = 1;
     sampler_8x8[index].dw0.ief_filter_type = IEF_FILTER_DETAIL;
     sampler_8x8[index].dw0.ief_filter_size = IEF_FILTER_SIZE_5X5;
-    sampler_8x8[index].dw1.sampler_8x8_state_pointer = pp_context->sampler_state_table.bo_8x8_uv->offset >> 5;
+    sampler_8x8[index].dw1.sampler_8x8_state_pointer = pp_context->sampler_state_table.bo_8x8->offset >> 5;
     sampler_8x8[index].dw2.global_noise_estimation = 22;
     sampler_8x8[index].dw2.strong_edge_threshold = 8;
     sampler_8x8[index].dw2.weak_edge_threshold = 1;
@@ -1667,7 +1695,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
                       0,
                       0,
                       sizeof(*sampler_8x8) * index + offsetof(struct i965_sampler_8x8, dw1),
-                      pp_context->sampler_state_table.bo_8x8_uv);
+                      pp_context->sampler_state_table.bo_8x8);
 
     dri_bo_unmap(pp_context->sampler_state_table.bo);
 
