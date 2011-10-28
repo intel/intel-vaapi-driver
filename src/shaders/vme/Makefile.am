@@ -20,6 +20,7 @@ all-local: $(TARGETS)
 
 SUFFIXES = .g6a .g6b .g7a .g7b .gen6.asm .gen7.asm
 
+if HAVE_GEN4ASM
 $(INTEL_GEN6_ASM): $(VME_CORE) $(INTEL_GEN6_INC)
 .g6a.gen6.asm:
 	$(AM_V_GEN)m4 $< > $@
@@ -31,6 +32,7 @@ $(INTEL_GEN7_ASM): $(VME_CORE) $(INTEL_GEN7_INC)
 	$(AM_V_GEN)m4 $< > $@
 .gen7.asm.g7b:
 	$(AM_V_GEN)$(GEN4ASM) -g 7 -o $@ $<
+endif
 
 CLEANFILES = $(INTEL_GEN6_ASM) $(INTEL_GEN7_ASM)
 

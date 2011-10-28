@@ -76,6 +76,7 @@ all-local: $(TARGETS)
 
 SUFFIXES = .g4a .g4s .g4b .g6a .g6s .g6b .g7a .g7s .g7b
 
+if HAVE_GEN4ASM
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 .g4a.g4s:
 	$(AM_V_GEN)m4 $< > $@
@@ -95,6 +96,7 @@ $(INTEL_G7S): $(INTEL_G7A) $(INTEL_G7I)
 	$(AM_V_GEN)m4 $< > $@
 .g7s.g7b:
 	$(AM_V_GEN)$(GEN4ASM) -g 7 -o $@ $<
+endif
 
 CLEANFILES = \
 	$(INTEL_G4S)		\

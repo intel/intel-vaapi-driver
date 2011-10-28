@@ -142,6 +142,7 @@ all-local: $(TARGETS)
 
 SUFFIXES = .g4a .g4b .g6a .g6b .g5s .g6s .asm
 
+if HAVE_GEN4ASM
 .g4a.g4b:
 	$(AM_V_GEN)m4 $*.g4a > $*.g4m			&& \
 	$(AM_V_GEN)$(GEN4ASM) -o $@ $*.g4m		&& \
@@ -170,6 +171,7 @@ $(INTEL_PP_GEN6_ASM): $(INTEL_PP_ASM)
 	rm _pp0.$@
 .g6s.g6b:
 	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 6 $<
+endif
 
 CLEANFILES = $(INTEL_PP_GEN5_ASM) $(INTEL_PP_GEN6_ASM)
 
