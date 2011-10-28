@@ -1,7 +1,7 @@
-libva-driver-intel NEWS -- summary of changes.  2011-10-DD
+libva-driver-intel NEWS -- summary of changes.  2011-10-28
 Copyright (C) 2009-2011 Intel Corporation
 
-Version 1.0.15 - DD.Oct.2011
+Version 1.0.15 - 28.Oct.2011
 * Fix VC-1 decoding (TTFRM packing)
 * Fix MPEG-2 decoding on Ivy Bridge
 * Fix MPEG-2 decoding with sparse QM matrices updates
