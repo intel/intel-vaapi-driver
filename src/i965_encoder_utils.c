@@ -215,8 +215,10 @@ slice_header(avc_bitstream *bs,
     if (sps_param->pic_order_cnt_type == 0) {
         avc_bitstream_put_ui(bs, pic_param->CurrPic.TopFieldOrderCnt, sps_param->log2_max_pic_order_cnt_lsb_minus4 + 4);
         /* pic_order_present_flag == 0 */
-    } else {
-        /* FIXME: */
+    }
+
+    if (sps_param->pic_order_cnt_type == 1 && !sps_param->seq_fields.bits.delta_pic_order_always_zero_flag) {
+        /* FIXME: pack delta pic information */
         assert(0);
     }
 
