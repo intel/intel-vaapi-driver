@@ -3785,7 +3785,8 @@ i965_proc_picture(VADriverContextP ctx,
                                   &input_param->region,
                                   &dst_surface,
                                   &pipeline_param->output_region,
-                                  PP_NV12_AVS,
+                                  (pipeline_param->flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC ?
+                                  PP_NV12_AVS : PP_NV12_SCALING,
                                   NULL);
 
     if (num_tmp_surfaces)
