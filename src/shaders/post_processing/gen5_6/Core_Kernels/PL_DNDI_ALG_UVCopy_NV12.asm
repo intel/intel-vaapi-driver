@@ -80,6 +80,10 @@ TOP_FIELD_FIRST:
         mov (4)     mudMSGHDR_DN(1,%1*4+4)<1>   udRESP(nDI_CURR_2ND_FIELD_LUMA_OFFSET,%2*4)<4;4,1> // 1st field luma from current frame (line 1,3)
     }
 SAVE_DN_CURR:
+    $for (0; <nY_NUM_OF_ROWS/2; 1) {
+        mov (16) mubMSGHDR_DN(1, %1*16)<1>       ubRESP(nDI_CURR_FRAME_LUMA_OFFSET,%1*16)
+    }
+        
     mov (2)     rMSGSRC.0<1>:ud        wORIX<2;2,1>:w               // X origin and Y origin
     mov (1)     rMSGSRC.2<1>:ud        nDPW_BLOCK_SIZE_DN:ud        // block width and height (16x4)
     mov (8)     mudMSGHDR_DN(0)<1>     rMSGSRC.0<8;8,1>:ud
