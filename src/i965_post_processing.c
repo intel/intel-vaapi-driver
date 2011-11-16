@@ -3720,7 +3720,7 @@ i965_proc_picture(VADriverContextP ctx,
     struct i965_surface src_surface, dst_surface;
     VAStatus status;
     int i;
-    VASurfaceID tmp_surfaces[VA_PROC_PIPELINE_MAX_NUM_FILTERS];
+    VASurfaceID tmp_surfaces[VA_PROC_PIPELINE_MAX_NUM_FILTERS + 4];
     int num_tmp_surfaces = 0;
     unsigned int tiling = 0, swizzle = 0;
     int in_width, in_height;
@@ -3729,17 +3729,60 @@ i965_proc_picture(VADriverContextP ctx,
     assert(proc_state->current_render_target != VA_INVALID_ID);
 
     obj_surface = SURFACE(input_param->surface);
-    assert(obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'));
     in_width = obj_surface->orig_width;
     in_height = obj_surface->orig_height;
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
-    obj_surface = SURFACE(proc_state->current_render_target);
-    i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'));
-
     src_surface.id = input_param->surface;
     src_surface.type = I965_SURFACE_TYPE_SURFACE;
     src_surface.flags = proc_frame_to_pp_frame[input_param->flags];
+
+    if (obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2')) {
+        struct i965_surface src_surface, dst_surface;
+        VARectangle src_rect, dst_rect;
+        VASurfaceID out_surface_id = VA_INVALID_ID;
+
+        src_surface.id = input_param->surface;
+        src_surface.type = I965_SURFACE_TYPE_SURFACE;
+        src_surface.flags = I965_SURFACE_FLAG_FRAME;
+        src_rect.x = 0;
+        src_rect.y = 0;
+        src_rect.width = in_width;
+        src_rect.height = in_height;
+
+        status = i965_CreateSurfaces(ctx,
+                                     in_width,
+                                     in_height,
+                                     VA_RT_FORMAT_YUV420,
+                                     1,
+                                     &out_surface_id);
+        assert(status == VA_STATUS_SUCCESS);
+        tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
+        obj_surface = SURFACE(out_surface_id);
+        i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N', 'V', '1', '2'));
+
+        dst_surface.id = out_surface_id;
+        dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+        dst_surface.flags = I965_SURFACE_FLAG_FRAME;
+        dst_rect.x = 0;
+        dst_rect.y = 0;
+        dst_rect.width = in_width;
+        dst_rect.height = in_height;
+
+        status = i965_image_processing(ctx,
+                                       &src_surface,
+                                       &src_rect,
+                                       &dst_surface,
+                                       &dst_rect);
+        assert(status == VA_STATUS_SUCCESS);
+
+        src_surface.id = out_surface_id;
+        src_surface.type = I965_SURFACE_TYPE_SURFACE;
+        src_surface.flags = proc_frame_to_pp_frame[input_param->flags];
+    }
+
+    obj_surface = SURFACE(proc_state->current_render_target);
+    i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'));
     
     for (i = 0; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++) {
         VAProcFilterType filter_type = pipeline_param->filter_pipeline[i];
