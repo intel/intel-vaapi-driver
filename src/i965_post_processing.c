@@ -2029,7 +2029,7 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
     /* source YUV surface index 4 */
     i965_pp_set_surface2_state(ctx, pp_context,
                                obj_surface->bo, 0,
-                               orig_w, orig_w, w,
+                               orig_w, orig_h, w,
                                0, h,
                                SURFACE_FORMAT_PLANAR_420_8, 1,
                                4);
@@ -2235,7 +2235,7 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
     /* source YUV surface index 4 */
     i965_pp_set_surface2_state(ctx, pp_context,
                                obj_surface->bo, 0,
-                               orig_w, orig_w, w,
+                               orig_w, orig_h, w,
                                0, h,
                                SURFACE_FORMAT_PLANAR_420_8, 1,
                                4);
@@ -2424,7 +2424,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     /* source YUV surface index 3 */
     gen7_pp_set_surface2_state(ctx, pp_context,
                                obj_surface->bo, 0,
-                               orig_w, orig_w, w,
+                               orig_w, orig_h, w,
                                0, h,
                                SURFACE_FORMAT_PLANAR_420_8, 1,
                                3);
@@ -2432,7 +2432,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     /* source (temporal reference) YUV surface index 4 */
     gen7_pp_set_surface2_state(ctx, pp_context,
                                obj_surface->bo, 0,
-                               orig_w, orig_w, w,
+                               orig_w, orig_h, w,
                                0, h,
                                SURFACE_FORMAT_PLANAR_420_8, 1,
                                4);
@@ -2669,7 +2669,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     /* source YUV surface index 3 */
     gen7_pp_set_surface2_state(ctx, pp_context,
                                obj_surface->bo, 0,
-                               orig_w, orig_w, w,
+                               orig_w, orig_h, w,
                                0, h,
                                SURFACE_FORMAT_PLANAR_420_8, 1,
                                3);
