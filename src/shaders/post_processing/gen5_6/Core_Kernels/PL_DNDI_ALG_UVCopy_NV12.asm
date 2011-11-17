@@ -89,19 +89,14 @@ SAVE_DN_CURR:
     mov (8)     mudMSGHDR_DN(0)<1>     rMSGSRC.0<8;8,1>:ud
     send (8)    dNULLREG    mMSGHDR_DN   udDUMMY_NULL    nDATAPORT_WRITE    nDPMW_MSGDSC+nDPMW_MSG_LEN_PL_DN_DI+nBI_DESTINATION_Y:ud
 
-
-/////////////////////////////NV12 UV Copy 422/////////////////////////////////////////////////////
-		//Read UV through DATAPORT    
-    add  (2) rMSGSRC.0<1>:d     wORIX<2;2,1>:w    wSRC_H_ORI_OFFSET<2;2,1>:w       // Source Y Block origin
-    asr (1)  rMSGSRC.1<1>:d     rMSGSRC.1<0;1,0>:d       1:w   // U/V block origin should be half of Y's
-    mov (1)  rMSGSRC.2<1>:ud    nDPR_BLOCK_SIZE_UV:ud          // U/V block width and height (16x2)
-    mov  (8) mudMSGHDR_DN<1>     rMSGSRC<8;8,1>:ud
-    send (8) udBOT_U_IO(0)<1>     mMSGHDR_DN    udDUMMY_NULL    nDATAPORT_READ    nDPMR_MSGDSC+nRESLEN_1+nBI_CURRENT_SRC_UV:ud
-
  		//Write UV through DATAPORT
 		mov (2)     rMSGSRC.0<1>:ud        wORIX<2;2,1>:w               // X origin and Y origin
 		asr (1)     rMSGSRC.1<1>:d         rMSGSRC.1<0;1,0>:d    1:w  // U/V block origin should be half of Y's
     mov (1)     rMSGSRC.2<1>:ud        nDPR_BLOCK_SIZE_UV:ud        // block width and height (16x2)
     mov (8)     mudMSGHDR_DN(0)<1>     rMSGSRC.0<8;8,1>:ud
-    mov (8)			mudMSGHDR_DN(1)<1>		 udBOT_U_IO(0)<8;8,1>
+
+    mov (8) mubMSGHDR_DN(1, 0)<2>      ubRESP(nDI_CURR_FRAME_CHROMA_OFFSET, 1)<16 ;8,2>
+    mov (8) mubMSGHDR_DN(1, 1)<2>      ubRESP(nDI_CURR_FRAME_CHROMA_OFFSET, 16)<16 ;8,2>        
+    mov (8) mubMSGHDR_DN(1, 16)<2>      ubRESP(nDI_CURR_FRAME_CHROMA_OFFSET+1, 1)<16 ;8,2>
+    mov (8) mubMSGHDR_DN(1, 17)<2>      ubRESP(nDI_CURR_FRAME_CHROMA_OFFSET+1, 16)<16 ;8,2>        
     send (8)    dNULLREG    mMSGHDR_DN   udDUMMY_NULL    nDATAPORT_WRITE    nDPMW_MSGDSC+nMSGLEN_1+nBI_DESTINATION_UV:ud 
