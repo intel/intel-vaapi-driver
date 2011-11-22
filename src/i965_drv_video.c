@@ -1074,6 +1074,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     switch (type) {
     case VAPictureParameterBufferType:
     case VAIQMatrixBufferType:
+    case VAQMatrixBufferType:
     case VABitPlaneBufferType:
     case VASliceGroupMapBufferType:
     case VASliceParameterBufferType:
