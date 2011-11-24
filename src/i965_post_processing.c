@@ -1317,12 +1317,12 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_scaling_context->dest_y = dst_rect->y;
     pp_scaling_context->dest_w = ALIGN(dst_rect->width, 16);
     pp_scaling_context->dest_h = ALIGN(dst_rect->height, 16);
-    pp_scaling_context->src_normalized_x = (float)src_rect->x / in_w / out_w;
-    pp_scaling_context->src_normalized_y = (float)src_rect->y / in_h / out_h;
+    pp_scaling_context->src_normalized_x = (float)src_rect->x / in_w;
+    pp_scaling_context->src_normalized_y = (float)src_rect->y / in_h;
 
-    pp_static_parameter->grf1.r1_6.normalized_video_y_scaling_step = (float) src_rect->height / in_h / out_h;
+    pp_static_parameter->grf1.r1_6.normalized_video_y_scaling_step = (float) src_rect->height / in_h / dst_rect->height;
 
-    pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / out_w;
+    pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / dst_rect->width;
     pp_inline_parameter->grf5.block_count_x = pp_scaling_context->dest_w / 16;   /* 1 x N */
     pp_inline_parameter->grf5.number_blocks = pp_scaling_context->dest_w / 16;
     pp_inline_parameter->grf5.block_vertical_mask = 0xff;
@@ -1703,15 +1703,15 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     pp_avs_context->dest_y = dst_rect->y;
     pp_avs_context->dest_w = ALIGN(dst_rect->width, 16);
     pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
-    pp_avs_context->src_normalized_x = (float)src_rect->x / in_w / out_w;
-    pp_avs_context->src_normalized_y = (float)src_rect->y / in_h / out_h;
+    pp_avs_context->src_normalized_x = (float)src_rect->x / in_w;
+    pp_avs_context->src_normalized_y = (float)src_rect->y / in_h;
     pp_avs_context->src_w = src_rect->width;
     pp_avs_context->src_h = src_rect->height;
 
     pp_static_parameter->grf4.r4_2.avs.nlas = 1;
-    pp_static_parameter->grf1.r1_6.normalized_video_y_scaling_step = (float) src_rect->height / in_h / out_h;
+    pp_static_parameter->grf1.r1_6.normalized_video_y_scaling_step = (float) src_rect->height / in_h / dst_rect->height;
 
-    pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / out_w;
+    pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / dst_rect->width;
     pp_inline_parameter->grf5.block_count_x = 1;        /* M x 1 */
     pp_inline_parameter->grf5.number_blocks = pp_avs_context->dest_h / 8;
     pp_inline_parameter->grf5.block_vertical_mask = 0xff;
