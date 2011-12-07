@@ -138,6 +138,8 @@ struct intel_region
 #define PCI_CHIP_Q45_G                  0x2E12
 #define PCI_CHIP_G45_G                  0x2E22
 #define PCI_CHIP_G41_G                  0x2E32
+#define PCI_CHIP_B43_G                  0x2E42
+#define PCI_CHIP_B43_G1                 0x2E92
 
 #define PCI_CHIP_IRONLAKE_D_G           0x0042
 #define PCI_CHIP_IRONLAKE_M_G           0x0046
@@ -161,7 +163,10 @@ struct intel_region
 #define IS_G45(devid)           (devid == PCI_CHIP_IGD_E_G ||   \
                                  devid == PCI_CHIP_Q45_G ||     \
                                  devid == PCI_CHIP_G45_G ||     \
-                                 devid == PCI_CHIP_G41_G)
+                                 devid == PCI_CHIP_G41_G ||     \
+                                 devid == PCI_CHIP_B43_G ||     \
+                                 devid == PCI_CHIP_B43_G1)
+ 
 #define IS_GM45(devid)          (devid == PCI_CHIP_GM45_GM)
 #define IS_G4X(devid)		(IS_G45(devid) || IS_GM45(devid))
 
