@@ -285,6 +285,8 @@
 #define MFX_QM_STATE                            MFX(2, 0, 0, 7)
 #define MFX_FQM_STATE                           MFX(2, 0, 0, 8)
 
+#define MFX_INSERT_OBJECT                       MFX(2, 0, 2, 8)
+
 #define MFX_WAIT                                MFX(1, 0, 0, 0)
 
 #define MFX_AVC_IMG_STATE                       MFX(2, 1, 0, 0)

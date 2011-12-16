@@ -662,11 +662,16 @@ gen6_mfc_avc_insert_object(VADriverContextP ctx, struct gen6_encoder_context *ge
                            unsigned int *insert_data, int lenght_in_dws, int data_bits_in_last_dw,
                            int skip_emul_byte_count, int is_last_header, int is_end_of_slice, int emulation_flag)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, lenght_in_dws + 2);
 
-    OUT_BCS_BATCH(batch, MFC_AVC_INSERT_OBJECT | (lenght_in_dws + 2 - 2));
+    if (IS_GEN7(i965->intel.device_id))
+        OUT_BCS_BATCH(batch, MFX_INSERT_OBJECT | (lenght_in_dws + 2 - 2));
+    else
+        OUT_BCS_BATCH(batch, MFC_AVC_INSERT_OBJECT | (lenght_in_dws + 2 - 2));
+
     OUT_BCS_BATCH(batch,
                   (0 << 16) |   /* always start at offset 0 */
                   (data_bits_in_last_dw << 8) |
