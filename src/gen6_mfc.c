@@ -393,7 +393,7 @@ gen7_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
                   (0 << 6)  |   /* Only valid for VLD decoding mode */
                   (0 << 5)  |   /* Constrained Intra Predition Flag, from PPS */
                   (0 << 4)  |   /* Direct 8x8 inference flag */
-                  (0 << 3)  |   /* Only 8x8 IDCT Transform Mode Flag */
+                  (pPicParameter->pic_fields.bits.transform_8x8_mode_flag << 3)  |   /*8x8 or 4x4 IDCT Transform Mode Flag*/
                   (1 << 2)  |   /* Frame MB only flag */
                   (0 << 1)  |   /* MBAFF mode is in active */
                   (0 << 0));    /* Field picture flag */
