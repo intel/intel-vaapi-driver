@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Intel Corporation
+ * Copyright © 2011 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -23,30 +23,29 @@
  *
  * Authors:
  *    Zhou Chang <chang.zhou@intel.com>
+ *    Xiang, Haihao <haihao.xiang@intel.com>
  *
  */
 
-#ifndef _GEN6_MFC_H_
-#define _GEN6_MFC_H_
+#ifndef _GEN7_MFC_H_
+#define _GEN7_MFC_H_
 
-#include <xf86drm.h>
 #include <drm.h>
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
 
 struct encode_state;
 
-#define MAX_MFC_REFERENCE_SURFACES        16
-#define NUM_MFC_DMV_BUFFERS				  34
+#define MAX_MFC_REFERENCE_SURFACES      16
+#define NUM_MFC_DMV_BUFFERS             34
 
-struct gen6_mfc_avc_surface_aux
+struct gen7_mfc_avc_surface_aux
 {
     dri_bo *dmv_top;
     dri_bo *dmv_bottom;
 };
 
-
-struct gen6_mfc_context
+struct gen7_mfc_context
 {
     struct {
         unsigned int width;
@@ -55,56 +54,55 @@ struct gen6_mfc_context
         unsigned int h_pitch;
     } surface_state;
 
-
     //MFX_PIPE_BUF_ADDR_STATE
     struct {
         dri_bo *bo;                            	
-    } post_deblocking_output;                   		//OUTPUT: reconstructed picture                           
+    } post_deblocking_output;           //OUTPUT: reconstructed picture                           
     
     struct {  
         dri_bo *bo;							   	
-    } pre_deblocking_output;                    		//OUTPUT: reconstructed picture with deblocked                           
+    } pre_deblocking_output;            //OUTPUT: reconstructed picture with deblocked                           
 
     struct {
         dri_bo *bo;
-    } uncompressed_picture_source;						//INPUT: original compressed image
+    } uncompressed_picture_source;      //INPUT: original compressed image
 
     struct {
         dri_bo *bo;							  	
-    } intra_row_store_scratch_buffer;					//INTERNAL:
+    } intra_row_store_scratch_buffer;   //INTERNAL:
 
-	struct {
-		dri_bo *bo;
-	} macroblock_status_buffer;							//INTERNAL:
+    struct {
+        dri_bo *bo;
+    } macroblock_status_buffer;         //INTERNAL:
 
     struct {
         dri_bo *bo;								
-    } deblocking_filter_row_store_scratch_buffer;		//INTERNAL:
+    } deblocking_filter_row_store_scratch_buffer;       //INTERNAL:
 
     struct {                                    
-       dri_bo *bo; 
-    } reference_surfaces[MAX_MFC_REFERENCE_SURFACES];	//INTERNAL: refrence surfaces
+        dri_bo *bo; 
+    } reference_surfaces[MAX_MFC_REFERENCE_SURFACES];   //INTERNAL: refrence surfaces
 
     //MFX_IND_OBJ_BASE_ADDR_STATE
     struct{
         dri_bo *bo;
-    } mfc_indirect_mv_object;							//INPUT: the blocks' mv info
+    } mfc_indirect_mv_object;           //INPUT: the blocks' mv info
 
     struct {
         dri_bo *bo;
         int offset;
         int end_offset;
-    } mfc_indirect_pak_bse_object;						//OUTPUT: the compressed bitstream 
+    } mfc_indirect_pak_bse_object;      //OUTPUT: the compressed bitstream 
 
     //MFX_BSP_BUF_BASE_ADDR_STATE
     struct {
         dri_bo *bo;
-    }bsd_mpc_row_store_scratch_buffer;					//INTERNAL:
+    } bsd_mpc_row_store_scratch_buffer; //INTERNAL:
 	
     //MFX_AVC_DIRECTMODE_STATE
     struct {
         dri_bo *bo;
-    }direct_mv_buffers[NUM_MFC_DMV_BUFFERS];				//INTERNAL:	0-31 as input,32 and 33 as output
+    } direct_mv_buffers[NUM_MFC_DMV_BUFFERS];   //INTERNAL: 0-31 as input,32 and 33 as output
 
     //Bit rate tracking context
     struct {
@@ -121,8 +119,8 @@ struct gen6_mfc_context
 
         unsigned int target_mb_size;
         unsigned int target_frame_size;
-    }bit_rate_control_context[2];                       //INTERNAL: 0 for intra frames, 1 for inter frames.
+    } bit_rate_control_context[2];      //INTERNAL: 0 for intra frames, 1 for inter frames.
 
 };
 
-#endif	/* _GEN6_MFC_BCS_H_ */
+#endif	/* _GEN7_MFC_BCS_H_ */

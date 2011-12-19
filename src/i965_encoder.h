@@ -29,21 +29,28 @@
 #ifndef _I965_ENCODER_H_
 #define _I965_ENCODER_H_
 
-#include <xf86drm.h>
 #include <drm.h>
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
+
 #include "i965_structs.h"
 #include "i965_drv_video.h"
 
-#include "gen6_vme.h"
-#include "gen6_mfc.h"
-
-struct gen6_encoder_context
+struct intel_encoder_context
 {
     struct hw_context base;
-    struct gen6_vme_context vme_context;
-    struct gen6_mfc_context mfc_context;
+    void *vme_context;
+    void *mfc_context;
+    void (*vme_context_destroy)(void *vme_context);
+    VAStatus (*vme_pipeline)(VADriverContextP ctx,
+                             VAProfile profile,
+                             struct encode_state *encode_state,
+                             struct intel_encoder_context *encoder_context);
+    void (*mfc_context_destroy)(void *mfc_context);
+    VAStatus (*mfc_pipeline)(VADriverContextP ctx,
+                             VAProfile profile,
+                             struct encode_state *encode_state,
+                             struct intel_encoder_context *encoder_context);
 };
 
 #endif	/* _I965_ENCODER_H_ */

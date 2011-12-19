@@ -50,6 +50,7 @@ source_c = \
 	gen6_mfc.c		\
 	gen6_mfd.c		\
 	gen6_vme.c		\
+	gen7_mfc.c		\
 	gen7_mfd.c		\
 	i965_avc_bsd.c		\
 	i965_avc_hw_scoreboard.c\
@@ -73,6 +74,7 @@ source_h = \
 	gen6_mfc.h		\
 	gen6_mfd.h		\
 	gen6_vme.h		\
+	gen7_mfc.h		\
 	gen7_mfd.h		\
 	i965_avc_bsd.h		\
 	i965_avc_hw_scoreboard.h\
