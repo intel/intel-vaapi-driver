@@ -1375,6 +1375,10 @@ i965_BeginPicture(VADriverContextP ctx,
         vaStatus = VA_STATUS_SUCCESS;
         break;
 
+    case VAProfileJPEGBaseline:
+        vaStatus = VA_STATUS_SUCCESS;
+        break;
+
     case VAProfileNone:
         vaStatus = VA_STATUS_SUCCESS;
         break;
