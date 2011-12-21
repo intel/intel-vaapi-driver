@@ -1203,6 +1203,10 @@ i965_BeginPicture(VADriverContextP ctx,
         vaStatus = VA_STATUS_SUCCESS;
         break;
 
+    case VAProfileJPEGBaseline:
+        vaStatus = VA_STATUS_SUCCESS;
+        break;
+
     default:
         assert(0);
         vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
