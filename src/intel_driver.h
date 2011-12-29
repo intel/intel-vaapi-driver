@@ -1,6 +1,7 @@
 #ifndef _INTEL_DRIVER_H_
 #define _INTEL_DRIVER_H_
 
+#include <stddef.h>
 #include <pthread.h>
 #include <signal.h>
 
@@ -61,6 +62,10 @@ struct intel_batchbuffer;
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
+
+#define Bool int
+#define True 1
+#define False 0
 
 #define SET_BLOCKED_SIGSET()   do {     \
         sigset_t bl_mask;               \
