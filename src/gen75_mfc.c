@@ -49,8 +49,6 @@
 #define	AVC_INTER_MV_OFFSET	48
 #define	AVC_RDO_MASK		0xFFFF
 
-#define	MFC_SOFTWARE_HASWELL	0
-
 #define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7)
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET(index)             (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * index)
@@ -995,7 +993,6 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
 }
 
 
-#if MFC_SOFTWARE_HASWELL
 
 static int
 gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb,
@@ -1252,7 +1249,6 @@ gen75_mfc_avc_software_batchbuffer(VADriverContextP ctx,
     struct intel_batchbuffer *batch;
     dri_bo *batch_bo;
     int i;
-    int buffer_size;
 
     batch = mfc_context->aux_batchbuffer;
     batch_bo = batch->buffer;
@@ -1275,7 +1271,6 @@ gen75_mfc_avc_software_batchbuffer(VADriverContextP ctx,
     return batch_bo;
 }
 
-#else
 
 static void
 gen75_mfc_batchbuffer_surfaces_input(VADriverContextP ctx,
@@ -1636,7 +1631,6 @@ gen75_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
     return mfc_context->aux_batchbuffer_surface.bo;
 }
 
-#endif
 
 static void
 gen75_mfc_avc_pipeline_programing(VADriverContextP ctx,
@@ -1652,11 +1646,11 @@ gen75_mfc_avc_pipeline_programing(VADriverContextP ctx,
         return; 
     }
 
-#if MFC_SOFTWARE_HASWELL
-    slice_batch_bo = gen75_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
-#else
-    slice_batch_bo = gen75_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
-#endif
+
+    if (encoder_context->soft_batch_force)
+        slice_batch_bo = gen75_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
+    else
+        slice_batch_bo = gen75_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
 
     // begin programing
     intel_batchbuffer_start_atomic_bcs(batch, 0x4000); 
