@@ -73,6 +73,8 @@
 #define ENCODER_HIGH_QUALITY      ENCODER_DEFAULT_QUALITY
 #define ENCODER_LOW_QUALITY       2
 
+#define I965_MAX_NUM_ROI_REGIONS                     8
+
 #define ENCODER_LP_QUALITY_RANGE  8
 
 struct i965_surface
