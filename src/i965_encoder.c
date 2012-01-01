@@ -882,7 +882,6 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         break;
     }
 
-    encoder_context->context_roi = 0;
     for (i = 0; i < obj_config->num_attribs; i++) {
         if (obj_config->attrib_list[i].type == VAConfigAttribRateControl) {
             encoder_context->rate_control_mode = obj_config->attrib_list[i].value;

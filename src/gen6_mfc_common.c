@@ -1773,11 +1773,174 @@ intel_h264_setup_cost_surface(VADriverContextP ctx,
                                          surface_state_offset);
 }
 
+/*
+ * the idea of conversion between qp and qstep comes from scaling process
+ * of transform coeff for Luma component in H264 spec.
+ *   2^(Qpy / 6 - 6)
+ * In order to avoid too small qstep, it is multiplied by 16.
+ */
+static float intel_h264_qp_qstep(int qp)
+{
+    float value, qstep;
+    value = qp;
+    value = value / 6 - 2;
+    qstep = powf(2, value);
+    return qstep;
+}
+
+static int intel_h264_qstep_qp(float qstep)
+{
+    float qp;
+
+    qp = 12.0f + 6.0f * log2f(qstep);
+
+    return floorf(qp);
+}
+
+/*
+ * Currently it is based on the following assumption:
+ * SUM(roi_area * 1 / roi_qstep) + non_area * 1 / nonroi_qstep =
+ *				   total_aread * 1 / baseqp_qstep
+ *
+ * qstep is the linearized quantizer of H264 quantizer
+ */
+typedef struct {
+    int row_start_in_mb;
+    int row_end_in_mb;
+    int col_start_in_mb;
+    int col_end_in_mb;
+
+    int width_mbs;
+    int height_mbs;
+
+    int roi_qp;
+} ROIRegionParam;
+
+static void
+intel_h264_enc_roi_cbr(VADriverContextP ctx,
+                       int base_qp,
+                       VAEncMiscParameterBufferROI *pMiscParamROI,
+                       struct encode_state *encode_state,
+                       struct intel_encoder_context *encoder_context)
+{
+    int nonroi_qp;
+    VAEncROI *region_roi;
+    bool quickfill = 0;
+
+    ROIRegionParam param_regions[I965_MAX_NUM_ROI_REGIONS];
+    int num_roi;
+    int i,j;
+
+    float temp;
+    float qstep_nonroi, qstep_base;
+    float roi_area, total_area, nonroi_area;
+    float sum_roi;
+
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+    int mbs_in_picture = width_in_mbs * height_in_mbs;
+
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+
+    num_roi = (pMiscParamROI->num_roi > I965_MAX_NUM_ROI_REGIONS) ? I965_MAX_NUM_ROI_REGIONS : pMiscParamROI->num_roi;
+
+    /* when the base_qp is lower than 12, the quality is quite good based
+     * on the H264 test experience.
+     * In such case it is unnecessary to adjust the quality for ROI region.
+     */
+    if (base_qp <= 12) {
+        nonroi_qp = base_qp;
+        quickfill = 1;
+        goto qp_fill;
+    }
+
+    /* currently roi_value_is_qp_delta is the only supported mode of priority.
+     *
+     * qp_delta set by user is added to base_qp, which is then clapped by
+     * [base_qp-min_delta, base_qp+max_delta].
+     */
+    assert (pMiscParamROI->roi_flags.bits.roi_value_is_qp_delta);
+
+    sum_roi = 0.0f;
+    roi_area = 0;
+    for (i = 0; i < num_roi; i++) {
+        int row_start, row_end, col_start, col_end;
+        int roi_width_mbs, roi_height_mbs;
+        int mbs_in_roi;
+        int roi_qp;
+        float qstep_roi;
+
+        region_roi =  (VAEncROI *)pMiscParamROI->roi + i;
+
+        col_start = region_roi->roi_rectangle.x;
+        col_end = col_start + region_roi->roi_rectangle.width;
+        row_start = region_roi->roi_rectangle.y;
+        row_end = row_start + region_roi->roi_rectangle.height;
+        col_start = col_start / 16;
+        col_end = (col_end + 15) / 16;
+        row_start = row_start / 16;
+        row_end = (row_end + 15) / 16;
+
+        roi_width_mbs = col_end - col_start;
+        roi_height_mbs = row_end - row_start;
+        mbs_in_roi = roi_width_mbs * roi_height_mbs;
+
+        param_regions[i].row_start_in_mb = row_start;
+        param_regions[i].row_end_in_mb = row_end;
+        param_regions[i].col_start_in_mb = col_start;
+        param_regions[i].col_end_in_mb = col_end;
+        param_regions[i].width_mbs = roi_width_mbs;
+        param_regions[i].height_mbs = roi_height_mbs;
+
+        roi_qp = base_qp + region_roi->roi_value;
+        BRC_CLIP(roi_qp, 1, 51);
+
+        param_regions[i].roi_qp = roi_qp;
+        qstep_roi = intel_h264_qp_qstep(roi_qp);
+
+        roi_area += mbs_in_roi;
+        sum_roi += mbs_in_roi / qstep_roi;
+    }
+
+    total_area = mbs_in_picture;
+    nonroi_area = total_area - roi_area;
+
+    qstep_base = intel_h264_qp_qstep(base_qp);
+    temp = (total_area / qstep_base - sum_roi);
+
+    if (temp < 0) {
+        nonroi_qp = 51;
+    } else {
+        qstep_nonroi = nonroi_area / temp;
+        nonroi_qp = intel_h264_qstep_qp(qstep_nonroi);
+    }
+
+    BRC_CLIP(nonroi_qp, 1, 51);
+
+qp_fill:
+    memset(vme_context->qp_per_mb, nonroi_qp, mbs_in_picture);
+    if (!quickfill) {
+        char *qp_ptr;
+
+        for (i = 0; i < num_roi; i++) {
+            for (j = param_regions[i].row_start_in_mb; j < param_regions[i].row_end_in_mb; j++) {
+                qp_ptr = vme_context->qp_per_mb + (j * width_in_mbs) + param_regions[i].col_start_in_mb;
+                memset(qp_ptr, param_regions[i].roi_qp, param_regions[i].width_mbs);
+            }
+        }
+    }
+    return ;
+}
+
 extern void
 intel_h264_enc_roi_config(VADriverContextP ctx,
                           struct encode_state *encode_state,
                           struct intel_encoder_context *encoder_context)
 {
+    char *qp_ptr;
+    int i, j;
+    VAEncROI *region_roi;
     VAEncMiscParameterBuffer* pMiscParamROI;
     VAEncMiscParameterBufferROI *pParamROI;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
@@ -1785,6 +1948,9 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+
+    int row_start, row_end, col_start, col_end;
+    int num_roi;
 
     vme_context->roi_enabled = 0;
     /* Restriction: Disable ROI when multi-slice is enabled */
@@ -1799,10 +1965,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
     pParamROI = (VAEncMiscParameterBufferROI *)pMiscParamROI->data;
 
     /* check whether number of ROI is correct */
-    /* currently one region is supported */
-    if (pParamROI->num_roi != 1) {
-        return;
-    }
+    num_roi = (pParamROI->num_roi > I965_MAX_NUM_ROI_REGIONS) ? I965_MAX_NUM_ROI_REGIONS : pParamROI->num_roi;
 
     vme_context->roi_enabled = 1;
 
@@ -1825,7 +1988,9 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
         int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
-        memset(vme_context->qp_per_mb, qp, width_in_mbs * height_in_mbs);
+        intel_h264_enc_roi_cbr(ctx, qp, pParamROI,
+                               encode_state, encoder_context);
+
     } else if (encoder_context->rate_control_mode == VA_RC_CQP){
         VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
         VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
@@ -1833,6 +1998,33 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
 
         qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
         memset(vme_context->qp_per_mb, qp, width_in_mbs * height_in_mbs);
+
+
+        for (j = num_roi; j ; j--) {
+            int qp_delta, qp_clip;
+
+            region_roi =  (VAEncROI *)pParamROI->roi + j - 1;
+
+            col_start = region_roi->roi_rectangle.x;
+            col_end = col_start + region_roi->roi_rectangle.width;
+            row_start = region_roi->roi_rectangle.y;
+            row_end = row_start + region_roi->roi_rectangle.height;
+
+            col_start = col_start / 16;
+            col_end = (col_end + 15) / 16;
+            row_start = row_start / 16;
+            row_end = (row_end + 15) / 16;
+
+            qp_delta = region_roi->roi_value;
+            qp_clip = qp + qp_delta;
+
+            BRC_CLIP(qp_clip, 1, 51);
+
+            for (i = row_start; i < row_end; i++) {
+                qp_ptr = vme_context->qp_per_mb + (i * width_in_mbs) + col_start;
+                memset(qp_ptr, qp_clip, (col_end - col_start));
+            }
+        }
     } else {
         /*
          * TODO: Disable it for non CBR-CQP.

@@ -936,6 +936,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                          int num_attribs)
 {
     VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
 
     va_status = i965_validate_config(ctx, profile, entrypoint);
@@ -1048,13 +1049,24 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribEncROI:
-            if ((entrypoint == VAEntrypointEncSliceLP) &&
-                (profile == VAProfileH264ConstrainedBaseline ||
-                 profile == VAProfileH264Main ||
-                 profile == VAProfileH264High))
-                attrib_list[i].value = 3;
-            else
+            if (profile == VAProfileH264ConstrainedBaseline ||
+                profile == VAProfileH264Main ||
+                profile == VAProfileH264High) {
+                VAConfigAttribValEncROI *roi_config = (VAConfigAttribValEncROI *)&(attrib_list[i].value);
+
+                if(entrypoint == VAEntrypointEncSliceLP) {
+                    roi_config->bits.num_roi_regions = 3;
+                    roi_config->bits.roi_rc_priority_support = 0;
+                    roi_config->bits.roi_rc_qp_delat_support = 0;
+                } else if (IS_GEN7(i965->intel.device_info)) {
+                    roi_config->bits.num_roi_regions = I965_MAX_NUM_ROI_REGIONS;
+                    roi_config->bits.roi_rc_priority_support = 0;
+                    roi_config->bits.roi_rc_qp_delat_support = 1;
+                } else
+                    roi_config->bits.num_roi_regions = 0;
+            }else {
                 attrib_list[i].value = 0;
+            }
 
             break;
 
@@ -2857,6 +2869,16 @@ i965_BeginPicture(VADriverContextP ctx,
         obj_context->codec_state.encode.num_packed_header_data_ext = 0;
         obj_context->codec_state.encode.slice_index = 0;
         obj_context->codec_state.encode.vps_sps_seq_index = 0;
+        /*
+        * Based on ROI definition in va/va.h, the ROI set through this
+        * structure is applicable only to the current frame or field.
+        * That is to say: it is on-the-fly setting. If it is not set,
+        * the current frame doesn't use ROI.
+        * It is uncertain whether the other misc buffer should be released.
+        * So only release the previous ROI buffer.
+        */
+        i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[VAEncMiscParameterTypeROI]);
+
         i965_release_buffer_store(&obj_context->codec_state.encode.encmb_map);
 
         if (obj_config->profile == VAProfileVP9Profile0) {
