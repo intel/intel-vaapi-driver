@@ -764,29 +764,13 @@ static float intel_lambda_qp(int qp)
     return lambdaf;
 }
 
-
-void intel_vme_update_mbmv_cost(VADriverContextP ctx,
-                                struct encode_state *encode_state,
-                                struct intel_encoder_context *encoder_context)
+static
+void intel_h264_calc_mbmvcost_qp(int qp,
+                                 int slice_type,
+                                 uint8_t *vme_state_message)
 {
-    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
-    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
-    int qp, m_cost, j, mv_count;
-    uint8_t *vme_state_message = (uint8_t *)(vme_context->vme_state_message);
+    int m_cost, j, mv_count;
     float   lambda, m_costf;
-
-    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
-
-    
-    if (encoder_context->rate_control_mode == VA_RC_CQP)
-        qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
-    else
-        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
-
-    if (vme_state_message == NULL)
-        return;
 
     assert(qp <= QP_MAX); 
     lambda = intel_lambda_qp(qp);
@@ -880,6 +864,31 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
             vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
         }
     }
+    return;
+}
+
+void intel_vme_update_mbmv_cost(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    int qp;
+    uint8_t *vme_state_message = (uint8_t *)(vme_context->vme_state_message);
+
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+    if (encoder_context->rate_control_mode == VA_RC_CQP)
+        qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+    else
+        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
+
+    if (vme_state_message == NULL)
+        return;
+
+    intel_h264_calc_mbmvcost_qp(qp, slice_type, vme_state_message);
 }
 
 void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
@@ -1023,6 +1032,16 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     int mb_row;
     int s;
     unsigned int *command_ptr;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    int qp;
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+    if (encoder_context->rate_control_mode == VA_RC_CQP)
+        qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+    else
+        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
 
 #define		USE_SCOREBOARD		(1 << 21)
  
@@ -1062,7 +1081,7 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                     }
                 }
 
-                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (9 - 2));
                 *command_ptr++ = kernel;
                 *command_ptr++ = USE_SCOREBOARD;
                 /* Indirect data */
@@ -1073,6 +1092,8 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                 /*inline data */
                 *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
                 *command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+                /* QP occupies one byte */
+                *command_ptr++ = qp;
                 x_inner -= 2;
                 y_inner += 1;
             }
@@ -1106,7 +1127,7 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                     }
                 }
 
-                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (9 - 2));
                 *command_ptr++ = kernel;
                 *command_ptr++ = USE_SCOREBOARD;
                 /* Indirect data */
@@ -1117,6 +1138,8 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                 /*inline data */
                 *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
                 *command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+                /* qp occupies one byte */
+                *command_ptr++ = qp;
 
                 x_inner -= 2;
                 y_inner += 1;
@@ -1647,6 +1670,97 @@ void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
     }
 
     return;
+}
+
+void
+intel_h264_initialize_mbmv_cost(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    int qp;
+    dri_bo *bo;
+    uint8_t *cost_table;
+
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+
+    if (slice_type == SLICE_TYPE_I) {
+        if (vme_context->i_qp_cost_table)
+            return;
+    } else if (slice_type == SLICE_TYPE_P) {
+        if (vme_context->p_qp_cost_table)
+            return;
+    } else {
+        if (vme_context->b_qp_cost_table)
+            return;
+    }
+
+    /* It is enough to allocate 32 bytes for each qp. */
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "cost_table ",
+                      QP_MAX * 32,
+                      64);
+
+    dri_bo_map(bo, 1);
+    assert(bo->virtual);
+    cost_table = (uint8_t *)(bo->virtual);
+    for (qp = 0; qp < QP_MAX; qp++) {
+        intel_h264_calc_mbmvcost_qp(qp, slice_type, cost_table);
+        cost_table += 32;
+    }
+
+    dri_bo_unmap(bo);
+
+    if (slice_type == SLICE_TYPE_I) {
+        vme_context->i_qp_cost_table = bo;
+    } else if (slice_type == SLICE_TYPE_P) {
+        vme_context->p_qp_cost_table = bo;
+    } else {
+        vme_context->b_qp_cost_table = bo;
+    }
+
+    vme_context->cost_table_size = QP_MAX * 32;
+    return;
+}
+
+extern void
+intel_h264_setup_cost_surface(VADriverContextP ctx,
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context,
+                              unsigned long binding_table_offset,
+                              unsigned long surface_state_offset)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    dri_bo *bo;
+
+
+    struct i965_buffer_surface cost_table;
+
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+
+    if (slice_type == SLICE_TYPE_I) {
+        bo = vme_context->i_qp_cost_table;
+    } else if (slice_type == SLICE_TYPE_P) {
+        bo = vme_context->p_qp_cost_table;
+    } else {
+        bo = vme_context->b_qp_cost_table;
+    }
+
+    cost_table.bo = bo;
+    cost_table.num_blocks = QP_MAX;
+    cost_table.pitch = 16;
+    cost_table.size_block = 32;
+
+    vme_context->vme_buffer_suface_setup(ctx,
+                                         &vme_context->gpe_context,
+                                         &cost_table,
+                                         binding_table_offset,
+                                         surface_state_offset);
 }
 
 /* HEVC */

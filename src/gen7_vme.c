@@ -227,7 +227,7 @@ gen7_vme_output_vme_batchbuffer_setup(VADriverContextP ctx,
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
     vme_context->vme_batchbuffer.num_blocks = width_in_mbs * height_in_mbs + 1;
-    vme_context->vme_batchbuffer.size_block = 32; /* 2 OWORDs */
+    vme_context->vme_batchbuffer.size_block = 64; /* 4 OWORDs */
     vme_context->vme_batchbuffer.pitch = 16;
     vme_context->vme_batchbuffer.bo = dri_bo_alloc(i965->intel.bufmgr, 
                                                    "VME batchbuffer",
@@ -270,6 +270,9 @@ gen7_vme_surface_setup(VADriverContextP ctx,
     /* VME output */
     gen7_vme_output_buffer_setup(ctx, encode_state, 3, encoder_context);
     gen7_vme_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
+    intel_h264_setup_cost_surface(ctx, encode_state, encoder_context,
+                                  BINDING_TABLE_OFFSET(INTEL_COST_TABLE_OFFSET),
+                                  SURFACE_STATE_OFFSET(INTEL_COST_TABLE_OFFSET));
 
     return VA_STATUS_SUCCESS;
 }
@@ -669,8 +672,10 @@ static VAStatus gen7_vme_prepare(VADriverContextP ctx,
         (vme_context->h264_level != pSequenceParameter->level_idc)) {
 	vme_context->h264_level = pSequenceParameter->level_idc;	
     }
-	
+
     intel_vme_update_mbmv_cost(ctx, encode_state, encoder_context);
+    intel_h264_initialize_mbmv_cost(ctx, encode_state, encoder_context);
+
     /*Setup all the memory object*/
     gen7_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
     gen7_vme_interface_setup(ctx, encode_state, encoder_context);
@@ -1018,10 +1023,17 @@ gen7_vme_context_destroy(void *context)
     dri_bo_unreference(vme_context->vme_batchbuffer.bo);
     vme_context->vme_batchbuffer.bo = NULL;
 
-    if (vme_context->vme_state_message) {
-	free(vme_context->vme_state_message);
-	vme_context->vme_state_message = NULL;
-    }
+    free(vme_context->vme_state_message);
+    vme_context->vme_state_message = NULL;
+
+    dri_bo_unreference(vme_context->i_qp_cost_table);
+    vme_context->i_qp_cost_table = NULL;
+
+    dri_bo_unreference(vme_context->p_qp_cost_table);
+    vme_context->p_qp_cost_table = NULL;
+
+    dri_bo_unreference(vme_context->b_qp_cost_table);
+    vme_context->b_qp_cost_table = NULL;
 
     free(vme_context);
 }
