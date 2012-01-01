@@ -554,6 +554,7 @@ gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx,
     VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     int qp;
     int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+    int qp_mb, qp_index;
 
     if (encoder_context->rate_control_mode == VA_RC_CQP)
         qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
@@ -619,7 +620,13 @@ gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx,
                 *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
                 *command_ptr++ = ((encoder_context->quality_level << 24) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
 
-                *command_ptr++ = qp;
+                if (vme_context->roi_enabled) {
+                    qp_index = mb_y * mb_width + mb_x;
+                    qp_mb = *(vme_context->qp_per_mb + qp_index);
+                } else
+                    qp_mb = qp;
+                *command_ptr++ = qp_mb;
+
                 i += 1;
             }
 

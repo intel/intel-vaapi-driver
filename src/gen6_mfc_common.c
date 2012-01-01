@@ -1035,7 +1035,7 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
-    int qp;
+    int qp,qp_mb,qp_index;
     int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
     if (encoder_context->rate_control_mode == VA_RC_CQP)
@@ -1093,7 +1093,12 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                 *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
                 *command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
                 /* QP occupies one byte */
-                *command_ptr++ = qp;
+                if (vme_context->roi_enabled) {
+                    qp_index = y_inner * mb_width + x_inner;
+                    qp_mb = *(vme_context->qp_per_mb + qp_index);
+                } else
+                    qp_mb = qp;
+                *command_ptr++ = qp_mb;
                 x_inner -= 2;
                 y_inner += 1;
             }
@@ -1139,7 +1144,12 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                 *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
                 *command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
                 /* qp occupies one byte */
-                *command_ptr++ = qp;
+                if (vme_context->roi_enabled) {
+                    qp_index = y_inner * mb_width + x_inner;
+                    qp_mb = *(vme_context->qp_per_mb + qp_index);
+                } else
+                    qp_mb = qp;
+                *command_ptr++ = qp_mb;
 
                 x_inner -= 2;
                 y_inner += 1;
@@ -1829,6 +1839,8 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
          */
         vme_context->roi_enabled = 0;
     }
+    if (vme_context->roi_enabled)
+        encoder_context->soft_batch_force = 1;
     return;
 }
 

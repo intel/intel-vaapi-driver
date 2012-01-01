@@ -1167,6 +1167,7 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
     int is_intra = slice_type == SLICE_TYPE_I;
     int qp_slice;
+    int qp_mb;
 
     qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
@@ -1210,19 +1211,26 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
         y = i / width_in_mbs;
         msg = (unsigned int *) (msg_ptr + i * vme_context->vme_output.size_block);
 
+        if (vme_context->roi_enabled) {
+            qp_mb = *(vme_context->qp_per_mb + i);
+        } else
+            qp_mb = qp;
+
         if (is_intra) {
             assert(msg);
-            gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+            gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp_mb, msg, encoder_context, 0, 0, slice_batch);
         } else {
 	    int inter_rdo, intra_rdo;
 	    inter_rdo = msg[AVC_INTER_RDO_OFFSET] & AVC_RDO_MASK;
 	    intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
 	    offset = i * vme_context->vme_output.size_block + AVC_INTER_MV_OFFSET;
 	    if (intra_rdo < inter_rdo) { 
-                gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+                gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp_mb, msg, encoder_context, 0, 0, slice_batch);
             } else {
-		msg += AVC_INTER_MSG_OFFSET;
-                gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, slice_type, slice_batch);
+                msg += AVC_INTER_MSG_OFFSET;
+                gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp_mb,
+                                               msg, offset, encoder_context,
+                                               0, 0, slice_type, slice_batch);
             }
         }
     }
