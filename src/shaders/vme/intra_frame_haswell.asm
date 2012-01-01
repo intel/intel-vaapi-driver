@@ -89,9 +89,30 @@ mov  (1) read1_header.8<1>:UD   BLOCK_8X4 {align1};
 mov  (8) msg_reg0.0<1>:UD       read1_header.0<8,8,1>:UD {align1};                
 send (8) msg_ind CHROMA_COL<1>:UB null read(BIND_IDX_CBCR, 0, 0, 4) mlen 1 rlen 1 {align1};
 
+mov  (8) msg_reg0.0<1>:ud   0:ud {align1};
+mov  (1) msg_reg0.20<1>:UB  thread_id_ub {align1};                  /* dispatch id */
+mov  (1) tmp_reg0.0<1>:UD   qp_ub<0,1,0>:ub {align1};
+mul  (1) msg_reg0.8<1>:ud tmp_reg0.0<1>:ud 2:ud {align1};
+
+send (16)
+        msg_ind
+        vme_cost_wb.0<1>:ud
+        null
+        data_port(
+                OBR_CACHE_TYPE,
+                OBR_MESSAGE_TYPE,
+                OBR_CONTROL_2,
+                BIND_IDX_COST,
+                OBR_WRITE_COMMIT_CATEGORY,
+                OBR_HEADER_PRESENT
+        )
+        mlen 1
+        rlen 1
+        {align1};
+
 /* m2, get the MV/Mb cost passed by constant buffer 
 when creating EU thread by MEDIA_OBJECT */       
-mov (8) vme_msg_2<1>:UD         r1.0<8,8,1>:UD {align1};
+mov (8) vme_msg_2<1>:UD         vme_cost_wb<8,8,1>:UD {align1};
 
 /* m3 */
 mov (8) vme_msg_3<1>:UD		0x0:UD {align1};	        
