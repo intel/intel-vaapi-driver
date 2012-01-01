@@ -50,7 +50,6 @@ struct encode_state;
 /* the space required for slice tail. */
 #define SLICE_TAIL			16
 
-#define __SOFTWARE__    0
 
 #define MFC_BATCHBUFFER_AVC_INTRA       0
 #define MFC_BATCHBUFFER_AVC_INTER       1

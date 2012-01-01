@@ -676,7 +676,6 @@ gen6_mfc_stop(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
-#if __SOFTWARE__
 
 static int
 gen6_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, int qp,unsigned int *msg,
@@ -899,7 +898,6 @@ gen6_mfc_avc_software_batchbuffer(VADriverContextP ctx,
     return batch_bo;
 }
 
-#else
 
 static void
 gen6_mfc_batchbuffer_surfaces_input(VADriverContextP ctx,
@@ -1299,7 +1297,6 @@ gen6_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
     return mfc_context->mfc_batchbuffer_surface.bo;
 }
 
-#endif
 
 
 static void
@@ -1316,11 +1313,10 @@ gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
         return; 
     }
 
-#if __SOFTWARE__
-    slice_batch_bo = gen6_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
-#else
-    slice_batch_bo = gen6_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
-#endif
+    if (encoder_context->soft_batch_force)
+        slice_batch_bo = gen6_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
+    else
+        slice_batch_bo = gen6_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
 
     // begin programing
     intel_batchbuffer_start_atomic_bcs(batch, 0x4000); 
