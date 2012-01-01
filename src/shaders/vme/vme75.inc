@@ -56,6 +56,7 @@ define(`BIND_IDX_VME_REF0',             `1')
 define(`BIND_IDX_VME_REF1',             `2')
 define(`BIND_IDX_OUTPUT',               `3')
 define(`BIND_IDX_INEP',                 `4')
+define(`BIND_IDX_COST',                 `8')
 
 define(`SUB_PEL_MODE_INTEGER',          `0x00000000')
 define(`SUB_PEL_MODE_HALF',             `0x00001000')
@@ -153,6 +154,8 @@ define(`input_mb_intra_ub',     `inline_reg0.5')
 define(`num_macroblocks',       `inline_reg0.6')
 define(`quality_level_ub',      `inline_reg0.7')
 
+define(`qp_ub',                 `inline_reg0.8')
+
 /*
  * GRF 6~11 -- reserved
  */
@@ -235,6 +238,7 @@ define(`tmp_uw6',               `tmp_rega.12')
 define(`tmp_uw7',               `tmp_rega.14')
 
 define(`vme_m2',                `r43')
+define(`vme_cost_wb',                `r44')
 /*
  * MRF registers
  */        

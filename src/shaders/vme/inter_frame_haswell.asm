@@ -387,10 +387,30 @@ __mb_hwdep_end:
 asr	(2)	mb_ref_win.0<1>:w	mb_mvp_ref.0<2,2,1>:w	2:w	{align1};
 add	(2)	mb_ref_win.8<1>:w	mb_ref_win.0<2,2,1>:w	3:w	{align1};
 and	(2)	mb_ref_win.16<1>:uw	mb_ref_win.8<2,2,1>:uw	0xFFFC:uw {align1};
-        
+
+mov  (8) msg_reg0.0<1>:ud   0:ud {align1};
+mov  (1) msg_reg0.20<1>:UB  thread_id_ub {align1};                  /* dispatch id */
+mov  (1) tmp_reg0.0<1>:UD   qp_ub<0,1,0>:ub {align1};
+mul  (1) msg_reg0.8<1>:ud tmp_reg0.0<1>:ud 2:ud {align1};
+
+send (16)
+        msg_ind
+        vme_cost_wb.0<1>:ud
+        null
+        data_port(
+                OBR_CACHE_TYPE,
+                OBR_MESSAGE_TYPE,
+                OBR_CONTROL_2,
+                BIND_IDX_COST,
+                OBR_WRITE_COMMIT_CATEGORY,
+                OBR_HEADER_PRESENT
+        )
+        mlen 1
+        rlen 1
+        {align1};
 /* m2, get the MV/Mb cost passed from constant buffer when
 spawning thread by MEDIA_OBJECT */       
-mov (8) vme_m2<1>:UD            r1.0<8,8,1>:UD {align1};
+mov (8) vme_m2<1>:UD            vme_cost_wb.0<8,8,1>:UD {align1};
 
 mov (8) vme_msg_2<1>:UD		vme_m2.0<8,8,1>:UD {align1};
 
