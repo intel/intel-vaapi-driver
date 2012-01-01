@@ -791,6 +791,7 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
     int is_intra = slice_type == SLICE_TYPE_I;
     int qp_slice;
+    int qp_mb;
 
     qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
@@ -835,15 +836,23 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
         x = i % width_in_mbs;
         y = i / width_in_mbs;
 
+        if (vme_context->roi_enabled) {
+            qp_mb = *(vme_context->qp_per_mb + i);
+        } else {
+            qp_mb = qp;
+        }
+
         if (is_intra) {
             assert(msg);
-            gen6_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+            gen6_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp_mb, msg, encoder_context, 0, 0, slice_batch);
             msg += INTRA_VME_OUTPUT_IN_DWS;
         } else {
             if (msg[0] & INTRA_MB_FLAG_MASK) {
-                gen6_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+                gen6_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp_mb, msg, encoder_context, 0, 0, slice_batch);
             } else {
-                gen6_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, slice_type, slice_batch);
+                gen6_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp_mb,
+                                              msg, offset, encoder_context,
+                                              0, 0, slice_type, slice_batch);
             }
 
             msg += INTER_VME_OUTPUT_IN_DWS;
