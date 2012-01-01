@@ -314,6 +314,9 @@ gen8_vme_surface_setup(VADriverContextP ctx,
     /* VME output */
     gen8_vme_avc_output_buffer_setup(ctx, encode_state, 3, encoder_context);
     gen8_vme_avc_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
+    intel_h264_setup_cost_surface(ctx, encode_state, encoder_context,
+                                  BINDING_TABLE_OFFSET(INTEL_COST_TABLE_OFFSET),
+                                  SURFACE_STATE_OFFSET(INTEL_COST_TABLE_OFFSET));
 
     return VA_STATUS_SUCCESS;
 }
@@ -721,7 +724,8 @@ static VAStatus gen8_vme_prepare(VADriverContextP ctx,
     }	
 
     intel_vme_update_mbmv_cost(ctx, encode_state, encoder_context);
-    	
+    intel_h264_initialize_mbmv_cost(ctx, encode_state, encoder_context);
+
     /*Setup all the memory object*/
     gen8_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
     gen8_vme_interface_setup(ctx, encode_state, encoder_context);
@@ -1287,10 +1291,17 @@ gen8_vme_context_destroy(void *context)
     dri_bo_unreference(vme_context->vme_batchbuffer.bo);
     vme_context->vme_batchbuffer.bo = NULL;
 
-    if (vme_context->vme_state_message) {
-	free(vme_context->vme_state_message);
-	vme_context->vme_state_message = NULL;
-    }
+    free(vme_context->vme_state_message);
+    vme_context->vme_state_message = NULL;
+
+    dri_bo_unreference(vme_context->i_qp_cost_table);
+    vme_context->i_qp_cost_table = NULL;
+
+    dri_bo_unreference(vme_context->p_qp_cost_table);
+    vme_context->p_qp_cost_table = NULL;
+
+    dri_bo_unreference(vme_context->b_qp_cost_table);
+    vme_context->b_qp_cost_table = NULL;
 
     free(vme_context);
 }

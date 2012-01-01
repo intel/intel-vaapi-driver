@@ -46,6 +46,8 @@
 
 #define GEN6_VME_KERNEL_NUMBER          3
 
+#define INTEL_COST_TABLE_OFFSET         8
+
 struct encode_state;
 struct intel_encoder_context;
 
@@ -91,6 +93,11 @@ struct gen6_vme_context
     struct object_surface *used_reference_objects[2];
     void *used_references[2];
     unsigned int ref_index_in_mb[2];
+
+    dri_bo *i_qp_cost_table;
+    dri_bo *p_qp_cost_table;
+    dri_bo *b_qp_cost_table;
+    int cost_table_size;
 };
 
 #define MPEG2_PIC_WIDTH_HEIGHT	30
@@ -200,4 +207,16 @@ void intel_vme_hevc_update_mbmv_cost(VADriverContextP ctx,
 extern Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 extern Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+
+extern void
+intel_h264_initialize_mbmv_cost(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context);
+
+extern void
+intel_h264_setup_cost_surface(VADriverContextP ctx,
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context,
+                              unsigned long binding_table_offset,
+                              unsigned long surface_state_offset);
 #endif /* _GEN6_VME_H_ */
