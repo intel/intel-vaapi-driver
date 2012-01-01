@@ -542,8 +542,19 @@ mov  (1) vme_m1.16<1>:ud	mb_mvp_ref.0<0,1,0>:ud	{align1};
 mov  (1) vme_m1.20<1>:ud	mb_mvp_ref.4<0,1,0>:ud	{align1};
 mov  (8) vme_msg_1.0<1>:UD      vme_m1.0<8,8,1>:UD {align1};
 
+mov  (1) tmp_reg0.0<1>:ud        qp_ub<0,1,0>:ub    {align1};
+/* lut_subindex */
+and  (1) tmp_reg1.0<1>:ud        tmp_reg0.0<0,1,0>:ud 0x06:ud {align1};
+shl  (1) tmp_reg0.4<1>:ud        tmp_reg1.0<0,1,0>:ud 10:ud {align1};
+
+/* lut_index */
+and  (1) tmp_reg1.0<1>:ud        tmp_reg0.0<0,1,0>:ud 0x038:ud {align1};
+shl  (1) tmp_reg1.4<1>:ud        tmp_reg1.0<0,1,0>:ud 5:ud {align1};
+
+add  (1) tmp_reg0.0<1>:ud        tmp_reg0.4<0,1,0>:ud tmp_reg1.4<0,1,0>:ud {align1};
 /* Use one register as the descriptor of send instruction */
-mov  (1) a0.0<1>:ud              0x0a686000:ud {align1};
+
+add  (1) a0.0<1>:ud              tmp_reg0.0<0,1,0>:ud 0x0a686000:ud {align1};
 send (1) vme_wb.0<1>:ud   vme_msg_0    0x08   a0.0<0,1,0>:ud {align1};
 
 and.z.f0.0      (1)     null<1>:ud              vme_wb0.0<0,1,0>:ud     INTRAMBFLAG_MASK:ud {align1} ;

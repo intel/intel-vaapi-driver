@@ -374,58 +374,117 @@ static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
     int i;
     VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     unsigned int is_low_quality = (encoder_context->quality_level == ENCODER_LOW_QUALITY);
+    dri_bo *cost_bo;
+    int slice_type;
+    uint8_t *cost_ptr;
+    int qp;
+
+    slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+    if (slice_type == SLICE_TYPE_I) {
+        cost_bo = vme_context->i_qp_cost_table;
+    } else if (slice_type == SLICE_TYPE_P) {
+        cost_bo = vme_context->p_qp_cost_table;
+    } else {
+        cost_bo = vme_context->b_qp_cost_table;
+    }
 
     mb_cost_table = (unsigned int *)vme_context->vme_state_message;
-    //building VME state message
     dri_bo_map(vme_context->vme_state.bo, 1);
+    dri_bo_map(cost_bo, 0);
     assert(vme_context->vme_state.bo->virtual);
+    assert(cost_bo->virtual);
     vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
 
-    if (((slice_param->slice_type == SLICE_TYPE_P) ||
-         (slice_param->slice_type == SLICE_TYPE_SP)) &&
-        !is_low_quality) {
-        vme_state_message[0] = 0x01010101;
-        vme_state_message[1] = 0x10010101;
-        vme_state_message[2] = 0x0F0F0F0F;
-        vme_state_message[3] = 0x100F0F0F;
-        vme_state_message[4] = 0x01010101;
-        vme_state_message[5] = 0x10010101;
-        vme_state_message[6] = 0x0F0F0F0F;
-        vme_state_message[7] = 0x100F0F0F;
-        vme_state_message[8] = 0x01010101;
-        vme_state_message[9] = 0x10010101;
-        vme_state_message[10] = 0x0F0F0F0F;
-        vme_state_message[11] = 0x000F0F0F;
-        vme_state_message[12] = 0x00;
-        vme_state_message[13] = 0x00;
-    } else {
-        vme_state_message[0] = 0x10010101;
-        vme_state_message[1] = 0x100F0F0F;
-        vme_state_message[2] = 0x10010101;
-        vme_state_message[3] = 0x000F0F0F;
-        vme_state_message[4] = 0;
-        vme_state_message[5] = 0;
-        vme_state_message[6] = 0;
-        vme_state_message[7] = 0;
-        vme_state_message[8] = 0;
-        vme_state_message[9] = 0;
-        vme_state_message[10] = 0;
-        vme_state_message[11] = 0;
-        vme_state_message[12] = 0;
-        vme_state_message[13] = 0;
+    cost_ptr = (uint8_t *)cost_bo->virtual;
+
+    /* up to 8 VME_SEARCH_PATH_LUT is supported */
+    /* Two subsequent qp will share the same mode/motion-vector cost table */
+    /* the range is from 0-51 */
+    for (i = 0; i < 8; i++)  {
+
+        vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual +
+                             i * 32;
+        if ((slice_type == SLICE_TYPE_P) && !is_low_quality) {
+            vme_state_message[0] = 0x01010101;
+            vme_state_message[1] = 0x10010101;
+            vme_state_message[2] = 0x0F0F0F0F;
+            vme_state_message[3] = 0x100F0F0F;
+            vme_state_message[4] = 0x01010101;
+            vme_state_message[5] = 0x10010101;
+            vme_state_message[6] = 0x0F0F0F0F;
+            vme_state_message[7] = 0x100F0F0F;
+            vme_state_message[8] = 0x01010101;
+            vme_state_message[9] = 0x10010101;
+            vme_state_message[10] = 0x0F0F0F0F;
+            vme_state_message[11] = 0x000F0F0F;
+            vme_state_message[12] = 0x00;
+            vme_state_message[13] = 0x00;
+        } else {
+            vme_state_message[0] = 0x10010101;
+            vme_state_message[1] = 0x100F0F0F;
+            vme_state_message[2] = 0x10010101;
+            vme_state_message[3] = 0x000F0F0F;
+            vme_state_message[4] = 0;
+            vme_state_message[5] = 0;
+            vme_state_message[6] = 0;
+            vme_state_message[7] = 0;
+            vme_state_message[8] = 0;
+            vme_state_message[9] = 0;
+            vme_state_message[10] = 0;
+            vme_state_message[11] = 0;
+            vme_state_message[12] = 0;
+            vme_state_message[13] = 0;
+        }
+
+        qp = 8 * i;
+
+        /* when qp is greater than 51, use the cost_table of qp=51 to fulfill */
+        if (qp > 51) {
+            qp = 51;
+        }
+        /* Setup the four LUT sets for MbMV cost */
+        mb_cost_table = (unsigned int *)(cost_ptr + qp * 32);
+        vme_state_message[14] = (mb_cost_table[2] & 0xFFFF);
+        vme_state_message[16] = mb_cost_table[0];
+        vme_state_message[17] = mb_cost_table[1];
+        vme_state_message[18] = mb_cost_table[3];
+        vme_state_message[19] = mb_cost_table[4];
+
+        qp += 2;
+        if (qp > 51) {
+            qp = 51;
+        }
+        mb_cost_table = (unsigned int *)(cost_ptr + qp * 32);
+        vme_state_message[14] |= ((mb_cost_table[2] & 0xFFFF) << 16);
+        vme_state_message[20] = mb_cost_table[0];
+        vme_state_message[21] = mb_cost_table[1];
+        vme_state_message[22] = mb_cost_table[3];
+        vme_state_message[23] = mb_cost_table[4];
+
+        qp += 2;
+        if (qp > 51) {
+            qp = 51;
+        }
+        vme_state_message[15] = (mb_cost_table[2] & 0xFFFF);
+        vme_state_message[24] = mb_cost_table[0];
+        vme_state_message[25] = mb_cost_table[1];
+        vme_state_message[26] = mb_cost_table[3];
+        vme_state_message[27] = mb_cost_table[4];
+
+        qp += 2;
+        if (qp > 51) {
+            qp = 51;
+        }
+        mb_cost_table = (unsigned int *)(cost_ptr + qp * 32);
+        vme_state_message[15] |= ((mb_cost_table[2] & 0xFFFF) << 16);
+        vme_state_message[28] = mb_cost_table[0];
+        vme_state_message[29] = mb_cost_table[1];
+        vme_state_message[30] = mb_cost_table[3];
+        vme_state_message[31] = mb_cost_table[4];
     }
 
-    vme_state_message[14] = (mb_cost_table[2] & 0xFFFF);
-    vme_state_message[15] = 0;
-    vme_state_message[16] = mb_cost_table[0];
-    vme_state_message[17] = mb_cost_table[1];
-    vme_state_message[18] = mb_cost_table[3];
-    vme_state_message[19] = mb_cost_table[4];
-
-    for(i = 20; i < 32; i++) {
-        vme_state_message[i] = 0;
-    }
-
+    dri_bo_unmap(cost_bo);
     dri_bo_unmap( vme_context->vme_state.bo);
     return VA_STATUS_SUCCESS;
 }
@@ -490,7 +549,16 @@ gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx,
     int mb_x = 0, mb_y = 0;
     int i, s, j;
     unsigned int *command_ptr;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    int qp;
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
+    if (encoder_context->rate_control_mode == VA_RC_CQP)
+        qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+    else
+        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
 
     dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
     command_ptr = vme_context->vme_batchbuffer.bo->virtual;
@@ -540,7 +608,7 @@ gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx,
                     mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
                 }
 
-                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (9 - 2));
                 *command_ptr++ = kernel;
                 *command_ptr++ = 0;
                 *command_ptr++ = 0;
@@ -551,6 +619,7 @@ gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx,
                 *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
                 *command_ptr++ = ((encoder_context->quality_level << 24) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
 
+                *command_ptr++ = qp;
                 i += 1;
             }
 
