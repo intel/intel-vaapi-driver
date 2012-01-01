@@ -104,8 +104,19 @@ mov  (8) vme_msg_4<1>:UD         0x0 {align1};
 mov (16) vme_msg_4.0<1>:UB       INEP_COL0.3<32,8,4>:UB {align1};
 mov  (1) vme_msg_4.16<1>:UD      INTRA_PREDICTORE_MODE {align1};
 
+mov  (1) tmp_reg0.0<1>:ud        qp_ub<0,1,0>:ub    {align1};
+/* lut_subindex */
+and  (1) tmp_reg1.0<1>:ud        tmp_reg0.0<0,1,0>:ud 0x06:ud {align1};
+shl  (1) tmp_reg0.4<1>:ud        tmp_reg1.0<0,1,0>:ud 10:ud {align1};
+
+/* lut_index */
+and  (1) tmp_reg1.0<1>:ud        tmp_reg0.0<0,1,0>:ud 0x038:ud {align1};
+shl  (1) tmp_reg1.4<1>:ud        tmp_reg1.0<0,1,0>:ud 5:ud {align1};
+
+add  (1) tmp_reg0.0<1>:ud        tmp_reg0.4<0,1,0>:ud tmp_reg1.4<0,1,0>:ud {align1};
 /* Use one register as the descriptor of send instruction */
-mov  (1) a0.0<1>:ud             0x0a184000:ud {align1};
+
+add  (1) a0.0<1>:ud              tmp_reg0.0<0,1,0>:ud 0x0a184000:ud {align1};
 send (1) vme_wb.0<1>:ud   vme_msg_0    0x08   a0.0<0,1,0>:ud {align1};
 
 /*

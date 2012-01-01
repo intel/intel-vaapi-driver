@@ -152,6 +152,7 @@ define(`input_mb_intra_ub',     `inline_reg0.5')
 define(`num_macroblocks',       `inline_reg0.6')
 define(`quality_level_ub',      `inline_reg0.7')
 
+define(`qp_ub',                 `inline_reg0.8')
 /*
  * GRF 6~11 -- reserved
  */
