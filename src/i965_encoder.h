@@ -66,6 +66,7 @@ struct intel_encoder_context
     unsigned int is_tmp_id:1;
     unsigned int low_power_mode:1;
     unsigned int soft_batch_force:1;
+    unsigned int context_roi:1;
 
     void (*vme_context_destroy)(void *vme_context);
     VAStatus (*vme_pipeline)(VADriverContextP ctx,

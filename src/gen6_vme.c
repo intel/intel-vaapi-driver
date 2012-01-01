@@ -622,6 +622,9 @@ gen6_vme_context_destroy(void *context)
     dri_bo_unreference(vme_context->vme_batchbuffer.bo);
     vme_context->vme_batchbuffer.bo = NULL;
 
+    free(vme_context->qp_per_mb);
+    vme_context->qp_per_mb = NULL;
+
     free(vme_context);
 }
 

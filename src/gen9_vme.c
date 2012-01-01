@@ -1776,6 +1776,9 @@ gen9_vme_context_destroy(void *context)
         vme_context->vme_state_message = NULL;
     }
 
+    free(vme_context->qp_per_mb);
+    vme_context->qp_per_mb = NULL;
+
     free(vme_context);
 }
 
