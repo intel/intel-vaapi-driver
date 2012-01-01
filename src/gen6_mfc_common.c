@@ -1763,6 +1763,75 @@ intel_h264_setup_cost_surface(VADriverContextP ctx,
                                          surface_state_offset);
 }
 
+extern void
+intel_h264_enc_roi_config(VADriverContextP ctx,
+                          struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context)
+{
+    VAEncMiscParameterBuffer* pMiscParamROI;
+    VAEncMiscParameterBufferROI *pParamROI;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+
+    vme_context->roi_enabled = 0;
+    /* Restriction: Disable ROI when multi-slice is enabled */
+    if (!encoder_context->context_roi || (encode_state->num_slice_params_ext > 1))
+        return;
+
+    if (encode_state->misc_param[VAEncMiscParameterTypeROI] == NULL) {
+        return;
+    }
+
+    pMiscParamROI = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeROI]->buffer;
+    pParamROI = (VAEncMiscParameterBufferROI *)pMiscParamROI->data;
+
+    /* check whether number of ROI is correct */
+    /* currently one region is supported */
+    if (pParamROI->num_roi != 1) {
+        return;
+    }
+
+    vme_context->roi_enabled = 1;
+
+    if ((vme_context->saved_width_mbs !=  width_in_mbs) ||
+        (vme_context->saved_height_mbs != height_in_mbs)) {
+        free(vme_context->qp_per_mb);
+        vme_context->qp_per_mb = calloc(1, width_in_mbs * height_in_mbs);
+
+        vme_context->saved_width_mbs = width_in_mbs;
+        vme_context->saved_height_mbs = height_in_mbs;
+        assert(vme_context->qp_per_mb);
+    }
+    if (encoder_context->rate_control_mode == VA_RC_CBR) {
+        /*
+         * TODO: More complex Qp adjust needs to be added.
+         * Currently it is initialized to slice_qp.
+         */
+        VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+        int qp;
+        int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
+        memset(vme_context->qp_per_mb, qp, width_in_mbs * height_in_mbs);
+    } else if (encoder_context->rate_control_mode == VA_RC_CQP){
+        VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+        VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+        int qp;
+
+        qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+        memset(vme_context->qp_per_mb, qp, width_in_mbs * height_in_mbs);
+    } else {
+        /*
+         * TODO: Disable it for non CBR-CQP.
+         */
+        vme_context->roi_enabled = 0;
+    }
+    return;
+}
+
 /* HEVC */
 static int
 hevc_temporal_find_surface(VAPictureHEVC *curr_pic,

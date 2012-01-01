@@ -1104,6 +1104,9 @@ gen7_vme_context_destroy(void *context)
     dri_bo_unreference(vme_context->b_qp_cost_table);
     vme_context->b_qp_cost_table = NULL;
 
+    free(vme_context->qp_per_mb);
+    vme_context->qp_per_mb = NULL;
+
     free(vme_context);
 }
 

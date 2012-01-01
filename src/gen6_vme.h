@@ -98,6 +98,13 @@ struct gen6_vme_context
     dri_bo *p_qp_cost_table;
     dri_bo *b_qp_cost_table;
     int cost_table_size;
+
+    /* one buffer define qp per mb. one byte for every mb.
+     * If it needs to be accessed by GPU, it will be changed to dri_bo.
+     */
+    bool roi_enabled;
+    char *qp_per_mb;
+    int saved_width_mbs, saved_height_mbs;
 };
 
 #define MPEG2_PIC_WIDTH_HEIGHT	30
@@ -219,4 +226,10 @@ intel_h264_setup_cost_surface(VADriverContextP ctx,
                               struct intel_encoder_context *encoder_context,
                               unsigned long binding_table_offset,
                               unsigned long surface_state_offset);
+
+extern void
+intel_h264_enc_roi_config(VADriverContextP ctx,
+                          struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context);
+
 #endif /* _GEN6_VME_H_ */
