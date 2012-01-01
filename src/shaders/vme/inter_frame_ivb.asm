@@ -458,19 +458,9 @@ mov  (1) vme_m1.20<1>:ud	mb_mvp_ref.0<0,1,0>:ud	{align1};
 mov  (8) vme_msg_1.0<1>:UD      vme_m1.0<8,8,1>:UD {align1};
 
 
-send (8)
-        vme_msg_ind
-        vme_wb
-        null
-        vme(
-                BIND_IDX_VME,
-                0,
-                0,
-                VME_MESSAGE_TYPE_MIXED
-        )
-        mlen vme_msg_length
-        rlen vme_inter_wb_length
-        {align1};
+/* Use one register as the descriptor of send instruction */
+mov  (1) a0.0<1>:ud              0x0a686000:ud {align1};
+send (1) vme_wb.0<1>:ud   vme_msg_0    0x08   a0.0<0,1,0>:ud {align1};
 
 and.z.f0.0      (1)     null<1>:ud              vme_wb0.0<0,1,0>:ud     INTRAMBFLAG_MASK:ud {align1} ;
 
