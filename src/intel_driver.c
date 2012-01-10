@@ -61,12 +61,7 @@ intel_driver_init(VADriverContextP ctx)
     intel->dri2Enabled = (dri_state->driConnectedFlag == VA_DRI2);
 
     if (!intel->dri2Enabled) {
-        drm_sarea_t *pSAREA;
-
-        pSAREA = (drm_sarea_t *)dri_state->pSAREA;
-        intel->hHWContext = dri_state->hwContext;
-        intel->driHwLock = (drmLock *)(&pSAREA->lock);
-        intel->pPrivSarea = (void *)pSAREA + sizeof(drm_sarea_t);
+        return False;
     }
 
     intel->locked = 0;
@@ -93,43 +88,4 @@ intel_driver_terminate(VADriverContextP ctx)
     pthread_mutex_destroy(&intel->ctxmutex);
 
     return True;
-}
-
-void 
-intel_lock_hardware(VADriverContextP ctx)
-{
-    struct intel_driver_data *intel = intel_driver_data(ctx);
-    char __ret = 0;
-
-    PPTHREAD_MUTEX_LOCK();
-
-    assert(!intel->locked);
-
-    if (!intel->dri2Enabled) {
-        DRM_CAS(intel->driHwLock, 
-                intel->hHWContext,
-                (DRM_LOCK_HELD|intel->hHWContext),
-                __ret);
-
-        if (__ret) {
-            drmGetLock(intel->fd, intel->hHWContext, 0);
-        }	
-    }
-
-    intel->locked = 1;
-}
-
-void 
-intel_unlock_hardware(VADriverContextP ctx)
-{
-    struct intel_driver_data *intel = intel_driver_data(ctx);
-
-    if (!intel->dri2Enabled) {
-        DRM_UNLOCK(intel->fd, 
-                   intel->driHwLock,
-                   intel->hHWContext);
-    }
-
-    intel->locked = 0;
-    PPTHREAD_MUTEX_UNLOCK();
 }

@@ -4,7 +4,6 @@
 #include <pthread.h>
 #include <signal.h>
 
-#include <xf86drm.h>
 #include <drm.h>
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
@@ -94,9 +93,6 @@ struct intel_driver_data
     int device_id;
 
     int dri2Enabled;
-    drm_context_t hHWContext;
-    drm_i915_sarea_t *pPrivSarea;
-    drmLock *driHwLock;
 
     sigset_t sa_mask;
     pthread_mutex_t ctxmutex;
@@ -111,8 +107,6 @@ struct intel_driver_data
 
 Bool intel_driver_init(VADriverContextP ctx);
 Bool intel_driver_terminate(VADriverContextP ctx);
-void intel_lock_hardware(VADriverContextP ctx);
-void intel_unlock_hardware(VADriverContextP ctx);
 
 static INLINE struct intel_driver_data *
 intel_driver_data(VADriverContextP ctx)
