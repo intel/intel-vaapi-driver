@@ -7,15 +7,13 @@
 *.loT
 *.bin
 *.pc
-*.g4s
-*.g5s
-*.g6s
-*.g7s
+*.g[4-7]s
 .deps
 .libs
 install-sh
 libtool
 ltmain.sh
+compile
 missing
 Makefile
 Makefile.in
@@ -31,3 +29,5 @@ config.sub
 configure
 depcomp
 TAGS
+/debian.upstream/changelog
+/debian.upstream/control

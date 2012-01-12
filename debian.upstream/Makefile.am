@@ -20,7 +20,7 @@ dist_noinst_DATA = $(DEBIANGENFILES)
 MAINTAINERCLEANFILES = Makefile.in $(DEBIANGENFILES)
 
 $(DEBIANGENFILES): %: %.in Makefile
-	-sed \
+	-$(AM_V_GEN)sed \
 	  -e 's|\@DATE\@|'"`LC_ALL=C date +'%a, %d %b %Y %X %z'`"'|' \
 	  -e 's|\@LIBDRM_VERSION\@|$(LIBDRM_VERSION)|' \
 	  -e 's|\@LIBVA_PACKAGE_VERSION\@|$(LIBVA_PACKAGE_VERSION)|' \

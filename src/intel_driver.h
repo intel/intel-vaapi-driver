@@ -1,10 +1,10 @@
 #ifndef _INTEL_DRIVER_H_
 #define _INTEL_DRIVER_H_
 
+#include <stddef.h>
 #include <pthread.h>
 #include <signal.h>
 
-#include <xf86drm.h>
 #include <drm.h>
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
@@ -63,6 +63,10 @@ struct intel_batchbuffer;
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
 
+#define Bool int
+#define True 1
+#define False 0
+
 #define SET_BLOCKED_SIGSET()   do {     \
         sigset_t bl_mask;               \
         sigfillset(&bl_mask);           \
@@ -94,9 +98,6 @@ struct intel_driver_data
     int device_id;
 
     int dri2Enabled;
-    drm_context_t hHWContext;
-    drm_i915_sarea_t *pPrivSarea;
-    drmLock *driHwLock;
 
     sigset_t sa_mask;
     pthread_mutex_t ctxmutex;
@@ -111,8 +112,6 @@ struct intel_driver_data
 
 Bool intel_driver_init(VADriverContextP ctx);
 Bool intel_driver_terminate(VADriverContextP ctx);
-void intel_lock_hardware(VADriverContextP ctx);
-void intel_unlock_hardware(VADriverContextP ctx);
 
 static INLINE struct intel_driver_data *
 intel_driver_data(VADriverContextP ctx)
@@ -138,6 +137,8 @@ struct intel_region
 #define PCI_CHIP_Q45_G                  0x2E12
 #define PCI_CHIP_G45_G                  0x2E22
 #define PCI_CHIP_G41_G                  0x2E32
+#define PCI_CHIP_B43_G                  0x2E42
+#define PCI_CHIP_B43_G1                 0x2E92
 
 #define PCI_CHIP_IRONLAKE_D_G           0x0042
 #define PCI_CHIP_IRONLAKE_M_G           0x0046
@@ -161,7 +162,10 @@ struct intel_region
 #define IS_G45(devid)           (devid == PCI_CHIP_IGD_E_G ||   \
                                  devid == PCI_CHIP_Q45_G ||     \
                                  devid == PCI_CHIP_G45_G ||     \
-                                 devid == PCI_CHIP_G41_G)
+                                 devid == PCI_CHIP_G41_G ||     \
+                                 devid == PCI_CHIP_B43_G ||     \
+                                 devid == PCI_CHIP_B43_G1)
+ 
 #define IS_GM45(devid)          (devid == PCI_CHIP_GM45_GM)
 #define IS_G4X(devid)		(IS_G45(devid) || IS_GM45(devid))
 

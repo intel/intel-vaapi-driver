@@ -99,13 +99,15 @@ all-local: $(TARGETS)
 
 SUFFIXES = .g4a .g4s .g4b .g4b.gen5
 
+if HAVE_GEN4ASM
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 .g4a.g4s:
-	m4 $< > $@
+	$(AM_V_GEN)m4 $< > $@
 .g4s.g4b:
-	intel-gen4asm -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -o $@ $<
 .g4s.g4b.gen5:
-	intel-gen4asm -g 5 -o $@ $<
+	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@ $<
+endif
 
 CLEANFILES = $(INTEL_G4S)
 

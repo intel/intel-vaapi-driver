@@ -1,7 +1,7 @@
 # intel-driver package version number
 m4_define([intel_driver_major_version], [1])
 m4_define([intel_driver_minor_version], [0])
-m4_define([intel_driver_micro_version], [15])
+m4_define([intel_driver_micro_version], [16])
 m4_define([intel_driver_pre_version],   [1])
 m4_define([intel_driver_version],
           [intel_driver_major_version.intel_driver_minor_version.intel_driver_micro_version])
@@ -60,6 +60,7 @@ AC_SUBST(LIBDRM_VERSION)
 dnl Check for gen4asm
 PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.2], [gen4asm=yes], [gen4asm=no])
 AM_CONDITIONAL(HAVE_GEN4ASM, test x$gen4asm = xyes)
+AC_PATH_PROG([GEN4ASM], [intel-gen4asm])
 
 dnl Check for VA-API
 PKG_CHECK_MODULES(LIBVA_DEPS,	  [libva])

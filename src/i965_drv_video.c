@@ -1491,10 +1491,10 @@ i965_decoder_render_picture(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_context *obj_context = CONTEXT(context);
-    VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
-    for (i = 0; i < num_buffers; i++) {
+    for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
         assert(obj_buffer);
 
@@ -1687,10 +1687,10 @@ i965_proc_render_picture(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_context *obj_context = CONTEXT(context);
-    VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
-    for (i = 0; i < num_buffers; i++) {  
+    for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
         assert(obj_buffer);
 
