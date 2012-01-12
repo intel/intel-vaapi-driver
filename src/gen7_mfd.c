@@ -2058,7 +2058,8 @@ static const int va_to_gen7_jpeg_hufftable[2] = {
 static void
 gen7_mfd_jpeg_huff_table_state(VADriverContextP ctx,
                                struct decode_state *decode_state,
-                               struct gen7_mfd_context *gen7_mfd_context)
+                               struct gen7_mfd_context *gen7_mfd_context,
+                               int num_tables)
 {
     VAHuffmanTableBufferJPEG *huffman_table;
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
@@ -2069,22 +2070,21 @@ gen7_mfd_jpeg_huff_table_state(VADriverContextP ctx,
 
     huffman_table = (VAHuffmanTableBufferJPEG *)decode_state->huffman_table->buffer;
 
-    for (index = 0; index < 2; index++) {
-        if (huffman_table->huffman_table_mask & (1 << index)) {
-            int id = va_to_gen7_jpeg_hufftable[index];
-            BEGIN_BCS_BATCH(batch, 53);
-            OUT_BCS_BATCH(batch, MFX_JPEG_HUFF_TABLE_STATE | (53 - 2));
-            OUT_BCS_BATCH(batch, id);
-            intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_bits, 12);
-            intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_huffval, 12);
-            intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_bits, 16);
-            intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_huffval, 164);
-            ADVANCE_BCS_BATCH(batch);
-        }
+    for (index = 0; index < num_tables; index++) {
+        int id = va_to_gen7_jpeg_hufftable[index];
+        BEGIN_BCS_BATCH(batch, 53);
+        OUT_BCS_BATCH(batch, MFX_JPEG_HUFF_TABLE_STATE | (53 - 2));
+        OUT_BCS_BATCH(batch, id);
+        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_bits, 12);
+        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_huffval, 12);
+        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_bits, 16);
+        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_huffval, 164);
+        ADVANCE_BCS_BATCH(batch);
     }
 }
 
-static const int va_to_gen7_jpeg_qm[4] = {
+static const int va_to_gen7_jpeg_qm[5] = {
+    -1,
     MFX_QM_JPEG_LUMA_Y_QUANTIZER_MATRIX,
     MFX_QM_JPEG_CHROMA_CB_QUANTIZER_MATRIX,
     MFX_QM_JPEG_CHROMA_CR_QUANTIZER_MATRIX,
@@ -2096,6 +2096,7 @@ gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
                        struct decode_state *decode_state,
                        struct gen7_mfd_context *gen7_mfd_context)
 {
+    VAPictureParameterBufferJPEG *pic_param;
     VAIQMatrixBufferJPEG *iq_matrix;
     int index;
 
@@ -2103,14 +2104,25 @@ gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
         return;
 
     iq_matrix = (VAIQMatrixBufferJPEG *)decode_state->iq_matrix->buffer;
+    pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
 
-    for (index = 0; index < 3; index++) {
-        if (iq_matrix->quantizer_matrix_mask & (1 << index)) {
-            int qm_type = va_to_gen7_jpeg_qm[index];
-            unsigned char *qm = iq_matrix->quantizer_matrix[index];
+    assert(pic_param->num_components <= 3);
 
-            gen7_mfd_qm_state(ctx, qm_type, qm, 64, gen7_mfd_context);
-        }
+    for (index = 0; index < pic_param->num_components; index++) {
+        int qm_type = va_to_gen7_jpeg_qm[pic_param->components[index].component_id];
+        unsigned char *qm = iq_matrix->quantiser_matrix[pic_param->components[index].quantiser_table_selector];
+        int precision = iq_matrix->precision[pic_param->components[index].quantiser_table_selector];
+        unsigned char raster_qm[64];
+        int j;
+
+        assert(pic_param->components[index].component_id >= VA_JPEG_COMPONENT_ID_Y &&
+               pic_param->components[index].component_id <= VA_JPEG_COMPONENT_ID_A);
+        assert(precision == 0);
+
+        for (j = 0; j < 64; j++)
+            raster_qm[zigzag_direct[j]] = qm[j];
+
+        gen7_mfd_qm_state(ctx, qm_type, raster_qm, 64, gen7_mfd_context);
     }
 }
 
@@ -2131,7 +2143,7 @@ gen7_mfd_jpeg_bsd_object(VADriverContextP ctx,
     assert(slice_param->num_components <= pic_param->num_components);
 
     for (i = 0; i < slice_param->num_components; i++) {
-        switch (pic_param->components[slice_param->components[i].index].component_id) {
+        switch (slice_param->components[i].component_id) {
         case VA_JPEG_COMPONENT_ID_Y:
             scan_component_mask |= (1 << 0);
             break;
@@ -2175,10 +2187,14 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
     VAPictureParameterBufferJPEG *pic_param;
     VASliceParameterBufferJPEG *slice_param, *next_slice_param, *next_slice_group_param;
     dri_bo *slice_data_bo;
-    int i, j;
+    int i, j, max_selector = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
+
+    /* Currently only support Baseline DCT */
+    assert(pic_param->type == VA_JPEG_SOF0);
+    assert(pic_param->sample_precision == 8);
 
     gen7_mfd_jpeg_decode_init(ctx, decode_state, gen7_mfd_context);
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
@@ -2188,7 +2204,42 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
     gen7_mfd_pipe_buf_addr_state(ctx, decode_state, MFX_FORMAT_JPEG, gen7_mfd_context);
     gen7_mfd_jpeg_pic_state(ctx, decode_state, gen7_mfd_context);
     gen7_mfd_jpeg_qm_state(ctx, decode_state, gen7_mfd_context);
-    gen7_mfd_jpeg_huff_table_state(ctx, decode_state, gen7_mfd_context);
+
+    for (j = 0; j < decode_state->num_slice_params; j++) {
+        assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
+        slice_param = (VASliceParameterBufferJPEG *)decode_state->slice_params[j]->buffer;
+        slice_data_bo = decode_state->slice_datas[j]->bo;
+        gen7_mfd_ind_obj_base_addr_state(ctx, slice_data_bo, MFX_FORMAT_JPEG, gen7_mfd_context);
+
+        if (j == decode_state->num_slice_params - 1)
+            next_slice_group_param = NULL;
+        else
+            next_slice_group_param = (VASliceParameterBufferJPEG *)decode_state->slice_params[j + 1]->buffer;
+
+        for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
+            int component;
+
+            assert(slice_param->slice_data_flag == VA_SLICE_DATA_FLAG_ALL);
+
+            if (i < decode_state->slice_params[j]->num_elements - 1)
+                next_slice_param = slice_param + 1;
+            else
+                next_slice_param = next_slice_group_param;
+
+            for (component = 0; component < slice_param->num_components; component++) {
+                if (max_selector < slice_param->components[component].dc_selector)
+                    max_selector = slice_param->components[component].dc_selector;
+
+                if (max_selector < slice_param->components[component].ac_selector)
+                    max_selector = slice_param->components[component].ac_selector;
+            }
+
+            slice_param++;
+        }
+    }
+
+    assert(max_selector < 2);
+    gen7_mfd_jpeg_huff_table_state(ctx, decode_state, gen7_mfd_context, max_selector + 1);
 
     for (j = 0; j < decode_state->num_slice_params; j++) {
         assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
