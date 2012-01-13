@@ -47,11 +47,11 @@ SUFFIXES = .g7b .g7s .asm
 
 $(INTEL_PP_GEN7_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G4A)
 .asm.g7s:
-	cpp $< > _pp0.$@;		\
+	$(AM_V_GEN)cpp $< > _pp0.$@;		\
 	../../gpp.py _pp0.$@ $@;	\
 	rm _pp0.$@
 .g7s.g7b:
-	intel-gen4asm -a -o $@ -g 7 $<
+	$(AM_V_GEN)intel-gen4asm -a -o $@ -g 7 $<
 
 CLEANFILES = $(INTEL_PP_GEN7_ASM)
 
