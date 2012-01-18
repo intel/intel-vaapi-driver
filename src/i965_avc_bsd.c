@@ -512,7 +512,7 @@ i965_avc_bsd_buf_base_state(VADriverContextP ctx,
     assert(obj_surface);
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+    i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
     i965_avc_bsd_init_avc_bsd_surface(ctx, obj_surface, pic_param, i965_h264_context);
     avc_bsd_surface = obj_surface->private_data;
 
@@ -957,7 +957,7 @@ i965_avc_bsd_frame_store_index(VADriverContextP ctx,
             int frame_idx;
             struct object_surface *obj_surface = SURFACE(ref_pic->picture_id);
             assert(obj_surface);
-            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
             
             for (frame_idx = 0; frame_idx < ARRAY_ELEMS(i965_h264_context->fsid_list); frame_idx++) {
                 for (j = 0; j < ARRAY_ELEMS(i965_h264_context->fsid_list); j++) {

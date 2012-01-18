@@ -3377,7 +3377,7 @@ i965_post_processing(
                                          &out_surface_id);
             assert(status == VA_STATUS_SUCCESS);
             obj_surface = SURFACE(out_surface_id);
-            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
             src_surface.id = in_surface_id;
             src_surface.type = I965_SURFACE_TYPE_SURFACE;
@@ -3411,7 +3411,7 @@ i965_post_processing(
                                          &out_surface_id);
             assert(status == VA_STATUS_SUCCESS);
             obj_surface = SURFACE(out_surface_id);
-            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+            i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
             src_surface.id = in_surface_id;
             src_surface.type = I965_SURFACE_TYPE_SURFACE;
@@ -3757,7 +3757,7 @@ i965_proc_picture(VADriverContextP ctx,
         assert(status == VA_STATUS_SUCCESS);
         tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
         obj_surface = SURFACE(out_surface_id);
-        i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N', 'V', '1', '2'));
+        i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
         dst_surface.id = out_surface_id;
         dst_surface.type = I965_SURFACE_TYPE_SURFACE;
@@ -3780,7 +3780,7 @@ i965_proc_picture(VADriverContextP ctx,
     }
 
     obj_surface = SURFACE(proc_state->current_render_target);
-    i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'));
+    i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
     
     for (i = 0; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++) {
         VAProcFilterType filter_type = pipeline_param->filter_pipeline[i];
@@ -3800,7 +3800,7 @@ i965_proc_picture(VADriverContextP ctx,
             assert(status == VA_STATUS_SUCCESS);
             tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
             obj_surface = SURFACE(out_surface_id);
-            i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'));
+            i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
             dst_surface.id = out_surface_id;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
             status = i965_post_processing_internal(ctx, &proc_context->pp_context,

@@ -928,7 +928,7 @@ gen7_mfc_avc_prepare(VADriverContextP ctx,
     /* Setup current frame and current direct mv buffer*/
     obj_surface = SURFACE(pPicParameter->CurrPic.picture_id);
     assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
     if ( obj_surface->private_data == NULL) {
         gen7_avc_surface = calloc(sizeof(struct gen7_mfc_avc_surface_aux), 1);

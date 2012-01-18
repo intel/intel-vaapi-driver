@@ -199,6 +199,14 @@ struct object_surface
     VAImageID locked_image_id;
     void (*free_private_data)(void **data);
     void *private_data;
+    unsigned int subsampling;
+    int x_cb_offset;
+    int y_cb_offset;
+    int x_cr_offset;
+    int y_cr_offset;
+    int cb_cr_width;
+    int cb_cr_height;
+    int cb_cr_pitch;
 };
 
 struct object_buffer 
@@ -292,6 +300,7 @@ void
 i965_check_alloc_surface_bo(VADriverContextP ctx,
                             struct object_surface *obj_surface,
                             int tiled,
-                            unsigned int fourcc);
+                            unsigned int fourcc,
+                            unsigned int subsampling);
 
 #endif /* _I965_DRV_VIDEO_H_ */
