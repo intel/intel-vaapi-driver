@@ -1798,8 +1798,8 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
 
             if (fourcc == VA_FOURCC('I', 'M', 'C', '1')) {
-                obj_surface->y_cb_offset = obj_surface->height;
-                obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+                obj_surface->y_cr_offset = obj_surface->height;
+                obj_surface->y_cb_offset = obj_surface->y_cr_offset + ALIGN(obj_surface->cb_cr_height, 32);
             } else {
                 obj_surface->y_cb_offset = obj_surface->height;
                 obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
