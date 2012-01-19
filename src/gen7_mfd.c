@@ -2059,8 +2059,8 @@ gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
             assert(0);
     }
 
-    if (chroma_type == GEN7_YUV400 &&
-        chroma_type == GEN7_YUV444 &&
+    if (chroma_type == GEN7_YUV400 ||
+        chroma_type == GEN7_YUV444 ||
         chroma_type == GEN7_YUV422V_2Y) {
         frame_width_in_blks = ((pic_param->image_width + 7) / 8);
         frame_height_in_blks = ((pic_param->image_height + 7) / 8);
