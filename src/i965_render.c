@@ -992,10 +992,16 @@ i965_render_upload_constants(VADriverContextP ctx,
     assert(render_state->curbe.bo->virtual);
     constant_buffer = render_state->curbe.bo->virtual;
 
-    if (obj_surface->fourcc == VA_FOURCC('N','V','1','2'))
-        *constant_buffer = 1;
-    else
-        *constant_buffer = 0;
+    if (obj_surface->subsampling == SUBSAMPLE_YUV400) {
+        assert(obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
+               obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '3'));
+        *constant_buffer = 2;
+    } else {
+        if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'))
+            *constant_buffer = 1;
+        else
+            *constant_buffer = 0;
+    }
 
     dri_bo_unmap(render_state->curbe.bo);
 }
