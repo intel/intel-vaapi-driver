@@ -33,14 +33,17 @@ include(`exa_wm.g4i')
 define(`src_msg_gen7',   `g65')
 define(`src_msg_ind_gen7',`65')
 /* UV flag */
-define(`nv12', `g6.0<0,1,0>UW')
+define(`uv_flag', `g6.0<0,1,0>UW')
 
 /* prepare sampler read back gX register, which would be written back to output */
 
 /* use simd16 sampler, param 0 is u, param 1 is v. */
 /* 'payload' loading, assuming tex coord start from g4 */
-cmp.g.f0.0 (1) null nv12 0x0UW {align1};
+cmp.e.f0.0 (1) null uv_flag 0x1UW {align1};
 (f0.0) jmpi INTERLEAVED_UV;
+
+cmp.e.f0.0 (1) null uv_flag 0x2UW {align1};
+(f0.0) jmpi CONSTANT_UV;
 
 /* load r */
 mov (1) g0.8<1>UD               0x0000e000UD { align1 mask_disable };
@@ -69,6 +72,12 @@ send (16) src_msg_ind_gen7		/* msg reg index */
 
 jmpi SAMPLE_Y;
 
+CONSTANT_UV:
+mov (16)        src_sample_g<1>f        0.5f { compr align1 mask_disable };
+mov (16)        src_sample_b<1>f        0.5f { compr align1 mask_disable };
+
+jmpi SAMPLE_Y;
+
 INTERLEAVED_UV:
 mov (1) g0.8<1>UD       0x0000c000UD { align1 mask_disable };
 mov (8) src_msg_gen7<1>UD    g0<8,8,1>UD  { align1 mask_disable };
@@ -80,6 +89,7 @@ send (16) src_msg_ind_gen7           /* msg reg index */
         sampler (3,2,F)         /* sampler message description, (binding_table,sampler_index,datatype)
                                 /* here(src->dst) we should use src_sampler and src_surface */
         mlen 5 rlen 4 { align1 };   /* required message len 5, readback len 8 */
+
 
 SAMPLE_Y:
 mov (1) g0.8<1>UD	0x0000e000UD { align1 mask_disable };
