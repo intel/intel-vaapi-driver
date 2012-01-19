@@ -2142,7 +2142,7 @@ gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
     assert(pic_param->num_components <= 3);
 
     for (index = 0; index < pic_param->num_components; index++) {
-        int qm_type = va_to_gen7_jpeg_qm[pic_param->components[index].component_id - pic_param->components[0].component_id + VA_JPEG_COMPONENT_ID_Y];
+        int qm_type = va_to_gen7_jpeg_qm[pic_param->components[index].component_id - pic_param->components[0].component_id + 1];
         unsigned char *qm = iq_matrix->quantiser_matrix[pic_param->components[index].quantiser_table_selector];
         int precision = iq_matrix->precision[pic_param->components[index].quantiser_table_selector];
         unsigned char raster_qm[64];
@@ -2174,14 +2174,14 @@ gen7_mfd_jpeg_bsd_object(VADriverContextP ctx,
     assert(slice_param->num_components <= pic_param->num_components);
 
     for (i = 0; i < slice_param->num_components; i++) {
-        switch (slice_param->components[i].component_id - pic_param->components[0].component_id + VA_JPEG_COMPONENT_ID_Y) {
-        case VA_JPEG_COMPONENT_ID_Y:
+        switch (slice_param->components[i].component_id - pic_param->components[0].component_id + 1) {
+        case 1:
             scan_component_mask |= (1 << 0);
             break;
-        case VA_JPEG_COMPONENT_ID_U:
+        case 2:
             scan_component_mask |= (1 << 1);
             break;
-        case VA_JPEG_COMPONENT_ID_V:
+        case 3:
             scan_component_mask |= (1 << 2);
             break;
         default:
