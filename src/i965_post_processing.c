@@ -416,12 +416,12 @@ static const uint32_t pp_nv12_dndi_gen7[][4] = {
 static const uint32_t pp_nv12_dn_gen7[][4] = {
 };
 
-static VAStatus gen7_pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                                            const struct i965_surface *src_surface,
-                                            const VARectangle *src_rect,
-                                            struct i965_surface *dst_surface,
-                                            const VARectangle *dst_rect,
-                                            void *filter_param);
+static VAStatus gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                                           const struct i965_surface *src_surface,
+                                           const VARectangle *src_rect,
+                                           struct i965_surface *dst_surface,
+                                           const VARectangle *dst_rect,
+                                           void *filter_param);
 static VAStatus gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                              const struct i965_surface *src_surface,
                                              const VARectangle *src_rect,
@@ -505,7 +505,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
 
-        gen7_pp_nv12_avs_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -517,7 +517,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
 
-        gen7_pp_nv12_avs_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -1103,6 +1103,122 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
                                   base_index + 2, is_target);
     }
 
+}
+
+static void 
+gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                                     const struct i965_surface *surface, 
+                                     int base_index, int is_target,
+                                     int *width, int *height, int *pitch, int *offset)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface;
+    struct object_image *obj_image;
+    dri_bo *bo;
+    int fourcc = pp_get_surface_fourcc(ctx, surface);
+    const int U = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
+                   fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 2 : 1;
+    const int V = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
+                   fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 1 : 2;
+    int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
+
+    if (surface->type == I965_SURFACE_TYPE_SURFACE) {
+        obj_surface = SURFACE(surface->id);
+        bo = obj_surface->bo;
+        width[0] = obj_surface->orig_width;
+        height[0] = obj_surface->orig_height;
+        pitch[0] = obj_surface->width;
+        offset[0] = 0;
+
+        width[1] = obj_surface->cb_cr_width;
+        height[1] = obj_surface->cb_cr_height;
+        pitch[1] = obj_surface->cb_cr_pitch;
+        offset[1] = obj_surface->y_cb_offset * obj_surface->width;
+
+        width[2] = obj_surface->cb_cr_width;
+        height[2] = obj_surface->cb_cr_height;
+        pitch[2] = obj_surface->cb_cr_pitch;
+        offset[2] = obj_surface->y_cr_offset * obj_surface->width;
+    } else {
+        obj_image = IMAGE(surface->id);
+        bo = obj_image->bo;
+        width[0] = obj_image->image.width;
+        height[0] = obj_image->image.height;
+        pitch[0] = obj_image->image.pitches[0];
+        offset[0] = obj_image->image.offsets[0];
+
+        if (interleaved_uv) {
+            width[1] = obj_image->image.width;
+            height[1] = obj_image->image.height / 2;
+            pitch[1] = obj_image->image.pitches[1];
+            offset[1] = obj_image->image.offsets[1];
+        } else {
+            width[1] = obj_image->image.width / 2;
+            height[1] = obj_image->image.height / 2;
+            pitch[1] = obj_image->image.pitches[U];
+            offset[1] = obj_image->image.offsets[U];
+            width[2] = obj_image->image.width / 2;
+            height[2] = obj_image->image.height / 2;
+            pitch[2] = obj_image->image.pitches[V];
+            offset[2] = obj_image->image.offsets[V];
+        }
+    }
+
+    if (is_target) {
+        gen7_pp_set_surface_state(ctx, pp_context,
+                                  bo, 0,
+                                  width[0] / 4, height[0], pitch[0],
+                                  I965_SURFACEFORMAT_R8_SINT,
+                                  base_index, 1);
+
+        if (interleaved_uv) {
+            gen7_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[1],
+                                      width[1] / 2, height[1], pitch[1],
+                                      I965_SURFACEFORMAT_R8G8_SINT,
+                                      base_index + 1, 1);
+        } else {
+            gen7_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[1],
+                                      width[1] / 4, height[1], pitch[1],
+                                      I965_SURFACEFORMAT_R8_SINT,
+                                      base_index + 1, 1);
+            gen7_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[2],
+                                      width[2] / 4, height[2], pitch[2],
+                                      I965_SURFACEFORMAT_R8_SINT,
+                                      base_index + 2, 1);
+        }
+    } else {
+        gen7_pp_set_surface2_state(ctx, pp_context,
+                                   bo, offset[0],
+                                   width[0], height[0], pitch[0],
+                                   0, 0,
+                                   SURFACE_FORMAT_Y8_UNORM, 0,
+                                   base_index);
+
+        if (interleaved_uv) {
+            gen7_pp_set_surface2_state(ctx, pp_context,
+                                       bo, offset[1],
+                                       width[1], height[1], pitch[1],
+                                       0, 0,
+                                       SURFACE_FORMAT_R8B8_UNORM, 0,
+                                       base_index + 1);
+        } else {
+            gen7_pp_set_surface2_state(ctx, pp_context,
+                                       bo, offset[1],
+                                       width[1], height[1], pitch[1],
+                                       0, 0,
+                                       SURFACE_FORMAT_R8_UNORM, 0,
+                                       base_index + 1);
+            gen7_pp_set_surface2_state(ctx, pp_context,
+                                       bo, offset[1],
+                                       width[2], height[2], pitch[2],
+                                       0, 0,
+                                       SURFACE_FORMAT_R8_UNORM, 0,
+                                       base_index + 2);
+        }
+    }
 }
 
 static int
@@ -1757,66 +1873,28 @@ gen7_pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context,
     return 0;
 }
 
-VAStatus
-gen7_pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                            const struct i965_surface *src_surface,
-                            const VARectangle *src_rect,
-                            struct i965_surface *dst_surface,
-                            const VARectangle *dst_rect,
-                            void *filter_param)
+static VAStatus
+gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                           const struct i965_surface *src_surface,
+                           const VARectangle *src_rect,
+                           struct i965_surface *dst_surface,
+                           const VARectangle *dst_rect,
+                           void *filter_param)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
-    struct object_surface *obj_surface;
     struct gen7_sampler_8x8 *sampler_8x8;
     struct i965_sampler_8x8_state *sampler_8x8_state;
     int index, i;
-    int in_w, in_h, in_wpitch, in_hpitch;
-    int out_w, out_h, out_wpitch, out_hpitch;
+    int width[3], height[3], pitch[3], offset[3];
 
-    /* surface */
-    obj_surface = SURFACE(src_surface->id);
-    in_w = obj_surface->orig_width;
-    in_h = obj_surface->orig_height;
-    in_wpitch = obj_surface->width;
-    in_hpitch = obj_surface->height;
-
-    /* source Y surface index 0 */
-    gen7_pp_set_surface2_state(ctx, pp_context,
-                               obj_surface->bo, 0,
-                               in_w, in_h, in_wpitch,
-                               0, 0,
-                               SURFACE_FORMAT_Y8_UNORM, 0,
-                               0);
-
-    /* source UV surface index 1 */
-    gen7_pp_set_surface2_state(ctx, pp_context,
-                               obj_surface->bo, in_wpitch * in_hpitch,
-                               in_w / 2, in_h / 2, in_wpitch,
-                               0, 0,
-                               SURFACE_FORMAT_R8B8_UNORM, 0,
-                               1);
+    /* source surface */
+    gen7_pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 0, 0,
+                                         width, height, pitch, offset);
 
     /* destination surface */
-    obj_surface = SURFACE(dst_surface->id);
-    out_w = obj_surface->orig_width;
-    out_h = obj_surface->orig_height;
-    out_wpitch = obj_surface->width;
-    out_hpitch = obj_surface->height;
-    assert(out_w <= out_wpitch && out_h <= out_hpitch);
-
-    /* destination Y surface index 24 */
-    gen7_pp_set_surface_state(ctx, pp_context,
-                              obj_surface->bo, 0,
-                              out_w / 4, out_h, out_wpitch, I965_SURFACEFORMAT_R8_SINT,
-                              24, 1);
-
-    /* destination UV surface index 25 */
-    gen7_pp_set_surface_state(ctx, pp_context,
-                              obj_surface->bo, out_wpitch * out_hpitch,
-                              out_w / 4, out_h / 2, out_wpitch, I965_SURFACEFORMAT_R8G8_SINT,
-                              25, 1);
+    gen7_pp_set_media_rw_message_surface(ctx, pp_context, dst_surface, 24, 1,
+                                         width, height, pitch, offset);
 
     /* sampler 8x8 state */
     dri_bo_map(pp_context->sampler_state_table.bo_8x8, True);
@@ -1932,6 +2010,35 @@ gen7_pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
 
     dri_bo_unmap(pp_context->sampler_state_table.bo);
 
+    /* sampler_8x8 V, index 12 */
+    index = 12;
+    memset(&sampler_8x8[index], 0, sizeof(*sampler_8x8));
+    sampler_8x8[index].dw0.disable_8x8_filter = 0;
+    sampler_8x8[index].dw0.global_noise_estimation = 255;
+    sampler_8x8[index].dw0.ief_bypass = 1;
+    sampler_8x8[index].dw1.sampler_8x8_state_pointer = pp_context->sampler_state_table.bo_8x8->offset >> 5;
+    sampler_8x8[index].dw2.weak_edge_threshold = 1;
+    sampler_8x8[index].dw2.strong_edge_threshold = 8;
+    sampler_8x8[index].dw2.r5x_coefficient = 9;
+    sampler_8x8[index].dw2.r5cx_coefficient = 8;
+    sampler_8x8[index].dw2.r5c_coefficient = 3;
+    sampler_8x8[index].dw3.r3x_coefficient = 27;
+    sampler_8x8[index].dw3.r3c_coefficient = 5;
+    sampler_8x8[index].dw3.gain_factor = 40;
+    sampler_8x8[index].dw3.non_edge_weight = 1;
+    sampler_8x8[index].dw3.regular_weight = 2;
+    sampler_8x8[index].dw3.strong_edge_weight = 7;
+    sampler_8x8[index].dw3.ief4_smooth_enable = 0;
+
+    dri_bo_emit_reloc(pp_context->sampler_state_table.bo,
+                      I915_GEM_DOMAIN_RENDER, 
+                      0,
+                      0,
+                      sizeof(*sampler_8x8) * index + offsetof(struct i965_sampler_8x8, dw1),
+                      pp_context->sampler_state_table.bo_8x8);
+
+    dri_bo_unmap(pp_context->sampler_state_table.bo);
+
     /* private function & data */
     pp_context->pp_x_steps = gen7_pp_avs_x_steps;
     pp_context->pp_y_steps = gen7_pp_avs_y_steps;
@@ -1941,8 +2048,6 @@ gen7_pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
     pp_avs_context->dest_y = dst_rect->y;
     pp_avs_context->dest_w = ALIGN(dst_rect->width, 16);
     pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
-    pp_avs_context->src_normalized_x = (float)src_rect->x / in_w / out_w;
-    pp_avs_context->src_normalized_y = (float)src_rect->y / in_h / out_h;
     pp_avs_context->src_w = src_rect->width;
     pp_avs_context->src_h = src_rect->height;
 
