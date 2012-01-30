@@ -78,6 +78,9 @@
 #define HAS_JPEG(ctx)   (IS_GEN7((ctx)->intel.device_id) &&     \
                          (ctx)->intel.has_bsd)
 
+#define HAS_ACCELERATED_GETIMAGE(ctx)   (IS_GEN6((ctx)->intel.device_id) ||     \
+                                         IS_GEN7((ctx)->intel.device_id))
+
 
 enum {
     I965_SURFACETYPE_RGBA = 1,
@@ -2513,14 +2516,14 @@ get_image_nv12(struct object_image *obj_image, uint8_t *image_data,
         dri_bo_unmap(obj_surface->bo);
 }
 
-VAStatus 
-i965_GetImage(VADriverContextP ctx,
-              VASurfaceID surface,
-              int x,   /* coordinates of the upper left source pixel */
-              int y,
-              unsigned int width,      /* width and height of the region */
-              unsigned int height,
-              VAImageID image)
+static VAStatus 
+i965_sw_getimage(VADriverContextP ctx,
+                 VASurfaceID surface,
+                 int x,   /* coordinates of the upper left source pixel */
+                 int y,
+                 unsigned int width,      /* width and height of the region */
+                 unsigned int height,
+                 VAImageID image)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
@@ -2576,6 +2579,92 @@ i965_GetImage(VADriverContextP ctx,
     }
 
     i965_UnmapBuffer(ctx, obj_image->image.buf);
+    return va_status;
+}
+
+static VAStatus 
+i965_hw_getimage(VADriverContextP ctx,
+                 VASurfaceID surface,
+                 int x,   /* coordinates of the upper left source pixel */
+                 int y,
+                 unsigned int width,      /* width and height of the region */
+                 unsigned int height,
+                 VAImageID image)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_surface src_surface;
+    struct i965_surface dst_surface;
+    VAStatus va_status;
+    VARectangle rect;
+    struct object_surface *obj_surface = SURFACE(surface);
+    struct object_image *obj_image = IMAGE(image);
+
+    if (!obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    if (!obj_image)
+        return VA_STATUS_ERROR_INVALID_IMAGE;
+
+    if (x < 0 || y < 0)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    if (x + width > obj_surface->orig_width ||
+        y + height > obj_surface->orig_height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    if (x + width > obj_image->image.width ||
+        y + height > obj_image->image.height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (!obj_surface->bo)
+        return VA_STATUS_SUCCESS;
+
+    rect.x = x;
+    rect.y = y;
+    rect.width = width;
+    rect.height = height;
+
+    src_surface.id = surface;
+    src_surface.type = I965_SURFACE_TYPE_SURFACE;
+    src_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+    dst_surface.id = image;
+    dst_surface.type = I965_SURFACE_TYPE_IMAGE;
+    dst_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+    va_status = i965_image_processing(ctx,
+                                      &src_surface,
+                                      &rect,
+                                      &dst_surface,
+                                      &rect);
+
+
+    return va_status;
+}
+
+VAStatus 
+i965_GetImage(VADriverContextP ctx,
+              VASurfaceID surface,
+              int x,   /* coordinates of the upper left source pixel */
+              int y,
+              unsigned int width,      /* width and height of the region */
+              unsigned int height,
+              VAImageID image)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    VAStatus va_status;
+
+    if (HAS_ACCELERATED_GETIMAGE(i965))
+        va_status = i965_hw_getimage(ctx,
+                                     surface,
+                                     x, y,
+                                     width, height,
+                                     image);
+    else
+        va_status = i965_sw_getimage(ctx,
+                                     surface,
+                                     x, y,
+                                     width, height,
+                                     image);
+
     return va_status;
 }
 
