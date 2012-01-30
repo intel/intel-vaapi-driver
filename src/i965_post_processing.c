@@ -3349,6 +3349,76 @@ i965_CreateSurfaces(VADriverContextP ctx,
                     int format,
                     int num_surfaces,
                     VASurfaceID *surfaces);
+
+static void 
+i965_vpp_clear_surface(VADriverContextP ctx,
+                       struct i965_post_processing_context *pp_context,
+                       VASurfaceID surface,
+                       unsigned int color)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = pp_context->batch;
+    struct object_surface *obj_surface = SURFACE(surface);
+    unsigned int blt_cmd, br13;
+    unsigned int tiling = 0, swizzle = 0;
+    int pitch;
+
+    /* Currently only support NV12 surface */
+    if (!obj_surface || obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2'))
+        return;
+
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+    blt_cmd = XY_COLOR_BLT_CMD;
+    pitch = obj_surface->width;
+
+    if (tiling != I915_TILING_NONE) {
+        blt_cmd |= XY_COLOR_BLT_DST_TILED;
+        pitch >>= 2;
+    }
+
+    br13 = 0xf0 << 16;
+    br13 |= BR13_8;
+    br13 |= pitch;
+
+    if (IS_GEN6(i965->intel.device_id) ||
+        IS_GEN7(i965->intel.device_id)) {
+        intel_batchbuffer_start_atomic_blt(batch, 48);
+        BEGIN_BLT_BATCH(batch, 12);
+    } else {
+        intel_batchbuffer_start_atomic(batch, 48);
+        BEGIN_BATCH(batch, 12);
+    }
+
+    OUT_BATCH(batch, blt_cmd);
+    OUT_BATCH(batch, br13);
+    OUT_BATCH(batch,
+              0 << 16 |
+              0);
+    OUT_BATCH(batch,
+              obj_surface->height << 16 |
+              obj_surface->width);
+    OUT_RELOC(batch, obj_surface->bo, 
+              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+              0);
+    OUT_BATCH(batch, 0x10);
+
+    OUT_BATCH(batch, blt_cmd);
+    OUT_BATCH(batch, br13);
+    OUT_BATCH(batch,
+              0 << 16 |
+              0);
+    OUT_BATCH(batch,
+              obj_surface->height / 2 << 16 |
+              obj_surface->width);
+    OUT_RELOC(batch, obj_surface->bo, 
+              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+              obj_surface->width * obj_surface->y_cb_offset);
+    OUT_BATCH(batch, 0x80);
+
+    ADVANCE_BATCH(batch);
+    intel_batchbuffer_end_atomic(batch);
+}
+
 VASurfaceID
 i965_post_processing(
     VADriverContextP   ctx,
@@ -3383,6 +3453,8 @@ i965_post_processing(
                 obj_surface = SURFACE(out_surface_id);
                 i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
+                i965_vpp_clear_surface(ctx, i965->pp_context, out_surface_id, 0); 
+
                 src_surface.id = in_surface_id;
                 src_surface.flags = I965_SURFACE_TYPE_SURFACE;
                 dst_surface.id = out_surface_id;
@@ -3413,6 +3485,7 @@ i965_post_processing(
                 assert(status == VA_STATUS_SUCCESS);
                 obj_surface = SURFACE(out_surface_id);
                 i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+                i965_vpp_clear_surface(ctx, i965->pp_context, out_surface_id, 0); 
 
                 src_surface.id = in_surface_id;
                 src_surface.flags = I965_SURFACE_TYPE_SURFACE;
