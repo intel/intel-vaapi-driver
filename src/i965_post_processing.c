@@ -1942,9 +1942,9 @@ gen7_pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
 
     pp_static_parameter->grf1.pointer_to_inline_parameter = 7;
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / pp_avs_context->dest_w;
-    pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) 1.0 / out_h;
-    pp_static_parameter->grf5.sampler_load_vertical_frame_origin = 0.0; /* FIXME */
-    pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = 0.0;
+    pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) 1.0 / pp_avs_context->dest_h;
+    pp_static_parameter->grf5.sampler_load_vertical_frame_origin = -(float)pp_avs_context->dest_y / pp_avs_context->dest_h;
+    pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = -(float)pp_avs_context->dest_x / pp_avs_context->dest_w;
 
     dst_surface->flags = src_surface->flags;
 
