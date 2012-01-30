@@ -4,6 +4,7 @@
 #include "i965_avc_bsd.h"
 #include "i965_avc_hw_scoreboard.h"
 #include "i965_avc_ildb.h"
+#include "i965_decoder.h"
 
 struct decode_state;
 struct i965_media_context;
@@ -60,10 +61,7 @@ struct i965_h264_context
     struct i965_avc_hw_scoreboard_context avc_hw_scoreboard_context;
     struct i965_avc_ildb_context avc_ildb_context;
 
-    struct {
-        VASurfaceID surface_id;
-        int frame_store_id;
-    } fsid_list[16];
+    GenFrameStore fsid_list[MAX_GEN_REFERENCE_FRAMES];
 
     struct i965_kernel avc_kernels[NUM_H264_AVC_KERNELS];
     struct intel_batchbuffer *batch;
