@@ -33,6 +33,7 @@
 #include <drm.h>
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
+#include "i965_decoder.h"
 
 struct gen7_avc_surface
 {
@@ -58,7 +59,6 @@ struct gen7_vc1_surface
     int picture_type;
 };
 
-#define MAX_MFX_REFERENCE_SURFACES        16
 struct hw_context;
 
 struct gen7_mfd_context
@@ -69,45 +69,14 @@ struct gen7_mfd_context
         VAIQMatrixBufferMPEG2 mpeg2;
     } iq_matrix;
 
-    struct {
-        VASurfaceID surface_id;
-        int frame_store_id;
-    } reference_surface[MAX_MFX_REFERENCE_SURFACES];
-
-    struct {
-        dri_bo *bo;
-        int valid;
-    } post_deblocking_output;
-
-    struct {
-        dri_bo *bo;
-        int valid;
-    } pre_deblocking_output;
-
-    struct {
-        dri_bo *bo;
-        int valid;
-    } intra_row_store_scratch_buffer;
-
-    struct {
-        dri_bo *bo;
-        int valid;
-    } deblocking_filter_row_store_scratch_buffer;
-
-    struct {
-        dri_bo *bo;
-        int valid;
-    } bsd_mpc_row_store_scratch_buffer;
-
-    struct {
-        dri_bo *bo;
-        int valid;
-    } mpr_row_store_scratch_buffer;
-
-    struct {
-        dri_bo *bo;
-        int valid;
-    } bitplane_read_buffer;
+    GenFrameStore       reference_surface[MAX_GEN_REFERENCE_FRAMES];
+    GenBuffer           post_deblocking_output;
+    GenBuffer           pre_deblocking_output;
+    GenBuffer           intra_row_store_scratch_buffer;
+    GenBuffer           deblocking_filter_row_store_scratch_buffer;
+    GenBuffer           bsd_mpc_row_store_scratch_buffer;
+    GenBuffer           mpr_row_store_scratch_buffer;
+    GenBuffer           bitplane_read_buffer;
 };
 
 #endif /* _GEN7_MFD_H_ */

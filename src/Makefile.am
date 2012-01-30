@@ -76,6 +76,7 @@ source_h = \
 	i965_avc_bsd.h		\
 	i965_avc_hw_scoreboard.h\
 	i965_avc_ildb.h		\
+	i965_decoder.h		\
 	i965_defines.h          \
 	i965_drv_video.h        \
 	i965_encoder.h		\
