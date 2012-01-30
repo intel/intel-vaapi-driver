@@ -37,7 +37,9 @@
 #define XY_COLOR_BLT_DST_TILED                  (1 << 11)
 
 /* BR13 */
+#define BR13_8                                  (0x0 << 24)
 #define BR13_565                                (0x1 << 24)
+#define BR13_1555                               (0x2 << 24)
 #define BR13_8888                               (0x3 << 24)
 
 #define CMD_PIPE_CONTROL                        (CMD_3D | (3 << 27) | (2 << 24) | (0 << 16))
