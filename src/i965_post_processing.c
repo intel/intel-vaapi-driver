@@ -402,6 +402,7 @@ static const uint32_t pp_pl3_load_save_pl3_gen7[][4] = {
 };
 
 static const uint32_t pp_nv12_scaling_gen7[][4] = {
+#include "shaders/post_processing/gen7/avs.g7b"
 };
 
 static const uint32_t pp_nv12_avs_gen7[][4] = {
@@ -504,7 +505,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
 
-        pp_nv12_scaling_initialize,
+        gen7_pp_nv12_avs_initialize,
     },
 
     {
