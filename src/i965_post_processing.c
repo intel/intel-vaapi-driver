@@ -388,15 +388,19 @@ static const uint32_t pp_null_gen7[][4] = {
 };
 
 static const uint32_t pp_nv12_load_save_nv12_gen7[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pl2.g7b"
 };
 
 static const uint32_t pp_nv12_load_save_pl3_gen7[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pl3.g7b"
 };
 
 static const uint32_t pp_pl3_load_save_nv12_gen7[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pl2.g7b"
 };
 
 static const uint32_t pp_pl3_load_save_pl3_gen7[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pl3.g7b"
 };
 
 static const uint32_t pp_nv12_scaling_gen7[][4] = {
@@ -455,7 +459,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
 
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -467,7 +471,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
         
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -479,7 +483,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
 
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -491,7 +495,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
 
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
