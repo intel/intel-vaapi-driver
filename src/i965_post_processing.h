@@ -346,12 +346,12 @@ struct gen7_pp_static_parameter
     } grf4;
 
     struct {
-        unsigned int sampler_load_vertical_frame_origin;
+        float sampler_load_vertical_frame_origin;
         unsigned int padx[7];
     } grf5;
 
     struct {
-        unsigned int sampler_load_horizontal_frame_origin;
+        float sampler_load_horizontal_frame_origin;
         unsigned int padx[7];
     } grf6;
 };
