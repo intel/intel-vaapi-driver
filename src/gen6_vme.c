@@ -314,7 +314,7 @@ static VAStatus gen6_vme_surface_setup(VADriverContextP ctx,
 
     /*Setup surfaces state*/
     /* current picture for encoding */
-    obj_surface = SURFACE(encode_state->current_render_target);
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
     assert(obj_surface);
     gen6_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen6_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
@@ -556,7 +556,7 @@ static VAStatus gen7_vme_surface_setup(VADriverContextP ctx,
 
     /*Setup surfaces state*/
     /* current picture for encoding */
-    obj_surface = SURFACE(encode_state->current_render_target);
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
     assert(obj_surface);
     gen7_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
     gen7_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
@@ -784,7 +784,7 @@ static int gen6_vme_media_object(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
-    struct object_surface *obj_surface = SURFACE(encode_state->current_render_target);
+    struct object_surface *obj_surface = SURFACE(encoder_context->input_yuv_surface);
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     int mb_width = ALIGN(obj_surface->orig_width, 16) / 16;
     int len_in_dowrds = 6 + 2;      /*6 + n: n is number of inline data*/

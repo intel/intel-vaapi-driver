@@ -42,6 +42,83 @@ extern Bool gen6_mfc_context_init(VADriverContextP ctx, struct intel_encoder_con
 extern Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 extern Bool gen7_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
+VAStatus 
+i965_DestroySurfaces(VADriverContextP ctx,
+                     VASurfaceID *surface_list,
+                     int num_surfaces);
+VAStatus 
+i965_CreateSurfaces(VADriverContextP ctx,
+                    int width,
+                    int height,
+                    int format,
+                    int num_surfaces,
+                    VASurfaceID *surfaces);
+
+static void
+intel_encoder_check_yuv_surface(VADriverContextP ctx,
+                                VAProfile profile,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_surface src_surface, dst_surface;
+    struct object_surface *obj_surface;
+    VAStatus status;
+    VARectangle rect;
+
+    /* releae the temporary surface */
+    if (encoder_context->is_tmp_id) {
+        i965_DestroySurfaces(ctx, &encoder_context->input_yuv_surface, 1);
+    }
+
+    encoder_context->is_tmp_id = 0;
+    obj_surface = SURFACE(encode_state->current_render_target);
+    assert(obj_surface && obj_surface->bo);
+
+    if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+        unsigned int tiling = 0, swizzle = 0;
+
+        dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+
+        if (tiling == I915_TILING_Y) {
+            encoder_context->input_yuv_surface = encode_state->current_render_target;
+            return;
+        }
+    }
+
+    rect.x = 0;
+    rect.y = 0;
+    rect.width = obj_surface->orig_width;
+    rect.height = obj_surface->orig_height;
+    
+    src_surface.id = encode_state->current_render_target;
+    src_surface.type = I965_SURFACE_TYPE_SURFACE;
+    src_surface.flags = I965_SURFACE_FLAG_FRAME;
+    
+    status = i965_CreateSurfaces(ctx,
+                                 obj_surface->orig_width,
+                                 obj_surface->orig_height,
+                                 VA_RT_FORMAT_YUV420,
+                                 1,
+                                 &encoder_context->input_yuv_surface);
+    assert(status == VA_STATUS_SUCCESS);
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+    
+    dst_surface.id = encoder_context->input_yuv_surface;
+    dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+    dst_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+    status = i965_image_processing(ctx,
+                                   &src_surface,
+                                   &rect,
+                                   &dst_surface,
+                                   &rect);
+    assert(status == VA_STATUS_SUCCESS);
+
+    encoder_context->is_tmp_id = 1;
+}
+
 static void 
 intel_encoder_end_picture(VADriverContextP ctx, 
                           VAProfile profile, 
@@ -51,6 +128,8 @@ intel_encoder_end_picture(VADriverContextP ctx,
     struct intel_encoder_context *encoder_context = (struct intel_encoder_context *)hw_context;
     struct encode_state *encode_state = &codec_state->encode;
     VAStatus vaStatus;
+
+    intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
 
     vaStatus = encoder_context->vme_pipeline(ctx, profile, encode_state, encoder_context);
 
@@ -101,6 +180,8 @@ gen7_enc_hw_context_init(VADriverContextP ctx, VAProfile profile)
     encoder_context->base.destroy = intel_encoder_context_destroy;
     encoder_context->base.run = intel_encoder_end_picture;
     encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
+    encoder_context->is_tmp_id = 0;
 
     gen6_vme_context_init(ctx, encoder_context);
     assert(encoder_context->vme_context);

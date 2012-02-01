@@ -39,6 +39,8 @@
 struct intel_encoder_context
 {
     struct hw_context base;
+    VASurfaceID input_yuv_surface;
+    int is_tmp_id;
     void *vme_context;
     void *mfc_context;
     void (*vme_context_destroy)(void *vme_context);
