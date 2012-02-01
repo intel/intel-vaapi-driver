@@ -1212,7 +1212,7 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                                        SURFACE_FORMAT_R8_UNORM, 0,
                                        base_index + 1);
             gen7_pp_set_surface2_state(ctx, pp_context,
-                                       bo, offset[1],
+                                       bo, offset[2],
                                        width[2], height[2], pitch[2],
                                        0, 0,
                                        SURFACE_FORMAT_R8_UNORM, 0,
