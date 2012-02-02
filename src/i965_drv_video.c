@@ -81,6 +81,7 @@
 #define HAS_ACCELERATED_GETIMAGE(ctx)   (IS_GEN6((ctx)->intel.device_id) ||     \
                                          IS_GEN7((ctx)->intel.device_id))
 
+#define HAS_ACCELERATED_PUTIMAGE(ctx)   HAS_VPP(ctx)
 
 enum {
     I965_SURFACETYPE_RGBA = 1,
@@ -649,82 +650,6 @@ i965_guess_surface_format(VADriverContextP ctx,
         *is_tiled = 0;
         break;
     }
-}
-
-VAStatus 
-i965_PutImage(VADriverContextP ctx,
-              VASurfaceID surface,
-              VAImageID image,
-              int src_x,
-              int src_y,
-              unsigned int src_width,
-              unsigned int src_height,
-              int dest_x,
-              int dest_y,
-              unsigned int dest_width,
-              unsigned int dest_height)
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface *obj_surface = SURFACE(surface);
-    struct object_image *obj_image = IMAGE(image);
-    struct i965_surface src_surface, dst_surface;
-    VAStatus va_status = VA_STATUS_SUCCESS;
-    VARectangle src_rect, dst_rect;
-
-    if (!obj_surface)
-        return VA_STATUS_ERROR_INVALID_SURFACE;
-
-    if (!obj_image || !obj_image->bo)
-        return VA_STATUS_ERROR_INVALID_IMAGE;
-
-    if (src_x < 0 ||
-        src_y < 0 ||
-        src_x + src_width > obj_image->image.width ||
-        src_y + src_height > obj_image->image.height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-
-    if (dest_x < 0 ||
-        dest_y < 0 ||
-        dest_x + dest_width > obj_surface->orig_width ||
-        dest_y + dest_height > obj_surface->orig_height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-
-    if (!obj_surface->bo) {
-        unsigned int tiling, swizzle;
-        dri_bo_get_tiling(obj_image->bo, &tiling, &swizzle);
-
-        i965_check_alloc_surface_bo(ctx,
-                                    obj_surface,
-                                    !!tiling,
-                                    obj_image->image.format.fourcc,
-                                    SUBSAMPLE_YUV420);
-    }
-
-    assert(obj_surface->fourcc);
-
-    src_surface.id = image;
-    src_surface.type = I965_SURFACE_TYPE_IMAGE;
-    src_surface.flags = I965_SURFACE_FLAG_FRAME;
-    src_rect.x = src_x;
-    src_rect.y = src_y;
-    src_rect.width = src_width;
-    src_rect.height = src_height;
-
-    dst_surface.id = surface;
-    dst_surface.type = I965_SURFACE_TYPE_SURFACE;
-    dst_surface.flags = I965_SURFACE_FLAG_FRAME;
-    dst_rect.x = dest_x;
-    dst_rect.y = dest_y;
-    dst_rect.width = dest_width;
-    dst_rect.height = dest_height;
-
-    va_status = i965_image_processing(ctx,
-                                      &src_surface,
-                                      &src_rect,
-                                      &dst_surface,
-                                      &dst_rect);
-
-    return  va_status;
 }
 
 VAStatus 
@@ -2741,6 +2666,329 @@ i965_GetImage(VADriverContextP ctx,
                                      x, y,
                                      width, height,
                                      image);
+
+    return va_status;
+}
+
+static void
+put_image_i420(struct object_surface *obj_surface,
+               const VARectangle *dst_rect,
+               struct object_image *obj_image, uint8_t *image_data,
+               const VARectangle *src_rect)
+{
+    uint8_t *dst[3], *src[3];
+    const int Y = 0;
+    const int U = obj_image->image.format.fourcc == obj_surface->fourcc ? 1 : 2;
+    const int V = obj_image->image.format.fourcc == obj_surface->fourcc ? 2 : 1;
+    unsigned int tiling, swizzle;
+
+    if (!obj_surface->bo)
+        return;
+
+    assert(obj_surface->fourcc);
+    assert(dst_rect->width == src_rect->width);
+    assert(dst_rect->height == src_rect->height);
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+
+    if (tiling != I915_TILING_NONE)
+        drm_intel_gem_bo_map_gtt(obj_surface->bo);
+    else
+        dri_bo_map(obj_surface->bo, 0);
+
+    if (!obj_surface->bo->virtual)
+        return;
+
+    /* Dest VA image has either I420 or YV12 format.
+       Source VA surface alway has I420 format */
+    dst[0] = (uint8_t *)obj_surface->bo->virtual;
+    src[Y] = image_data + obj_image->image.offsets[Y];
+    dst[1] = dst[0] + obj_surface->width * obj_surface->height;
+    src[U] = image_data + obj_image->image.offsets[U];
+    dst[2] = dst[1] + (obj_surface->width / 2) * (obj_surface->height / 2);
+    src[V] = image_data + obj_image->image.offsets[V];
+
+    /* Y plane */
+    dst[0] += dst_rect->y * obj_surface->width + dst_rect->x;
+    src[Y] += src_rect->y * obj_image->image.pitches[Y] + src_rect->x;
+    memcpy_pic(dst[0], obj_surface->width,
+               src[Y], obj_image->image.pitches[Y],
+               src_rect->width, src_rect->height);
+
+    /* U plane */
+    dst[1] += (dst_rect->y / 2) * obj_surface->width / 2 + dst_rect->x / 2;
+    src[U] += (src_rect->y / 2) * obj_image->image.pitches[U] + src_rect->x / 2;
+    memcpy_pic(dst[1], obj_surface->width / 2,
+               src[U], obj_image->image.pitches[U],
+               src_rect->width / 2, src_rect->height / 2);
+
+    /* V plane */
+    dst[2] += (dst_rect->y / 2) * obj_surface->width / 2 + dst_rect->x / 2;
+    src[V] += (src_rect->y / 2) * obj_image->image.pitches[V] + src_rect->x / 2;
+    memcpy_pic(dst[2], obj_surface->width / 2,
+               src[V], obj_image->image.pitches[V],
+               src_rect->width / 2, src_rect->height / 2);
+
+    if (tiling != I915_TILING_NONE)
+        drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
+    else
+        dri_bo_unmap(obj_surface->bo);
+}
+
+static void
+put_image_nv12(struct object_surface *obj_surface,
+               const VARectangle *dst_rect,
+               struct object_image *obj_image, uint8_t *image_data,
+               const VARectangle *src_rect)
+{
+    uint8_t *dst[2], *src[2];
+    unsigned int tiling, swizzle;
+
+    if (!obj_surface->bo)
+        return;
+
+    assert(obj_surface->fourcc);
+    assert(dst_rect->width == src_rect->width);
+    assert(dst_rect->height == src_rect->height);
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+
+    if (tiling != I915_TILING_NONE)
+        drm_intel_gem_bo_map_gtt(obj_surface->bo);
+    else
+        dri_bo_map(obj_surface->bo, 0);
+
+    if (!obj_surface->bo->virtual)
+        return;
+
+    /* Both dest VA image and source surface have NV12 format */
+    dst[0] = (uint8_t *)obj_surface->bo->virtual;
+    src[0] = image_data + obj_image->image.offsets[0];
+    dst[1] = dst[0] + obj_surface->width * obj_surface->height;
+    src[1] = image_data + obj_image->image.offsets[1];
+
+    /* Y plane */
+    dst[0] += dst_rect->y * obj_surface->width + dst_rect->x;
+    src[0] += src_rect->y * obj_image->image.pitches[0] + src_rect->x;
+    memcpy_pic(dst[0], obj_surface->width,
+               src[0], obj_image->image.pitches[0],
+               src_rect->width, src_rect->height);
+
+    /* UV plane */
+    dst[1] += (dst_rect->y / 2) * obj_surface->width + (dst_rect->x & -2);
+    src[1] += (src_rect->y / 2) * obj_image->image.pitches[1] + (src_rect->x & -2);
+    memcpy_pic(dst[1], obj_surface->width,
+               src[1], obj_image->image.pitches[1],
+               src_rect->width, src_rect->height / 2);
+
+    if (tiling != I915_TILING_NONE)
+        drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
+    else
+        dri_bo_unmap(obj_surface->bo);
+}
+
+static VAStatus
+i965_sw_putimage(VADriverContextP ctx,
+                 VASurfaceID surface,
+                 VAImageID image,
+                 int src_x,
+                 int src_y,
+                 unsigned int src_width,
+                 unsigned int src_height,
+                 int dest_x,
+                 int dest_y,
+                 unsigned int dest_width,
+                 unsigned int dest_height)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface = SURFACE(surface);
+
+    if (!obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    struct object_image *obj_image = IMAGE(image);
+    if (!obj_image)
+        return VA_STATUS_ERROR_INVALID_IMAGE;
+
+    if (src_x < 0 || src_y < 0)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    if (src_x + src_width > obj_image->image.width ||
+        src_y + src_height > obj_image->image.height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    if (dest_x < 0 || dest_y < 0)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    if (dest_x + dest_width > obj_surface->orig_width ||
+        dest_y + dest_height > obj_surface->orig_height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    /* XXX: don't allow scaling */
+    if (src_width != dest_width || src_height != dest_height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (obj_surface->fourcc) {
+        /* Don't allow format mismatch */
+        if (obj_surface->fourcc != obj_image->image.format.fourcc)
+            return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
+    }
+
+    else {
+        /* VA is surface not used for decoding, use same VA image format */
+        i965_check_alloc_surface_bo(
+            ctx,
+            obj_surface,
+            0, /* XXX: don't use tiled surface */
+            obj_image->image.format.fourcc,
+            SUBSAMPLE_YUV420);
+    }
+
+    VAStatus va_status;
+    void *image_data = NULL;
+
+    va_status = i965_MapBuffer(ctx, obj_image->image.buf, &image_data);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    VARectangle src_rect, dest_rect;
+    src_rect.x       = src_x;
+    src_rect.y       = src_y;
+    src_rect.width   = src_width;
+    src_rect.height  = src_height;
+    dest_rect.x      = dest_x;
+    dest_rect.y      = dest_y;
+    dest_rect.width  = dest_width;
+    dest_rect.height = dest_height;
+     
+    switch (obj_image->image.format.fourcc) {
+    case VA_FOURCC('Y','V','1','2'):
+    case VA_FOURCC('I','4','2','0'):
+        put_image_i420(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        break;
+    case VA_FOURCC('N','V','1','2'):
+        put_image_nv12(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        break;
+    default:
+        va_status = VA_STATUS_ERROR_OPERATION_FAILED;
+        break;
+    }
+
+    i965_UnmapBuffer(ctx, obj_image->image.buf);
+    return va_status;
+}
+
+static VAStatus 
+i965_hw_putimage(VADriverContextP ctx,
+                 VASurfaceID surface,
+                 VAImageID image,
+                 int src_x,
+                 int src_y,
+                 unsigned int src_width,
+                 unsigned int src_height,
+                 int dest_x,
+                 int dest_y,
+                 unsigned int dest_width,
+                 unsigned int dest_height)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface = SURFACE(surface);
+    struct object_image *obj_image = IMAGE(image);
+    struct i965_surface src_surface, dst_surface;
+    VAStatus va_status = VA_STATUS_SUCCESS;
+    VARectangle src_rect, dst_rect;
+
+    if (!obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    if (!obj_image || !obj_image->bo)
+        return VA_STATUS_ERROR_INVALID_IMAGE;
+
+    if (src_x < 0 ||
+        src_y < 0 ||
+        src_x + src_width > obj_image->image.width ||
+        src_y + src_height > obj_image->image.height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (dest_x < 0 ||
+        dest_y < 0 ||
+        dest_x + dest_width > obj_surface->orig_width ||
+        dest_y + dest_height > obj_surface->orig_height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (!obj_surface->bo) {
+        unsigned int tiling, swizzle;
+        dri_bo_get_tiling(obj_image->bo, &tiling, &swizzle);
+
+        i965_check_alloc_surface_bo(ctx,
+                                    obj_surface,
+                                    !!tiling,
+                                    obj_image->image.format.fourcc,
+                                    SUBSAMPLE_YUV420);
+    }
+
+    assert(obj_surface->fourcc);
+
+    src_surface.id = image;
+    src_surface.type = I965_SURFACE_TYPE_IMAGE;
+    src_surface.flags = I965_SURFACE_FLAG_FRAME;
+    src_rect.x = src_x;
+    src_rect.y = src_y;
+    src_rect.width = src_width;
+    src_rect.height = src_height;
+
+    dst_surface.id = surface;
+    dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+    dst_surface.flags = I965_SURFACE_FLAG_FRAME;
+    dst_rect.x = dest_x;
+    dst_rect.y = dest_y;
+    dst_rect.width = dest_width;
+    dst_rect.height = dest_height;
+
+    va_status = i965_image_processing(ctx,
+                                      &src_surface,
+                                      &src_rect,
+                                      &dst_surface,
+                                      &dst_rect);
+
+    return  va_status;
+}
+
+static VAStatus 
+i965_PutImage(VADriverContextP ctx,
+              VASurfaceID surface,
+              VAImageID image,
+              int src_x,
+              int src_y,
+              unsigned int src_width,
+              unsigned int src_height,
+              int dest_x,
+              int dest_y,
+              unsigned int dest_width,
+              unsigned int dest_height)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAStatus va_status = VA_STATUS_SUCCESS;
+
+    if (HAS_ACCELERATED_PUTIMAGE(i965))
+        va_status = i965_hw_putimage(ctx,
+                                     surface,
+                                     image,
+                                     src_x,
+                                     src_y,
+                                     src_width,
+                                     src_height,
+                                     dest_x,
+                                     dest_y,
+                                     dest_width,
+                                     dest_height);
+    else 
+        va_status = i965_sw_putimage(ctx,
+                                     surface,
+                                     image,
+                                     src_x,
+                                     src_y,
+                                     src_width,
+                                     src_height,
+                                     dest_x,
+                                     dest_y,
+                                     dest_width,
+                                     dest_height);
 
     return va_status;
 }
