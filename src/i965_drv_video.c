@@ -689,7 +689,18 @@ i965_PutImage(VADriverContextP ctx,
         dest_y + dest_height > obj_surface->orig_height)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+    if (!obj_surface->bo) {
+        unsigned int tiling, swizzle;
+        dri_bo_get_tiling(obj_image->bo, &tiling, &swizzle);
+
+        i965_check_alloc_surface_bo(ctx,
+                                    obj_surface,
+                                    !!tiling,
+                                    obj_image->image.format.fourcc,
+                                    SUBSAMPLE_YUV420);
+    }
+
+    assert(obj_surface->fourcc);
 
     src_surface.id = image;
     src_surface.type = I965_SURFACE_TYPE_IMAGE;
