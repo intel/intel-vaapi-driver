@@ -598,6 +598,59 @@ i965_QueryImageFormats(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+/*
+ * Guess the format when the usage of a VA surface is unknown
+ * 1. Without a valid context: YV12
+ * 2. The current context is valid:
+ *    a) always NV12 on GEN6 and later
+ *    b) I420 for MPEG-2 and NV12 for other codec on GEN4 & GEN5
+ */
+static void
+i965_guess_surface_format(VADriverContextP ctx,
+                          VASurfaceID surface,
+                          unsigned int *fourcc,
+                          unsigned int *is_tiled)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_context *obj_context = NULL;
+    struct object_config *obj_config = NULL;
+
+    *fourcc = VA_FOURCC('Y', 'V', '1', '2');
+    *is_tiled = 0;
+
+    if (i965->current_context_id == VA_INVALID_ID)
+        return;
+
+    obj_context = CONTEXT(i965->current_context_id);
+
+    if (!obj_context || obj_context->config_id == VA_INVALID_ID)
+        return;
+
+    obj_config = CONFIG(obj_context->config_id);
+
+    if (!obj_config)
+        return;
+
+    if (IS_GEN6(i965->intel.device_id) || IS_GEN7(i965->intel.device_id)) {
+        *fourcc = VA_FOURCC('N', 'V', '1', '2');
+        *is_tiled = 1;
+        return;
+    }
+
+    switch (obj_config->profile) {
+    case VAProfileMPEG2Simple:
+    case VAProfileMPEG2Main:
+        *fourcc = VA_FOURCC('I', '4', '2', '0');
+        *is_tiled = 0;
+        break;
+
+    default:
+        *fourcc = VA_FOURCC('N', 'V', '1', '2');
+        *is_tiled = 0;
+        break;
+    }
+}
+
 VAStatus 
 i965_PutImage(VADriverContextP ctx,
               VASurfaceID surface,
@@ -1028,6 +1081,8 @@ i965_CreateContext(VADriverContextP ctx,
         i965_destroy_context(&i965->context_heap, (struct object_base *)obj_context);
     }
 
+    i965->current_context_id = contextID;
+
     return vaStatus;
 }
 
@@ -1038,6 +1093,10 @@ i965_DestroyContext(VADriverContextP ctx, VAContextID context)
     struct object_context *obj_context = CONTEXT(context);
 
     assert(obj_context);
+
+    if (i965->current_context_id == context)
+        i965->current_context_id = VA_INVALID_ID;
+
     i965_destroy_context(&i965->context_heap, (struct object_base *)obj_context);
 
     return VA_STATUS_SUCCESS;
@@ -2231,7 +2290,14 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     if (!obj_surface)
         return VA_STATUS_ERROR_INVALID_SURFACE;
 
-    i965_check_alloc_surface_bo(ctx, obj_surface, HAS_TILED_SURFACE(i965), VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+    if (!obj_surface->bo) {
+        unsigned int is_tiled = 0;
+        unsigned int fourcc = VA_FOURCC('Y', 'V', '1', '2');
+        i965_guess_surface_format(ctx, surface, &fourcc, &is_tiled);
+        i965_check_alloc_surface_bo(ctx, obj_surface, is_tiled, fourcc, SUBSAMPLE_YUV420);
+    }
+
+    assert(obj_surface->fourcc);
 
     w_pitch = obj_surface->width;
     h_pitch = obj_surface->height;
@@ -2270,28 +2336,28 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->num_planes = 3;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
-        image->pitches[1] = w_pitch / 2; /* V */
-        image->offsets[1] = w_pitch * h_pitch;
-        image->pitches[2] = w_pitch / 2; /* U */
-        image->offsets[2] = w_pitch * h_pitch + (w_pitch / 2) * (h_pitch / 2);
+        image->pitches[1] = obj_surface->cb_cr_pitch; /* V */
+        image->offsets[1] = w_pitch * obj_surface->y_cr_offset;
+        image->pitches[2] = obj_surface->cb_cr_pitch; /* U */
+        image->offsets[2] = w_pitch * obj_surface->y_cb_offset;
         break;
 
     case VA_FOURCC('N', 'V', '1', '2'):
         image->num_planes = 2;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
-        image->pitches[1] = w_pitch; /* UV */
-        image->offsets[1] = w_pitch * h_pitch;
+        image->pitches[1] = obj_surface->cb_cr_pitch; /* UV */
+        image->offsets[1] = w_pitch * obj_surface->y_cb_offset;
         break;
 
     case VA_FOURCC('I', '4', '2', '0'):
         image->num_planes = 3;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
-        image->pitches[1] = w_pitch / 2; /* U */
-        image->offsets[1] = w_pitch * h_pitch;
-        image->pitches[2] = w_pitch / 2; /* V */
-        image->offsets[2] = w_pitch * h_pitch + (w_pitch / 2) * (h_pitch / 2);
+        image->pitches[1] = obj_surface->cb_cr_pitch; /* U */
+        image->offsets[1] = w_pitch * obj_surface->y_cb_offset;
+        image->pitches[2] = obj_surface->cb_cr_pitch; /* V */
+        image->offsets[2] = w_pitch * obj_surface->y_cr_offset;
         break;
 
     default:
@@ -3148,7 +3214,10 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
         const int len = strlen(i965->va_vendor);
         sprintf(&i965->va_vendor[len], ".pre%d", INTEL_DRIVER_PRE_VERSION);
     }
-    ctx->str_vendor = i965->va_vendor;
 
+    i965->current_context_id = VA_INVALID_ID;
+
+    ctx->str_vendor = i965->va_vendor;
+    
     return i965_Init(ctx);
 }

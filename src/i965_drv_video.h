@@ -268,6 +268,8 @@ struct i965_driver_data
     struct i965_render_state render_state;
     void *pp_context;
     char va_vendor[256];
+    
+    VAContextID current_context_id;
 };
 
 #define NEW_CONFIG_ID() object_heap_allocate(&i965->config_heap);
