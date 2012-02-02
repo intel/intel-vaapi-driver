@@ -1496,7 +1496,7 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
 
         bo = dri_bo_alloc(i965->intel.bufmgr,
                           "VC-1 Bitplane",
-                          bitplane_width * bitplane_width,
+                          bitplane_width * height_in_mbs,
                           0x1000);
         assert(bo);
         gen6_mfd_context->bitplane_read_buffer.bo = bo;
