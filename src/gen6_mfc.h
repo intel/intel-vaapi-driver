@@ -123,6 +123,20 @@ struct gen6_mfc_context
         unsigned int target_frame_size;
     }bit_rate_control_context[2];                       //INTERNAL: 0 for intra frames, 1 for inter frames.
 
+    //HRD control context
+    struct {
+        int i_bit_rate_value;
+        int i_cpb_size_value;
+
+        int i_initial_cpb_removal_delay;
+        int i_cpb_removal_delay;
+
+        int i_frame_number;
+
+        int i_initial_cpb_removal_delay_length;
+        int i_cpb_removal_delay_length;
+        int i_dpb_output_delay_length;
+    }vui_hrd;
 };
 
 #endif	/* _GEN6_MFC_BCS_H_ */
