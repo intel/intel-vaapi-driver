@@ -91,6 +91,9 @@ struct gen7_mfd_context
     GenBuffer           bsd_mpc_row_store_scratch_buffer;
     GenBuffer           mpr_row_store_scratch_buffer;
     GenBuffer           bitplane_read_buffer;
+    
+    VASurfaceID jpeg_wa_surface_id;
+    dri_bo *jpeg_wa_slice_data_bo;
 };
 
 #endif /* _GEN7_MFD_H_ */
