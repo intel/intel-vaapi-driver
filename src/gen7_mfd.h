@@ -122,6 +122,9 @@ struct gen7_mfd_context
         dri_bo *bo;
         int valid;
     } bitplane_read_buffer;
+    
+    VASurfaceID jpeg_wa_surface_id;
+    dri_bo *jpeg_wa_slice_data_bo;
 };
 
 #endif /* _GEN7_MFD_H_ */
