@@ -41,6 +41,7 @@
 #define NAL_IDR                 5
 #define NAL_SPS                 7
 #define NAL_PPS                 8
+#define NAL_SEI                 6
 
 #define SLICE_TYPE_P            0
 #define SLICE_TYPE_B            1
@@ -97,7 +98,7 @@ avc_bitstream_end(avc_bitstream *bs)
 
     // free(bs->buffer);
 }
- 
+
 static void
 avc_bitstream_put_ui(avc_bitstream *bs, unsigned int val, int size_in_bits)
 {
@@ -176,7 +177,11 @@ avc_bitstream_byte_aligning(avc_bitstream *bs, int bit)
 
     avc_bitstream_put_ui(bs, new_val, bit_left);
 }
-
+static void avc_rbsp_trailing_bits(avc_bitstream *bs)
+{
+    avc_bitstream_put_ui(bs, 1, 1);
+    avc_bitstream_byte_aligning(bs, 0);
+}
 static void nal_start_code_prefix(avc_bitstream *bs)
 {
     avc_bitstream_put_ui(bs, 0x00000001, 32);
@@ -215,10 +220,8 @@ slice_header(avc_bitstream *bs,
     if (sps_param->pic_order_cnt_type == 0) {
         avc_bitstream_put_ui(bs, pic_param->CurrPic.TopFieldOrderCnt, sps_param->log2_max_pic_order_cnt_lsb_minus4 + 4);
         /* pic_order_present_flag == 0 */
-    }
-
-    if (sps_param->pic_order_cnt_type == 1 && !sps_param->seq_fields.bits.delta_pic_order_always_zero_flag) {
-        /* FIXME: pack delta pic information */
+    } else {
+        /* FIXME: */
         assert(0);
     }
 
@@ -323,3 +326,89 @@ build_avc_slice_header(VAEncSequenceParameterBufferH264 *sps_param,
 
     return bs.bit_offset;
 }
+
+int 
+build_avc_sei_buffering_period(int cpb_removal_length,
+                               unsigned int init_cpb_removal_delay, 
+                               unsigned int init_cpb_removal_delay_offset,
+                               unsigned char **sei_buffer) 
+{
+    unsigned char *byte_buf;
+    int byte_size, i;
+
+    avc_bitstream nal_bs;
+    avc_bitstream sei_bs;
+
+    avc_bitstream_start(&sei_bs);
+    avc_bitstream_put_ue(&sei_bs, 0);       /*seq_parameter_set_id*/
+    avc_bitstream_put_ui(&sei_bs, init_cpb_removal_delay, cpb_removal_length); 
+    avc_bitstream_put_ui(&sei_bs, init_cpb_removal_delay_offset, cpb_removal_length); 
+    if ( sei_bs.bit_offset & 0x7) {
+        avc_bitstream_put_ui(&sei_bs, 1, 1);
+    }
+    avc_bitstream_end(&sei_bs);
+    byte_size = (sei_bs.bit_offset + 7) / 8;
+    
+    avc_bitstream_start(&nal_bs);
+    nal_start_code_prefix(&nal_bs);
+    nal_header(&nal_bs, NAL_REF_IDC_NONE, NAL_SEI);
+    
+    avc_bitstream_put_ui(&nal_bs, 0, 8);
+    avc_bitstream_put_ui(&nal_bs, byte_size, 8);
+    
+    byte_buf = (unsigned char *)sei_bs.buffer;
+    for(i = 0; i < byte_size; i++) {
+        avc_bitstream_put_ui(&nal_bs, byte_buf[i], 8);
+    }
+    free(byte_buf);
+
+    avc_rbsp_trailing_bits(&nal_bs);
+    avc_bitstream_end(&nal_bs);
+
+    *sei_buffer = (unsigned char *)nal_bs.buffer; 
+   
+    return nal_bs.bit_offset;
+}
+
+int 
+build_avc_sei_pic_timing(unsigned int cpb_removal_length, unsigned int cpb_removal_delay, 
+                         unsigned int dpb_output_length, unsigned int dpb_output_delay,
+                         unsigned char **sei_buffer)
+{
+    unsigned char *byte_buf;
+    int byte_size, i;
+
+    avc_bitstream nal_bs;
+    avc_bitstream sei_bs;
+
+    avc_bitstream_start(&sei_bs);
+    avc_bitstream_put_ui(&sei_bs, cpb_removal_delay, cpb_removal_length); 
+    avc_bitstream_put_ui(&sei_bs, dpb_output_delay, dpb_output_length); 
+    if ( sei_bs.bit_offset & 0x7) {
+        avc_bitstream_put_ui(&sei_bs, 1, 1);
+    }
+    avc_bitstream_end(&sei_bs);
+    byte_size = (sei_bs.bit_offset + 7) / 8;
+    
+    avc_bitstream_start(&nal_bs);
+    nal_start_code_prefix(&nal_bs);
+    nal_header(&nal_bs, NAL_REF_IDC_NONE, NAL_SEI);
+    
+    avc_bitstream_put_ui(&nal_bs, 0x01, 8);
+    avc_bitstream_put_ui(&nal_bs, byte_size, 8);
+    
+    byte_buf = (unsigned char *)sei_bs.buffer;
+    for(i = 0; i < byte_size; i++) {
+        avc_bitstream_put_ui(&nal_bs, byte_buf[i], 8);
+    }
+    free(byte_buf);
+
+    avc_rbsp_trailing_bits(&nal_bs);
+    avc_bitstream_end(&nal_bs);
+
+    *sei_buffer = (unsigned char *)nal_bs.buffer; 
+   
+    return nal_bs.bit_offset;
+}
+
+
