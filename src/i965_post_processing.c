@@ -3619,11 +3619,11 @@ i965_post_processing(
 }       
 
 static VAStatus
-i965_image_i420_processing(VADriverContextP ctx,
-                           const struct i965_surface *src_surface,
-                           const VARectangle *src_rect,
-                           struct i965_surface *dst_surface,
-                           const VARectangle *dst_rect)
+i965_image_pl3_processing(VADriverContextP ctx,
+                          const struct i965_surface *src_surface,
+                          const VARectangle *src_rect,
+                          struct i965_surface *dst_surface,
+                          const VARectangle *dst_rect)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = i965->pp_context;
@@ -3653,11 +3653,11 @@ i965_image_i420_processing(VADriverContextP ctx,
 }
 
 static VAStatus
-i965_image_nv12_processing(VADriverContextP ctx,
-                           const struct i965_surface *src_surface,
-                           const VARectangle *src_rect,
-                           struct i965_surface *dst_surface,
-                           const VARectangle *dst_rect)
+i965_image_pl2_processing(VADriverContextP ctx,
+                          const struct i965_surface *src_surface,
+                          const VARectangle *src_rect,
+                          struct i965_surface *dst_surface,
+                          const VARectangle *dst_rect)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = i965->pp_context;
@@ -3702,19 +3702,21 @@ i965_image_processing(VADriverContextP ctx,
         switch (fourcc) {
         case VA_FOURCC('Y', 'V', '1', '2'):
         case VA_FOURCC('I', '4', '2', '0'):
-            status = i965_image_i420_processing(ctx,
-                                                src_surface,
-                                                src_rect,
-                                                dst_surface,
-                                                dst_rect);
+        case VA_FOURCC('I', 'M', 'C', '1'):
+        case VA_FOURCC('I', 'M', 'C', '3'):
+            status = i965_image_pl3_processing(ctx,
+                                               src_surface,
+                                               src_rect,
+                                               dst_surface,
+                                               dst_rect);
             break;
 
         case  VA_FOURCC('N', 'V', '1', '2'):
-            status = i965_image_nv12_processing(ctx,
-                                                src_surface,
-                                                src_rect,
-                                                dst_surface,
-                                                dst_rect);
+            status = i965_image_pl2_processing(ctx,
+                                               src_surface,
+                                               src_rect,
+                                               dst_surface,
+                                               dst_rect);
             break;
 
         default:
