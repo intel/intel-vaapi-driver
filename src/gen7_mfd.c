@@ -120,7 +120,7 @@ gen7_mfd_avc_frame_store_index(VADriverContextP ctx,
             struct object_surface *obj_surface = SURFACE(ref_pic->picture_id);
             
             assert(obj_surface);
-            i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+            i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
             for (frame_idx = 0; frame_idx < ARRAY_ELEMS(gen7_mfd_context->reference_surface); frame_idx++) {
                 for (j = 0; j < ARRAY_ELEMS(gen7_mfd_context->reference_surface); j++) {
@@ -270,17 +270,9 @@ gen7_mfd_surface_state(VADriverContextP ctx,
 
     assert(obj_surface);
 
-    if (obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '1')) {
-        y_cb_offset = ALIGN(obj_surface->height, 32) + ALIGN(obj_surface->height / 2, 32);
-        y_cr_offset = ALIGN(obj_surface->height, 32);
-    } else if (obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
-        y_cb_offset = ALIGN(obj_surface->height, 32);
-        y_cr_offset = ALIGN(obj_surface->height, 32) + ALIGN(obj_surface->height / 2, 32);
-    } else {
-        y_cb_offset = ALIGN(obj_surface->height, 32);
-        y_cr_offset = 0;
-    }
-    
+    y_cb_offset = obj_surface->y_cb_offset;
+    y_cr_offset = obj_surface->y_cr_offset;
+
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFX_SURFACE_STATE | (6 - 2));
     OUT_BCS_BATCH(batch, 0);
@@ -938,7 +930,7 @@ gen7_mfd_avc_decode_init(VADriverContextP ctx,
     assert(obj_surface);
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
     gen7_mfd_init_avc_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
@@ -1087,7 +1079,7 @@ gen7_mfd_mpeg2_decode_init(VADriverContextP ctx,
     /* Current decoded picture */
     obj_surface = SURFACE(decode_state->current_render_target);
     assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
     dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
@@ -1416,7 +1408,7 @@ gen7_mfd_vc1_decode_init(VADriverContextP ctx,
     /* Current decoded picture */
     obj_surface = SURFACE(decode_state->current_render_target);
     assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'));
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
     gen7_mfd_init_vc1_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
@@ -1938,11 +1930,52 @@ gen7_mfd_jpeg_decode_init(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
+    VAPictureParameterBufferJPEG *pic_param;
+    int subsampling = SUBSAMPLE_YUV420;
+
+    pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
+
+    if (pic_param->num_components == 1)
+        subsampling = SUBSAMPLE_YUV400;
+    else if (pic_param->num_components == 3) {
+        int h1 = pic_param->components[0].h_sampling_factor;
+        int h2 = pic_param->components[1].h_sampling_factor;
+        int h3 = pic_param->components[2].h_sampling_factor;
+        int v1 = pic_param->components[0].v_sampling_factor;
+        int v2 = pic_param->components[1].v_sampling_factor;
+        int v3 = pic_param->components[2].v_sampling_factor;
+
+        if (h1 == 2 && h2 == 1 && h3 == 1 &&
+            v1 == 2 && v2 == 1 && v3 == 1)
+            subsampling = SUBSAMPLE_YUV420;
+        else if (h1 == 2 && h2 == 1 && h3 == 1 &&
+                 v1 == 1 && v2 == 1 && v3 == 1)
+            subsampling = SUBSAMPLE_YUV422H;
+        else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+                 v1 == 1 && v2 == 1 && v3 == 1)
+            subsampling = SUBSAMPLE_YUV444;
+        else if (h1 == 4 && h2 == 1 && h3 == 1 &&
+                 v1 == 1 && v2 == 1 && v3 == 1)
+            subsampling = SUBSAMPLE_YUV411;
+        else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+                 v1 == 2 && v2 == 1 && v3 == 1)
+            subsampling = SUBSAMPLE_YUV422V;
+        else if (h1 == 2 && h2 == 1 && h3 == 1 &&
+                 v1 == 2 && v2 == 2 && v3 == 2)
+            subsampling = SUBSAMPLE_YUV422H;
+        else if (h2 == 2 && h2 == 2 && h3 == 2 &&
+                 v1 == 2 && v2 == 1 && v3 == 1)
+            subsampling = SUBSAMPLE_YUV422V;
+        else
+            assert(0);
+    } else {
+        assert(0);
+    }
 
     /* Current decoded picture */
     obj_surface = SURFACE(decode_state->current_render_target);
     assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('I','M','C','1'));
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('I','M','C','1'), subsampling);
 
     dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
@@ -1982,7 +2015,7 @@ gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     VAPictureParameterBufferJPEG *pic_param;
-    int chroma_type = GEN7_YUV400;
+    int chroma_type = GEN7_YUV420;
     int frame_width_in_blks;
     int frame_height_in_blks;
 

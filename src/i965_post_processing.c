@@ -2236,7 +2236,7 @@ i965_post_processing(
                                              &out_surface_id);
                 assert(status == VA_STATUS_SUCCESS);
                 obj_surface = SURFACE(out_surface_id);
-                i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+                i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
                 i965_post_processing_internal(ctx,
                                               in_surface_id, out_surface_id,
                                               src_rect, dst_rect,
@@ -2258,7 +2258,7 @@ i965_post_processing(
                                              &out_surface_id);
                 assert(status == VA_STATUS_SUCCESS);
                 obj_surface = SURFACE(out_surface_id);
-                i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'));
+                i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
                 i965_post_processing_internal(ctx,
                                               in_surface_id, out_surface_id,
                                               src_rect, dst_rect,

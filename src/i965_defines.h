@@ -703,11 +703,20 @@
 #define MFD_MODE_IT             1
 
 #define MFX_SURFACE_PLANAR_420_8        4
+#define MFX_SURFACE_PLANAR_411_8        5
+#define MFX_SURFACE_PLANAR_422_8        6
 #define MFX_SURFACE_MONOCHROME          12
 
 #define MPEG_TOP_FIELD		1
 #define MPEG_BOTTOM_FIELD	2
 #define MPEG_FRAME		3
+
+#define SUBSAMPLE_YUV400        0
+#define SUBSAMPLE_YUV420        1
+#define SUBSAMPLE_YUV422H       2
+#define SUBSAMPLE_YUV422V       3
+#define SUBSAMPLE_YUV444        4
+#define SUBSAMPLE_YUV411        5
 
 #define URB_SIZE(intel)         (IS_GEN7(intel->device_id) ? 4096 :     \
                                  IS_GEN6(intel->device_id) ? 1024 :     \
