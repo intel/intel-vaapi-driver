@@ -865,40 +865,25 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    int emit_new_state = 1, object_len_in_bytes;
     int x, y;
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
 
+    intel_batchbuffer_emit_mi_flush(batch);
+
+    /*Step2: State command PIPELINE_SELECT*/
+    gen6_vme_pipeline_select(ctx, encoder_context);
+
+    /*Step3: State commands configuring pipeline states*/
+    gen6_vme_state_base_address(ctx, encoder_context);
+    gen6_vme_vfe_state(ctx, encoder_context);
+    gen6_vme_curbe_load(ctx, encoder_context);
+    gen6_vme_idrt(ctx, encoder_context);
+
+    /*Step4: Primitive commands*/
     for(y = 0; y < height_in_mbs; y++){
         for(x = 0; x < width_in_mbs; x++){	
-
-            if (emit_new_state) {
-                /*Step1: MI_FLUSH/PIPE_CONTROL*/
-                intel_batchbuffer_emit_mi_flush(batch);
-
-                /*Step2: State command PIPELINE_SELECT*/
-                gen6_vme_pipeline_select(ctx, encoder_context);
-
-                /*Step3: State commands configuring pipeline states*/
-                gen6_vme_state_base_address(ctx, encoder_context);
-                gen6_vme_vfe_state(ctx, encoder_context);
-                gen6_vme_curbe_load(ctx, encoder_context);
-                gen6_vme_idrt(ctx, encoder_context);
-
-                emit_new_state = 0;
-            }
-
-            /*Step4: Primitive commands*/
-            object_len_in_bytes = gen6_vme_media_object(ctx, encode_state, x, y, is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER, encoder_context);
-
-            if (intel_batchbuffer_check_free_space(batch, object_len_in_bytes) == 0) {
-                assert(0);
-                intel_batchbuffer_end_atomic(batch);	
-                intel_batchbuffer_flush(batch);
-                emit_new_state = 1;
-                intel_batchbuffer_start_atomic(batch, 0x1000);
-            }
+            gen6_vme_media_object(ctx, encode_state, x, y, is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER, encoder_context);
         }
     }
 
