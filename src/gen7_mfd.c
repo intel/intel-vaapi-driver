@@ -2373,7 +2373,7 @@ gen7_jpeg_wa_pipe_buf_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
 
     /* DW 7..22 */
-    for (i = 0; i < MAX_MFX_REFERENCE_SURFACES; i++) {
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
         OUT_BCS_BATCH(batch, 0);
     }
 
@@ -2487,7 +2487,7 @@ gen7_jpeg_wa_avc_directmode_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_AVC_DIRECTMODE_STATE | (69 - 2));
 
     /* reference surfaces 0..15 */
-    for (i = 0; i < MAX_MFX_REFERENCE_SURFACES; i++) {
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
         OUT_BCS_BATCH(batch, 0); /* top */
         OUT_BCS_BATCH(batch, 0); /* bottom */
     }
@@ -2497,7 +2497,7 @@ gen7_jpeg_wa_avc_directmode_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0); /* bottom */
 
     /* POC List */
-    for (i = 0; i < MAX_MFX_REFERENCE_SURFACES; i++) {
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
     }
