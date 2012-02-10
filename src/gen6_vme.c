@@ -517,7 +517,6 @@ gen7_vme_output_buffer_setup(VADriverContextP ctx,
     assert(bo->virtual);
 
     ss = (struct gen7_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    ss = bo->virtual;
     memset(ss, 0, sizeof(*ss));
 
     /* always use 16 bytes as pitch on Sandy Bridge */
