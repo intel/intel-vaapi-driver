@@ -38,7 +38,7 @@
 #define MAX_INTERFACE_DESC_GEN6      32
 #define MAX_MEDIA_SURFACES_GEN6      34
 
-#define GEN6_VME_KERNEL_NUMBER          2
+#define GEN6_VME_KERNEL_NUMBER          3
 
 struct encode_state;
 struct intel_encoder_context;
@@ -75,6 +75,13 @@ struct gen6_vme_context
         unsigned int size_block; /* in bytes */
         unsigned int pitch;
     } vme_output;
+
+    struct {
+        dri_bo *bo;
+        unsigned int num_blocks;
+        unsigned int size_block;
+        unsigned int pitch;
+    } vme_batchbuffer;
 
     struct i965_kernel vme_kernels[GEN6_VME_KERNEL_NUMBER];
 };

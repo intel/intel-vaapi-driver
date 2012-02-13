@@ -51,8 +51,9 @@
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET                    SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6)
 
-#define VME_INTRA_SHADER	0	
-#define VME_INTER_SHADER	1
+#define VME_INTRA_SHADER        0	
+#define VME_INTER_SHADER        1
+#define VME_BATCHBUFFER         2
 
 #define CURBE_ALLOCATION_SIZE   37              /* in 256-bit */
 #define CURBE_TOTAL_DATA_LENGTH (4 * 32)        /* in byte, it should be less than or equal to CURBE_ALLOCATION_SIZE * 32 */
@@ -64,6 +65,9 @@ static const uint32_t gen6_vme_intra_frame[][4] = {
 
 static const uint32_t gen6_vme_inter_frame[][4] = {
 #include "shaders/vme/inter_frame.g6b"
+};
+
+static const uint32_t gen6_vme_batchbuffer[][4] = {
 };
 
 static struct i965_kernel gen6_vme_kernels[] = {
@@ -80,7 +84,14 @@ static struct i965_kernel gen6_vme_kernels[] = {
         gen6_vme_inter_frame,
         sizeof(gen6_vme_inter_frame),
         NULL
-    }
+    },
+    {
+        "VME BATCHBUFFER",
+        VME_BATCHBUFFER,
+        gen6_vme_batchbuffer,
+        sizeof(gen6_vme_batchbuffer),
+        NULL
+    },
 };
 
 static const uint32_t gen7_vme_intra_frame[][4] = {
@@ -89,6 +100,10 @@ static const uint32_t gen7_vme_intra_frame[][4] = {
 
 static const uint32_t gen7_vme_inter_frame[][4] = {
 #include "shaders/vme/inter_frame.g7b"
+};
+
+static const uint32_t gen7_vme_batchbuffer[][4] = {
+#include "shaders/vme/batchbuffer.g7b"
 };
 
 static struct i965_kernel gen7_vme_kernels[] = {
@@ -105,7 +120,14 @@ static struct i965_kernel gen7_vme_kernels[] = {
         gen7_vme_inter_frame,
         sizeof(gen7_vme_inter_frame),
         NULL
-    }
+    },
+    {
+        "VME BATCHBUFFER",
+        VME_BATCHBUFFER,
+        gen7_vme_batchbuffer,
+        sizeof(gen7_vme_batchbuffer),
+        NULL
+    },
 };
 
 static void
@@ -544,6 +566,64 @@ gen7_vme_output_buffer_setup(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static VAStatus
+gen7_vme_output_vme_batchbuffer_setup(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      int index,
+                                      struct intel_encoder_context *encoder_context)
+
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    struct gen7_surface_state *ss;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+    int num_entries;
+    dri_bo *bo;
+
+    vme_context->vme_batchbuffer.num_blocks = width_in_mbs * height_in_mbs + 1;
+    vme_context->vme_batchbuffer.size_block = 32; /* an OWORD */
+    vme_context->vme_batchbuffer.pitch = 16;
+    bo = dri_bo_alloc(i965->intel.bufmgr, 
+                      "VME batchbuffer",
+                      vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block,
+                      0x1000);
+    assert(bo);
+    vme_context->vme_batchbuffer.bo = bo;
+
+    bo = vme_context->surface_state_binding_table.bo;
+    dri_bo_map(bo, 1);
+    assert(bo->virtual);
+
+    ss = (struct gen7_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
+    memset(ss, 0, sizeof(*ss));
+
+    num_entries = vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block / vme_context->vme_batchbuffer.pitch;
+
+    ss->ss0.render_cache_read_write = 1;
+    ss->ss0.surface_type = I965_SURFACE_BUFFER;
+
+    ss->ss1.base_addr = vme_context->vme_batchbuffer.bo->offset;
+
+    ss->ss2.width = ((num_entries - 1) & 0x7f);
+    ss->ss2.height = (((num_entries - 1) >> 7) & 0x3fff);
+    ss->ss3.depth = (((num_entries - 1) >> 21) & 0x3f);
+
+    ss->ss3.pitch = vme_context->vme_batchbuffer.pitch - 1;
+
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                      0,
+                      SURFACE_STATE_OFFSET(index) + offsetof(struct gen7_surface_state, ss1),
+                      vme_context->vme_batchbuffer.bo);
+
+    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
+    dri_bo_unmap(bo);
+
+    return VA_STATUS_SUCCESS;
+}
+
 static VAStatus gen7_vme_surface_setup(VADriverContextP ctx, 
                                        struct encode_state *encode_state,
                                        int is_intra,
@@ -576,6 +656,7 @@ static VAStatus gen7_vme_surface_setup(VADriverContextP ctx,
 
     /* VME output */
     gen7_vme_output_buffer_setup(ctx, encode_state, 0, encoder_context);
+    gen7_vme_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
 
     return VA_STATUS_SUCCESS;
 }
@@ -775,35 +856,80 @@ static void gen6_vme_idrt(VADriverContextP ctx, struct intel_encoder_context *en
     ADVANCE_BATCH(batch);
 }
 
-static int gen6_vme_media_object(VADriverContextP ctx, 
-                                 struct encode_state *encode_state,
-                                 int mb_x, int mb_y,
-                                 int kernel,
-                                 struct intel_encoder_context *encoder_context)
+static void
+gen6_vme_fill_vme_batchbuffer(VADriverContextP ctx, 
+                              struct encode_state *encode_state,
+                              int mb_width, int mb_height,
+                              int kernel,
+                              int transform_8x8_mode_flag,
+                              struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
-    struct object_surface *obj_surface = SURFACE(encoder_context->input_yuv_surface);
-    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
-    int mb_width = ALIGN(obj_surface->orig_width, 16) / 16;
-    int len_in_dowrds = 6 + 2;      /*6 + n: n is number of inline data*/
+    int mb_x, mb_y, i;
+    int total_mbs = mb_width * mb_height;
+    int number_mb_cmds = 512;
+    int starting_mb = 0;
+    int last_object = 0;
 
-    BEGIN_BATCH(batch, len_in_dowrds);
+    for (i = 0; i < total_mbs / number_mb_cmds; i++) {
+        mb_x = starting_mb % mb_width;
+        mb_y = starting_mb / mb_width;
+        last_object = (total_mbs - starting_mb) == number_mb_cmds;
+        starting_mb += number_mb_cmds;
+
+        BEGIN_BATCH(batch, 9);
     
-    OUT_BATCH(batch, CMD_MEDIA_OBJECT | (len_in_dowrds - 2));
-    OUT_BATCH(batch, kernel);		/*Interface Descriptor Offset*/	
-    OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, 0);
+        OUT_BATCH(batch, CMD_MEDIA_OBJECT | (9 - 2));
+        OUT_BATCH(batch, VME_BATCHBUFFER);
+        OUT_BATCH(batch, 0);
+        OUT_BATCH(batch, 0);
+        OUT_BATCH(batch, 0);
+        OUT_BATCH(batch, 0);
    
-    /*inline data */
-    OUT_BATCH(batch, mb_width << 16 | mb_y << 8 | mb_x);			/*M0.0 Refrence0 X,Y, not used in Intra*/
-    OUT_BATCH(batch, pPicParameter->pic_fields.bits.transform_8x8_mode_flag);   /* Enabling or disabling 8x8,4x4 Intra mode,
-                                                                                   more control flags will added here.*/
-    ADVANCE_BATCH(batch);
+        /*inline data */
+        OUT_BATCH(batch, 
+                  kernel << 24 |
+                  transform_8x8_mode_flag << 16 |
+                  mb_width);
+        OUT_BATCH(batch,
+                  number_mb_cmds << 16 |
+                  mb_y << 8 |
+                  mb_x);
+        OUT_BATCH(batch, last_object);
 
-    return len_in_dowrds * 4;
+        ADVANCE_BATCH(batch);
+    }
+
+    if (!last_object) {
+        number_mb_cmds = total_mbs % number_mb_cmds;
+        mb_x = starting_mb % mb_width;
+        mb_y = starting_mb / mb_width;
+        last_object = 1;
+        starting_mb += number_mb_cmds;
+
+        BEGIN_BATCH(batch, 9);
+    
+        OUT_BATCH(batch, CMD_MEDIA_OBJECT | (9 - 2));
+        OUT_BATCH(batch, VME_BATCHBUFFER);
+        OUT_BATCH(batch, 0);
+        OUT_BATCH(batch, 0);
+        OUT_BATCH(batch, 0);
+        OUT_BATCH(batch, 0);
+   
+        /*inline data */
+        OUT_BATCH(batch, 
+                  kernel << 24 |
+                  transform_8x8_mode_flag << 16 |
+                  mb_width);
+        OUT_BATCH(batch,
+                  number_mb_cmds << 16 |
+                  mb_y << 8 |
+                  mb_x);
+        OUT_BATCH(batch, last_object);
+
+        ADVANCE_BATCH(batch);
+    }
+
 }
 
 static void gen6_vme_media_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
@@ -840,6 +966,9 @@ static void gen6_vme_media_init(VADriverContextP ctx, struct intel_encoder_conte
     dri_bo_unreference(vme_context->vme_output.bo);
     vme_context->vme_output.bo = NULL;
 
+    dri_bo_unreference(vme_context->vme_batchbuffer.bo);
+    vme_context->vme_batchbuffer.bo = NULL;
+
     /* VME state */
     dri_bo_unreference(vme_context->vme_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -859,13 +988,14 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
                                          struct encode_state *encode_state,
                                          struct intel_encoder_context *encoder_context)
 {
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
+    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    int x, y;
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
 
@@ -880,12 +1010,22 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
     gen6_vme_curbe_load(ctx, encoder_context);
     gen6_vme_idrt(ctx, encoder_context);
 
-    /*Step4: Primitive commands*/
-    for(y = 0; y < height_in_mbs; y++){
-        for(x = 0; x < width_in_mbs; x++){	
-            gen6_vme_media_object(ctx, encode_state, x, y, is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER, encoder_context);
-        }
-    }
+    gen6_vme_fill_vme_batchbuffer(ctx, 
+                                  encode_state,
+                                  width_in_mbs, height_in_mbs,
+                                  is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
+                                  pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
+                                  encoder_context);
+
+    intel_batchbuffer_emit_mi_flush(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
+    OUT_RELOC(batch,
+              vme_context->vme_batchbuffer.bo,
+              I915_GEM_DOMAIN_COMMAND, 0, 
+              0);
+    ADVANCE_BATCH(batch);
 
     intel_batchbuffer_end_atomic(batch);	
 }
