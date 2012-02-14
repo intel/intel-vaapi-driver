@@ -695,7 +695,7 @@ static VAStatus gen7_vme_surface_setup(VADriverContextP ctx,
     /* current picture for encoding */
     obj_surface = SURFACE(encoder_context->input_yuv_surface);
     assert(obj_surface);
-    gen7_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
+    gen7_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen7_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
 
     if (!is_intra) {
@@ -703,17 +703,17 @@ static VAStatus gen7_vme_surface_setup(VADriverContextP ctx,
         obj_surface = SURFACE(pPicParameter->ReferenceFrames[0].picture_id);
         assert(obj_surface);
         if ( obj_surface->bo != NULL)
-            gen7_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
+            gen7_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
 
         /* reference 1 */
         obj_surface = SURFACE(pPicParameter->ReferenceFrames[1].picture_id);
         assert(obj_surface);
         if ( obj_surface->bo != NULL ) 
-            gen7_vme_source_surface_state(ctx, 3, obj_surface, encoder_context);
+            gen7_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
     }
 
     /* VME output */
-    gen7_vme_output_buffer_setup(ctx, encode_state, 0, encoder_context);
+    gen7_vme_output_buffer_setup(ctx, encode_state, 3, encoder_context);
     gen7_vme_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
 
     return VA_STATUS_SUCCESS;
