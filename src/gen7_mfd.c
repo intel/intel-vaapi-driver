@@ -455,7 +455,6 @@ gen7_mfd_avc_img_state(VADriverContextP ctx,
                        struct gen7_mfd_context *gen7_mfd_context)
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-    int qm_present_flag;
     int img_struct;
     int mbaff_frame_flag;
     unsigned int width_in_mbs, height_in_mbs;
@@ -464,11 +463,6 @@ gen7_mfd_avc_img_state(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
     assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
-
-    if (decode_state->iq_matrix && decode_state->iq_matrix->buffer)
-        qm_present_flag = 1;
-    else
-        qm_present_flag = 0; /* built-in QM matrices */
 
     if (pic_param->CurrPic.flags & VA_PICTURE_H264_TOP_FIELD)
         img_struct = 1;
@@ -548,10 +542,10 @@ gen7_mfd_avc_qm_state(VADriverContextP ctx,
     VAIQMatrixBufferH264 *iq_matrix;
     VAPictureParameterBufferH264 *pic_param;
 
-    if (!decode_state->iq_matrix || !decode_state->iq_matrix->buffer)
-        return;
-
-    iq_matrix = (VAIQMatrixBufferH264 *)decode_state->iq_matrix->buffer;
+    if (decode_state->iq_matrix && decode_state->iq_matrix->buffer)
+        iq_matrix = (VAIQMatrixBufferH264 *)decode_state->iq_matrix->buffer;
+    else
+        iq_matrix = &gen7_mfd_context->iq_matrix.h264;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
@@ -875,6 +869,16 @@ gen7_mfd_avc_bsd_object(VADriverContextP ctx,
                   (slice_data_bit_offset & 0x7));
     OUT_BCS_BATCH(batch, 0);
     ADVANCE_BCS_BATCH(batch);
+}
+
+static inline void
+gen7_mfd_avc_context_init(
+    VADriverContextP         ctx,
+    struct gen7_mfd_context *gen7_mfd_context
+)
+{
+    /* Initialize flat scaling lists */
+    avc_gen_default_iq_matrix(&gen7_mfd_context->iq_matrix.h264);
 }
 
 static void
@@ -1997,5 +2001,14 @@ gen7_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
         gen7_mfd_context->reference_surface[i].frame_store_id = -1;
     }
 
+    switch (profile) {
+    case VAProfileH264Baseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        gen7_mfd_avc_context_init(ctx, gen7_mfd_context);
+        break;
+    default:
+        break;
+    }
     return (struct hw_context *)gen7_mfd_context;
 }

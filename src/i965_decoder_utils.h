@@ -28,6 +28,9 @@
 #include "intel_batchbuffer.h"
 
 void
+avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix);
+
+void
 gen5_fill_avc_ref_idx_state(
     uint8_t             state[32],
     const VAPictureH264 ref_list[32],

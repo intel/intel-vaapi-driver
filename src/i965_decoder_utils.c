@@ -23,9 +23,21 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <string.h>
 #include "intel_batchbuffer.h"
 #include "i965_decoder_utils.h"
 #include "i965_defines.h"
+
+/* Generate flat scaling matrices for H.264 decoding */
+void
+avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix)
+{
+    /* Flat_4x4_16 */
+    memset(&iq_matrix->ScalingList4x4, 16, sizeof(iq_matrix->ScalingList4x4));
+
+    /* Flat_8x8_16 */
+    memset(&iq_matrix->ScalingList8x8, 16, sizeof(iq_matrix->ScalingList8x8));
+}
 
 static inline uint8_t
 get_ref_idx_state_1(const VAPictureH264 *va_pic, unsigned int frame_store_id)
