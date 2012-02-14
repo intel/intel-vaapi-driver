@@ -68,6 +68,7 @@ static const uint32_t gen6_vme_inter_frame[][4] = {
 };
 
 static const uint32_t gen6_vme_batchbuffer[][4] = {
+#include "shaders/vme/batchbuffer.g6b"
 };
 
 static struct i965_kernel gen6_vme_kernels[] = {
@@ -325,6 +326,62 @@ gen6_vme_output_buffer_setup(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static VAStatus
+gen6_vme_output_vme_batchbuffer_setup(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      int index,
+                                      struct intel_encoder_context *encoder_context)
+
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    struct i965_surface_state *ss;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+    int num_entries;
+    dri_bo *bo;
+
+    vme_context->vme_batchbuffer.num_blocks = width_in_mbs * height_in_mbs + 1;
+    vme_context->vme_batchbuffer.size_block = 32; /* 2 OWORDs */
+    vme_context->vme_batchbuffer.pitch = 16;
+    bo = dri_bo_alloc(i965->intel.bufmgr, 
+                      "VME batchbuffer",
+                      vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block,
+                      0x1000);
+    assert(bo);
+    vme_context->vme_batchbuffer.bo = bo;
+
+    bo = vme_context->surface_state_binding_table.bo;
+    dri_bo_map(bo, 1);
+    assert(bo->virtual);
+
+    ss = (struct i965_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
+    memset(ss, 0, sizeof(*ss));
+
+    num_entries = vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block / vme_context->vme_batchbuffer.pitch;
+
+    ss->ss0.render_cache_read_mode = 1;
+    ss->ss0.surface_type = I965_SURFACE_BUFFER;
+
+    ss->ss1.base_addr = vme_context->vme_batchbuffer.bo->offset;
+
+    ss->ss2.width = ((num_entries - 1) & 0x7f);
+    ss->ss2.height = (((num_entries - 1) >> 7) & 0x1fff);
+    ss->ss3.depth = (((num_entries - 1) >> 20) & 0x7f);
+
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                      0,
+                      SURFACE_STATE_OFFSET(index) + offsetof(struct i965_surface_state, ss1),
+                      vme_context->vme_batchbuffer.bo);
+
+    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
+    dri_bo_unmap(bo);
+
+    return VA_STATUS_SUCCESS;
+}
+
 static VAStatus gen6_vme_surface_setup(VADriverContextP ctx, 
                                        struct encode_state *encode_state,
                                        int is_intra,
@@ -356,6 +413,7 @@ static VAStatus gen6_vme_surface_setup(VADriverContextP ctx,
 
     /* VME output */
     gen6_vme_output_buffer_setup(ctx, encode_state, 3, encoder_context);
+    gen6_vme_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
 
     return VA_STATUS_SUCCESS;
 }
