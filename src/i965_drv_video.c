@@ -407,6 +407,7 @@ i965_CreateConfig(VADriverContextP ctx,
         }
 
         break;
+
     default:
         vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         break;

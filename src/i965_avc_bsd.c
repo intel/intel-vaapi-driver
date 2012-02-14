@@ -38,6 +38,7 @@
 #include "i965_avc_bsd.h"
 #include "i965_media_h264.h"
 #include "i965_media.h"
+#include "i965_decoder_utils.h"
 
 static void 
 i965_avc_bsd_free_avc_bsd_surface(void **data)
@@ -259,13 +260,7 @@ i965_avc_bsd_slice_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = i965_h264_context->batch;
     int present_flag, cmd_len, list, j;
-    struct {
-        unsigned char bottom_idc:1;
-        unsigned char frame_store_index:4;
-        unsigned char field_picture:1;
-        unsigned char long_term:1;
-        unsigned char non_exist:1;
-    } refs[32];
+    uint8_t ref_idx_state[32];
     char weightoffsets[32 * 6];
 
     /* don't issue SLICE_STATE for intra-prediction decoding */
@@ -302,53 +297,28 @@ i965_avc_bsd_slice_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, present_flag);
 
     for (list = 0; list < 2; list++) {
-        int flag;
+        int flag, num_va_pics;
         VAPictureH264 *va_pic;
 
         if (list == 0) {
-            flag = PRESENT_REF_LIST0;
-            va_pic = slice_param->RefPicList0;
+            flag        = PRESENT_REF_LIST0;
+            va_pic      = slice_param->RefPicList0;
+            num_va_pics = slice_param->num_ref_idx_l0_active_minus1 + 1;
         } else {
-            flag = PRESENT_REF_LIST1;
-            va_pic = slice_param->RefPicList1;
+            flag        = PRESENT_REF_LIST1;
+            va_pic      = slice_param->RefPicList1;
+            num_va_pics = slice_param->num_ref_idx_l1_active_minus1 + 1;
         }
 
         if (!(present_flag & flag))
             continue;
 
-        for (j = 0; j < 32; j++) {
-            if (va_pic->flags & VA_PICTURE_H264_INVALID) {
-                refs[j].non_exist = 1;
-                refs[j].long_term = 1;
-                refs[j].field_picture = 1;
-                refs[j].frame_store_index = 0xf;
-                refs[j].bottom_idc = 1;
-            } else {
-                int frame_idx;
-                
-                for (frame_idx = 0; frame_idx < ARRAY_ELEMS(i965_h264_context->fsid_list); frame_idx++) {
-                    if (i965_h264_context->fsid_list[frame_idx].surface_id != VA_INVALID_ID &&
-                        va_pic->picture_id == i965_h264_context->fsid_list[frame_idx].surface_id) {
-                        assert(frame_idx == i965_h264_context->fsid_list[frame_idx].frame_store_id);
-                        break;
-                    }
-                }
-
-                assert(frame_idx < ARRAY_ELEMS(i965_h264_context->fsid_list));
-                
-                refs[j].non_exist = 0;
-                refs[j].long_term = !!(va_pic->flags & VA_PICTURE_H264_LONG_TERM_REFERENCE);
-                refs[j].field_picture = !!(va_pic->flags & 
-                                           (VA_PICTURE_H264_TOP_FIELD | 
-                                            VA_PICTURE_H264_BOTTOM_FIELD));
-                refs[j].frame_store_index = frame_idx;
-                refs[j].bottom_idc = !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD);
-            }
-
-            va_pic++;
-        }
-        
-        intel_batchbuffer_data(batch, refs, sizeof(refs));
+        gen5_fill_avc_ref_idx_state(
+            ref_idx_state,
+            va_pic, num_va_pics,
+            i965_h264_context->fsid_list
+        );            
+        intel_batchbuffer_data(batch, ref_idx_state, sizeof(ref_idx_state));
     }
 
     i965_h264_context->weight128_luma_l0 = 0;

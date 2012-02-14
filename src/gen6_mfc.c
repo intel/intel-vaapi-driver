@@ -998,6 +998,7 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     obj_surface = SURFACE(pPicParameter->CurrPic.picture_id);
     assert(obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+
     if ( obj_surface->private_data == NULL) {
         gen6_avc_surface = calloc(sizeof(struct gen6_mfc_avc_surface_aux), 1);
         gen6_avc_surface->dmv_top = 

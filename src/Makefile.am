@@ -55,6 +55,7 @@ source_c = \
 	i965_avc_bsd.c		\
 	i965_avc_hw_scoreboard.c\
 	i965_avc_ildb.c		\
+	i965_decoder_utils.c	\
 	i965_drv_video.c	\
 	i965_encoder.c		\
 	i965_encoder_utils.c	\
@@ -79,6 +80,8 @@ source_h = \
 	i965_avc_bsd.h		\
 	i965_avc_hw_scoreboard.h\
 	i965_avc_ildb.h		\
+	i965_decoder.h		\
+	i965_decoder_utils.h	\
 	i965_defines.h          \
 	i965_drv_video.h        \
 	i965_encoder.h		\

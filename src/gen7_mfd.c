@@ -36,6 +36,7 @@
 
 #include "i965_defines.h"
 #include "i965_drv_video.h"
+#include "i965_decoder_utils.h"
 
 #include "gen7_mfd.h"
 
@@ -757,81 +758,17 @@ gen7_mfd_avc_slice_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-static void
+static inline void
 gen7_mfd_avc_ref_idx_state(VADriverContextP ctx,
                            VAPictureParameterBufferH264 *pic_param,
                            VASliceParameterBufferH264 *slice_param,
                            struct gen7_mfd_context *gen7_mfd_context)
 {
-    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-    int i, j, num_ref_list;
-    struct {
-        unsigned char bottom_idc:1;
-        unsigned char frame_store_index:4;
-        unsigned char field_picture:1;
-        unsigned char long_term:1;
-        unsigned char non_exist:1;
-    } refs[32];
-
-    if (slice_param->slice_type == SLICE_TYPE_I ||
-        slice_param->slice_type == SLICE_TYPE_SI)
-        return;
-
-    if (slice_param->slice_type == SLICE_TYPE_P ||
-        slice_param->slice_type == SLICE_TYPE_SP) {
-        num_ref_list = 1;
-    } else {
-        num_ref_list = 2;
-    }
-
-    for (i = 0; i < num_ref_list; i++) {
-        VAPictureH264 *va_pic;
-
-        if (i == 0) {
-            va_pic = slice_param->RefPicList0;
-        } else {
-            va_pic = slice_param->RefPicList1;
-        }
-
-        BEGIN_BCS_BATCH(batch, 10);
-        OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | (10 - 2));
-        OUT_BCS_BATCH(batch, i);
-
-        for (j = 0; j < 32; j++) {
-            if (va_pic->flags & VA_PICTURE_H264_INVALID) {
-                refs[j].non_exist = 1;
-                refs[j].long_term = 1;
-                refs[j].field_picture = 1;
-                refs[j].frame_store_index = 0xf;
-                refs[j].bottom_idc = 1;
-            } else {
-                int frame_idx;
-                
-                for (frame_idx = 0; frame_idx < ARRAY_ELEMS(gen7_mfd_context->reference_surface); frame_idx++) {
-                    if (gen7_mfd_context->reference_surface[frame_idx].surface_id != VA_INVALID_ID &&
-                        va_pic->picture_id == gen7_mfd_context->reference_surface[frame_idx].surface_id) {
-                        assert(frame_idx == gen7_mfd_context->reference_surface[frame_idx].frame_store_id);
-                        break;
-                    }
-                }
-
-                assert(frame_idx < ARRAY_ELEMS(gen7_mfd_context->reference_surface));
-                
-                refs[j].non_exist = 0;
-                refs[j].long_term = !!(va_pic->flags & VA_PICTURE_H264_LONG_TERM_REFERENCE);
-                refs[j].field_picture = !!(va_pic->flags & 
-                                           (VA_PICTURE_H264_TOP_FIELD | 
-                                            VA_PICTURE_H264_BOTTOM_FIELD));
-                refs[j].frame_store_index = frame_idx;
-                refs[j].bottom_idc = !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD);
-            }
-
-            va_pic++;
-        }
-        
-        intel_batchbuffer_data(batch, refs, sizeof(refs));
-        ADVANCE_BCS_BATCH(batch);
-    }
+    gen6_send_avc_ref_idx_state(
+        gen7_mfd_context->base.batch,
+        slice_param,
+        gen7_mfd_context->reference_surface
+    );
 }
 
 static void
@@ -1721,13 +1658,13 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
     if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPelBilinear ||
         (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
          pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPelBilinear))
-        interpolation_mode = 8; /* Half-pel bilinear */
+        interpolation_mode = 9; /* Half-pel bilinear */
     else if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPel ||
              (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
               pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPel))
-        interpolation_mode = 0; /* Half-pel bicubic */
+        interpolation_mode = 1; /* Half-pel bicubic */
     else
-        interpolation_mode = 1; /* Quarter-pel bicubic */
+        interpolation_mode = 0; /* Quarter-pel bicubic */
 
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFD_VC1_LONG_PIC_STATE | (6 - 2));
@@ -2435,7 +2372,7 @@ gen7_jpeg_wa_pipe_buf_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
 
     /* DW 7..22 */
-    for (i = 0; i < MAX_MFX_REFERENCE_SURFACES; i++) {
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
         OUT_BCS_BATCH(batch, 0);
     }
 
@@ -2549,7 +2486,7 @@ gen7_jpeg_wa_avc_directmode_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_AVC_DIRECTMODE_STATE | (69 - 2));
 
     /* reference surfaces 0..15 */
-    for (i = 0; i < MAX_MFX_REFERENCE_SURFACES; i++) {
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
         OUT_BCS_BATCH(batch, 0); /* top */
         OUT_BCS_BATCH(batch, 0); /* bottom */
     }
@@ -2559,7 +2496,7 @@ gen7_jpeg_wa_avc_directmode_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0); /* bottom */
 
     /* POC List */
-    for (i = 0; i < MAX_MFX_REFERENCE_SURFACES; i++) {
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
     }
