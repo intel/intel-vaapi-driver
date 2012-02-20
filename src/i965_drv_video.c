@@ -887,6 +887,9 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
         for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.packed_header_data); i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_data[i]);
 
+        for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param); i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[i]);
+
         for (i = 0; i < obj_context->codec_state.encode.num_slice_params_ext; i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.slice_params_ext[i]);
 
@@ -1083,6 +1086,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncSliceParameterBufferType:
     case VAEncPackedHeaderParameterBufferType:
     case VAEncPackedHeaderDataBufferType:
+    case VAEncMiscParameterBufferType:
     case VAProcPipelineParameterBufferType:
     case VAProcFilterParameterBufferType:
 #ifdef HAVE_JPEG_DECODING
@@ -1557,6 +1561,24 @@ i965_encoder_render_packed_header_data_buffer(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static VAStatus
+i965_encoder_render_misc_parameter_buffer(VADriverContextP ctx,
+                                          struct object_context *obj_context,
+                                          struct object_buffer *obj_buffer)
+{
+    struct encode_state *encode = &obj_context->codec_state.encode;
+    VAEncMiscParameterBuffer *param = NULL;
+
+    assert(obj_buffer->buffer_store->bo == NULL);
+    assert(obj_buffer->buffer_store->buffer);
+
+    param = (VAEncMiscParameterBuffer *)obj_buffer->buffer_store->buffer;
+    i965_release_buffer_store(&encode->misc_param[param->type]);
+    i965_reference_buffer_store(&encode->misc_param[param->type], obj_buffer->buffer_store);
+
+    return VA_STATUS_SUCCESS;
+}
+
 static VAStatus 
 i965_encoder_render_picture(VADriverContextP ctx,
                             VAContextID context,
@@ -1620,6 +1642,12 @@ i965_encoder_render_picture(VADriverContextP ctx,
             break;       
         }
 
+        case VAEncMiscParameterBufferType:
+            vaStatus = i965_encoder_render_misc_parameter_buffer(ctx,
+                                                                 obj_context,
+                                                                 obj_buffer);
+            break;
+            
         default:
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
             break;
