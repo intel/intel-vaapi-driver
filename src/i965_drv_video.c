@@ -325,7 +325,7 @@ i965_update_attribute(struct object_config *obj_config, VAConfigAttrib *attrib)
     int i;
 
     /* Check existing attrbiutes */
-    for (i = 0; obj_config->num_attribs < i; i++) {
+    for (i = 0; i < obj_config->num_attribs; i++) {
         if (obj_config->attrib_list[i].type == attrib->type) {
             /* Update existing attribute */
             obj_config->attrib_list[i].value = attrib->value;
