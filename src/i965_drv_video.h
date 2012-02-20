@@ -136,7 +136,6 @@ struct encode_state
 struct proc_state
 {
     struct buffer_store *pipeline_param;
-    struct buffer_store *filter_param[VAProcFilterCount];
 
     VASurfaceID current_render_target;
 };

@@ -3988,15 +3988,11 @@ i965_proc_picture(VADriverContextP ctx,
     
     for (i = 0; i < pipeline_param->num_filters; i++) {
         struct object_buffer *obj_buffer = BUFFER(pipeline_param->filters[i]);
-        VAProcFilterParameterBufferBase *base = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
-        VAProcFilterType filter_type = base->type;
+        VAProcFilterParameterBufferBase *filter_param = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
+        VAProcFilterType filter_type = filter_param->type;
         VASurfaceID out_surface_id = VA_INVALID_ID;
-        void *filter_param = NULL;
 
         if (procfilter_to_pp_flag[filter_type] != PP_NULL) {
-            if (proc_state->filter_param[filter_type])
-                filter_param = proc_state->filter_param[filter_type]->buffer;
-
             status = i965_CreateSurfaces(ctx,
                                          in_width,
                                          in_height,

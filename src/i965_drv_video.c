@@ -865,8 +865,6 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
     if (obj_context->codec_type == CODEC_PROC) {
         i965_release_buffer_store(&obj_context->codec_state.proc.pipeline_param);
 
-        for (i = 0; i < VAProcFilterCount; i++)
-            i965_release_buffer_store(&obj_context->codec_state.proc.filter_param[i]);
     } else if (obj_context->codec_type == CODEC_ENC) {
         assert(obj_context->codec_state.encode.num_slice_params <= obj_context->codec_state.encode.max_slice_params);
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
@@ -1662,22 +1660,6 @@ i965_encoder_render_picture(VADriverContextP ctx,
 #define DEF_RENDER_PROC_SINGLE_BUFFER_FUNC(name, member) DEF_RENDER_SINGLE_BUFFER_FUNC(proc, name, member)
 DEF_RENDER_PROC_SINGLE_BUFFER_FUNC(pipeline_parameter, pipeline_param)    
 
-static VAStatus
-i965_render_proc_filter_parameter_buffer(VADriverContextP ctx,
-                                         struct object_context *obj_context,
-                                         struct object_buffer *obj_buffer,
-                                         VAProcFilterType type)
-{
-    struct proc_state *proc = &obj_context->codec_state.proc;
-
-    assert(obj_buffer->buffer_store->bo == NULL);
-    assert(obj_buffer->buffer_store->buffer);
-    i965_release_buffer_store(&proc->filter_param[type]);
-    i965_reference_buffer_store(&proc->filter_param[type], obj_buffer->buffer_store);
-
-    return VA_STATUS_SUCCESS;
-}
-
 static VAStatus 
 i965_proc_render_picture(VADriverContextP ctx,
                          VAContextID context,
@@ -1695,17 +1677,8 @@ i965_proc_render_picture(VADriverContextP ctx,
 
         switch (obj_buffer->type) {
         case VAProcPipelineParameterBufferType:
-            /* FIXME: */
             vaStatus = I965_RENDER_PROC_BUFFER(pipeline_parameter);
             break;
-
-        case VAProcFilterParameterBufferType:
-        {
-            /* FIXME: */
-            VAProcFilterParameterBuffer *param = (VAProcFilterParameterBuffer *)obj_buffer->buffer_store->buffer;
-            vaStatus = i965_render_proc_filter_parameter_buffer(ctx, obj_context, obj_buffer, param->type);
-            break;
-        }
 
         default:
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
