@@ -633,7 +633,7 @@ static void gen6_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
 {
     static int count = 0;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int rate_control_mode = 0; /* FIXME: */
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
 
     if (encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {
         VAEncPackedHeaderParameterBuffer *param = NULL;
@@ -675,7 +675,7 @@ static void gen6_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
                                    !param->has_emulation_bytes);
     }
     
-    if ( (rate_control_mode == 0) && encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {       // this is frist AU
+    if ( (rate_control_mode == VA_RC_CBR) && encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {       // this is frist AU
         struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
         unsigned char *sei_data = NULL;
@@ -694,7 +694,7 @@ static void gen6_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
     }    
 
     // SEI pic_timing header
-    if ( rate_control_mode == 0) {   
+    if (rate_control_mode == VA_RC_CBR) {   
         struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
         unsigned char *sei_data = NULL;
         int length_in_bits = build_avc_sei_pic_timing( mfc_context->vui_hrd.i_cpb_removal_delay_length,
@@ -750,14 +750,14 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int last_slice = (pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks) == (width_in_mbs * height_in_mbs);
     int i,x,y;
     int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
-    int rate_control_mode = 0; /* FIXME: */
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     unsigned char *slice_header = NULL;
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0, 0x0 };
 
     gen6_mfc_avc_slice_state(ctx, pSliceParameter->slice_type,
                              encode_state, encoder_context,
-                             (rate_control_mode == 0), qp, slice_index);
+                             (rate_control_mode == VA_RC_CBR), qp, slice_index);
 
     if ( slice_index == 0) 
         gen6_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context);
@@ -770,7 +770,7 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
             5,  /* first 5 bytes are start code + nal unit type */
             1, 0, 1);
 
-    if ( rate_control_mode == 0) {
+    if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[1-is_intra].QpPrimeY;
     }
 
@@ -937,15 +937,16 @@ static int gen6_mfc_bit_rate_control_context_update(struct encode_state *encode_
 }
 
 static void 
-gen6_mfc_hrd_context_init(struct encode_state *encode_state, 
-                          struct gen6_mfc_context *mfc_context) 
+gen6_mfc_hrd_context_init(struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context)
 {
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int rate_control_mode = 0; /* FIXME: */
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     int target_bit_rate = pSequenceParameter->bits_per_second;
     
     // current we only support CBR mode.
-    if ( rate_control_mode == 0) {
+    if (rate_control_mode == VA_RC_CBR) {
         mfc_context->vui_hrd.i_bit_rate_value = target_bit_rate >> 10;
         mfc_context->vui_hrd.i_cpb_size_value = (target_bit_rate * 8) >> 10;
         mfc_context->vui_hrd.i_initial_cpb_removal_delay = mfc_context->vui_hrd.i_cpb_size_value * 0.5 * 1024 / target_bit_rate * 90000;
@@ -985,7 +986,7 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     dri_bo *bo;
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int rate_control_mode = 0; /* FIXME: */
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
@@ -1085,8 +1086,8 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
         gen6_mfc_bit_rate_control_context_init(encode_state, mfc_context);
 
     /*Programing HRD control */
-    if ( (rate_control_mode == 0) && (mfc_context->vui_hrd.i_cpb_size_value == 0) )
-        gen6_mfc_hrd_context_init(encode_state, mfc_context);
+    if ( (rate_control_mode == VA_RC_CBR) && (mfc_context->vui_hrd.i_cpb_size_value == 0) )
+        gen6_mfc_hrd_context_init(encode_state, encoder_context);
 
     /*Programing bcs pipeline*/
     gen6_mfc_avc_pipeline_programing(ctx, encode_state, encoder_context);	//filling the pipeline
@@ -1139,7 +1140,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
 {
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    int rate_control_mode = 0; /* FIXME */
+    int rate_control_mode = encoder_context->rate_control_mode;
     int MAX_CBR_INTERATE = 4;
     int current_frame_bits_size;
     int i;
@@ -1149,7 +1150,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
         gen6_mfc_avc_prepare(ctx, encode_state, encoder_context);
         gen6_mfc_run(ctx, encode_state, encoder_context);
         gen6_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
-        if ( rate_control_mode == 0) {
+        if (rate_control_mode == VA_RC_CBR) {
             //gen6_mfc_hrd_context_check(encode_state, mfc_context);
             if ( gen6_mfc_bit_rate_control_context_update( encode_state, mfc_context, current_frame_bits_size) ) {
                 gen6_mfc_hrd_context_update(encode_state, mfc_context);

@@ -689,7 +689,7 @@ gen7_mfc_avc_pipeline_programing(VADriverContextP ctx,
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
     int x,y;
-    int rate_control_mode = 0; /* FIXME: */
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     unsigned char target_mb_size = mfc_context->bit_rate_control_context[1-is_intra].TargetSizeInWord;
     unsigned char max_mb_size = mfc_context->bit_rate_control_context[1-is_intra].MaxSizeInWord;
     int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
@@ -699,7 +699,7 @@ gen7_mfc_avc_pipeline_programing(VADriverContextP ctx,
 
     slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 
-    if ( rate_control_mode == 0) {
+    if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[1-is_intra].QpPrimeY;
     }
 
@@ -729,7 +729,7 @@ gen7_mfc_avc_pipeline_programing(VADriverContextP ctx,
                 gen7_mfc_avc_ref_idx_state(ctx, encoder_context);
                 gen7_mfc_avc_slice_state(ctx, pSliceParameter->slice_type, 
                                          encode_state, encoder_context, 
-                                         rate_control_mode == 0, pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta);
+                                         rate_control_mode == VA_RC_CBR, pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta);
 
                 if (encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {
                     VAEncPackedHeaderParameterBuffer *param = NULL;
@@ -1070,7 +1070,7 @@ gen7_mfc_avc_encode_picture(VADriverContextP ctx,
 {
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
-    int rate_control_mode = 0; /* FIXME: */
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     int MAX_CBR_INTERATE = 4;
     int current_frame_bits_size;
     int i;
@@ -1081,7 +1081,7 @@ gen7_mfc_avc_encode_picture(VADriverContextP ctx,
         gen7_mfc_run(ctx, encode_state, encoder_context);
         gen7_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
 
-        if (rate_control_mode == 0) {
+        if (rate_control_mode == VA_RC_CBR) {
             if (gen7_mfc_bit_rate_control_context_update( encode_state, mfc_context, current_frame_bits_size))
                 break;
         } else {
