@@ -293,7 +293,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
 
         case VAConfigAttribRateControl:
             if (entrypoint == VAEntrypointEncSlice) {
-                attrib_list[i].value = VA_RC_VBR; /* FIXME: */
+                attrib_list[i].value = VA_RC_CBR | VA_RC_CQP;
                 break;
             }
 
