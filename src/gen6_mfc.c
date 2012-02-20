@@ -233,7 +233,7 @@ gen6_mfc_avc_img_state(VADriverContextP ctx,struct encode_state *encode_state,
                   (pPicParameter->pic_fields.bits.entropy_coding_mode_flag << 7)  |   /*0:CAVLC encoding mode,1:CABAC*/
                   (0 << 6)  |   /*Only valid for VLD decoding mode*/
                   (0 << 5)  |   /*Constrained Intra Predition Flag, from PPS*/
-                  (pSequenceParameter->direct_8x8_inference_flag << 4)  |   /*Direct 8x8 inference flag*/
+                  (pSequenceParameter->seq_fields.bits.direct_8x8_inference_flag << 4)  |   /*Direct 8x8 inference flag*/
                   (pPicParameter->pic_fields.bits.transform_8x8_mode_flag << 3)  |   /*8x8 or 4x4 IDCT Transform Mode Flag*/
                   (1 << 2)  |   /*Frame MB only flag*/
                   (0 << 1)  |   /*MBAFF mode is in active*/
@@ -304,13 +304,13 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; /* TODO: multi slices support */
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
-    int beginmb = pSliceParameter->starting_macroblock_address;
-    int endmb = beginmb + pSliceParameter->number_of_mbs;
+    int beginmb = pSliceParameter->macroblock_address;
+    int endmb = beginmb + pSliceParameter->num_macroblocks;
     int beginx = beginmb % width_in_mbs;
     int beginy = beginmb / width_in_mbs;
     int nextx =  endmb % width_in_mbs;
     int nexty = endmb / width_in_mbs;
-    int last_slice = (pSliceParameter->starting_macroblock_address + pSliceParameter->number_of_mbs) == (width_in_mbs * height_in_mbs);
+    int last_slice = (pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks) == (width_in_mbs * height_in_mbs);
     int bit_rate_control_target;
     if ( slice_type == SLICE_TYPE_I )
         bit_rate_control_target = 0;
@@ -347,7 +347,7 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
                   0x0202 );
     OUT_BCS_BATCH(batch, (beginy << 24) |			/*First MB X&Y , the begin postion of current slice*/
                          (beginx << 16) |
-                         pSliceParameter->starting_macroblock_address );
+                         pSliceParameter->macroblock_address );
     OUT_BCS_BATCH(batch, (nexty << 16) | nextx);                       /*Next slice first MB X&Y*/
     OUT_BCS_BATCH(batch, 
                   (rate_control_enable<<31) |		/*in CBR mode RateControlCounterEnable = enable*/
@@ -633,49 +633,49 @@ static void gen6_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
 {
     static int count = 0;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int rate_control_mode = pSequenceParameter->rate_control_method;   
+    int rate_control_mode = 0; /* FIXME: */
 
-    if (encode_state->packed_header_data[VAEncPackedHeaderSPS]) {
+    if (encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {
         VAEncPackedHeaderParameterBuffer *param = NULL;
-        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderSPS]->buffer;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]->buffer;
         unsigned int length_in_bits;
 
-        assert(encode_state->packed_header_param[VAEncPackedHeaderSPS]);
-        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderSPS]->buffer;
-        length_in_bits = param->length_in_bits[0];
+        assert(encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]->buffer;
+        length_in_bits = param->bit_length;
 
         gen6_mfc_avc_insert_object(ctx, 
-                encoder_context,
-                header_data,
-                ALIGN(length_in_bits, 32) >> 5,
-                length_in_bits & 0x1f,
-                param->skip_emulation_check_count,
-                0,
-                0,
-                param->insert_emulation_bytes);
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   5,   /* FIXME: check it */
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes);
     }
 
-    if (encode_state->packed_header_data[VAEncPackedHeaderPPS]) {
+    if (encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]) {
         VAEncPackedHeaderParameterBuffer *param = NULL;
-        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderPPS]->buffer;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]->buffer;
         unsigned int length_in_bits;
 
-        assert(encode_state->packed_header_param[VAEncPackedHeaderPPS]);
-        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderPPS]->buffer;
-        length_in_bits = param->length_in_bits[0];
+        assert(encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]->buffer;
+        length_in_bits = param->bit_length;
 
         gen6_mfc_avc_insert_object(ctx, 
-                encoder_context,
-                header_data,
-                ALIGN(length_in_bits, 32) >> 5,
-                length_in_bits & 0x1f,
-                param->skip_emulation_check_count,
-                0,
-                0,
-                param->insert_emulation_bytes);
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   5, /* FIXME: check it */
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes);
     }
     
-    if ( (rate_control_mode == 0) && encode_state->packed_header_data[VAEncPackedHeaderSPS]) {       // this is frist AU
+    if ( (rate_control_mode == 0) && encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {       // this is frist AU
         struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
         unsigned char *sei_data = NULL;
@@ -743,15 +743,14 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[slice_index]->buffer; 
-    VAEncH264DecRefPicMarkingBuffer *pDecRefPicMarking = NULL;
     unsigned int *msg = NULL, offset = 0;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
-    int last_slice = (pSliceParameter->starting_macroblock_address + pSliceParameter->number_of_mbs) == (width_in_mbs * height_in_mbs);
+    int last_slice = (pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks) == (width_in_mbs * height_in_mbs);
     int i,x,y;
     int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
-    int rate_control_mode = pSequenceParameter->rate_control_method;   
+    int rate_control_mode = 0; /* FIXME: */
     unsigned char *slice_header = NULL;
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0, 0x0 };
@@ -763,9 +762,7 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     if ( slice_index == 0) 
         gen6_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context);
 
-    if (encode_state->dec_ref_pic_marking)
-        pDecRefPicMarking = (VAEncH264DecRefPicMarkingBuffer *)encode_state->dec_ref_pic_marking->buffer;
-    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, pDecRefPicMarking, &slice_header);
+    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 
     // slice hander
     gen6_mfc_avc_insert_object(ctx, encoder_context,
@@ -782,9 +779,9 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
         msg = (unsigned int *)vme_context->vme_output.bo->virtual;
     }
    
-    for (i = pSliceParameter->starting_macroblock_address; 
-         i < pSliceParameter->starting_macroblock_address + pSliceParameter->number_of_mbs; i++) {
-        int last_mb = (i == (pSliceParameter->starting_macroblock_address + pSliceParameter->number_of_mbs - 1) );
+    for (i = pSliceParameter->macroblock_address; 
+         i < pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks; i++) {
+        int last_mb = (i == (pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks - 1) );
         x = i % width_in_mbs;
         y = i / width_in_mbs;
 
@@ -944,7 +941,7 @@ gen6_mfc_hrd_context_init(struct encode_state *encode_state,
                           struct gen6_mfc_context *mfc_context) 
 {
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int rate_control_mode = pSequenceParameter->rate_control_method;   
+    int rate_control_mode = 0; /* FIXME: */
     int target_bit_rate = pSequenceParameter->bits_per_second;
     
     // current we only support CBR mode.
@@ -988,7 +985,7 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     dri_bo *bo;
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int rate_control_mode = pSequenceParameter->rate_control_method;   
+    int rate_control_mode = 0; /* FIXME: */
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
@@ -1075,7 +1072,7 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     mfc_context->uncompressed_picture_source.bo = obj_surface->bo;
     dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
 
-    obj_buffer = BUFFER (pPicParameter->CodedBuf); /* FIXME: fix this later */
+    obj_buffer = BUFFER (pPicParameter->coded_buf); /* FIXME: fix this later */
     bo = obj_buffer->buffer_store->bo;
     assert(bo);
     mfc_context->mfc_indirect_pak_bse_object.bo = bo;
@@ -1142,7 +1139,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
 {
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    int rate_control_mode = pSequenceParameter->rate_control_method;  
+    int rate_control_mode = 0; /* FIXME */
     int MAX_CBR_INTERATE = 4;
     int current_frame_bits_size;
     int i;

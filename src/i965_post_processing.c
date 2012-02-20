@@ -2288,7 +2288,7 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
     struct i965_sampler_dndi *sampler_dndi;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
-    VAProcFilterBaseParameterBuffer *dn_filter_param = filter_param;
+    VAProcFilterParameterBuffer *dn_filter_param = filter_param; /* FIXME: parameter */
     int index;
     int w, h;
     int orig_w, orig_h;
@@ -2308,7 +2308,7 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
     }
 
     if (dn_filter_param) {
-        int value = dn_filter_param->value;
+        float value = dn_filter_param->value;
         
         if (value > 1.0)
             value = 1.0;
@@ -2722,7 +2722,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct object_surface *obj_surface;
     struct gen7_sampler_dndi *sampler_dn;
-    VAProcFilterBaseParameterBuffer *dn_filter_param = filter_param;
+    VAProcFilterParameterBuffer *dn_filter_param = filter_param; /* FIXME: parameter */
     int index;
     int w, h;
     int orig_w, orig_h;
@@ -2742,7 +2742,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     }
 
     if (dn_filter_param) {
-        int value = dn_filter_param->value;
+        float value = dn_filter_param->value;
         
         if (value > 1.0)
             value = 1.0;
@@ -3895,34 +3895,32 @@ i965_proc_picture(VADriverContextP ctx,
     struct i965_proc_context *proc_context = (struct i965_proc_context *)hw_context;
     struct proc_state *proc_state = &codec_state->proc;
     VAProcPipelineParameterBuffer *pipeline_param = (VAProcPipelineParameterBuffer *)proc_state->pipeline_param->buffer;
-    VAProcInputParameterBuffer *input_param = (VAProcInputParameterBuffer *)proc_state->input_param->buffer;
     struct object_surface *obj_surface;
     struct i965_surface src_surface, dst_surface;
+    VARectangle src_rect, dst_rect;
     VAStatus status;
     int i;
-    VASurfaceID tmp_surfaces[VA_PROC_PIPELINE_MAX_NUM_FILTERS + 4];
+    VASurfaceID tmp_surfaces[VAProcFilterCount + 4];
     int num_tmp_surfaces = 0;
     unsigned int tiling = 0, swizzle = 0;
     int in_width, in_height;
 
-    assert(input_param->surface != VA_INVALID_ID);
+    assert(pipeline_param->surface != VA_INVALID_ID);
     assert(proc_state->current_render_target != VA_INVALID_ID);
 
-    obj_surface = SURFACE(input_param->surface);
+    obj_surface = SURFACE(pipeline_param->surface);
     in_width = obj_surface->orig_width;
     in_height = obj_surface->orig_height;
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
-    src_surface.id = input_param->surface;
+    src_surface.id = pipeline_param->surface;
     src_surface.type = I965_SURFACE_TYPE_SURFACE;
-    src_surface.flags = proc_frame_to_pp_frame[input_param->flags];
+    src_surface.flags = proc_frame_to_pp_frame[pipeline_param->filter_flags & 0x3];
 
     if (obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2')) {
-        struct i965_surface src_surface, dst_surface;
-        VARectangle src_rect, dst_rect;
         VASurfaceID out_surface_id = VA_INVALID_ID;
 
-        src_surface.id = input_param->surface;
+        src_surface.id = pipeline_param->surface;
         src_surface.type = I965_SURFACE_TYPE_SURFACE;
         src_surface.flags = I965_SURFACE_FLAG_FRAME;
         src_rect.x = 0;
@@ -3958,14 +3956,40 @@ i965_proc_picture(VADriverContextP ctx,
 
         src_surface.id = out_surface_id;
         src_surface.type = I965_SURFACE_TYPE_SURFACE;
-        src_surface.flags = proc_frame_to_pp_frame[input_param->flags];
+        src_surface.flags = proc_frame_to_pp_frame[pipeline_param->filter_flags & 0x3];
+    }
+
+    if (pipeline_param->surface_region) {
+        src_rect.x = pipeline_param->surface_region->x;
+        src_rect.y = pipeline_param->surface_region->y;
+        src_rect.width = pipeline_param->surface_region->width;
+        src_rect.height = pipeline_param->surface_region->height;
+    } else {
+        src_rect.x = 0;
+        src_rect.y = 0;
+        src_rect.width = in_width;
+        src_rect.height = in_height;
+    }
+
+    if (pipeline_param->output_region) {
+        dst_rect.x = pipeline_param->output_region->x;
+        dst_rect.y = pipeline_param->output_region->y;
+        dst_rect.width = pipeline_param->output_region->width;
+        dst_rect.height = pipeline_param->output_region->height;
+    } else {
+        dst_rect.x = 0;
+        dst_rect.y = 0;
+        dst_rect.width = in_width;
+        dst_rect.height = in_height;
     }
 
     obj_surface = SURFACE(proc_state->current_render_target);
     i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
     
-    for (i = 0; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++) {
-        VAProcFilterType filter_type = pipeline_param->filter_pipeline[i];
+    for (i = 0; i < pipeline_param->num_filters; i++) {
+        struct object_buffer *obj_buffer = BUFFER(pipeline_param->filters[i]);
+        VAProcFilterParameterBufferBase *base = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
+        VAProcFilterType filter_type = base->type;
         VASurfaceID out_surface_id = VA_INVALID_ID;
         void *filter_param = NULL;
 
@@ -3987,9 +4011,9 @@ i965_proc_picture(VADriverContextP ctx,
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
             status = i965_post_processing_internal(ctx, &proc_context->pp_context,
                                                    &src_surface,
-                                                   &input_param->region,
+                                                   &src_rect,
                                                    &dst_surface,
-                                                   &input_param->region,
+                                                   &src_rect,
                                                    procfilter_to_pp_flag[filter_type],
                                                    filter_param);
 
@@ -4005,10 +4029,10 @@ i965_proc_picture(VADriverContextP ctx,
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
     i965_post_processing_internal(ctx, &proc_context->pp_context,
                                   &src_surface,
-                                  &input_param->region,
+                                  &src_rect,
                                   &dst_surface,
-                                  &pipeline_param->output_region,
-                                  (pipeline_param->flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC ?
+                                  &dst_rect,
+                                  (pipeline_param->filter_flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC ?
                                   PP_NV12_AVS : PP_NV12_SCALING,
                                   NULL);
 

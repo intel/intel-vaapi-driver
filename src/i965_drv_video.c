@@ -292,12 +292,14 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribRateControl:
-            attrib_list[i].value = VA_RC_VBR;
-            break;
-
-        case VAConfigAttribEncHeaderPacking:
             if (entrypoint == VAEntrypointEncSlice) {
-                attrib_list[i].value = VA_ENC_HEADER_PACKING_SLICE;
+                attrib_list[i].value = VA_RC_VBR; /* FIXME: */
+                break;
+            }
+
+        case VAConfigAttribEncPackedHeaders:
+            if (entrypoint == VAEntrypointEncSlice) {
+                attrib_list[i].value = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE;
                 break;
             }
 
@@ -862,9 +864,8 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
 
     if (obj_context->codec_type == CODEC_PROC) {
         i965_release_buffer_store(&obj_context->codec_state.proc.pipeline_param);
-        i965_release_buffer_store(&obj_context->codec_state.proc.input_param);
 
-        for (i = 0; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++)
+        for (i = 0; i < VAProcFilterCount; i++)
             i965_release_buffer_store(&obj_context->codec_state.proc.filter_param[i]);
     } else if (obj_context->codec_type == CODEC_ENC) {
         assert(obj_context->codec_state.encode.num_slice_params <= obj_context->codec_state.encode.max_slice_params);
@@ -879,7 +880,6 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
         assert(obj_context->codec_state.encode.num_slice_params_ext <= obj_context->codec_state.encode.max_slice_params_ext);
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param_ext);
         i965_release_buffer_store(&obj_context->codec_state.encode.seq_param_ext);
-        i965_release_buffer_store(&obj_context->codec_state.encode.dec_ref_pic_marking);
 
         for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.packed_header_param); i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_param[i]);
@@ -1081,14 +1081,10 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncSequenceParameterBufferType:
     case VAEncPictureParameterBufferType:
     case VAEncSliceParameterBufferType:
-    case VAEncDecRefPicMarkingBufferH264Type:
     case VAEncPackedHeaderParameterBufferType:
     case VAEncPackedHeaderDataBufferType:
     case VAProcPipelineParameterBufferType:
-    case VAProcInputParameterBufferType:
-    case VAProcFilterBaseParameterBufferType:
-    case VAProcFilterDeinterlacingParameterBufferType:
-    case VAProcFilterProcAmpParameterBufferType:
+    case VAProcFilterParameterBufferType:
 #ifdef HAVE_JPEG_DECODING
     case VAHuffmanTableBufferType:
 #endif
@@ -1150,30 +1146,15 @@ i965_create_buffer_internal(VADriverContextP ctx,
 
     } else if (type == VAEncPackedHeaderParameterBufferType) {
         VAEncPackedHeaderParameterBuffer *param;
-        int msize;
 
         assert(data);
         assert(num_elements == 1);
         assert(size == sizeof(*param));
 
         param = (VAEncPackedHeaderParameterBuffer *)data;
-        msize = ALIGN(size, 32) + param->num_headers * sizeof(int) * 2;
-        buffer_store->buffer = malloc(msize);
-        assert(buffer_store->buffer);
-
         memcpy(buffer_store->buffer,
                data, 
                size);
-        memcpy((unsigned char *)buffer_store->buffer + ALIGN(size, 32),
-               param->length_in_bits,
-               param->num_headers * sizeof(int));
-        memcpy((unsigned char *)buffer_store->buffer + ALIGN(size, 32) + param->num_headers * sizeof(int),
-               param->offset_in_bytes,
-               param->num_headers * sizeof(int));
-
-        param = (VAEncPackedHeaderParameterBuffer *)buffer_store->buffer;
-        param->length_in_bits = (unsigned int *)((unsigned char *)buffer_store->buffer + ALIGN(size, 32));
-        param->offset_in_bytes = (unsigned int *)((unsigned char *)buffer_store->buffer + ALIGN(size, 32) + param->num_headers * sizeof(int));
     } else {
         int msize = size;
         
@@ -1399,8 +1380,6 @@ i965_BeginPicture(VADriverContextP ctx,
         /* ext */
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param_ext);
         i965_release_buffer_store(&obj_context->codec_state.encode.seq_param_ext);
-        i965_release_buffer_store(&obj_context->codec_state.encode.dec_ref_pic_marking);
-
 
         for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.packed_header_param); i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_param[i]);
@@ -1541,7 +1520,6 @@ DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(iqmatrix, iq_matrix)
 /* extended buffer */
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(sequence_parameter_ext, seq_param_ext)
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_parameter_ext, pic_param_ext)
-DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(dec_ref_pic_marking, dec_ref_pic_marking)
 
 #define DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(name, member) DEF_RENDER_MULTI_BUFFER_FUNC(encode, name, member)
 DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
@@ -1615,10 +1593,6 @@ i965_encoder_render_picture(VADriverContextP ctx,
             vaStatus = I965_RENDER_ENCODE_BUFFER(slice_parameter_ext);
             break;
 
-        case VAEncDecRefPicMarkingBufferH264Type:
-            vaStatus = I965_RENDER_ENCODE_BUFFER(dec_ref_pic_marking);
-            break;
-
         case VAEncPackedHeaderParameterBufferType:
         {
             struct encode_state *encode = &obj_context->codec_state.encode;
@@ -1636,8 +1610,8 @@ i965_encoder_render_picture(VADriverContextP ctx,
         {
             struct encode_state *encode = &obj_context->codec_state.encode;
 
-            assert(encode->last_packed_header_type == VAEncPackedHeaderSPS ||
-                   encode->last_packed_header_type == VAEncPackedHeaderPPS ||
+            assert(encode->last_packed_header_type == VAEncPackedHeaderSequence ||
+                   encode->last_packed_header_type == VAEncPackedHeaderPicture ||
                    encode->last_packed_header_type == VAEncPackedHeaderSlice);
             vaStatus = i965_encoder_render_packed_header_data_buffer(ctx, 
                                                                      obj_context,
@@ -1659,7 +1633,6 @@ i965_encoder_render_picture(VADriverContextP ctx,
 
 #define DEF_RENDER_PROC_SINGLE_BUFFER_FUNC(name, member) DEF_RENDER_SINGLE_BUFFER_FUNC(proc, name, member)
 DEF_RENDER_PROC_SINGLE_BUFFER_FUNC(pipeline_parameter, pipeline_param)    
-DEF_RENDER_PROC_SINGLE_BUFFER_FUNC(input_parameter, input_param)
 
 static VAStatus
 i965_render_proc_filter_parameter_buffer(VADriverContextP ctx,
@@ -1694,27 +1667,17 @@ i965_proc_render_picture(VADriverContextP ctx,
 
         switch (obj_buffer->type) {
         case VAProcPipelineParameterBufferType:
+            /* FIXME: */
             vaStatus = I965_RENDER_PROC_BUFFER(pipeline_parameter);
             break;
 
-        case VAProcInputParameterBufferType:
-            vaStatus = I965_RENDER_PROC_BUFFER(input_parameter);
-            break;		
-
-        case VAProcFilterBaseParameterBufferType:
+        case VAProcFilterParameterBufferType:
         {
-            VAProcFilterBaseParameterBuffer *param = (VAProcFilterBaseParameterBuffer *)obj_buffer->buffer_store->buffer;
-            vaStatus = i965_render_proc_filter_parameter_buffer(ctx, obj_context, obj_buffer, param->filter);
+            /* FIXME: */
+            VAProcFilterParameterBuffer *param = (VAProcFilterParameterBuffer *)obj_buffer->buffer_store->buffer;
+            vaStatus = i965_render_proc_filter_parameter_buffer(ctx, obj_context, obj_buffer, param->type);
             break;
         }
-
-        case VAProcFilterDeinterlacingParameterBufferType:
-            vaStatus = i965_render_proc_filter_parameter_buffer(ctx, obj_context, obj_buffer, VAProcFilterDeinterlacing);
-            break;
-
-        case VAProcFilterProcAmpParameterBufferType:
-            vaStatus = i965_render_proc_filter_parameter_buffer(ctx, obj_context, obj_buffer, VAProcFilterProcAmp);
-            break;
 
         default:
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
@@ -3307,60 +3270,95 @@ i965_UnlockSurface(
 /* 
  * Query video processing pipeline 
  */
-VAStatus i965_QueryVideoProcPipelineCap(
+VAStatus i965_QueryVideoProcFilters(
+    VADriverContextP    ctx,
+    VAContextID         context,
+    VAProcFilterType   *filters,
+    unsigned int       *num_filters
+    )
+{
+    struct i965_driver_data *const i965 = i965_driver_data(ctx);
+    unsigned int i = 0;
+    
+    if (HAS_VPP(i965)) {
+        filters[i++] = VAProcFilterNoiseReduction;
+        filters[i++] = VAProcFilterDeinterlacing;
+    }
+
+    *num_filters = i;
+
+    return VA_STATUS_SUCCESS;
+}
+
+VAStatus i965_QueryVideoProcFilterCaps(
+    VADriverContextP    ctx,
+    VAContextID         context,
+    VAProcFilterType    type,
+    void               *filter_caps,
+    unsigned int       *num_filter_caps
+    )
+{
+    unsigned int i = 0;
+
+    if (type == VAProcFilterNoiseReduction) {
+        VAProcFilterCap *cap = filter_caps;
+
+        cap->range.min_value = 0.0;
+        cap->range.max_value = 1.0;
+        cap->range.default_value = 0.5;
+        cap->range.step = 0.03125; /* 1.0 / 32 */
+        i++;
+    } else if (type == VAProcFilterDeinterlacing) {
+        VAProcFilterCapDeinterlacing *cap = filter_caps;
+        
+        cap->type = VAProcDeinterlacingBob;
+        i++;
+        cap++;
+        cap->type = VAProcDeinterlacingWeave;
+        i++;
+        cap++;
+    }
+
+    *num_filter_caps = i;
+
+    return VA_STATUS_SUCCESS;
+}
+
+VAStatus i965_QueryVideoProcPipelineCaps(
     VADriverContextP ctx,
     VAContextID context,
-    VAProcPipelineCap *pipeline_cap     /* out */
+    VABufferID *filters,
+    unsigned int num_filters,
+    VAProcPipelineCaps *pipeline_cap     /* out */
     )
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
-    int i = 0;
+    unsigned int i = 0;
 
-    if (HAS_VPP(i965)) {
-        pipeline_cap->filter_pipeline[i] = VAProcFilterNoiseReduction;
-        pipeline_cap->bypass[i++] = 1;
-        pipeline_cap->filter_pipeline[i] = VAProcFilterDeinterlacing;
-        pipeline_cap->bypass[i++] = 1;
+    pipeline_cap->flags = 0;
+    pipeline_cap->pipeline_flags = 0;
+    pipeline_cap->filter_flags = 0;
+    pipeline_cap->num_forward_references = 0;
+    pipeline_cap->num_backward_references = 0;
+    pipeline_cap->num_input_color_standards = 0;
+    pipeline_cap->input_color_standards[pipeline_cap->num_input_color_standards++] = VAProcColorStandardBT601;
+    pipeline_cap->num_output_color_standards = 0;
+    pipeline_cap->output_color_standards[pipeline_cap->num_output_color_standards++] = VAProcColorStandardBT601;
+
+    for (i = 0; i < num_filters; i++) {
+        struct object_buffer *obj_buffer = BUFFER(filters[i]);
+        VAProcFilterParameterBufferBase *base = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
+
+        if (base->type == VAProcFilterNoiseReduction) {
+            VAProcFilterParameterBuffer *denoise = (VAProcFilterParameterBuffer *)base;
+            (void)denoise;
+        } else if (base->type == VAProcFilterDeinterlacing) {
+            VAProcFilterParameterBufferDeinterlacing *deint = (VAProcFilterParameterBufferDeinterlacing *)base;
+
+            assert(deint->algorithm == VAProcDeinterlacingWeave ||
+                   deint->algorithm == VAProcDeinterlacingBob);
+        }
     }
-
-    for (; i < VA_PROC_PIPELINE_MAX_NUM_FILTERS; i++) {
-        pipeline_cap->filter_pipeline[i] = VAProcFilterNone;
-        pipeline_cap->bypass[i] = 1;
-    }
-
-    return VA_STATUS_SUCCESS;
-}
-
-VAStatus i965_QueryVideoProcFilterCap(
-    VADriverContextP ctx,
-    VAContextID context,
-    VAProcFilterType filter,
-    void *cap   /* out */
-    ) 
-{
-    assert(cap);
-
-    if (filter == VAProcFilterNoiseReduction) {
-        VAProcFilterCapBase *base_cap = cap;
-        base_cap->range.min = 0.0;
-        base_cap->range.max = 1.0;
-        base_cap->range.default_value = 0.5;
-        base_cap->range.step = 0.03125; /* 1.0 / 32 */
-    }
-
-    return VA_STATUS_SUCCESS;
-}
-
-VAStatus i965_QueryVideoProcReferenceFramesCap(
-    VADriverContextP ctx,
-    VAContextID context,
-    unsigned int *num_forward_reference, /* out */
-    unsigned int *num_backward_reference /* out */
-    )
-{
-
-    *num_forward_reference = 0;
-    *num_backward_reference = 0;
 
     return VA_STATUS_SUCCESS;
 }
@@ -3372,6 +3370,8 @@ VAStatus
 VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
 {
     struct VADriverVTable * const vtable = ctx->vtable;
+    struct VADriverVTableVPP * const vtable_vpp = ctx->vtable_vpp;
+
     struct i965_driver_data *i965;
     int result;
 
@@ -3428,11 +3428,10 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     vtable->vaBufferInfo = i965_BufferInfo;
     vtable->vaLockSurface = i965_LockSurface;
     vtable->vaUnlockSurface = i965_UnlockSurface;
-    vtable->vaQueryVideoProcPipelineCap = i965_QueryVideoProcPipelineCap;
-    vtable->vaQueryVideoProcFilterCap = i965_QueryVideoProcFilterCap;
-    vtable->vaQueryVideoProcReferenceFramesCap = i965_QueryVideoProcReferenceFramesCap;
 
-    //    vtable->vaDbgCopySurfaceToBuffer = i965_DbgCopySurfaceToBuffer;
+    vtable_vpp->vaQueryVideoProcFilters = i965_QueryVideoProcFilters;
+    vtable_vpp->vaQueryVideoProcFilterCaps = i965_QueryVideoProcFilterCaps;
+    vtable_vpp->vaQueryVideoProcPipelineCaps = i965_QueryVideoProcPipelineCaps;
 
     i965 = (struct i965_driver_data *)calloc(1, sizeof(*i965));
     assert(i965);

@@ -27,6 +27,7 @@
 #include <assert.h>
 
 #include <va/va.h>
+#include <va/va_enc_h264.h>
 
 #include "i965_encoder_utils.h"
 
@@ -198,18 +199,17 @@ static void
 slice_header(avc_bitstream *bs,
              VAEncSequenceParameterBufferH264 *sps_param,
              VAEncPictureParameterBufferH264 *pic_param,
-             VAEncSliceParameterBufferH264 *slice_param,
-             VAEncH264DecRefPicMarkingBuffer *dec_ref_pic_marking_param)
+             VAEncSliceParameterBufferH264 *slice_param)
 {
-    int first_mb_in_slice = slice_param->starting_macroblock_address;
+    int first_mb_in_slice = slice_param->macroblock_address;
 
     avc_bitstream_put_ue(bs, first_mb_in_slice);        /* first_mb_in_slice: 0 */
     avc_bitstream_put_ue(bs, slice_param->slice_type);  /* slice_type */
     avc_bitstream_put_ue(bs, slice_param->pic_parameter_set_id);        /* pic_parameter_set_id: 0 */
-    avc_bitstream_put_ui(bs, pic_param->frame_num, sps_param->log2_max_frame_num_minus4 + 4); /* frame_num */
+    avc_bitstream_put_ui(bs, pic_param->frame_num, sps_param->seq_fields.bits.log2_max_frame_num_minus4 + 4); /* frame_num */
 
     /* frame_mbs_only_flag == 1 */
-    if (!sps_param->frame_mbs_only_flag) {
+    if (!sps_param->seq_fields.bits.frame_mbs_only_flag) {
         /* FIXME: */
         assert(0);
     }
@@ -217,8 +217,8 @@ slice_header(avc_bitstream *bs,
     if (pic_param->pic_fields.bits.idr_pic_flag)
         avc_bitstream_put_ue(bs, slice_param->idr_pic_id);		/* idr_pic_id: 0 */
 
-    if (sps_param->pic_order_cnt_type == 0) {
-        avc_bitstream_put_ui(bs, pic_param->CurrPic.TopFieldOrderCnt, sps_param->log2_max_pic_order_cnt_lsb_minus4 + 4);
+    if (sps_param->seq_fields.bits.pic_order_cnt_type == 0) {
+        avc_bitstream_put_ui(bs, pic_param->CurrPic.TopFieldOrderCnt, sps_param->seq_fields.bits.log2_max_pic_order_cnt_lsb_minus4 + 4);
         /* pic_order_present_flag == 0 */
     } else {
         /* FIXME: */
@@ -232,17 +232,14 @@ slice_header(avc_bitstream *bs,
         avc_bitstream_put_ui(bs, 0, 1);            /* num_ref_idx_active_override_flag: 0 */
 
         /* ref_pic_list_reordering */
-        assert(slice_param->ref_pic_list_modification_flag_l0 == 0);
-        avc_bitstream_put_ui(bs, slice_param->ref_pic_list_modification_flag_l0, 1);            /* ref_pic_list_reordering_flag_l0: 0 */
+        avc_bitstream_put_ui(bs, 0, 1);            /* ref_pic_list_reordering_flag_l0: 0 */
     } else if (IS_B_SLICE(slice_param->slice_type)) {
         avc_bitstream_put_ui(bs, slice_param->direct_spatial_mv_pred_flag, 1);            /* direct_spatial_mv_pred: 1 */
         avc_bitstream_put_ui(bs, 0, 1);            /* num_ref_idx_active_override_flag: 0 */
 
         /* ref_pic_list_reordering */
-        assert(slice_param->ref_pic_list_modification_flag_l0 == 0);
-        assert(slice_param->ref_pic_list_modification_flag_l1 == 0);
-        avc_bitstream_put_ui(bs, slice_param->ref_pic_list_modification_flag_l0, 1);            /* ref_pic_list_reordering_flag_l0: 0 */
-        avc_bitstream_put_ui(bs, slice_param->ref_pic_list_modification_flag_l1, 1);            /* ref_pic_list_reordering_flag_l1: 0 */
+        avc_bitstream_put_ui(bs, 0, 1);            /* ref_pic_list_reordering_flag_l0: 0 */
+        avc_bitstream_put_ui(bs, 0, 1);            /* ref_pic_list_reordering_flag_l1: 0 */
     } 
 
     if ((pic_param->pic_fields.bits.weighted_pred_flag && 
@@ -258,14 +255,6 @@ slice_header(avc_bitstream *bs,
         unsigned char no_output_of_prior_pics_flag = 0;
         unsigned char long_term_reference_flag = 0;
         unsigned char adaptive_ref_pic_marking_mode_flag = 0;
-
-        if (dec_ref_pic_marking_param) {
-            no_output_of_prior_pics_flag = dec_ref_pic_marking_param->no_output_of_prior_pics_flag;
-            long_term_reference_flag = dec_ref_pic_marking_param->long_term_reference_flag;
-            adaptive_ref_pic_marking_mode_flag = dec_ref_pic_marking_param->adaptive_ref_pic_marking_mode_flag;
-            /* FIXME: XXX */
-            assert(adaptive_ref_pic_marking_mode_flag == 0);
-        }
 
         if (pic_param->pic_fields.bits.idr_pic_flag) {
             avc_bitstream_put_ui(bs, no_output_of_prior_pics_flag, 1);            /* no_output_of_prior_pics_flag: 0 */
@@ -301,7 +290,6 @@ int
 build_avc_slice_header(VAEncSequenceParameterBufferH264 *sps_param,
                        VAEncPictureParameterBufferH264 *pic_param,
                        VAEncSliceParameterBufferH264 *slice_param,
-                       VAEncH264DecRefPicMarkingBuffer *dec_ref_pic_marking_param,
                        unsigned char **slice_header_buffer)
 {
     avc_bitstream bs;
@@ -319,7 +307,7 @@ build_avc_slice_header(VAEncSequenceParameterBufferH264 *sps_param,
         nal_header(&bs, NAL_REF_IDC_NONE, is_idr ? NAL_IDR : NAL_NON_IDR);
     }
 
-    slice_header(&bs, sps_param, pic_param, slice_param, dec_ref_pic_marking_param);
+    slice_header(&bs, sps_param, pic_param, slice_param);
 
     avc_bitstream_end(&bs);
     *slice_header_buffer = (unsigned char *)bs.buffer;

@@ -31,7 +31,10 @@
 #define _I965_DRV_VIDEO_H_
 
 #include <va/va.h>
+#include <va/va_enc_h264.h>
+#include <va/va_vpp.h>
 #include <va/va_backend.h>
+#include <va/va_backend_vpp.h>
 
 #include "i965_mutext.h"
 #include "object_heap.h"
@@ -118,7 +121,6 @@ struct encode_state
     /* for ext */
     struct buffer_store *seq_param_ext;
     struct buffer_store *pic_param_ext;
-    struct buffer_store *dec_ref_pic_marking;
     struct buffer_store *packed_header_param[4];
     struct buffer_store *packed_header_data[4];
     struct buffer_store **slice_params_ext;
@@ -132,8 +134,7 @@ struct encode_state
 struct proc_state
 {
     struct buffer_store *pipeline_param;
-    struct buffer_store *input_param;
-    struct buffer_store *filter_param[VA_PROC_PIPELINE_MAX_NUM_FILTERS];
+    struct buffer_store *filter_param[VAProcFilterCount];
 
     VASurfaceID current_render_target;
 };

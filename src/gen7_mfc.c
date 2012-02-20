@@ -683,14 +683,13 @@ gen7_mfc_avc_pipeline_programing(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; /* FIXME: multi slices */
-    VAEncH264DecRefPicMarkingBuffer *pDecRefPicMarking = NULL;
     unsigned int *msg = NULL, offset = 0;
     int emit_new_state = 1, object_len_in_bytes;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
     int x,y;
-    int rate_control_mode = pSequenceParameter->rate_control_method; 
+    int rate_control_mode = 0; /* FIXME: */
     unsigned char target_mb_size = mfc_context->bit_rate_control_context[1-is_intra].TargetSizeInWord;
     unsigned char max_mb_size = mfc_context->bit_rate_control_context[1-is_intra].MaxSizeInWord;
     int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
@@ -698,10 +697,7 @@ gen7_mfc_avc_pipeline_programing(VADriverContextP ctx,
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0 };
 
-    if (encode_state->dec_ref_pic_marking)
-        pDecRefPicMarking = (VAEncH264DecRefPicMarkingBuffer *)encode_state->dec_ref_pic_marking->buffer;
-
-    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, pDecRefPicMarking, &slice_header);
+    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 
     if ( rate_control_mode == 0) {
         qp = mfc_context->bit_rate_control_context[1-is_intra].QpPrimeY;
@@ -735,44 +731,44 @@ gen7_mfc_avc_pipeline_programing(VADriverContextP ctx,
                                          encode_state, encoder_context, 
                                          rate_control_mode == 0, pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta);
 
-                if (encode_state->packed_header_data[VAEncPackedHeaderSPS]) {
+                if (encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {
                     VAEncPackedHeaderParameterBuffer *param = NULL;
-                    unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderSPS]->buffer;
+                    unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]->buffer;
                     unsigned int length_in_bits;
 
-                    assert(encode_state->packed_header_param[VAEncPackedHeaderSPS]);
-                    param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderSPS]->buffer;
-                    length_in_bits = param->length_in_bits[0];
+                    assert(encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]);
+                    param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]->buffer;
+                    length_in_bits = param->bit_length;
 
                     gen7_mfc_avc_insert_object(ctx, 
                                                encoder_context,
                                                header_data,
                                                ALIGN(length_in_bits, 32) >> 5,
                                                length_in_bits & 0x1f,
-                                               param->skip_emulation_check_count,
+                                               5, /* FIXME: check it */
                                                0,
                                                0,
-                                               param->insert_emulation_bytes);
+                                               !param->has_emulation_bytes);
                 }
 
-                if (encode_state->packed_header_data[VAEncPackedHeaderPPS]) {
+                if (encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]) {
                     VAEncPackedHeaderParameterBuffer *param = NULL;
-                    unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderPPS]->buffer;
+                    unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]->buffer;
                     unsigned int length_in_bits;
 
-                    assert(encode_state->packed_header_param[VAEncPackedHeaderPPS]);
-                    param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderPPS]->buffer;
-                    length_in_bits = param->length_in_bits[0];
+                    assert(encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]);
+                    param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]->buffer;
+                    length_in_bits = param->bit_length;
 
                     gen7_mfc_avc_insert_object(ctx, 
                                                encoder_context,
                                                header_data,
                                                ALIGN(length_in_bits, 32) >> 5,
                                                length_in_bits & 0x1f,
-                                               param->skip_emulation_check_count,
+                                               5, /* FIXME: check it */
                                                0,
                                                0,
-                                               param->insert_emulation_bytes);
+                                               !param->has_emulation_bytes);
                 }
 
                 gen7_mfc_avc_insert_object(ctx, encoder_context,
@@ -1007,7 +1003,7 @@ gen7_mfc_avc_prepare(VADriverContextP ctx,
     mfc_context->uncompressed_picture_source.bo = obj_surface->bo;
     dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
 
-    obj_buffer = BUFFER (pPicParameter->CodedBuf); /* FIXME: fix this later */
+    obj_buffer = BUFFER (pPicParameter->coded_buf); /* FIXME: fix this later */
     bo = obj_buffer->buffer_store->bo;
     assert(bo);
     mfc_context->mfc_indirect_pak_bse_object.bo = bo;
@@ -1074,7 +1070,7 @@ gen7_mfc_avc_encode_picture(VADriverContextP ctx,
 {
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
-    int rate_control_mode = pSequenceParameter->rate_control_method;  
+    int rate_control_mode = 0; /* FIXME: */
     int MAX_CBR_INTERATE = 4;
     int current_frame_bits_size;
     int i;
