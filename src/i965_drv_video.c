@@ -3268,6 +3268,165 @@ i965_UnlockSurface(
     return vaStatus;
 }
 
+static VAStatus
+i965_GetSurfaceAttributes(
+    VADriverContextP ctx,
+    VAConfigID config,
+    VASurfaceAttrib *attrib_list,
+    unsigned int num_attribs
+    )
+{
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_config *obj_config;
+    int i;
+
+    if (config == VA_INVALID_ID)
+        return VA_STATUS_ERROR_INVALID_CONFIG;
+
+    obj_config = CONFIG(config);
+
+    if (obj_config == NULL)
+        return VA_STATUS_ERROR_INVALID_CONFIG;
+    
+    if (attrib_list == NULL || num_attribs)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    for (i = 0; i < num_attribs; i++) {
+        switch (attrib_list[i].type) {
+        case VASurfaceAttribPixelFormat:
+            attrib_list[i].value.type = VAGenericValueTypeInteger;
+            attrib_list[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+
+            if (attrib_list[i].value.value.i == 0) {
+                if (IS_G4X(i965->intel.device_id)) {
+                    if (obj_config->profile == VAProfileMPEG2Simple ||
+                        obj_config->profile == VAProfileMPEG2Main) {
+                        attrib_list[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+                    } else {
+                        assert(0);
+                        attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+                    }
+                } else if (IS_IRONLAKE(i965->intel.device_id)) {
+                    if (obj_config->profile == VAProfileMPEG2Simple ||
+                        obj_config->profile == VAProfileMPEG2Main) {
+                        attrib_list[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+                    } else if (obj_config->profile == VAProfileH264Baseline ||
+                               obj_config->profile == VAProfileH264Main ||
+                               obj_config->profile == VAProfileH264High) {
+                        attrib_list[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+                    } else if (obj_config->profile == VAProfileNone) {
+                        attrib_list[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+                    } else {
+                        assert(0);
+                        attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+                    }
+                } else if (IS_GEN6(i965->intel.device_id)) {
+                    attrib_list[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');                    
+                } else if (IS_GEN7(i965->intel.device_id)) {
+                    if (obj_config->profile == VAProfileJPEGBaseline)
+                        attrib_list[i].value.value.i = 0; /* internal format */
+                    else
+                        attrib_list[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+                }
+            } else {
+                if (IS_G4X(i965->intel.device_id)) {
+                    if (obj_config->profile == VAProfileMPEG2Simple ||
+                        obj_config->profile == VAProfileMPEG2Main) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0')) {
+                            attrib_list[i].value.value.i = 0;
+                            attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                        }
+                    } else {
+                        assert(0);
+                        attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+                    }
+                } else if (IS_IRONLAKE(i965->intel.device_id)) {
+                    if (obj_config->profile == VAProfileMPEG2Simple ||
+                        obj_config->profile == VAProfileMPEG2Main) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0')) {
+                            attrib_list[i].value.value.i = 0;                            
+                            attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                        }
+                    } else if (obj_config->profile == VAProfileH264Baseline ||
+                               obj_config->profile == VAProfileH264Main ||
+                               obj_config->profile == VAProfileH264High) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2')) {
+                            attrib_list[i].value.value.i = 0;
+                            attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                        }
+                    } else if (obj_config->profile == VAProfileNone) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2') &&
+                            attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0') &&
+                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2')) {
+                            attrib_list[i].value.value.i = 0;                            
+                            attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                        }
+                    } else {
+                        assert(0);
+                        attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+                    }
+                } else if (IS_GEN6(i965->intel.device_id)) {
+                    if (obj_config->entrypoint == VAEntrypointEncSlice ||
+                        obj_config->entrypoint == VAEntrypointVideoProc) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2') &&
+                            attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0') &&
+                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2')) {
+                            attrib_list[i].value.value.i = 0;                            
+                            attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                        }
+                    } else {
+                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2')) {
+                            attrib_list[i].value.value.i = 0;
+                            attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                        }
+                    }
+                } else if (IS_GEN7(i965->intel.device_id)) {
+                    if (obj_config->entrypoint == VAEntrypointEncSlice ||
+                        obj_config->entrypoint == VAEntrypointVideoProc) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2') &&
+                            attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0') &&
+                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2')) {
+                            attrib_list[i].value.value.i = 0;                            
+                            attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                        }
+                    } else {
+                        if (obj_config->profile == VAProfileJPEGBaseline) {
+                            attrib_list[i].value.value.i = 0;   /* JPEG decoding always uses an internal format */
+                            attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                        } else {
+                            if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2')) {
+                                attrib_list[i].value.value.i = 0;
+                                attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                            }
+                        }
+                    }
+                }
+            }
+
+            break;
+        case VASurfaceAttribMinWidth:
+            /* FIXME: add support for it later */
+            attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+            break;
+        case VASurfaceAttribMaxWidth:
+            attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+            break;
+        case VASurfaceAttribMinHeight:
+            attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+            break;
+        case VASurfaceAttribMaxHeight:
+            attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+            break;
+        default:
+            attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
+            break;
+        }
+    }
+
+    return vaStatus;
+}
+
 /* 
  * Query video processing pipeline 
  */
@@ -3429,6 +3588,7 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     vtable->vaBufferInfo = i965_BufferInfo;
     vtable->vaLockSurface = i965_LockSurface;
     vtable->vaUnlockSurface = i965_UnlockSurface;
+    vtable->vaGetSurfaceAttributes = i965_GetSurfaceAttributes;
 
     vtable_vpp->vaQueryVideoProcFilters = i965_QueryVideoProcFilters;
     vtable_vpp->vaQueryVideoProcFilterCaps = i965_QueryVideoProcFilterCaps;
