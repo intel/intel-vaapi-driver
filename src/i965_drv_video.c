@@ -64,8 +64,7 @@
                          (ctx)->intel.has_bsd)
 
 #define HAS_TILED_SURFACE(ctx) ((IS_GEN7((ctx)->intel.device_id) ||     \
-                                 IS_GEN6((ctx)->intel.device_id)) &&    \
-                                (ctx)->render_state.interleaved_uv)
+                                 IS_GEN6((ctx)->intel.device_id)))
 
 #define HAS_ENCODER(ctx)        ((IS_GEN7((ctx)->intel.device_id) ||    \
                                   IS_GEN6((ctx)->intel.device_id)) &&   \
@@ -507,17 +506,31 @@ i965_destroy_surface(struct object_heap *heap, struct object_base *obj)
     object_heap_free(heap, obj);
 }
 
-VAStatus 
-i965_CreateSurfaces(VADriverContextP ctx,
-                    int width,
-                    int height,
-                    int format,
-                    int num_surfaces,
-                    VASurfaceID *surfaces)      /* out */
+static VAStatus
+i965_CreateSurfaces2(
+    VADriverContextP    ctx,
+    unsigned int        format,
+    unsigned int        width,
+    unsigned int        height,
+    VASurfaceID        *surfaces,
+    unsigned int        num_surfaces,
+    VASurfaceAttrib    *attrib_list,
+    unsigned int        num_attribs
+    )
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
+    int expected_fourcc = 0;
+
+    for (i = 0; i < num_attribs && attrib_list; i++) {
+        if ((attrib_list[i].type == VASurfaceAttribPixelFormat) &&
+            (attrib_list[i].flags & VA_SURFACE_ATTRIB_SETTABLE)) {
+            assert(attrib_list[i].value.type == VAGenericValueTypeInteger);
+            expected_fourcc = attrib_list[i].value.value.i;
+            break;
+        }
+    }
 
     /* We only support one format */
     if (VA_RT_FORMAT_YUV420 != format) {
@@ -548,6 +561,15 @@ i965_CreateSurfaces(VADriverContextP ctx,
         obj_surface->private_data = NULL;
         obj_surface->free_private_data = NULL;
         obj_surface->subsampling = SUBSAMPLE_YUV420;
+
+        if (expected_fourcc) {
+            int tiling = HAS_TILED_SURFACE(i965);
+
+            if (expected_fourcc != VA_FOURCC('N', 'V', '1', '2'))
+                tiling = 0;
+
+            i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, SUBSAMPLE_YUV420);
+        }
     }
 
     /* Error recovery */
@@ -563,6 +585,24 @@ i965_CreateSurfaces(VADriverContextP ctx,
     }
 
     return vaStatus;
+}
+
+VAStatus 
+i965_CreateSurfaces(VADriverContextP ctx,
+                    int width,
+                    int height,
+                    int format,
+                    int num_surfaces,
+                    VASurfaceID *surfaces)      /* out */
+{
+    return i965_CreateSurfaces2(ctx,
+                                format,
+                                width,
+                                height,
+                                surfaces,
+                                num_surfaces,
+                                NULL,
+                                0);
 }
 
 VAStatus 
@@ -3589,6 +3629,7 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     vtable->vaLockSurface = i965_LockSurface;
     vtable->vaUnlockSurface = i965_UnlockSurface;
     vtable->vaGetSurfaceAttributes = i965_GetSurfaceAttributes;
+    vtable->vaCreateSurfaces2 = i965_CreateSurfaces2;
 
     vtable_vpp->vaQueryVideoProcFilters = i965_QueryVideoProcFilters;
     vtable_vpp->vaQueryVideoProcFilterCaps = i965_QueryVideoProcFilterCaps;
