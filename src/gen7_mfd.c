@@ -555,10 +555,10 @@ gen7_mfd_avc_qm_state(VADriverContextP ctx,
     VAIQMatrixBufferH264 *iq_matrix;
     VAPictureParameterBufferH264 *pic_param;
 
-    if (!decode_state->iq_matrix || !decode_state->iq_matrix->buffer)
-        return;
-
-    iq_matrix = (VAIQMatrixBufferH264 *)decode_state->iq_matrix->buffer;
+    if (decode_state->iq_matrix && decode_state->iq_matrix->buffer)
+        iq_matrix = (VAIQMatrixBufferH264 *)decode_state->iq_matrix->buffer;
+    else
+        iq_matrix = &gen7_mfd_context->iq_matrix.h264;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
@@ -882,6 +882,16 @@ gen7_mfd_avc_bsd_object(VADriverContextP ctx,
                   (slice_data_bit_offset & 0x7));
     OUT_BCS_BATCH(batch, 0);
     ADVANCE_BCS_BATCH(batch);
+}
+
+static inline void
+gen7_mfd_avc_context_init(
+    VADriverContextP         ctx,
+    struct gen7_mfd_context *gen7_mfd_context
+)
+{
+    /* Initialize flat scaling lists */
+    avc_gen_default_iq_matrix(&gen7_mfd_context->iq_matrix.h264);
 }
 
 static void
@@ -1922,6 +1932,7 @@ gen7_mfd_vc1_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_flush(batch);
 }
 
+#ifdef HAVE_JPEG_DECODING
 static void
 gen7_mfd_jpeg_decode_init(VADriverContextP ctx,
                           struct decode_state *decode_state,
@@ -2708,6 +2719,7 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
 }
+#endif
 
 static void 
 gen7_mfd_decode_picture(VADriverContextP ctx, 
@@ -2739,9 +2751,11 @@ gen7_mfd_decode_picture(VADriverContextP ctx,
         gen7_mfd_vc1_decode_picture(ctx, decode_state, gen7_mfd_context);
         break;
 
+#ifdef HAVE_JPEG_DECODING
     case VAProfileJPEGBaseline:
         gen7_mfd_jpeg_decode_picture(ctx, decode_state, gen7_mfd_context);
         break;
+#endif
 
     default:
         assert(0);
@@ -2799,5 +2813,14 @@ gen7_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
 
     gen7_mfd_context->jpeg_wa_surface_id = VA_INVALID_SURFACE;
 
+    switch (profile) {
+    case VAProfileH264Baseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        gen7_mfd_avc_context_init(ctx, gen7_mfd_context);
+        break;
+    default:
+        break;
+    }
     return (struct hw_context *)gen7_mfd_context;
 }

@@ -1089,7 +1089,9 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAProcFilterBaseParameterBufferType:
     case VAProcFilterDeinterlacingParameterBufferType:
     case VAProcFilterProcAmpParameterBufferType:
+#ifdef HAVE_JPEG_DECODING
     case VAHuffmanTableBufferType:
+#endif
         /* Ok */
         break;
 
@@ -1417,6 +1419,7 @@ i965_BeginPicture(VADriverContextP ctx,
         i965_release_buffer_store(&obj_context->codec_state.decode.pic_param);
         i965_release_buffer_store(&obj_context->codec_state.decode.iq_matrix);
         i965_release_buffer_store(&obj_context->codec_state.decode.bit_plane);
+        i965_release_buffer_store(&obj_context->codec_state.decode.huffman_table);
 
         for (i = 0; i < obj_context->codec_state.decode.num_slice_params; i++) {
             i965_release_buffer_store(&obj_context->codec_state.decode.slice_params[i]);
@@ -1512,9 +1515,11 @@ i965_decoder_render_picture(VADriverContextP ctx,
             vaStatus = I965_RENDER_DECODE_BUFFER(slice_data);
             break;
 
+#ifdef HAVE_JPEG_DECODING
         case VAHuffmanTableBufferType:
             vaStatus = I965_RENDER_DECODE_BUFFER(huffman_table);
             break;
+#endif
 
         default:
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;

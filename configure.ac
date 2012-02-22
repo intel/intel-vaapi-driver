@@ -89,6 +89,28 @@ fi
 AC_MSG_RESULT([$LIBVA_DRIVERS_PATH])
 AC_SUBST(LIBVA_DRIVERS_PATH)
 
+dnl Check for JPEG decoding API
+AC_CACHE_CHECK([for JPEG decoding API], ac_cv_have_jpeg_decoding_api, [
+    saved_CFLAGS="$CFLAGS"
+    CFLAGS="$CFLAGS $LIBVA_DEPS_CFLAGS"
+    saved_LIBS="$LIBS"
+    LIBS="$CFLAGS $LIBVA_DEPS_LIBS"
+    AC_TRY_COMPILE(
+        [#include <va/va.h>],
+        [VAPictureParameterBufferJPEG pic_param;
+         VASliceParameterBufferJPEG slice_param;
+         VAIQMatrixBufferJPEG iq_matrix;],
+        [ac_cv_have_jpeg_decoding_api="yes"],
+        [ac_cv_have_jpeg_decoding_api="no"]
+    )
+    CFLAGS="$saved_CFLAGS"
+    LIBS="$saved_LIBS"
+])
+if test "$ac_cv_have_jpeg_decoding_api" = "yes"; then
+    AC_DEFINE(HAVE_JPEG_DECODING, 1,
+        [Defined to 1 if VA-API exposes JPEG decoding])
+fi
+
 AC_OUTPUT([
     Makefile
     debian.upstream/Makefile 
