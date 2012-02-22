@@ -149,31 +149,31 @@ get_subpic_format(const VAImageFormat *va_format)
     return NULL;
 }
 
-extern struct hw_context *i965_proc_context_init(VADriverContextP, VAProfile);
-extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, VAProfile);
+extern struct hw_context *i965_proc_context_init(VADriverContextP, struct object_config *);
+extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, struct object_config *);
 static struct hw_codec_info g4x_hw_codec_info = {
     .dec_hw_context_init = g4x_dec_hw_context_init,
     .enc_hw_context_init = NULL,
     .proc_hw_context_init = NULL,
 };
 
-extern struct hw_context *ironlake_dec_hw_context_init(VADriverContextP, VAProfile);
+extern struct hw_context *ironlake_dec_hw_context_init(VADriverContextP, struct object_config *);
 static struct hw_codec_info ironlake_hw_codec_info = {
     .dec_hw_context_init = ironlake_dec_hw_context_init,
     .enc_hw_context_init = NULL,
     .proc_hw_context_init = i965_proc_context_init,
 };
 
-extern struct hw_context *gen6_dec_hw_context_init(VADriverContextP, VAProfile);
-extern struct hw_context *gen6_enc_hw_context_init(VADriverContextP, VAProfile);
+extern struct hw_context *gen6_dec_hw_context_init(VADriverContextP, struct object_config *);
+extern struct hw_context *gen6_enc_hw_context_init(VADriverContextP, struct object_config *);
 static struct hw_codec_info gen6_hw_codec_info = {
     .dec_hw_context_init = gen6_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
     .proc_hw_context_init = i965_proc_context_init,
 };
 
-extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, VAProfile);
-extern struct hw_context *gen7_enc_hw_context_init(VADriverContextP, VAProfile);
+extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, struct object_config *);
+extern struct hw_context *gen7_enc_hw_context_init(VADriverContextP, struct object_config *);
 static struct hw_codec_info gen7_hw_codec_info = {
     .dec_hw_context_init = gen7_dec_hw_context_init,
     .enc_hw_context_init = gen7_enc_hw_context_init,
@@ -987,7 +987,7 @@ i965_CreateContext(VADriverContextP ctx,
             memset(&obj_context->codec_state.proc, 0, sizeof(obj_context->codec_state.proc));
             obj_context->codec_state.proc.current_render_target = VA_INVALID_ID;
             assert(i965->codec_info->proc_hw_context_init);
-            obj_context->hw_context = i965->codec_info->proc_hw_context_init(ctx, obj_config->profile);
+            obj_context->hw_context = i965->codec_info->proc_hw_context_init(ctx, obj_config);
         } else if (VAEntrypointEncSlice == obj_config->entrypoint) { /*encode routin only*/
             obj_context->codec_type = CODEC_ENC;
             memset(&obj_context->codec_state.encode, 0, sizeof(obj_context->codec_state.encode));
@@ -996,7 +996,7 @@ i965_CreateContext(VADriverContextP ctx,
             obj_context->codec_state.encode.slice_params = calloc(obj_context->codec_state.encode.max_slice_params,
                                                                sizeof(*obj_context->codec_state.encode.slice_params));
             assert(i965->codec_info->enc_hw_context_init);
-            obj_context->hw_context = i965->codec_info->enc_hw_context_init(ctx, obj_config->profile);
+            obj_context->hw_context = i965->codec_info->enc_hw_context_init(ctx, obj_config);
         } else {
             obj_context->codec_type = CODEC_DEC;
             memset(&obj_context->codec_state.decode, 0, sizeof(obj_context->codec_state.decode));
@@ -1009,7 +1009,7 @@ i965_CreateContext(VADriverContextP ctx,
                                                               sizeof(*obj_context->codec_state.decode.slice_datas));
 
             assert(i965->codec_info->dec_hw_context_init);
-            obj_context->hw_context = i965->codec_info->dec_hw_context_init(ctx, obj_config->profile);
+            obj_context->hw_context = i965->codec_info->dec_hw_context_init(ctx, obj_config);
         }
     }
 

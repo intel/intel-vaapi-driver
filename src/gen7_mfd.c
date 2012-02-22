@@ -2796,7 +2796,7 @@ gen7_mfd_context_destroy(void *hw_context)
 }
 
 struct hw_context *
-gen7_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
+gen7_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct gen7_mfd_context *gen7_mfd_context = calloc(1, sizeof(struct gen7_mfd_context));
@@ -2813,7 +2813,7 @@ gen7_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
 
     gen7_mfd_context->jpeg_wa_surface_id = VA_INVALID_SURFACE;
 
-    switch (profile) {
+    switch (obj_config->profile) {
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:

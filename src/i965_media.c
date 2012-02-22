@@ -321,7 +321,7 @@ i965_media_context_destroy(void *hw_context)
 }
 
 struct hw_context *
-g4x_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
+g4x_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct i965_media_context *media_context = calloc(1, sizeof(struct i965_media_context));
@@ -330,7 +330,7 @@ g4x_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
     media_context->base.run = i965_media_decode_picture;
     media_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
 
-    switch (profile) {
+    switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
         i965_media_mpeg2_dec_context_init(ctx, media_context);
@@ -351,7 +351,7 @@ g4x_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
 }
 
 struct hw_context *
-ironlake_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
+ironlake_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct i965_media_context *media_context = calloc(1, sizeof(struct i965_media_context));
@@ -360,7 +360,7 @@ ironlake_dec_hw_context_init(VADriverContextP ctx, VAProfile profile)
     media_context->base.run = i965_media_decode_picture;
     media_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
 
-    switch (profile) {
+    switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
         i965_media_mpeg2_dec_context_init(ctx, media_context);
