@@ -1174,6 +1174,8 @@ gen6_mfc_pipeline(VADriverContextP ctx,
 
     switch (profile) {
     case VAProfileH264Baseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
         vaStatus = gen6_mfc_avc_encode_picture(ctx, encode_state, encoder_context);
         break;
 
