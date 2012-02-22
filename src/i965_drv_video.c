@@ -3513,6 +3513,14 @@ VAStatus i965_QueryVideoProcFilterCaps(
     return VA_STATUS_SUCCESS;
 }
 
+static VAProcColorStandardType vpp_input_color_standards[VAProcColorStandardCount] = {
+    VAProcColorStandardBT601,
+};
+
+static VAProcColorStandardType vpp_output_color_standards[VAProcColorStandardCount] = {
+    VAProcColorStandardBT601,
+};
+
 VAStatus i965_QueryVideoProcPipelineCaps(
     VADriverContextP ctx,
     VAContextID context,
@@ -3529,10 +3537,10 @@ VAStatus i965_QueryVideoProcPipelineCaps(
     pipeline_cap->filter_flags = 0;
     pipeline_cap->num_forward_references = 0;
     pipeline_cap->num_backward_references = 0;
-    pipeline_cap->num_input_color_standards = 0;
-    pipeline_cap->input_color_standards[pipeline_cap->num_input_color_standards++] = VAProcColorStandardBT601;
-    pipeline_cap->num_output_color_standards = 0;
-    pipeline_cap->output_color_standards[pipeline_cap->num_output_color_standards++] = VAProcColorStandardBT601;
+    pipeline_cap->num_input_color_standards = 1;
+    pipeline_cap->input_color_standards = vpp_input_color_standards;
+    pipeline_cap->num_output_color_standards = 1;
+    pipeline_cap->output_color_standards = vpp_output_color_standards;
 
     for (i = 0; i < num_filters; i++) {
         struct object_buffer *obj_buffer = BUFFER(filters[i]);
