@@ -1186,17 +1186,6 @@ i965_create_buffer_internal(VADriverContextP ctx,
             dri_bo_subdata(buffer_store->bo, 0, size * num_elements, data);
         }
 
-    } else if (type == VAEncPackedHeaderParameterBufferType) {
-        VAEncPackedHeaderParameterBuffer *param;
-
-        assert(data);
-        assert(num_elements == 1);
-        assert(size == sizeof(*param));
-
-        param = (VAEncPackedHeaderParameterBuffer *)data;
-        memcpy(buffer_store->buffer,
-               data, 
-               size);
     } else {
         int msize = size;
         
