@@ -1077,6 +1077,11 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
 
     intel_batchbuffer_emit_mi_flush(batch);
 
+    gen6_vme_state_base_address(ctx, encoder_context);
+    gen6_vme_vfe_state(ctx, encoder_context);
+    gen6_vme_curbe_load(ctx, encoder_context);
+    gen6_vme_idrt(ctx, encoder_context);
+
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
     OUT_RELOC(batch,
