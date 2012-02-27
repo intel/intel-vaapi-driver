@@ -292,27 +292,27 @@ static void gen6_mfc_avc_directmode_state(VADriverContextP ctx, struct intel_enc
 }
 
 static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
-                                     int slice_type,
+                                     VAEncSliceParameterBufferH264 *slice_param,
                                      struct encode_state *encode_state,
                                      struct intel_encoder_context *encoder_context,
                                      int rate_control_enable,
-                                     int qp,
-                                     int slice_index)
+                                     int qp)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; /* TODO: multi slices support */
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
-    int beginmb = pSliceParameter->starting_macroblock_address;
-    int endmb = beginmb + pSliceParameter->number_of_mbs;
+    int beginmb = slice_param->starting_macroblock_address;
+    int endmb = beginmb + slice_param->number_of_mbs;
     int beginx = beginmb % width_in_mbs;
     int beginy = beginmb / width_in_mbs;
     int nextx =  endmb % width_in_mbs;
     int nexty = endmb / width_in_mbs;
-    int last_slice = (pSliceParameter->starting_macroblock_address + pSliceParameter->number_of_mbs) == (width_in_mbs * height_in_mbs);
+    int last_slice = (endmb == (width_in_mbs * height_in_mbs));
     int bit_rate_control_target;
-    if ( slice_type == SLICE_TYPE_I )
+    int slice_type = slice_param->slice_type;
+
+    if (slice_type == SLICE_TYPE_I)
         bit_rate_control_target = 0;
     else
         bit_rate_control_target = 1;
@@ -341,13 +341,13 @@ static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
     }
 
     OUT_BCS_BATCH(batch, 
-                  (pSliceParameter->direct_spatial_mv_pred_flag<<29) |             /*Direct Prediction Type*/
+                  (slice_param->direct_spatial_mv_pred_flag<<29) |             /*Direct Prediction Type*/
                   (0<<24) |                /*Enable deblocking operation*/
                   (qp<<16) | 			/*Slice Quantization Parameter*/
                   0x0202 );
     OUT_BCS_BATCH(batch, (beginy << 24) |			/*First MB X&Y , the begin postion of current slice*/
                          (beginx << 16) |
-                         pSliceParameter->starting_macroblock_address );
+                         slice_param->starting_macroblock_address );
     OUT_BCS_BATCH(batch, (nexty << 16) | nextx);                       /*Next slice first MB X&Y*/
     OUT_BCS_BATCH(batch, 
                   (rate_control_enable<<31) |		/*in CBR mode RateControlCounterEnable = enable*/
@@ -756,9 +756,9 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0, 0x0 };
 
-    gen6_mfc_avc_slice_state(ctx, pSliceParameter->slice_type,
+    gen6_mfc_avc_slice_state(ctx, pSliceParameter,
                              encode_state, encoder_context,
-                             (rate_control_mode == 0), qp, slice_index);
+                             (rate_control_mode == 0), qp);
 
     if ( slice_index == 0) 
         gen6_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context);
