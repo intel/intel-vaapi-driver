@@ -1142,9 +1142,17 @@ gen6_mfd_mpeg2_pic_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen6_mfd_context->base.batch;
     VAPictureParameterBufferMPEG2 *pic_param;
+    unsigned int tff, pic_structure;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferMPEG2 *)decode_state->pic_param->buffer;
+
+    pic_structure = pic_param->picture_coding_extension.bits.picture_structure;
+    if (pic_structure == MPEG_FRAME)
+        tff = pic_param->picture_coding_extension.bits.top_field_first;
+    else
+        tff = !(pic_param->picture_coding_extension.bits.is_first_field ^
+                (pic_structure & MPEG_TOP_FIELD));
 
     BEGIN_BCS_BATCH(batch, 4);
     OUT_BCS_BATCH(batch, MFX_MPEG2_PIC_STATE | (4 - 2));
@@ -1155,7 +1163,7 @@ gen6_mfd_mpeg2_pic_state(VADriverContextP ctx,
                   ((pic_param->f_code >> 12) & 0xf) << 16 | /* f_code[0][0] */
                   pic_param->picture_coding_extension.bits.intra_dc_precision << 14 |
                   pic_param->picture_coding_extension.bits.picture_structure << 12 |
-                  pic_param->picture_coding_extension.bits.top_field_first << 11 |
+                  tff << 11 |
                   pic_param->picture_coding_extension.bits.frame_pred_frame_dct << 10 |
                   pic_param->picture_coding_extension.bits.concealment_motion_vectors << 9 |
                   pic_param->picture_coding_extension.bits.q_scale_type << 8 |
