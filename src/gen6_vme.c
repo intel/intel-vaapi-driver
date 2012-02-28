@@ -1171,6 +1171,9 @@ gen6_vme_context_destroy(void *context)
     dri_bo_unreference(vme_context->vme_state.bo);
     vme_context->vme_state.bo = NULL;
 
+    dri_bo_unreference(vme_context->vme_batchbuffer.bo);
+    vme_context->vme_batchbuffer.bo = NULL;
+
     for (i = 0; i < GEN6_VME_KERNEL_NUMBER; i++) {
         /*Load kernel into GPU memory*/	
         struct i965_kernel *kernel = &vme_context->vme_kernels[i];
