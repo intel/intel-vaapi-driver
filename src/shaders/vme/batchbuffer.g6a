@@ -24,6 +24,6 @@
  *    Xiang Haihao <haihao.xiang@intel.com>
  */
 
-include(`gen6_batchbuffer_header.inc')
-include(`batchbuffer.asm')
+#include "gen6_batchbuffer_header.inc"
+#include "batchbuffer.asm"
 
