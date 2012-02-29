@@ -62,6 +62,7 @@ source_c = \
 	i965_media.c		\
 	i965_media_h264.c	\
 	i965_media_mpeg2.c	\
+	i965_gpe_utils.c	\
 	i965_post_processing.c	\
 	i965_render.c		\
 	intel_batchbuffer.c	\
@@ -90,6 +91,7 @@ source_h = \
 	i965_media_h264.h	\
 	i965_media_mpeg2.h      \
 	i965_mutext.h		\
+	i965_gpe_utils.h	\
 	i965_post_processing.h	\
 	i965_render.h           \
 	i965_structs.h		\
