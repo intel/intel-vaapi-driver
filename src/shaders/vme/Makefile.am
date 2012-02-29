@@ -23,13 +23,17 @@ SUFFIXES = .g6a .g6b .g7a .g7b .gen6.asm .gen7.asm
 if HAVE_GEN4ASM
 $(INTEL_GEN6_ASM): $(VME_CORE) $(INTEL_GEN6_INC)
 .g6a.gen6.asm:
-	$(AM_V_GEN)m4 $< > $@
+	$(AM_V_GEN)cpp -P -DDEV_SNB $< > _vme0.$@ 	&& \
+	m4 _vme0.$@ > $@				&& \
+	rm _vme0.$@
 .gen6.asm.g6b:
 	$(AM_V_GEN)$(GEN4ASM) -g 6 -o $@ $<
 
 $(INTEL_GEN7_ASM): $(VME_CORE) $(INTEL_GEN7_INC)
 .g7a.gen7.asm:
-	$(AM_V_GEN)m4 $< > $@
+	$(AM_V_GEN)cpp -P -DDEV_IVB $< > _vme0.$@ 	&& \
+	m4 _vme0.$@ > $@				&& \
+	rm _vme0.$@
 .gen7.asm.g7b:
 	$(AM_V_GEN)$(GEN4ASM) -g 7 -o $@ $<
 endif
