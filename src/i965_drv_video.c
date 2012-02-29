@@ -1282,7 +1282,8 @@ i965_MapBuffer(VADriverContextP ctx,
                 if (!buffer[i] &&
                     !buffer[i + 1] &&
                     !buffer[i + 2] &&
-                    !buffer[i + 3])
+                    !buffer[i + 3] &&
+                    !buffer[i + 4])
                     break;
             }
 
