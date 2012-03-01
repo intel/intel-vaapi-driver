@@ -3546,6 +3546,8 @@ i965_post_processing(
         if (obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2'))
             return out_surface_id;
 
+        _i965LockMutex(&i965->pp_mutex);
+
         if (flags & I965_PP_FLAG_DEINTERLACING) {
             status = i965_CreateSurfaces(ctx,
                                          obj_surface->orig_width,
@@ -3611,6 +3613,8 @@ i965_post_processing(
                 
             *has_done_scaling = 1;
         }
+
+        _i965UnlockMutex(&i965->pp_mutex);
     }
 
     return out_surface_id;
@@ -3697,6 +3701,8 @@ i965_image_processing(VADriverContextP ctx,
     if (HAS_PP(i965)) {
         int fourcc = pp_get_surface_fourcc(ctx, src_surface);
 
+        _i965LockMutex(&i965->pp_mutex);
+
         switch (fourcc) {
         case VA_FOURCC('Y', 'V', '1', '2'):
         case VA_FOURCC('I', '4', '2', '0'):
@@ -3721,6 +3727,8 @@ i965_image_processing(VADriverContextP ctx,
             status = VA_STATUS_ERROR_UNIMPLEMENTED;
             break;
         }
+        
+        _i965UnlockMutex(&i965->pp_mutex);
     }
 
     return status;

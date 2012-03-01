@@ -1907,6 +1907,7 @@ i965_Init(VADriverContextP ctx)
         return VA_STATUS_ERROR_UNKNOWN;
 
     _i965InitMutex(&i965->render_mutex);
+    _i965InitMutex(&i965->pp_mutex);
 
     return VA_STATUS_SUCCESS;
 }
@@ -3122,6 +3123,7 @@ i965_Terminate(VADriverContextP ctx)
     if (i965->batch)
         intel_batchbuffer_free(i965->batch);
 
+    _i965DestroyMutex(&i965->pp_mutex);
     _i965DestroyMutex(&i965->render_mutex);
 
     if (i965_render_terminate(ctx) == False)
