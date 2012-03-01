@@ -2007,8 +2007,6 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
                       sizeof(*sampler_8x8) * index + offsetof(struct i965_sampler_8x8, dw1),
                       pp_context->sampler_state_table.bo_8x8);
 
-    dri_bo_unmap(pp_context->sampler_state_table.bo);
-
     /* sampler_8x8 V, index 12 */
     index = 12;
     memset(&sampler_8x8[index], 0, sizeof(*sampler_8x8));
