@@ -264,6 +264,7 @@ struct i965_driver_data
     struct hw_codec_info *codec_info;
 
     _I965Mutex render_mutex;
+    _I965Mutex pp_mutex;
     struct intel_batchbuffer *batch;
     struct i965_render_state render_state;
     void *pp_context;
