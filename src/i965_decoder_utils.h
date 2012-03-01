@@ -46,6 +46,20 @@ mpeg2_set_reference_surfaces(
 void
 avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix);
 
+unsigned int
+avc_get_first_mb_bit_offset(
+    dri_bo                     *slice_data_bo,
+    VASliceParameterBufferH264 *slice_param,
+    unsigned int                mode_flag
+);
+
+unsigned int
+avc_get_first_mb_bit_offset_with_epb(
+    dri_bo                     *slice_data_bo,
+    VASliceParameterBufferH264 *slice_param,
+    unsigned int                mode_flag
+);
+
 void
 gen5_fill_avc_ref_idx_state(
     uint8_t             state[32],

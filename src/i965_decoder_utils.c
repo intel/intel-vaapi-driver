@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
+#include <alloca.h>
 #include "intel_batchbuffer.h"
 #include "i965_decoder_utils.h"
 #include "i965_drv_video.h"
@@ -168,6 +169,60 @@ avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix)
 
     /* Flat_8x8_16 */
     memset(&iq_matrix->ScalingList8x8, 16, sizeof(iq_matrix->ScalingList8x8));
+}
+
+/* Get first macroblock bit offset for BSD, minus EPB count (AVC) */
+/* XXX: slice_data_bit_offset does not account for EPB */
+unsigned int
+avc_get_first_mb_bit_offset(
+    dri_bo                     *slice_data_bo,
+    VASliceParameterBufferH264 *slice_param,
+    unsigned int                mode_flag
+)
+{
+    unsigned int slice_data_bit_offset = slice_param->slice_data_bit_offset;
+
+    if (mode_flag == ENTROPY_CABAC)
+        slice_data_bit_offset = ALIGN(slice_data_bit_offset, 0x8);
+    return slice_data_bit_offset;
+}
+
+/* Get first macroblock bit offset for BSD, with EPB count (AVC) */
+/* XXX: slice_data_bit_offset does not account for EPB */
+unsigned int
+avc_get_first_mb_bit_offset_with_epb(
+    dri_bo                     *slice_data_bo,
+    VASliceParameterBufferH264 *slice_param,
+    unsigned int                mode_flag
+)
+{
+    unsigned int in_slice_data_bit_offset = slice_param->slice_data_bit_offset;
+    unsigned int out_slice_data_bit_offset;
+    unsigned int i, n, buf_size, data_size;
+    uint8_t *buf;
+    int ret;
+
+    buf_size  = slice_param->slice_data_bit_offset / 8;
+    data_size = slice_param->slice_data_size - slice_param->slice_data_offset;
+    if (buf_size > data_size)
+        buf_size = data_size;
+
+    buf = alloca(buf_size);
+    ret = dri_bo_get_subdata(
+        slice_data_bo, slice_param->slice_data_offset,
+        buf_size, buf
+    );
+    assert(ret == 0);
+
+    for (i = 2, n = 0; i < buf_size; i++) {
+        if (!buf[i - 2] && !buf[i - 1] && buf[i] == 3)
+            i += 2, n++;
+    }
+    out_slice_data_bit_offset = in_slice_data_bit_offset + n * 8;
+
+    if (mode_flag == ENTROPY_CABAC)
+        out_slice_data_bit_offset = ALIGN(out_slice_data_bit_offset, 0x8);
+    return out_slice_data_bit_offset;
 }
 
 static inline uint8_t
