@@ -534,35 +534,6 @@ i965_avc_bsd_buf_base_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-/*
- * Return the bit offset to the first bit of the slice data
- *
- * VASliceParameterBufferH264.slice_data_bit_offset will point into the part
- * of slice header if there are some escaped bytes in the slice header. The offset 
- * to slice data is needed for BSD unit so that BSD unit can fetch right slice data
- * for processing. This fixes conformance case BASQP1_Sony_C.jsv
- */
-static int
-i965_avc_bsd_get_slice_bit_offset(uint8_t *buf, int mode_flag, int in_slice_data_bit_offset)
-{
-    int out_slice_data_bit_offset;
-    int slice_header_size = in_slice_data_bit_offset / 8;
-    int i, j;
-
-    for (i = 0, j = 0; i < slice_header_size; i++, j++) {
-        if (!buf[j] && !buf[j + 1] && buf[j + 2] == 3) {
-            i++, j += 2;
-        }
-    }
-
-    out_slice_data_bit_offset = 8 * j + in_slice_data_bit_offset % 8;
-
-    if (mode_flag == ENTROPY_CABAC)
-        out_slice_data_bit_offset = ALIGN(out_slice_data_bit_offset, 0x8);
-
-    return out_slice_data_bit_offset;
-}
-
 static void
 g4x_avc_bsd_object(VADriverContextP ctx, 
                    struct decode_state *decode_state,
@@ -581,11 +552,10 @@ g4x_avc_bsd_object(VADriverContextP ctx,
         int num_ref_idx_l0, num_ref_idx_l1;
         int mbaff_picture = (!pic_param->pic_fields.bits.field_pic_flag &&
                              pic_param->seq_fields.bits.mb_adaptive_frame_field_flag);
-        int slice_data_bit_offset;
+        unsigned int slice_data_bit_offset;
         int weighted_pred_idc = 0;
         int first_mb_in_slice = 0;
         int slice_type;
-        uint8_t *slice_data = NULL;
 
         encrypted = 0; /* FIXME: which flag in VAAPI is used for encryption? */
 
@@ -595,12 +565,12 @@ g4x_avc_bsd_object(VADriverContextP ctx,
         } else 
             cmd_len = 8;
 
-        dri_bo_map(decode_state->slice_datas[slice_index]->bo, 0);
-        slice_data = (uint8_t *)(decode_state->slice_datas[slice_index]->bo->virtual + slice_param->slice_data_offset);
-        slice_data_bit_offset = i965_avc_bsd_get_slice_bit_offset(slice_data,
-                                                                  pic_param->pic_fields.bits.entropy_coding_mode_flag,
-                                                                  slice_param->slice_data_bit_offset);
-        dri_bo_unmap(decode_state->slice_datas[slice_index]->bo);
+
+        slice_data_bit_offset = avc_get_first_mb_bit_offset_with_epb(
+            decode_state->slice_datas[slice_index]->bo,
+            slice_param,
+            pic_param->pic_fields.bits.entropy_coding_mode_flag
+        );
 
         if (slice_param->slice_type == SLICE_TYPE_I ||
             slice_param->slice_type == SLICE_TYPE_SI)
@@ -710,11 +680,10 @@ ironlake_avc_bsd_object(VADriverContextP ctx,
         int num_ref_idx_l0, num_ref_idx_l1;
         int mbaff_picture = (!pic_param->pic_fields.bits.field_pic_flag &&
                              pic_param->seq_fields.bits.mb_adaptive_frame_field_flag);
-        int slice_data_bit_offset;
+        unsigned int slice_data_bit_offset;
         int weighted_pred_idc = 0;
         int first_mb_in_slice;
         int slice_type;
-        uint8_t *slice_data = NULL;
 
         encrypted = 0; /* FIXME: which flag in VAAPI is used for encryption? */
 
@@ -723,12 +692,11 @@ ironlake_avc_bsd_object(VADriverContextP ctx,
         } else 
             counter_value = 0;
 
-        dri_bo_map(decode_state->slice_datas[slice_index]->bo, 0);
-        slice_data = (uint8_t *)(decode_state->slice_datas[slice_index]->bo->virtual + slice_param->slice_data_offset);
-        slice_data_bit_offset = i965_avc_bsd_get_slice_bit_offset(slice_data,
-                                                                  pic_param->pic_fields.bits.entropy_coding_mode_flag,
-                                                                  slice_param->slice_data_bit_offset);
-        dri_bo_unmap(decode_state->slice_datas[slice_index]->bo);
+        slice_data_bit_offset = avc_get_first_mb_bit_offset_with_epb(
+            decode_state->slice_datas[slice_index]->bo,
+            slice_param,
+            pic_param->pic_fields.bits.entropy_coding_mode_flag
+        );
 
         if (slice_param->slice_type == SLICE_TYPE_I ||
             slice_param->slice_type == SLICE_TYPE_SI)
