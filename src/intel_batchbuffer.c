@@ -309,3 +309,27 @@ intel_batchbuffer_end_atomic(struct intel_batchbuffer *batch)
     assert(batch->atomic);
     batch->atomic = 0;
 }
+
+int
+intel_batchbuffer_used_size(struct intel_batchbuffer *batch)
+{
+    return batch->ptr - batch->map;
+}
+
+void
+intel_batchbuffer_align(struct intel_batchbuffer *batch, unsigned int alignedment)
+{
+    int used = batch->ptr - batch->map;
+    int pad_size;
+
+    assert((alignedment & 3) == 0);
+    pad_size = ALIGN(used, alignedment) - used;
+    assert((pad_size & 3) == 0);
+    assert(intel_batchbuffer_space(batch) >= pad_size);
+
+    while (pad_size >= 4) {
+        intel_batchbuffer_emit_dword(batch, 0);
+        pad_size -= 4;
+    }
+}
+

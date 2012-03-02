@@ -44,6 +44,8 @@ void intel_batchbuffer_begin_batch(struct intel_batchbuffer *batch, int total);
 void intel_batchbuffer_advance_batch(struct intel_batchbuffer *batch);
 void intel_batchbuffer_check_batchbuffer_flag(struct intel_batchbuffer *batch, int flag);
 int intel_batchbuffer_check_free_space(struct intel_batchbuffer *batch, int size);
+int intel_batchbuffer_used_size(struct intel_batchbuffer *batch);
+void intel_batchbuffer_align(struct intel_batchbuffer *batch, unsigned int alignedment);
 
 #define __BEGIN_BATCH(batch, n, f) do {                         \
         assert(f == batch->flag);                               \
