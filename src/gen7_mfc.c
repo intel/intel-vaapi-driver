@@ -732,11 +732,12 @@ static void gen7_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
     }
     
     if ( (rate_control_mode == 0) && encode_state->packed_header_data[VAEncPackedHeaderSPS]) {       // this is frist AU
-        int target_bit_rate = pSequenceParameter->bits_per_second;        
-        int initial_remove_delay = pSequenceParameter->initial_hrd_buffer_fullness * 90000 / target_bit_rate;
 
+        struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
         unsigned char *sei_data = NULL;
-        int length_in_bits = build_avc_sei_buffering_period(24, initial_remove_delay, 0, &sei_data);
+        int length_in_bits = build_avc_sei_buffering_period(mfc_context->vui_hrd.i_initial_cpb_removal_delay_length, 
+                                                            
+                                                            mfc_context->vui_hrd.i_initial_cpb_removal_delay, 0, &sei_data);
         gen7_mfc_avc_insert_object(ctx, 
                 encoder_context,
                 (unsigned int *)sei_data,
@@ -750,9 +751,13 @@ static void gen7_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
     }    
 
     // SEI pic_timing header
-    if ( rate_control_mode == 0) {    
+    if ( rate_control_mode == 0) {   
+        struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
         unsigned char *sei_data = NULL;
-        int length_in_bits = build_avc_sei_pic_timing(24, count * 10, 24, 0, &sei_data);
+        int length_in_bits = build_avc_sei_pic_timing( mfc_context->vui_hrd.i_cpb_removal_delay_length,
+                                                       mfc_context->vui_hrd.i_cpb_removal_delay * mfc_context->vui_hrd.i_frame_number,
+                                                       mfc_context->vui_hrd.i_dpb_output_delay_length,
+                                                       0, &sei_data);
         gen7_mfc_avc_insert_object(ctx, 
                 encoder_context,
                 (unsigned int *)sei_data,
@@ -986,7 +991,6 @@ gen7_mfc_bit_rate_control_context_update(struct encode_state *encode_state,
 
     return 1;
 }
-
 static void 
 gen7_mfc_hrd_context_init(struct encode_state *encode_state, 
                           struct gen7_mfc_context *mfc_context) 
@@ -994,28 +998,35 @@ gen7_mfc_hrd_context_init(struct encode_state *encode_state,
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int rate_control_mode = pSequenceParameter->rate_control_method;   
     int target_bit_rate = pSequenceParameter->bits_per_second;
-
+    
     // current we only support CBR mode.
     if ( rate_control_mode == 0) {
-        mfc_context->vui_hrd.i_cpb_cnt = 0;
-        mfc_context->vui_hrd.i_bit_rate_scale = 0;
-        mfc_context->vui_hrd.i_cpb_size_scale = 2;
-        mfc_context->vui_hrd.i_cbr_flag = 0;
-
-        mfc_context->vui_hrd.i_bit_rate_unscaled = target_bit_rate;
-        mfc_context->vui_hrd.i_cpb_size_unscaled = target_bit_rate / 5;
-        mfc_context->vui_hrd.i_bit_rate_value = target_bit_rate >> ( 6 + mfc_context->vui_hrd.i_bit_rate_scale );
-        mfc_context->vui_hrd.i_cpb_size_value = (target_bit_rate / 5) >> ( 4 + mfc_context->vui_hrd.i_cpb_size_scale );
+        mfc_context->vui_hrd.i_bit_rate_value = target_bit_rate >> 10;
+        mfc_context->vui_hrd.i_cpb_size_value = (target_bit_rate * 8) >> 10;
+        mfc_context->vui_hrd.i_initial_cpb_removal_delay = mfc_context->vui_hrd.i_cpb_size_value * 0.5 * 1024 / target_bit_rate * 90000;
+        mfc_context->vui_hrd.i_cpb_removal_delay = 2;
+        mfc_context->vui_hrd.i_frame_number = 0;
 
         mfc_context->vui_hrd.i_initial_cpb_removal_delay_length = 24; 
         mfc_context->vui_hrd.i_cpb_removal_delay_length = 24;
         mfc_context->vui_hrd.i_dpb_output_delay_length = 24;
-        mfc_context->vui_hrd.i_time_offset_length = 24;
     }
 
 }
 
+static VAStatus
+gen7_mfc_hrd_context_check(struct encode_state *encode_state, 
+                          struct gen7_mfc_context *mfc_context) 
+{
+    return VA_STATUS_SUCCESS;
+}
 
+static void 
+gen7_mfc_hrd_context_update(struct encode_state *encode_state, 
+                          struct gen7_mfc_context *mfc_context) 
+{
+    mfc_context->vui_hrd.i_frame_number++;
+}
 
 static VAStatus
 gen7_mfc_avc_prepare(VADriverContextP ctx, 
@@ -1201,8 +1212,11 @@ gen7_mfc_avc_encode_picture(VADriverContextP ctx,
         gen7_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
 
         if (rate_control_mode == 0) {
-            if (gen7_mfc_bit_rate_control_context_update( encode_state, mfc_context, current_frame_bits_size))
+            //gen7_mfc_hrd_context_check(encode_state, mfc_context);
+            if (gen7_mfc_bit_rate_control_context_update( encode_state, mfc_context, current_frame_bits_size)) {
+                gen7_mfc_hrd_context_update(encode_state, mfc_context);
                 break;
+            }
         } else {
             break;
         }

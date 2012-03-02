@@ -121,31 +121,20 @@ struct gen7_mfc_context
         unsigned int target_frame_size;
     } bit_rate_control_context[2];      //INTERNAL: 0 for intra frames, 1 for inter frames.
 
-    // HRD control context
+    //HRD control context
     struct {
-        int i_cpb_cnt;
-        int i_bit_rate_scale;
-        int i_cpb_size_scale;
-        int i_cbr_flag;
         int i_bit_rate_value;
         int i_cpb_size_value;
-        int i_bit_rate_unscaled;
-        int i_cpb_size_unscaled;
+
+        int i_initial_cpb_removal_delay;
+        int i_cpb_removal_delay;
+
+        int i_frame_number;
 
         int i_initial_cpb_removal_delay_length;
         int i_cpb_removal_delay_length;
         int i_dpb_output_delay_length;
-        int i_time_offset_length;            
-
     }vui_hrd;
-
-    struct {
-        double cpb_initial_arrival_time;
-        double cpb_final_arrival_time;
-        double cpb_removal_time;
-
-        double dpb_output_time;
-    }hrd_frame_result;
 
 };
 
