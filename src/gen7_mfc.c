@@ -299,7 +299,7 @@ gen7_mfc_avc_directmode_state(VADriverContextP ctx, struct intel_encoder_context
 
 static void
 gen7_mfc_avc_slice_state(VADriverContextP ctx,
-                         int slice_type,
+                         VAEncSliceParameterBufferH264 *slice_param,
                          struct encode_state *encode_state,
                          struct intel_encoder_context *encoder_context,
                          int rate_control_enable,
@@ -307,7 +307,16 @@ gen7_mfc_avc_slice_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
-    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; /* TODO: multi slices support */
+    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
+    int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
+    int beginmb = slice_param->macroblock_address;
+    int endmb = beginmb + slice_param->num_macroblocks;
+    int beginx = beginmb % width_in_mbs;
+    int beginy = beginmb / width_in_mbs;
+    int nextx =  endmb % width_in_mbs;
+    int nexty = endmb / width_in_mbs;
+    int slice_type = slice_param->slice_type;
+    int last_slice = (endmb == (width_in_mbs * height_in_mbs));
     int bit_rate_control_target, maxQpN, maxQpP;
     unsigned char correct[6], grow, shrink;
     int i;
@@ -340,12 +349,14 @@ gen7_mfc_avc_slice_state(VADriverContextP ctx,
     }
 
     OUT_BCS_BATCH(batch, 
-                  (pSliceParameter->direct_spatial_mv_pred_flag << 29) |             /*Direct Prediction Type*/
+                  (slice_param->direct_spatial_mv_pred_flag << 29) |             /*Direct Prediction Type*/
                   (0 << 24) |                /*Enable deblocking operation*/
                   (qp << 16) | 			/*Slice Quantization Parameter*/
                   (0x0202 << 0));
-    OUT_BCS_BATCH(batch, 0);			/*First MB X&Y , the postion of current slice*/
-    OUT_BCS_BATCH(batch, (((mfc_context->surface_state.height+15)/16) << 16));
+    OUT_BCS_BATCH(batch, (beginy << 24) |			/*First MB X&Y , the begin postion of current slice*/
+                         (beginx << 16) |
+                         slice_param->macroblock_address );
+    OUT_BCS_BATCH(batch, (nexty << 16) | nextx);                       /*Next slice first MB X&Y*/
     OUT_BCS_BATCH(batch, 
                   (rate_control_enable << 31) |		/*in CBR mode RateControlCounterEnable = enable*/
                   (1 << 30) |		/*ResetRateControlCounter*/
@@ -355,7 +366,7 @@ gen7_mfc_avc_slice_state(VADriverContextP ctx,
                   (0 << 22) |     /*QP mode, don't modfiy CBP*/
                   (0 << 21) |     /*MB Type Direct Conversion Enabled*/ 
                   (0 << 20) |     /*MB Type Skip Conversion Enabled*/ 
-                  (1 << 19) |     /*IsLastSlice*/
+                  (last_slice << 19) |     /*IsLastSlice*/
                   (0 << 18) | 	/*BitstreamOutputFlag Compressed BitStream Output Disable Flag 0:enable 1:disable*/
                   (1 << 17) |	    /*HeaderPresentFlag*/	
                   (1 << 16) |	    /*SliceData PresentFlag*/
@@ -672,141 +683,215 @@ gen7_mfc_init(VADriverContextP ctx, struct intel_encoder_context *encoder_contex
     mfc_context->bsd_mpc_row_store_scratch_buffer.bo = bo;
 }
 
+static void gen7_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context)
+{
+    static int count = 0;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int rate_control_mode = encoder_context->rate_control_mode;  
+
+    if (encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]->buffer;
+        unsigned int length_in_bits;
+
+        assert(encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]->buffer;
+        length_in_bits = param->bit_length;
+
+        gen7_mfc_avc_insert_object(ctx, 
+                encoder_context,
+                header_data,
+                ALIGN(length_in_bits, 32) >> 5,
+                length_in_bits & 0x1f,
+                5,      /* FIXME: check it */
+                0,
+                0,
+                !param->has_emulation_bytes);
+    }
+
+    if (encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]->buffer;
+        unsigned int length_in_bits;
+
+        assert(encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]->buffer;
+        length_in_bits = param->bit_length;
+
+        gen7_mfc_avc_insert_object(ctx, 
+                encoder_context,
+                header_data,
+                ALIGN(length_in_bits, 32) >> 5,
+                length_in_bits & 0x1f,
+                5,      /* FIXME: check it*/
+                0,
+                0,
+                !param->has_emulation_bytes);
+    }
+    
+    if ( (rate_control_mode == VA_RC_CBR) && encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {       // this is frist AU
+
+        struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
+        unsigned char *sei_data = NULL;
+        int length_in_bits = build_avc_sei_buffering_period(mfc_context->vui_hrd.i_initial_cpb_removal_delay_length, 
+                                                            
+                                                            mfc_context->vui_hrd.i_initial_cpb_removal_delay, 0, &sei_data);
+        gen7_mfc_avc_insert_object(ctx, 
+                encoder_context,
+                (unsigned int *)sei_data,
+                ALIGN(length_in_bits, 32) >> 5,
+                length_in_bits & 0x1f,
+                4,   
+                0,   
+                0,   
+                1);  
+        free(sei_data);
+    }    
+
+    // SEI pic_timing header
+    if ( rate_control_mode == VA_RC_CBR) {   
+        struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
+        unsigned char *sei_data = NULL;
+        int length_in_bits = build_avc_sei_pic_timing( mfc_context->vui_hrd.i_cpb_removal_delay_length,
+                                                       mfc_context->vui_hrd.i_cpb_removal_delay * mfc_context->vui_hrd.i_frame_number,
+                                                       mfc_context->vui_hrd.i_dpb_output_delay_length,
+                                                       0, &sei_data);
+        gen7_mfc_avc_insert_object(ctx, 
+                encoder_context,
+                (unsigned int *)sei_data,
+                ALIGN(length_in_bits, 32) >> 5,
+                length_in_bits & 0x1f,
+                4,   
+                0,   
+                0,   
+                1);  
+        free(sei_data);
+    }  
+    
+    count++;
+}
+
+static void gen7_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context)
+{
+    gen7_mfc_pipe_mode_select(ctx, MFX_FORMAT_AVC, encoder_context);
+    gen7_mfc_surface_state(ctx, encoder_context);
+    gen7_mfc_ind_obj_base_addr_state(ctx, encoder_context);
+    gen7_mfc_pipe_buf_addr_state(ctx, encoder_context);
+    gen7_mfc_bsp_buf_base_addr_state(ctx, encoder_context);
+    gen7_mfc_avc_img_state(ctx, encode_state, encoder_context);
+    gen7_mfc_avc_qm_state(ctx, encoder_context);
+    gen7_mfc_avc_fqm_state(ctx, encoder_context);
+    gen7_mfc_avc_directmode_state(ctx, encoder_context); 
+    gen7_mfc_avc_ref_idx_state(ctx, encoder_context);
+}
+
+static void 
+gen7_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
+                                       struct encode_state *encode_state,
+                                       struct intel_encoder_context *encoder_context,
+                                       int slice_index)
+{
+    struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[slice_index]->buffer; 
+    unsigned int *msg = NULL, offset = 0;
+    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
+    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
+    int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
+    int last_slice = (pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks) == (width_in_mbs * height_in_mbs);
+    int i,x,y;
+    int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
+    int rate_control_mode = encoder_context->rate_control_mode; 
+    unsigned char *slice_header = NULL;
+    int slice_header_length_in_bits = 0;
+    unsigned int tail_data[] = { 0x0, 0x0 };
+
+    gen7_mfc_avc_slice_state(ctx, pSliceParameter,
+                             encode_state, encoder_context,
+                             (rate_control_mode == VA_RC_CBR), qp);
+
+    if ( slice_index == 0) 
+        gen7_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context);
+
+    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
+
+    // slice hander
+    gen7_mfc_avc_insert_object(ctx, encoder_context,
+            (unsigned int *)slice_header, ALIGN(slice_header_length_in_bits, 32) >> 5, slice_header_length_in_bits & 0x1f,
+            5,  /* first 5 bytes are start code + nal unit type */
+            1, 0, 1);
+
+    if ( rate_control_mode == VA_RC_CBR) {
+        qp = mfc_context->bit_rate_control_context[1-is_intra].QpPrimeY;
+    }
+
+    if (is_intra) {
+        dri_bo_map(vme_context->vme_output.bo , 1);
+        msg = (unsigned int *)vme_context->vme_output.bo->virtual;
+    }
+   
+    for (i = pSliceParameter->macroblock_address; 
+         i < pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks; i++) {
+        int last_mb = (i == (pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks - 1) );
+        x = i % width_in_mbs;
+        y = i / width_in_mbs;
+
+        if (is_intra) {
+            assert(msg);
+            gen7_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0);
+            msg += 4;
+        } else {
+            gen7_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, offset, encoder_context, 0, 0, pSliceParameter->slice_type);
+            offset += 64;
+        }
+    }
+   
+    if (is_intra)
+        dri_bo_unmap(vme_context->vme_output.bo);
+    if ( last_slice ) {    
+        gen7_mfc_avc_insert_object(ctx, encoder_context,
+                               tail_data, 2, 8,
+                               2, 1, 1, 0);
+    } else {
+        gen7_mfc_avc_insert_object(ctx, encoder_context,
+                               tail_data, 1, 8,
+                               1, 1, 1, 0);
+    }
+
+    free(slice_header);
+
+}
+
 static void
 gen7_mfc_avc_pipeline_programing(VADriverContextP ctx,
                                  struct encode_state *encode_state,
                                  struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
-    struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
-    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; /* FIXME: multi slices */
-    unsigned int *msg = NULL, offset = 0;
-    int emit_new_state = 1, object_len_in_bytes;
-    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
-    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
-    int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
-    int x,y;
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    unsigned char target_mb_size = mfc_context->bit_rate_control_context[1-is_intra].TargetSizeInWord;
-    unsigned char max_mb_size = mfc_context->bit_rate_control_context[1-is_intra].MaxSizeInWord;
-    int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
-    unsigned char *slice_header = NULL;
-    int slice_header_length_in_bits = 0;
-    unsigned int tail_data[] = { 0x0 };
+    int i;
 
-    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
-
-    if (rate_control_mode == VA_RC_CBR) {
-        qp = mfc_context->bit_rate_control_context[1-is_intra].QpPrimeY;
-    }
-
-    intel_batchbuffer_start_atomic_bcs(batch, 0x1000); 
+    // begin programing
+    intel_batchbuffer_start_atomic_bcs(batch, 0x4000); 
+    intel_batchbuffer_emit_mi_flush(batch);
     
-    if (is_intra) {
-        dri_bo_map(vme_context->vme_output.bo , 1);
-        msg = (unsigned int *)vme_context->vme_output.bo->virtual;
+    // picture level programing
+    gen7_mfc_avc_pipeline_picture_programing(ctx, encode_state, encoder_context);
+
+    for ( i = 0; i < encode_state->num_slice_params_ext; i++) {
+        // slice level programing
+        gen7_mfc_avc_pipeline_slice_programing(ctx, encode_state, encoder_context, i);
     }
-
-    for (y = 0; y < height_in_mbs; y++) {
-        for (x = 0; x < width_in_mbs; x++) { 
-            int last_mb = (y == (height_in_mbs-1)) && ( x == (width_in_mbs-1) );
-            
-            if (emit_new_state) {
-                intel_batchbuffer_emit_mi_flush(batch);
-                
-                gen7_mfc_pipe_mode_select(ctx, MFX_FORMAT_AVC, encoder_context);
-                gen7_mfc_surface_state(ctx, encoder_context);
-                gen7_mfc_ind_obj_base_addr_state(ctx, encoder_context);
-                gen7_mfc_pipe_buf_addr_state(ctx, encoder_context);
-                gen7_mfc_bsp_buf_base_addr_state(ctx, encoder_context);
-                gen7_mfc_avc_img_state(ctx, encode_state, encoder_context);
-                gen7_mfc_avc_qm_state(ctx, encoder_context);
-                gen7_mfc_avc_fqm_state(ctx, encoder_context);
-                gen7_mfc_avc_directmode_state(ctx, encoder_context); 
-                gen7_mfc_avc_ref_idx_state(ctx, encoder_context);
-                gen7_mfc_avc_slice_state(ctx, pSliceParameter->slice_type, 
-                                         encode_state, encoder_context, 
-                                         rate_control_mode == VA_RC_CBR, pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta);
-
-                if (encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {
-                    VAEncPackedHeaderParameterBuffer *param = NULL;
-                    unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]->buffer;
-                    unsigned int length_in_bits;
-
-                    assert(encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]);
-                    param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]->buffer;
-                    length_in_bits = param->bit_length;
-
-                    gen7_mfc_avc_insert_object(ctx, 
-                                               encoder_context,
-                                               header_data,
-                                               ALIGN(length_in_bits, 32) >> 5,
-                                               length_in_bits & 0x1f,
-                                               5, /* FIXME: check it */
-                                               0,
-                                               0,
-                                               !param->has_emulation_bytes);
-                }
-
-                if (encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]) {
-                    VAEncPackedHeaderParameterBuffer *param = NULL;
-                    unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]->buffer;
-                    unsigned int length_in_bits;
-
-                    assert(encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]);
-                    param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]->buffer;
-                    length_in_bits = param->bit_length;
-
-                    gen7_mfc_avc_insert_object(ctx, 
-                                               encoder_context,
-                                               header_data,
-                                               ALIGN(length_in_bits, 32) >> 5,
-                                               length_in_bits & 0x1f,
-                                               5, /* FIXME: check it */
-                                               0,
-                                               0,
-                                               !param->has_emulation_bytes);
-                }
-
-                gen7_mfc_avc_insert_object(ctx, encoder_context,
-                                           (unsigned int *)slice_header, ALIGN(slice_header_length_in_bits, 32) >> 5, slice_header_length_in_bits & 0x1f,
-                                           5,  /* first 5 bytes are start code + nal unit type */
-                                           1, 0, 1);
-                emit_new_state = 0;
-            }
-
-            if (is_intra) {
-                assert(msg);
-                object_len_in_bytes = gen7_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context,target_mb_size, max_mb_size);
-                msg += 4;
-            } else {
-                object_len_in_bytes = gen7_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, offset, encoder_context, target_mb_size, max_mb_size, pSliceParameter->slice_type);
-                offset += 64;
-            }
-
-            if (intel_batchbuffer_check_free_space(batch, object_len_in_bytes) == 0) {
-                assert(0);
-                intel_batchbuffer_end_atomic(batch);
-                intel_batchbuffer_flush(batch);
-                emit_new_state = 1;
-                intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
-            }
-        }
-    }
-
-    gen7_mfc_avc_insert_object(ctx, encoder_context,
-                               tail_data, sizeof(tail_data) >> 2, 32,
-                               sizeof(tail_data), 1, 1, 1);
-
-    if (is_intra)
-        dri_bo_unmap(vme_context->vme_output.bo);
-
-    free(slice_header);
-
+    
+    // end programing
     intel_batchbuffer_end_atomic(batch);
+
+    return;
 }
 
 static void 
@@ -904,6 +989,44 @@ gen7_mfc_bit_rate_control_context_update(struct encode_state *encode_state,
     return 1;
 }
 
+static void 
+gen7_mfc_hrd_context_init(struct encode_state *encode_state, 
+                          struct intel_encoder_context *encoder_context) 
+{
+    struct gen7_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int rate_control_mode = encoder_context->rate_control_mode; 
+    int target_bit_rate = pSequenceParameter->bits_per_second;
+    
+    // current we only support CBR mode.
+    if ( rate_control_mode == VA_RC_CBR) {
+        mfc_context->vui_hrd.i_bit_rate_value = target_bit_rate >> 10;
+        mfc_context->vui_hrd.i_cpb_size_value = (target_bit_rate * 8) >> 10;
+        mfc_context->vui_hrd.i_initial_cpb_removal_delay = mfc_context->vui_hrd.i_cpb_size_value * 0.5 * 1024 / target_bit_rate * 90000;
+        mfc_context->vui_hrd.i_cpb_removal_delay = 2;
+        mfc_context->vui_hrd.i_frame_number = 0;
+
+        mfc_context->vui_hrd.i_initial_cpb_removal_delay_length = 24; 
+        mfc_context->vui_hrd.i_cpb_removal_delay_length = 24;
+        mfc_context->vui_hrd.i_dpb_output_delay_length = 24;
+    }
+
+}
+
+static VAStatus
+gen7_mfc_hrd_context_check(struct encode_state *encode_state, 
+                          struct gen7_mfc_context *mfc_context) 
+{
+    return VA_STATUS_SUCCESS;
+}
+
+static void 
+gen7_mfc_hrd_context_update(struct encode_state *encode_state, 
+                          struct gen7_mfc_context *mfc_context) 
+{
+    mfc_context->vui_hrd.i_frame_number++;
+}
+
 static VAStatus
 gen7_mfc_avc_prepare(VADriverContextP ctx, 
                      struct encode_state *encode_state,
@@ -916,6 +1039,8 @@ gen7_mfc_avc_prepare(VADriverContextP ctx,
     struct gen7_mfc_avc_surface_aux* gen7_avc_surface;
     dri_bo *bo;
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
@@ -1015,6 +1140,10 @@ gen7_mfc_avc_prepare(VADriverContextP ctx,
     if ( mfc_context->bit_rate_control_context[0].MaxSizeInWord == 0 )
         gen7_mfc_bit_rate_control_context_init(encode_state, mfc_context);
 
+    /*Programing HRD control */
+    if ( (rate_control_mode == VA_RC_CBR) && (mfc_context->vui_hrd.i_cpb_size_value == 0) )
+        gen7_mfc_hrd_context_init(encode_state, encoder_context);
+
     /*Programing bcs pipeline*/
     gen7_mfc_avc_pipeline_programing(ctx, encode_state, encoder_context);	//filling the pipeline
 	
@@ -1082,8 +1211,11 @@ gen7_mfc_avc_encode_picture(VADriverContextP ctx,
         gen7_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
 
         if (rate_control_mode == VA_RC_CBR) {
-            if (gen7_mfc_bit_rate_control_context_update( encode_state, mfc_context, current_frame_bits_size))
+            //gen7_mfc_hrd_context_check(encode_state, mfc_context);
+            if (gen7_mfc_bit_rate_control_context_update( encode_state, mfc_context, current_frame_bits_size)) {
+                gen7_mfc_hrd_context_update(encode_state, mfc_context);
                 break;
+            }
         } else {
             break;
         }
@@ -1092,7 +1224,7 @@ gen7_mfc_avc_encode_picture(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
-static VAStatus
+static VAStatus 
 gen7_mfc_pipeline(VADriverContextP ctx,
                   VAProfile profile,
                   struct encode_state *encode_state,
