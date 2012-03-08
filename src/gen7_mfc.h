@@ -34,10 +34,14 @@
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
 
+#include "i965_gpe_utils.h"
+
 struct encode_state;
 
 #define MAX_MFC_REFERENCE_SURFACES      16
 #define NUM_MFC_DMV_BUFFERS             34
+
+#define __SOFTWARE__    0
 
 struct gen7_mfc_avc_surface_aux
 {
@@ -136,6 +140,10 @@ struct gen7_mfc_context
         int i_dpb_output_delay_length;
     }vui_hrd;
 
+    struct i965_gpe_context gpe_context;
+    struct i965_buffer_surface mfc_batchbuffer_surface;
+    struct intel_batchbuffer *aux_batchbuffer;
+    struct i965_buffer_surface aux_batchbuffer_surface;
 };
 
 #endif	/* _GEN7_MFC_BCS_H_ */
