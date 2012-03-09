@@ -76,7 +76,6 @@ source_h = \
 	gen6_mfc.h		\
 	gen6_mfd.h		\
 	gen6_vme.h		\
-	gen7_mfc.h		\
 	gen7_mfd.h		\
 	i965_avc_bsd.h		\
 	i965_avc_hw_scoreboard.h\
