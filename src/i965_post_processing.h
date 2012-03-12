@@ -31,8 +31,10 @@
 
 #define MAX_PP_SURFACES 32
 
-#define I965_PP_FLAG_DEINTERLACING      1
-#define I965_PP_FLAG_AVS                2
+#define I965_PP_FLAG_TOP_FIELD          1
+#define I965_PP_FLAG_BOTTOM_FIELD       2
+#define I965_PP_FLAG_DEINTERLACING      4 /* XXX: don't support MCDI yet */
+#define I965_PP_FLAG_AVS                8
 
 enum
 {

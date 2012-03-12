@@ -2327,8 +2327,10 @@ i965_PutSurface(VADriverContextP ctx,
     if ((flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC)
         pp_flag |= I965_PP_FLAG_AVS;
 
-    if (flags & (VA_BOTTOM_FIELD | VA_TOP_FIELD))
-        pp_flag |= I965_PP_FLAG_DEINTERLACING;
+    if (flags & VA_TOP_FIELD)
+        pp_flag |= I965_PP_FLAG_TOP_FIELD;
+    else if (flags & VA_BOTTOM_FIELD)
+        pp_flag |= I965_PP_FLAG_BOTTOM_FIELD;
 
     src_rect.x      = srcx;
     src_rect.y      = srcy;

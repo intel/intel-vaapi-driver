@@ -2,6 +2,7 @@ libva-driver-intel NEWS -- summary of changes.  2012-02-DD
 Copyright (C) 2009-2011 Intel Corporation
 
 Version 1.0.16 - DD.Feb.2012
+* Fix rendering of interlaced surfaces
 * Fix VC-1 bitplane buffer size (SNB, IVB)
 * Fix VC-1 motion vector modes for Ivy Bridge
 * Fix weighted prediction indicator for Sandy Bridge
