@@ -95,6 +95,8 @@ struct gen7_mfd_context
     
     VASurfaceID jpeg_wa_surface_id;
     dri_bo *jpeg_wa_slice_data_bo;
+
+    int                 wa_mpeg2_slice_vertical_position;
 };
 
 #endif /* _GEN7_MFD_H_ */

@@ -27,6 +27,14 @@
 #include "i965_decoder.h"
 #include "intel_batchbuffer.h"
 
+struct decode_state;
+
+int
+mpeg2_wa_slice_vertical_position(
+    struct decode_state           *decode_state,
+    VAPictureParameterBufferMPEG2 *pic_param
+);
+
 void
 avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix);
 
