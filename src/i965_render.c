@@ -637,15 +637,32 @@ i965_render_set_surface_tiling(struct i965_surface_state *ss, unsigned int tilin
 }
 
 static void
-i965_render_set_surface_state(struct i965_surface_state *ss,
-                              dri_bo *bo, unsigned long offset,
-                              int width, int height,
-                              int pitch, int format)
+i965_render_set_surface_state(
+    struct i965_surface_state *ss,
+    dri_bo                    *bo,
+    unsigned long              offset,
+    unsigned int               width,
+    unsigned int               height,
+    unsigned int               pitch,
+    unsigned int               format,
+    unsigned int               flags
+)
 {
     unsigned int tiling;
     unsigned int swizzle;
 
     memset(ss, 0, sizeof(*ss));
+
+    switch (flags & (I965_PP_FLAG_TOP_FIELD|I965_PP_FLAG_BOTTOM_FIELD)) {
+    case I965_PP_FLAG_BOTTOM_FIELD:
+        ss->ss0.vert_line_stride_ofs = 1;
+        /* fall-through */
+    case I965_PP_FLAG_TOP_FIELD:
+        ss->ss0.vert_line_stride = 1;
+        height /= 2;
+        break;
+    }
+
     ss->ss0.surface_type = I965_SURFACE_2D;
     ss->ss0.surface_format = format;
     ss->ss0.color_blend = 1;
@@ -681,15 +698,31 @@ gen7_render_set_surface_tiling(struct gen7_surface_state *ss, uint32_t tiling)
 }
 
 static void
-gen7_render_set_surface_state(struct gen7_surface_state *ss,
-                              dri_bo *bo, unsigned long offset,
-                              int width, int height,
-                              int pitch, int format)
+gen7_render_set_surface_state(
+    struct gen7_surface_state *ss,
+    dri_bo                    *bo,
+    unsigned long              offset,
+    int                        width,
+    int                        height,
+    int                        pitch,
+    int                        format,
+    unsigned int               flags
+)
 {
     unsigned int tiling;
     unsigned int swizzle;
 
     memset(ss, 0, sizeof(*ss));
+
+    switch (flags & (I965_PP_FLAG_TOP_FIELD|I965_PP_FLAG_BOTTOM_FIELD)) {
+    case I965_PP_FLAG_BOTTOM_FIELD:
+        ss->ss0.vert_line_stride_ofs = 1;
+        /* fall-through */
+    case I965_PP_FLAG_TOP_FIELD:
+        ss->ss0.vert_line_stride = 1;
+        height /= 2;
+        break;
+    }
 
     ss->ss0.surface_type = I965_SURFACE_2D;
     ss->ss0.surface_format = format;
@@ -706,12 +739,17 @@ gen7_render_set_surface_state(struct gen7_surface_state *ss,
 }
 
 static void
-i965_render_src_surface_state(VADriverContextP ctx, 
-                              int index,
-                              dri_bo *region,
-                              unsigned long offset,
-                              int w, int h,
-                              int pitch, int format)
+i965_render_src_surface_state(
+    VADriverContextP ctx, 
+    int              index,
+    dri_bo          *region,
+    unsigned long    offset,
+    int              w,
+    int              h,
+    int              pitch,
+    int              format,
+    unsigned int     flags
+)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);  
     struct i965_render_state *render_state = &i965->render_state;
@@ -728,7 +766,7 @@ i965_render_src_surface_state(VADriverContextP ctx,
         gen7_render_set_surface_state(ss,
                                       region, offset,
                                       w, h,
-                                      pitch, format);
+                                      pitch, format, flags);
         dri_bo_emit_reloc(ss_bo,
                           I915_GEM_DOMAIN_SAMPLER, 0,
                           offset,
@@ -738,7 +776,7 @@ i965_render_src_surface_state(VADriverContextP ctx,
         i965_render_set_surface_state(ss,
                                       region, offset,
                                       w, h,
-                                      pitch, format);
+                                      pitch, format, flags);
         dri_bo_emit_reloc(ss_bo,
                           I915_GEM_DOMAIN_SAMPLER, 0,
                           offset,
@@ -752,8 +790,11 @@ i965_render_src_surface_state(VADriverContextP ctx,
 }
 
 static void
-i965_render_src_surfaces_state(VADriverContextP ctx,
-                              VASurfaceID surface)
+i965_render_src_surfaces_state(
+    VADriverContextP ctx,
+    VASurfaceID      surface,
+    unsigned int     flags
+)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);  
     struct object_surface *obj_surface;
@@ -769,35 +810,35 @@ i965_render_src_surfaces_state(VADriverContextP ctx,
     rh = obj_surface->orig_height;
     region = obj_surface->bo;
 
-    i965_render_src_surface_state(ctx, 1, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM);     /* Y */
-    i965_render_src_surface_state(ctx, 2, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM);
+    i965_render_src_surface_state(ctx, 1, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);     /* Y */
+    i965_render_src_surface_state(ctx, 2, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);
 
     if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2')) {
         i965_render_src_surface_state(ctx, 3, region,
                                       region_pitch * obj_surface->y_cb_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8G8_UNORM); /* UV */
+                                      I965_SURFACEFORMAT_R8G8_UNORM, flags); /* UV */
         i965_render_src_surface_state(ctx, 4, region,
                                       region_pitch * obj_surface->y_cb_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8G8_UNORM);
+                                      I965_SURFACEFORMAT_R8G8_UNORM, flags);
     } else {
         i965_render_src_surface_state(ctx, 3, region,
                                       region_pitch * obj_surface->y_cb_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8_UNORM); /* U */
+                                      I965_SURFACEFORMAT_R8_UNORM, flags); /* U */
         i965_render_src_surface_state(ctx, 4, region,
                                       region_pitch * obj_surface->y_cb_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8_UNORM);
+                                      I965_SURFACEFORMAT_R8_UNORM, flags);
         i965_render_src_surface_state(ctx, 5, region,
                                       region_pitch * obj_surface->y_cr_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8_UNORM); /* V */
+                                      I965_SURFACEFORMAT_R8_UNORM, flags); /* V */
         i965_render_src_surface_state(ctx, 6, region,
                                       region_pitch * obj_surface->y_cr_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8_UNORM);
+                                      I965_SURFACEFORMAT_R8_UNORM, flags);
     }
 }
 
@@ -819,8 +860,8 @@ i965_subpic_render_src_surfaces_state(VADriverContextP ctx,
     region = obj_surface->bo;
     subpic_region = obj_image->bo;
     /*subpicture surface*/
-    i965_render_src_surface_state(ctx, 1, subpic_region, 0, obj_subpic->width, obj_subpic->height, obj_subpic->pitch, obj_subpic->format);     
-    i965_render_src_surface_state(ctx, 2, subpic_region, 0, obj_subpic->width, obj_subpic->height, obj_subpic->pitch, obj_subpic->format);     
+    i965_render_src_surface_state(ctx, 1, subpic_region, 0, obj_subpic->width, obj_subpic->height, obj_subpic->pitch, obj_subpic->format, 0);     
+    i965_render_src_surface_state(ctx, 2, subpic_region, 0, obj_subpic->width, obj_subpic->height, obj_subpic->pitch, obj_subpic->format, 0);     
 }
 
 static void
@@ -848,7 +889,7 @@ i965_render_dest_surface_state(VADriverContextP ctx, int index)
         gen7_render_set_surface_state(ss,
                                       dest_region->bo, 0,
                                       dest_region->width, dest_region->height,
-                                      dest_region->pitch, format);
+                                      dest_region->pitch, format, 0);
         dri_bo_emit_reloc(ss_bo,
                           I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                           0,
@@ -858,7 +899,7 @@ i965_render_dest_surface_state(VADriverContextP ctx, int index)
         i965_render_set_surface_state(ss,
                                       dest_region->bo, 0,
                                       dest_region->width, dest_region->height,
-                                      dest_region->pitch, format);
+                                      dest_region->pitch, format, 0);
         dri_bo_emit_reloc(ss_bo,
                           I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                           0,
@@ -1005,13 +1046,14 @@ i965_surface_render_state_setup(
     VADriverContextP   ctx,
     VASurfaceID        surface,
     const VARectangle *src_rect,
-    const VARectangle *dst_rect
+    const VARectangle *dst_rect,
+    unsigned int       flags
 )
 {
     i965_render_vs_unit(ctx);
     i965_render_sf_unit(ctx);
     i965_render_dest_surface_state(ctx, 0);
-    i965_render_src_surfaces_state(ctx, surface);
+    i965_render_src_surfaces_state(ctx, surface, flags);
     i965_render_sampler(ctx);
     i965_render_wm_unit(ctx);
     i965_render_cc_viewport(ctx);
@@ -1019,6 +1061,7 @@ i965_surface_render_state_setup(
     i965_render_upload_vertex(ctx, surface, src_rect, dst_rect);
     i965_render_upload_constants(ctx, surface);
 }
+
 static void
 i965_subpic_render_state_setup(
     VADriverContextP   ctx,
@@ -1535,7 +1578,7 @@ i965_render_put_surface(
     struct intel_batchbuffer *batch = i965->batch;
 
     i965_render_initialize(ctx);
-    i965_surface_render_state_setup(ctx, surface, src_rect, dst_rect);
+    i965_surface_render_state_setup(ctx, surface, src_rect, dst_rect, flags);
     i965_surface_render_pipeline_setup(ctx);
     intel_batchbuffer_flush(batch);
 }
@@ -1689,11 +1732,12 @@ gen6_render_setup_states(
     VADriverContextP   ctx,
     VASurfaceID        surface,
     const VARectangle *src_rect,
-    const VARectangle *dst_rect
+    const VARectangle *dst_rect,
+    unsigned int       flags
 )
 {
     i965_render_dest_surface_state(ctx, 0);
-    i965_render_src_surfaces_state(ctx, surface);
+    i965_render_src_surfaces_state(ctx, surface, flags);
     i965_render_sampler(ctx);
     i965_render_cc_viewport(ctx);
     gen6_render_color_calc_state(ctx);
@@ -2059,7 +2103,7 @@ gen6_render_put_surface(
     struct intel_batchbuffer *batch = i965->batch;
 
     gen6_render_initialize(ctx);
-    gen6_render_setup_states(ctx, surface, src_rect, dst_rect);
+    gen6_render_setup_states(ctx, surface, src_rect, dst_rect, flags);
     i965_clear_dest_region(ctx);
     gen6_render_emit_states(ctx, PS_KERNEL);
     intel_batchbuffer_flush(batch);
@@ -2281,11 +2325,12 @@ gen7_render_setup_states(
     VADriverContextP   ctx,
     VASurfaceID        surface,
     const VARectangle *src_rect,
-    const VARectangle *dst_rect
+    const VARectangle *dst_rect,
+    unsigned int       flags
 )
 {
     i965_render_dest_surface_state(ctx, 0);
-    i965_render_src_surfaces_state(ctx, surface);
+    i965_render_src_surfaces_state(ctx, surface, flags);
     gen7_render_sampler(ctx);
     i965_render_cc_viewport(ctx);
     gen7_render_color_calc_state(ctx);
@@ -2824,7 +2869,7 @@ gen7_render_put_surface(
     struct intel_batchbuffer *batch = i965->batch;
 
     gen7_render_initialize(ctx);
-    gen7_render_setup_states(ctx, surface, src_rect, dst_rect);
+    gen7_render_setup_states(ctx, surface, src_rect, dst_rect, flags);
     i965_clear_dest_region(ctx);
     gen7_render_emit_states(ctx, PS_KERNEL);
     intel_batchbuffer_flush(batch);

@@ -3,6 +3,7 @@ Copyright (C) 2009-2011 Intel Corporation
 
 Version 1.0.17 - DD.Mar.2012
 * Add support for IMC1/IMC3 surface formats
+* Fix rendering of interlaced surfaces
 * Fix weighted prediction indicator for Sandy Bridge
 * Fix and simplify first macroblock bit offset calculation (ILK, SNB, IVB)
 
