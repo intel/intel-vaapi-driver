@@ -77,6 +77,8 @@ struct gen6_mfd_context
     GenBuffer           bsd_mpc_row_store_scratch_buffer;
     GenBuffer           mpr_row_store_scratch_buffer;
     GenBuffer           bitplane_read_buffer;
+
+    int                 wa_mpeg2_slice_vertical_position;
 };
 
 #endif /* _GEN6_MFD_H_ */

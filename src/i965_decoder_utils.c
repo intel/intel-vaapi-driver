@@ -27,7 +27,48 @@
 #include <alloca.h>
 #include "intel_batchbuffer.h"
 #include "i965_decoder_utils.h"
+#include "i965_drv_video.h"
 #include "i965_defines.h"
+
+/* Check wether codec layer incorrectly fills in slice_vertical_position */
+int
+mpeg2_wa_slice_vertical_position(
+    struct decode_state           *decode_state,
+    VAPictureParameterBufferMPEG2 *pic_param
+)
+{
+    unsigned int i, j, mb_height, vpos, last_vpos = 0;
+
+    /* Assume progressive sequence if we got a progressive frame */
+    if (pic_param->picture_coding_extension.bits.progressive_frame)
+        return 0;
+
+    /* Wait for a field coded picture */
+    if (pic_param->picture_coding_extension.bits.picture_structure == MPEG_FRAME)
+        return -1;
+
+    assert(decode_state && decode_state->slice_params);
+
+    mb_height = (pic_param->vertical_size + 31) / 32;
+
+    for (j = 0; j < decode_state->num_slice_params; j++) {
+        struct buffer_store * const buffer_store =
+            decode_state->slice_params[j];
+
+        for (i = 0; i < buffer_store->num_elements; i++) {
+            VASliceParameterBufferMPEG2 * const slice_param =
+                ((VASliceParameterBufferMPEG2 *)buffer_store->buffer) + i;
+
+            vpos = slice_param->slice_vertical_position;
+            if (vpos >= mb_height || vpos == last_vpos + 2) {
+                WARN_ONCE("codec layer incorrectly fills in MPEG-2 slice_vertical_position. Workaround applied\n");
+                return 1;
+            }
+            last_vpos = vpos;
+        }
+    }
+    return 0;
+}
 
 /* Generate flat scaling matrices for H.264 decoding */
 void
