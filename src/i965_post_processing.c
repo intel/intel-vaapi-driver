@@ -3592,7 +3592,7 @@ i965_post_processing(
 
         _i965LockMutex(&i965->pp_mutex);
 
-        if (flags & I965_PP_FLAG_DEINTERLACING) {
+        if (flags & I965_PP_FLAG_MCDI) {
             status = i965_CreateSurfaces(ctx,
                                          obj_surface->orig_width,
                                          obj_surface->orig_height,
@@ -3605,7 +3605,7 @@ i965_post_processing(
             i965_vpp_clear_surface(ctx, i965->pp_context, out_surface_id, 0); 
             src_surface.id = in_surface_id;
             src_surface.type = I965_SURFACE_TYPE_SURFACE;
-            src_surface.flags = (flags & I965_PP_FLAG_DEINTERLACING_TOP_FISRT) ? 
+            src_surface.flags = (flags & I965_PP_FLAG_TOP_FIELD) ? 
                 I965_SURFACE_FLAG_TOP_FIELD_FIRST : I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST;
             dst_surface.id = out_surface_id;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
