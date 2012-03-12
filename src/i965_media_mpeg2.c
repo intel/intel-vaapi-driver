@@ -36,6 +36,7 @@
 #include "intel_driver.h"
 #include "i965_defines.h"
 #include "i965_drv_video.h"
+#include "i965_decoder_utils.h"
 
 #include "i965_media.h"
 #include "i965_media_mpeg2.h"
@@ -879,6 +880,7 @@ i965_media_mpeg2_objects(VADriverContextP ctx,
                          struct decode_state *decode_state,
                          struct i965_media_context *media_context)
 {
+    struct i965_mpeg2_context * const i965_mpeg2_context = media_context->private_context;
     struct intel_batchbuffer *batch = media_context->base.batch;
     VASliceParameterBufferMPEG2 *slice_param;
     VAPictureParameterBufferMPEG2 *pic_param;
@@ -886,6 +888,10 @@ i965_media_mpeg2_objects(VADriverContextP ctx,
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferMPEG2 *)decode_state->pic_param->buffer;
+
+    if (i965_mpeg2_context->wa_slice_vertical_position < 0)
+        i965_mpeg2_context->wa_slice_vertical_position =
+            mpeg2_wa_slice_vertical_position(decode_state, pic_param);
 
     for (j = 0; j < decode_state->num_slice_params; j++) {
         assert(decode_state->slice_params[j] && decode_state->slice_params[j]->buffer);
@@ -895,8 +901,9 @@ i965_media_mpeg2_objects(VADriverContextP ctx,
         for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
             int vpos, hpos, is_field_pic = 0;
 
-            if (pic_param->picture_coding_extension.bits.picture_structure == MPEG_TOP_FIELD ||
-                pic_param->picture_coding_extension.bits.picture_structure == MPEG_BOTTOM_FIELD)
+            if (i965_mpeg2_context->wa_slice_vertical_position > 0 &&
+                (pic_param->picture_coding_extension.bits.picture_structure == MPEG_TOP_FIELD ||
+                 pic_param->picture_coding_extension.bits.picture_structure == MPEG_BOTTOM_FIELD))
                 is_field_pic = 1;
 
             assert(slice_param->slice_data_flag == VA_SLICE_DATA_FLAG_ALL);
@@ -970,6 +977,7 @@ i965_media_mpeg2_dec_context_init(VADriverContextP ctx, struct i965_media_contex
     int i;
 
     i965_mpeg2_context = calloc(1, sizeof(struct i965_mpeg2_context));
+    i965_mpeg2_context->wa_slice_vertical_position = -1;
 
     /* kernel */
     assert(NUM_MPEG2_VLD_KERNELS == (sizeof(mpeg2_vld_kernels_gen4) / 

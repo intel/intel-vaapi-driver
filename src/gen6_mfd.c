@@ -1251,20 +1251,22 @@ gen6_mfd_mpeg2_bsd_object(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen6_mfd_context->base.batch;
     unsigned int width_in_mbs = ALIGN(pic_param->horizontal_size, 16) / 16;
-    int mb_count, vpos0, hpos0, vpos1, hpos1, is_field_pic = 0;
+    int mb_count, vpos0, hpos0, vpos1, hpos1, is_field_pic_wa, is_field_pic = 0;
 
     if (pic_param->picture_coding_extension.bits.picture_structure == MPEG_TOP_FIELD ||
         pic_param->picture_coding_extension.bits.picture_structure == MPEG_BOTTOM_FIELD)
         is_field_pic = 1;
+    is_field_pic_wa = is_field_pic &&
+        gen6_mfd_context->wa_mpeg2_slice_vertical_position > 0;
 
-    vpos0 = slice_param->slice_vertical_position / (1 + is_field_pic);
+    vpos0 = slice_param->slice_vertical_position / (1 + is_field_pic_wa);
     hpos0 = slice_param->slice_horizontal_position;
 
     if (next_slice_param == NULL) {
         vpos1 = ALIGN(pic_param->vertical_size, 16) / 16 / (1 + is_field_pic);
         hpos1 = 0;
     } else {
-        vpos1 = next_slice_param->slice_vertical_position / (1 + is_field_pic);
+        vpos1 = next_slice_param->slice_vertical_position / (1 + is_field_pic_wa);
         hpos1 = next_slice_param->slice_horizontal_position;
     }
 
@@ -1311,6 +1313,10 @@ gen6_mfd_mpeg2_decode_picture(VADriverContextP ctx,
     gen6_mfd_bsp_buf_base_addr_state(ctx, decode_state, MFX_FORMAT_MPEG2, gen6_mfd_context);
     gen6_mfd_mpeg2_pic_state(ctx, decode_state, gen6_mfd_context);
     gen6_mfd_mpeg2_qm_state(ctx, decode_state, gen6_mfd_context);
+
+    if (gen6_mfd_context->wa_mpeg2_slice_vertical_position < 0)
+        gen6_mfd_context->wa_mpeg2_slice_vertical_position =
+            mpeg2_wa_slice_vertical_position(decode_state, pic_param);
 
     for (j = 0; j < decode_state->num_slice_params; j++) {
         assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
@@ -2051,6 +2057,8 @@ gen6_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
         gen6_mfd_context->reference_surface[i].surface_id = VA_INVALID_ID;
         gen6_mfd_context->reference_surface[i].frame_store_id = -1;
     }
+
+    gen6_mfd_context->wa_mpeg2_slice_vertical_position = -1;
     
     return (struct hw_context *)gen6_mfd_context;
 }
