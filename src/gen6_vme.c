@@ -49,7 +49,7 @@
 
 #define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7)
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
-#define BINDING_TABLE_OFFSET                    SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6)
+#define BINDING_TABLE_OFFSET(index)             (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * index)
 
 #define VME_INTRA_SHADER        0	
 #define VME_INTER_SHADER        1
@@ -131,96 +131,20 @@ static struct i965_kernel gen7_vme_kernels[] = {
     },
 };
 
-static void
-gen6_vme_set_common_surface_tiling(struct i965_surface_state *ss, unsigned int tiling)
-{
-    switch (tiling) {
-    case I915_TILING_NONE:
-        ss->ss3.tiled_surface = 0;
-        ss->ss3.tile_walk = 0;
-        break;
-    case I915_TILING_X:
-        ss->ss3.tiled_surface = 1;
-        ss->ss3.tile_walk = I965_TILEWALK_XMAJOR;
-        break;
-    case I915_TILING_Y:
-        ss->ss3.tiled_surface = 1;
-        ss->ss3.tile_walk = I965_TILEWALK_YMAJOR;
-        break;
-    }
-}
-
-static void
-gen6_vme_set_source_surface_tiling(struct i965_surface_state2 *ss, unsigned int tiling)
-{
-    switch (tiling) {
-    case I915_TILING_NONE:
-        ss->ss2.tiled_surface = 0;
-        ss->ss2.tile_walk = 0;
-        break;
-    case I915_TILING_X:
-        ss->ss2.tiled_surface = 1;
-        ss->ss2.tile_walk = I965_TILEWALK_XMAJOR;
-        break;
-    case I915_TILING_Y:
-        ss->ss2.tiled_surface = 1;
-        ss->ss2.tile_walk = I965_TILEWALK_YMAJOR;
-        break;
-    }
-}
-
 /* only used for VME source surface state */
-static void gen6_vme_source_surface_state(VADriverContextP ctx,
-                                          int index,
-                                          struct object_surface *obj_surface,
-                                          struct intel_encoder_context *encoder_context)
+static void 
+gen6_vme_source_surface_state(VADriverContextP ctx,
+                              int index,
+                              struct object_surface *obj_surface,
+                              struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct i965_surface_state2 *ss;
-    dri_bo *bo;
-    int w, h, w_pitch, h_pitch;
-    unsigned int tiling, swizzle;
 
-    assert(obj_surface->bo);
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
-
-    w = obj_surface->orig_width;
-    h = obj_surface->orig_height;
-    w_pitch = obj_surface->width;
-    h_pitch = obj_surface->height;
-
-    bo = vme_context->surface_state_binding_table.bo;
-    dri_bo_map(bo, 1);
-    assert(bo->virtual);
-
-    ss = (struct i965_surface_state2 *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    memset(ss, 0, sizeof(*ss));
-
-    ss->ss0.surface_base_address = obj_surface->bo->offset;
-
-    ss->ss1.cbcr_pixel_offset_v_direction = 2;
-    ss->ss1.width = w - 1;
-    ss->ss1.height = h - 1;
-
-    ss->ss2.surface_format = MFX_SURFACE_PLANAR_420_8;
-    ss->ss2.interleave_chroma = 1;
-    ss->ss2.pitch = w_pitch - 1;
-    ss->ss2.half_pitch_for_chroma = 0;
-
-    gen6_vme_set_source_surface_tiling(ss, tiling);
-
-    /* UV offset for interleave mode */
-    ss->ss3.x_offset_for_cb = 0;
-    ss->ss3.y_offset_for_cb = h_pitch;
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 0,
-                      0,
-                      SURFACE_STATE_OFFSET(index) + offsetof(struct i965_surface_state2, ss0),
-                      obj_surface->bo);
-
-    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
-    dri_bo_unmap(bo);
+    vme_context->vme_surface2_setup(ctx,
+                                    &vme_context->gpe_context,
+                                    obj_surface,
+                                    BINDING_TABLE_OFFSET(index),
+                                    SURFACE_STATE_OFFSET(index));
 }
 
 static void
@@ -230,43 +154,15 @@ gen6_vme_media_source_surface_state(VADriverContextP ctx,
                                     struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct i965_surface_state *ss;
-    dri_bo *bo;
-    int w, h, w_pitch;
-    unsigned int tiling, swizzle;
 
-    w = obj_surface->orig_width;
-    h = obj_surface->orig_height;
-    w_pitch = obj_surface->width;
-
-    /* Y plane */
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
-
-    bo = vme_context->surface_state_binding_table.bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-
-    ss = (struct i965_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    memset(ss, 0, sizeof(*ss));
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-    ss->ss1.base_addr = obj_surface->bo->offset;
-    ss->ss2.width = w / 4 - 1;
-    ss->ss2.height = h - 1;
-    ss->ss3.pitch = w_pitch - 1;
-    gen6_vme_set_common_surface_tiling(ss, tiling);
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 
-                      0,
-                      0,
-                      SURFACE_STATE_OFFSET(index) + offsetof(struct i965_surface_state, ss1),
-                      obj_surface->bo);
-
-    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
-    dri_bo_unmap(bo);
+    vme_context->vme_media_rw_surface_setup(ctx,
+                                            &vme_context->gpe_context,
+                                            obj_surface,
+                                            BINDING_TABLE_OFFSET(index),
+                                            SURFACE_STATE_OFFSET(index));
 }
 
-static VAStatus
+static void
 gen6_vme_output_buffer_setup(VADriverContextP ctx,
                              struct encode_state *encode_state,
                              int index,
@@ -275,58 +171,33 @@ gen6_vme_output_buffer_setup(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct i965_surface_state *ss;
-    dri_bo *bo;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    int num_entries;
 
-    if ( is_intra ) {
-        vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs;
-    } else {
-        vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs * 4;
-    }
-    vme_context->vme_output.size_block = 16; /* an OWORD */
-    vme_context->vme_output.pitch = ALIGN(vme_context->vme_output.size_block, 16);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "VME output buffer",
-                      vme_context->vme_output.num_blocks * vme_context->vme_output.pitch,
-                      0x1000);
-    assert(bo);
-    vme_context->vme_output.bo = bo;
+    vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs;
+    vme_context->vme_output.pitch = 16; /* in bytes, always 16 */
 
-    bo = vme_context->surface_state_binding_table.bo;
-    dri_bo_map(bo, 1);
-    assert(bo->virtual);
+    if (is_intra)
+        vme_context->vme_output.size_block = 16; /* in bytes */
+    else
+        vme_context->vme_output.size_block = 64; /* in bytes */
 
-    ss = (struct i965_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    memset(ss, 0, sizeof(*ss));
-
-    /* always use 16 bytes as pitch on Sandy Bridge */
-    num_entries = vme_context->vme_output.num_blocks * vme_context->vme_output.pitch / 16;
-    ss->ss0.render_cache_read_mode = 1;
-    ss->ss0.surface_type = I965_SURFACE_BUFFER;
-    ss->ss1.base_addr = vme_context->vme_output.bo->offset;
-    ss->ss2.width = ((num_entries - 1) & 0x7f);
-    ss->ss2.height = (((num_entries - 1) >> 7) & 0x1fff);
-    ss->ss3.depth = (((num_entries - 1) >> 20) & 0x7f);
-    ss->ss3.pitch = vme_context->vme_output.pitch - 1;
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                      0,
-                      SURFACE_STATE_OFFSET(index) + offsetof(struct i965_surface_state, ss1),
-                      vme_context->vme_output.bo);
-
-
-    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
-    dri_bo_unmap(bo);
-    return VA_STATUS_SUCCESS;
+    vme_context->vme_output.bo = dri_bo_alloc(i965->intel.bufmgr, 
+                                              "VME output buffer",
+                                              vme_context->vme_output.num_blocks * vme_context->vme_output.size_block,
+                                              0x1000);
+    assert(vme_context->vme_output.bo);
+    vme_context->vme_buffer_suface_setup(ctx,
+                                         &vme_context->gpe_context,
+                                         &vme_context->vme_output,
+                                         BINDING_TABLE_OFFSET(index),
+                                         SURFACE_STATE_OFFSET(index));
 }
 
-static VAStatus
+static void
 gen6_vme_output_vme_batchbuffer_setup(VADriverContextP ctx,
                                       struct encode_state *encode_state,
                                       int index,
@@ -335,57 +206,29 @@ gen6_vme_output_vme_batchbuffer_setup(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct i965_surface_state *ss;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    int num_entries;
-    dri_bo *bo;
 
     vme_context->vme_batchbuffer.num_blocks = width_in_mbs * height_in_mbs + 1;
     vme_context->vme_batchbuffer.size_block = 32; /* 2 OWORDs */
     vme_context->vme_batchbuffer.pitch = 16;
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "VME batchbuffer",
-                      vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block,
-                      0x1000);
-    assert(bo);
-    vme_context->vme_batchbuffer.bo = bo;
-
-    bo = vme_context->surface_state_binding_table.bo;
-    dri_bo_map(bo, 1);
-    assert(bo->virtual);
-
-    ss = (struct i965_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    memset(ss, 0, sizeof(*ss));
-
-    num_entries = vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block / vme_context->vme_batchbuffer.pitch;
-
-    ss->ss0.render_cache_read_mode = 1;
-    ss->ss0.surface_type = I965_SURFACE_BUFFER;
-
-    ss->ss1.base_addr = vme_context->vme_batchbuffer.bo->offset;
-
-    ss->ss2.width = ((num_entries - 1) & 0x7f);
-    ss->ss2.height = (((num_entries - 1) >> 7) & 0x1fff);
-    ss->ss3.depth = (((num_entries - 1) >> 20) & 0x7f);
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                      0,
-                      SURFACE_STATE_OFFSET(index) + offsetof(struct i965_surface_state, ss1),
-                      vme_context->vme_batchbuffer.bo);
-
-    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
-    dri_bo_unmap(bo);
-
-    return VA_STATUS_SUCCESS;
+    vme_context->vme_batchbuffer.bo = dri_bo_alloc(i965->intel.bufmgr, 
+                                                   "VME batchbuffer",
+                                                   vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block,
+                                                   0x1000);
+    vme_context->vme_buffer_suface_setup(ctx,
+                                         &vme_context->gpe_context,
+                                         &vme_context->vme_batchbuffer,
+                                         BINDING_TABLE_OFFSET(index),
+                                         SURFACE_STATE_OFFSET(index));
 }
 
-static VAStatus gen6_vme_surface_setup(VADriverContextP ctx, 
-                                       struct encode_state *encode_state,
-                                       int is_intra,
-                                       struct intel_encoder_context *encoder_context)
+static VAStatus
+gen6_vme_surface_setup(VADriverContextP ctx, 
+                       struct encode_state *encode_state,
+                       int is_intra,
+                       struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
@@ -398,323 +241,23 @@ static VAStatus gen6_vme_surface_setup(VADriverContextP ctx,
     gen6_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen6_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
 
-    if ( ! is_intra ) {
-        /* reference 0 */
-        obj_surface = SURFACE(pPicParameter->ReferenceFrames[0].picture_id);
-        assert(obj_surface);
-		if ( obj_surface->bo != NULL)
-			gen6_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
-		/* reference 1 */
-		obj_surface = SURFACE(pPicParameter->ReferenceFrames[1].picture_id);
-		assert(obj_surface);
-		if ( obj_surface->bo != NULL ) 
-			gen6_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
-    }
-
-    /* VME output */
-    gen6_vme_output_buffer_setup(ctx, encode_state, 3, encoder_context);
-    gen6_vme_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
-
-    return VA_STATUS_SUCCESS;
-}
-
-/*
- * Surface state for IvyBridge
- */
-static void
-gen7_vme_set_common_surface_tiling(struct gen7_surface_state *ss, unsigned int tiling)
-{
-    switch (tiling) {
-    case I915_TILING_NONE:
-        ss->ss0.tiled_surface = 0;
-        ss->ss0.tile_walk = 0;
-        break;
-    case I915_TILING_X:
-        ss->ss0.tiled_surface = 1;
-        ss->ss0.tile_walk = I965_TILEWALK_XMAJOR;
-        break;
-    case I915_TILING_Y:
-        ss->ss0.tiled_surface = 1;
-        ss->ss0.tile_walk = I965_TILEWALK_YMAJOR;
-        break;
-    }
-}
-
-static void
-gen7_vme_set_source_surface_tiling(struct gen7_surface_state2 *ss, unsigned int tiling)
-{
-    switch (tiling) {
-    case I915_TILING_NONE:
-        ss->ss2.tiled_surface = 0;
-        ss->ss2.tile_walk = 0;
-        break;
-    case I915_TILING_X:
-        ss->ss2.tiled_surface = 1;
-        ss->ss2.tile_walk = I965_TILEWALK_XMAJOR;
-        break;
-    case I915_TILING_Y:
-        ss->ss2.tiled_surface = 1;
-        ss->ss2.tile_walk = I965_TILEWALK_YMAJOR;
-        break;
-    }
-}
-
-/* only used for VME source surface state */
-static void gen7_vme_source_surface_state(VADriverContextP ctx,
-                                          int index,
-                                          struct object_surface *obj_surface,
-                                          struct intel_encoder_context *encoder_context)
-{
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct gen7_surface_state2 *ss;
-    dri_bo *bo;
-    int w, h, w_pitch, h_pitch;
-    unsigned int tiling, swizzle;
-
-    assert(obj_surface->bo);
-
-    w = obj_surface->orig_width;
-    h = obj_surface->orig_height;
-    w_pitch = obj_surface->width;
-    h_pitch = obj_surface->height;
-
-    bo = vme_context->surface_state_binding_table.bo;
-    dri_bo_map(bo, 1);
-    assert(bo->virtual);
-
-    ss = (struct gen7_surface_state2 *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    memset(ss, 0, sizeof(*ss));
-
-    ss->ss0.surface_base_address = obj_surface->bo->offset;
-
-    ss->ss1.cbcr_pixel_offset_v_direction = 2;
-    ss->ss1.width = w - 1;
-    ss->ss1.height = h - 1;
-
-    ss->ss2.surface_format = MFX_SURFACE_PLANAR_420_8;
-    ss->ss2.interleave_chroma = 1;
-    ss->ss2.pitch = w_pitch - 1;
-    ss->ss2.half_pitch_for_chroma = 0;
-
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
-    gen7_vme_set_source_surface_tiling(ss, tiling);
-
-    /* UV offset for interleave mode */
-    ss->ss3.x_offset_for_cb = 0;
-    ss->ss3.y_offset_for_cb = h_pitch;
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 0,
-                      0,
-                      SURFACE_STATE_OFFSET(index) + offsetof(struct gen7_surface_state2, ss0),
-                      obj_surface->bo);
-
-    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
-    dri_bo_unmap(bo);
-}
-
-static void
-gen7_vme_media_source_surface_state(VADriverContextP ctx,
-                                    int index,
-                                    struct object_surface *obj_surface,
-                                    struct intel_encoder_context *encoder_context)
-{
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct gen7_surface_state *ss;
-    dri_bo *bo;
-    int w, h, w_pitch;
-    unsigned int tiling, swizzle;
-
-    /* Y plane */
-    w = obj_surface->orig_width;
-    h = obj_surface->orig_height;
-    w_pitch = obj_surface->width;
-
-    bo = vme_context->surface_state_binding_table.bo;
-    dri_bo_map(bo, True);
-    assert(bo->virtual);
-
-    ss = (struct gen7_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    memset(ss, 0, sizeof(*ss));
-
-    ss->ss0.surface_type = I965_SURFACE_2D;
-    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
-
-    ss->ss1.base_addr = obj_surface->bo->offset;
-
-    ss->ss2.width = w / 4 - 1;
-    ss->ss2.height = h - 1;
-
-    ss->ss3.pitch = w_pitch - 1;
-
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
-    gen7_vme_set_common_surface_tiling(ss, tiling);
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 0,
-                      0,
-                      SURFACE_STATE_OFFSET(index) + offsetof(struct gen7_surface_state, ss1),
-                      obj_surface->bo);
-
-    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
-    dri_bo_unmap(bo);
-}
-
-static VAStatus
-gen7_vme_output_buffer_setup(VADriverContextP ctx,
-                             struct encode_state *encode_state,
-                             int index,
-                             struct intel_encoder_context *encoder_context)
-
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct gen7_surface_state *ss;
-    dri_bo *bo;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
-    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
-    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
-    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    int num_entries;
-
-    if ( is_intra ) {
-        vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs;
-    } else {
-        vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs * 4;
-    }
-    vme_context->vme_output.size_block = 16; /* an OWORD */
-    vme_context->vme_output.pitch = ALIGN(vme_context->vme_output.size_block, 16);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "VME output buffer",
-                      vme_context->vme_output.num_blocks * vme_context->vme_output.pitch,
-                      0x1000);
-    assert(bo);
-    vme_context->vme_output.bo = bo;
-
-    bo = vme_context->surface_state_binding_table.bo;
-    dri_bo_map(bo, 1);
-    assert(bo->virtual);
-
-    ss = (struct gen7_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    memset(ss, 0, sizeof(*ss));
-
-    /* always use 16 bytes as pitch on Sandy Bridge */
-    num_entries = vme_context->vme_output.num_blocks * vme_context->vme_output.pitch / 16;
-
-    ss->ss0.surface_type = I965_SURFACE_BUFFER;
-
-    ss->ss1.base_addr = vme_context->vme_output.bo->offset;
-
-    ss->ss2.width = ((num_entries - 1) & 0x7f);
-    ss->ss2.height = (((num_entries - 1) >> 7) & 0x3fff);
-    ss->ss3.depth = (((num_entries - 1) >> 21) & 0x3f);
-
-    ss->ss3.pitch = vme_context->vme_output.pitch - 1;
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                      0,
-                      SURFACE_STATE_OFFSET(index) + offsetof(struct gen7_surface_state, ss1),
-                      vme_context->vme_output.bo);
-
-    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
-    dri_bo_unmap(bo);
-
-    return VA_STATUS_SUCCESS;
-}
-
-static VAStatus
-gen7_vme_output_vme_batchbuffer_setup(VADriverContextP ctx,
-                                      struct encode_state *encode_state,
-                                      int index,
-                                      struct intel_encoder_context *encoder_context)
-
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct gen7_surface_state *ss;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
-    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    int num_entries;
-    dri_bo *bo;
-
-    vme_context->vme_batchbuffer.num_blocks = width_in_mbs * height_in_mbs + 1;
-    vme_context->vme_batchbuffer.size_block = 32; /* an OWORD */
-    vme_context->vme_batchbuffer.pitch = 16;
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "VME batchbuffer",
-                      vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block,
-                      0x1000);
-    assert(bo);
-    vme_context->vme_batchbuffer.bo = bo;
-
-    bo = vme_context->surface_state_binding_table.bo;
-    dri_bo_map(bo, 1);
-    assert(bo->virtual);
-
-    ss = (struct gen7_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    memset(ss, 0, sizeof(*ss));
-
-    num_entries = vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block / vme_context->vme_batchbuffer.pitch;
-
-    ss->ss0.render_cache_read_write = 1;
-    ss->ss0.surface_type = I965_SURFACE_BUFFER;
-
-    ss->ss1.base_addr = vme_context->vme_batchbuffer.bo->offset;
-
-    ss->ss2.width = ((num_entries - 1) & 0x7f);
-    ss->ss2.height = (((num_entries - 1) >> 7) & 0x3fff);
-    ss->ss3.depth = (((num_entries - 1) >> 21) & 0x3f);
-
-    ss->ss3.pitch = vme_context->vme_batchbuffer.pitch - 1;
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                      0,
-                      SURFACE_STATE_OFFSET(index) + offsetof(struct gen7_surface_state, ss1),
-                      vme_context->vme_batchbuffer.bo);
-
-    ((unsigned int *)((char *)bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
-    dri_bo_unmap(bo);
-
-    return VA_STATUS_SUCCESS;
-}
-
-static VAStatus gen7_vme_surface_setup(VADriverContextP ctx, 
-                                       struct encode_state *encode_state,
-                                       int is_intra,
-                                       struct intel_encoder_context *encoder_context)
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface *obj_surface;
-    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
-
-    /*Setup surfaces state*/
-    /* current picture for encoding */
-    obj_surface = SURFACE(encoder_context->input_yuv_surface);
-    assert(obj_surface);
-    gen7_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
-    gen7_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
-
     if (!is_intra) {
         /* reference 0 */
         obj_surface = SURFACE(pPicParameter->ReferenceFrames[0].picture_id);
         assert(obj_surface);
         if ( obj_surface->bo != NULL)
-            gen7_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
+            gen6_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
 
         /* reference 1 */
         obj_surface = SURFACE(pPicParameter->ReferenceFrames[1].picture_id);
         assert(obj_surface);
         if ( obj_surface->bo != NULL ) 
-            gen7_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
+            gen6_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
     }
 
     /* VME output */
-    gen7_vme_output_buffer_setup(ctx, encode_state, 3, encoder_context);
-    gen7_vme_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
+    gen6_vme_output_buffer_setup(ctx, encode_state, 3, encoder_context);
+    gen6_vme_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
 
     return VA_STATUS_SUCCESS;
 }
@@ -728,14 +271,14 @@ static VAStatus gen6_vme_interface_setup(VADriverContextP ctx,
     int i;
     dri_bo *bo;
 
-    bo = vme_context->idrt.bo;
+    bo = vme_context->gpe_context.idrt.bo;
     dri_bo_map(bo, 1);
     assert(bo->virtual);
     desc = bo->virtual;
 
     for (i = 0; i < GEN6_VME_KERNEL_NUMBER; i++) {
         struct i965_kernel *kernel;
-        kernel = &vme_context->vme_kernels[i];
+        kernel = &vme_context->gpe_context.kernels[i];
         assert(sizeof(*desc) == 32);
         /*Setup the descritor table*/
         memset(desc, 0, sizeof(*desc));
@@ -743,7 +286,7 @@ static VAStatus gen6_vme_interface_setup(VADriverContextP ctx,
         desc->desc2.sampler_count = 1; /* FIXME: */
         desc->desc2.sampler_state_pointer = (vme_context->vme_state.bo->offset >> 5);
         desc->desc3.binding_table_entry_count = 1; /* FIXME: */
-        desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
+        desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET(0) >> 5);
         desc->desc4.constant_urb_entry_read_offset = 0;
         desc->desc4.constant_urb_entry_read_length = CURBE_URB_ENTRY_LENGTH;
  		
@@ -773,13 +316,13 @@ static VAStatus gen6_vme_constant_setup(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     // unsigned char *constant_buffer;
 
-    dri_bo_map(vme_context->curbe.bo, 1);
-    assert(vme_context->curbe.bo->virtual);
+    dri_bo_map(vme_context->gpe_context.curbe.bo, 1);
+    assert(vme_context->gpe_context.curbe.bo->virtual);
     // constant_buffer = vme_context->curbe.bo->virtual;
 	
     /*TODO copy buffer into CURB*/
 
-    dri_bo_unmap( vme_context->curbe.bo);
+    dri_bo_unmap( vme_context->gpe_context.curbe.bo);
 
     return VA_STATUS_SUCCESS;
 }
@@ -821,97 +364,6 @@ static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,
 
     dri_bo_unmap( vme_context->vme_state.bo);
     return VA_STATUS_SUCCESS;
-}
-
-static void gen6_vme_pipeline_select(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
-{
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-
-    BEGIN_BATCH(batch, 1);
-    OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_MEDIA);
-    ADVANCE_BATCH(batch);
-}
-
-static void gen6_vme_state_base_address(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
-{
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-
-    BEGIN_BATCH(batch, 10);
-
-    OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | 8);
-
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//General State Base Address
-    OUT_RELOC(batch, vme_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Dynamic State Base Address
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Indirect Object Base Address
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Instruction Base Address
-
-    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//General State Access Upper Bound	
-    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Dynamic State Access Upper Bound
-    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Indirect Object Access Upper Bound
-    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Instruction Access Upper Bound
-
-    /*
-      OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//LLC Coherent Base Address
-      OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY );		//LLC Coherent Upper Bound
-    */
-
-    ADVANCE_BATCH(batch);
-}
-
-static void gen6_vme_vfe_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
-{
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-
-    BEGIN_BATCH(batch, 8);
-
-    OUT_BATCH(batch, CMD_MEDIA_VFE_STATE | 6);					/*Gen6 CMD_MEDIA_STATE_POINTERS = CMD_MEDIA_STATE */
-    OUT_BATCH(batch, 0);												/*Scratch Space Base Pointer and Space*/
-    OUT_BATCH(batch, (vme_context->vfe_state.max_num_threads << 16) 
-              | (vme_context->vfe_state.num_urb_entries << 8) 
-              | (vme_context->vfe_state.gpgpu_mode << 2) );	/*Maximum Number of Threads , Number of URB Entries, MEDIA Mode*/
-    OUT_BATCH(batch, 0);												/*Debug: Object ID*/
-    OUT_BATCH(batch, (vme_context->vfe_state.urb_entry_size << 16) 
-              | vme_context->vfe_state.curbe_allocation_size);				/*URB Entry Allocation Size , CURBE Allocation Size*/
-    OUT_BATCH(batch, 0);											/*Disable Scoreboard*/
-    OUT_BATCH(batch, 0);											/*Disable Scoreboard*/
-    OUT_BATCH(batch, 0);											/*Disable Scoreboard*/
-	
-    ADVANCE_BATCH(batch);
-
-}
-
-static void gen6_vme_curbe_load(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
-{
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-
-    BEGIN_BATCH(batch, 4);
-
-    OUT_BATCH(batch, CMD_MEDIA_CURBE_LOAD | 2);
-    OUT_BATCH(batch, 0);
-
-    OUT_BATCH(batch, CURBE_TOTAL_DATA_LENGTH);
-    OUT_RELOC(batch, vme_context->curbe.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
-
-    ADVANCE_BATCH(batch);
-}
-
-static void gen6_vme_idrt(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
-{
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-
-    BEGIN_BATCH(batch, 4);
-
-    OUT_BATCH(batch, CMD_MEDIA_INTERFACE_LOAD | 2);	
-    OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, GEN6_VME_KERNEL_NUMBER * sizeof(struct gen6_interface_descriptor_data));
-    OUT_RELOC(batch, vme_context->idrt.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
-
-    ADVANCE_BATCH(batch);
 }
 
 static void
@@ -996,29 +448,7 @@ static void gen6_vme_media_init(VADriverContextP ctx, struct intel_encoder_conte
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     dri_bo *bo;
 
-    /* constant buffer */
-    dri_bo_unreference(vme_context->curbe.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "Buffer",
-                      CURBE_TOTAL_DATA_LENGTH, 64);
-    assert(bo);
-    vme_context->curbe.bo = bo;
-
-    dri_bo_unreference(vme_context->surface_state_binding_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "surface state & binding table",
-                      (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6,
-                      4096);
-    assert(bo);
-    vme_context->surface_state_binding_table.bo = bo;
-
-    /* interface descriptor remapping table */
-    dri_bo_unreference(vme_context->idrt.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "Buffer", 
-                      MAX_INTERFACE_DESC_GEN6 * sizeof(struct gen6_interface_descriptor_data), 16);
-    assert(bo);
-    vme_context->idrt.bo = bo;
+    i965_gpe_context_init(ctx, &vme_context->gpe_context);
 
     /* VME output buffer */
     dri_bo_unreference(vme_context->vme_output.bo);
@@ -1034,12 +464,6 @@ static void gen6_vme_media_init(VADriverContextP ctx, struct intel_encoder_conte
                       1024*16, 64);
     assert(bo);
     vme_context->vme_state.bo = bo;
-
-    vme_context->vfe_state.max_num_threads = 60 - 1;
-    vme_context->vfe_state.num_urb_entries = 16;
-    vme_context->vfe_state.gpgpu_mode = 0;
-    vme_context->vfe_state.urb_entry_size = 59 - 1;
-    vme_context->vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
 }
 
 static void gen6_vme_pipeline_programing(VADriverContextP ctx, 
@@ -1057,31 +481,14 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
 
-    intel_batchbuffer_emit_mi_flush(batch);
-
-    /*Step2: State command PIPELINE_SELECT*/
-    gen6_vme_pipeline_select(ctx, encoder_context);
-
-    /*Step3: State commands configuring pipeline states*/
-    gen6_vme_state_base_address(ctx, encoder_context);
-    gen6_vme_vfe_state(ctx, encoder_context);
-    gen6_vme_curbe_load(ctx, encoder_context);
-    gen6_vme_idrt(ctx, encoder_context);
-
+    gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
     gen6_vme_fill_vme_batchbuffer(ctx, 
                                   encode_state,
                                   width_in_mbs, height_in_mbs,
                                   is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
                                   pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
                                   encoder_context);
-
-    intel_batchbuffer_emit_mi_flush(batch);
-
-    gen6_vme_state_base_address(ctx, encoder_context);
-    gen6_vme_vfe_state(ctx, encoder_context);
-    gen6_vme_curbe_load(ctx, encoder_context);
-    gen6_vme_idrt(ctx, encoder_context);
-
+    gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
     OUT_RELOC(batch,
@@ -1097,17 +504,12 @@ static VAStatus gen6_vme_prepare(VADriverContextP ctx,
                                  struct encode_state *encode_state,
                                  struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
 	
     /*Setup all the memory object*/
-    if (IS_GEN7(i965->intel.device_id))
-        gen7_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
-    else
-        gen6_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
-
+    gen6_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
     gen6_vme_interface_setup(ctx, encode_state, encoder_context);
     gen6_vme_constant_setup(ctx, encode_state, encoder_context);
     gen6_vme_vme_state_setup(ctx, encode_state, is_intra, encoder_context);
@@ -1154,16 +556,8 @@ static void
 gen6_vme_context_destroy(void *context)
 {
     struct gen6_vme_context *vme_context = context;
-    int i;
 
-    dri_bo_unreference(vme_context->idrt.bo);
-    vme_context->idrt.bo = NULL;
-
-    dri_bo_unreference(vme_context->surface_state_binding_table.bo);
-    vme_context->surface_state_binding_table.bo = NULL;
-
-    dri_bo_unreference(vme_context->curbe.bo);
-    vme_context->curbe.bo = NULL;
+    i965_gpe_context_destroy(&vme_context->gpe_context);
 
     dri_bo_unreference(vme_context->vme_output.bo);
     vme_context->vme_output.bo = NULL;
@@ -1174,14 +568,6 @@ gen6_vme_context_destroy(void *context)
     dri_bo_unreference(vme_context->vme_batchbuffer.bo);
     vme_context->vme_batchbuffer.bo = NULL;
 
-    for (i = 0; i < GEN6_VME_KERNEL_NUMBER; i++) {
-        /*Load kernel into GPU memory*/	
-        struct i965_kernel *kernel = &vme_context->vme_kernels[i];
-
-        dri_bo_unreference(kernel->bo);
-        kernel->bo = NULL;
-    }
-
     free(vme_context);
 }
 
@@ -1189,23 +575,36 @@ Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_vme_context *vme_context = calloc(1, sizeof(struct gen6_vme_context));
-    int i;
 
-    if (IS_GEN7(i965->intel.device_id))
-        memcpy(vme_context->vme_kernels, gen7_vme_kernels, sizeof(vme_context->vme_kernels));
-    else
-        memcpy(vme_context->vme_kernels, gen6_vme_kernels, sizeof(vme_context->vme_kernels));
+    vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
-    for (i = 0; i < GEN6_VME_KERNEL_NUMBER; i++) {
-        /*Load kernel into GPU memory*/	
-        struct i965_kernel *kernel = &vme_context->vme_kernels[i];
+    vme_context->gpe_context.idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
+    vme_context->gpe_context.idrt.entry_size = sizeof(struct gen6_interface_descriptor_data);
 
-        kernel->bo = dri_bo_alloc(i965->intel.bufmgr, 
-                                  kernel->name, 
-                                  kernel->size,
-                                  0x1000);
-        assert(kernel->bo);
-        dri_bo_subdata(kernel->bo, 0, kernel->size, kernel->bin);
+    vme_context->gpe_context.curbe.length = CURBE_TOTAL_DATA_LENGTH;
+
+    vme_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
+    vme_context->gpe_context.vfe_state.num_urb_entries = 16;
+    vme_context->gpe_context.vfe_state.gpgpu_mode = 0;
+    vme_context->gpe_context.vfe_state.urb_entry_size = 59 - 1;
+    vme_context->gpe_context.vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
+
+    if (IS_GEN7(i965->intel.device_id)) {
+        i965_gpe_load_kernels(ctx,
+                              &vme_context->gpe_context,
+                              gen7_vme_kernels,
+                              GEN6_VME_KERNEL_NUMBER);
+        vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
+        vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
+        vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;
+    } else {
+        i965_gpe_load_kernels(ctx,
+                              &vme_context->gpe_context,
+                              gen6_vme_kernels,
+                              GEN6_VME_KERNEL_NUMBER);
+        vme_context->vme_surface2_setup = i965_gpe_surface2_setup;
+        vme_context->vme_media_rw_surface_setup = i965_gpe_media_rw_surface_setup;
+        vme_context->vme_buffer_suface_setup = i965_gpe_buffer_suface_setup;
     }
 
     encoder_context->vme_context = vme_context;

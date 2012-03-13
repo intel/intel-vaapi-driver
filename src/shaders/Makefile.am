@@ -1,4 +1,4 @@
-SUBDIRS = h264 mpeg2 render post_processing vme
+SUBDIRS = h264 mpeg2 render post_processing vme utils
 
 EXTRA_DIST = gpp.py
 

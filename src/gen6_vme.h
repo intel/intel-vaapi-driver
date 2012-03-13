@@ -34,8 +34,9 @@
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
 
+#include "i965_gpe_utils.h"
 
-#define MAX_INTERFACE_DESC_GEN6      32
+#define MAX_INTERFACE_DESC_GEN6      MAX_GPE_KERNELS
 #define MAX_MEDIA_SURFACES_GEN6      34
 
 #define GEN6_VME_KERNEL_NUMBER          3
@@ -45,45 +46,31 @@ struct intel_encoder_context;
 
 struct gen6_vme_context
 {
-    struct {
-        dri_bo *bo;
-    } surface_state_binding_table;
-
-    struct {
-        dri_bo *bo;
-    } idrt;  /* interface descriptor remap table */
-
-    struct {
-        dri_bo *bo;
-    } curbe;
-
-    struct {
-        unsigned int gpgpu_mode:1;
-        unsigned int max_num_threads:16;
-        unsigned int num_urb_entries:8;
-        unsigned int urb_entry_size:16;
-        unsigned int curbe_allocation_size:16;
-    } vfe_state;
+    struct i965_gpe_context gpe_context;
 
     struct {
         dri_bo *bo;
     } vme_state;
 
-    struct {
-        dri_bo *bo;
-        unsigned int num_blocks;
-        unsigned int size_block; /* in bytes */
-        unsigned int pitch;
-    } vme_output;
+    struct i965_buffer_surface vme_output;
+    struct i965_buffer_surface vme_batchbuffer;
 
-    struct {
-        dri_bo *bo;
-        unsigned int num_blocks;
-        unsigned int size_block;
-        unsigned int pitch;
-    } vme_batchbuffer;
 
-    struct i965_kernel vme_kernels[GEN6_VME_KERNEL_NUMBER];
+    void (*vme_surface2_setup)(VADriverContextP ctx,
+                                struct i965_gpe_context *gpe_context,
+                                struct object_surface *obj_surface,
+                                unsigned long binding_table_offset,
+                                unsigned long surface_state_offset);
+    void (*vme_media_rw_surface_setup)(VADriverContextP ctx,
+                                            struct i965_gpe_context *gpe_context,
+                                            struct object_surface *obj_surface,
+                                            unsigned long binding_table_offset,
+                                            unsigned long surface_state_offset);
+    void (*vme_buffer_suface_setup)(VADriverContextP ctx,
+                                    struct i965_gpe_context *gpe_context,
+                                    struct i965_buffer_surface *buffer_surface,
+                                    unsigned long binding_table_offset,
+                                    unsigned long surface_state_offset);
 };
 
 #endif /* _GEN6_VME_H_ */
