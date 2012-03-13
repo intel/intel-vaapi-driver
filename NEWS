@@ -2,6 +2,7 @@ libva-driver-intel NEWS -- summary of changes.  2012-03-DD
 Copyright (C) 2009-2011 Intel Corporation
 
 Version 1.0.17 - DD.Mar.2012
+* Fix weighted prediction indicator for Sandy Bridge
 * Fix and simplify first macroblock bit offset calculation (ILK, SNB, IVB)
 
 Version 1.0.16 - 14.Feb.2012

@@ -708,7 +708,7 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
     } else {
         num_ref_idx_l0 = slice_param->num_ref_idx_l0_active_minus1 + 1;
         num_ref_idx_l1 = slice_param->num_ref_idx_l1_active_minus1 + 1;
-        weighted_pred_idc = (pic_param->pic_fields.bits.weighted_bipred_idc == 1);
+        weighted_pred_idc = pic_param->pic_fields.bits.weighted_bipred_idc;
     }
 
     first_mb_in_slice = slice_param->first_mb_in_slice << mbaff_picture;
