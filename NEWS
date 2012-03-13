@@ -4,6 +4,7 @@ Copyright (C) 2009-2011 Intel Corporation
 Version 1.0.16 - DD.Feb.2012
 * Fix VC-1 bitplane buffer size (SNB, IVB)
 * Fix VC-1 motion vector modes for Ivy Bridge
+* Fix weighted prediction indicator for Sandy Bridge
 * Fix MFX_QM_STATE for H.264 flat scaling lists (IVB)
 * Fix and simplify AVC_REF_IDX_STATE setup (ILK, SNB, IVB)
 * Fix and simplify first macroblock bit offset calculation (ILK, SNB, IVB)
