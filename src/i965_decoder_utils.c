@@ -73,7 +73,7 @@ avc_get_first_mb_bit_offset_with_epb(
 
     header_size = slice_param->slice_data_bit_offset / 8;
     data_size   = slice_param->slice_data_size - slice_param->slice_data_offset;
-    buf_size    = (header_size * 4 + 2) / 3; /* max possible header size */
+    buf_size    = (header_size * 3 + 1) / 2; // Max possible header size (x1.5)
     if (buf_size > data_size)
         buf_size = data_size;
 
