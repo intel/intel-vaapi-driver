@@ -698,6 +698,10 @@
 #define MFX_SURFACE_PLANAR_422_8        6
 #define MFX_SURFACE_MONOCHROME          12
 
+#define MPEG_I_PICTURE          1
+#define MPEG_P_PICTURE          2
+#define MPEG_B_PICTURE          3
+
 #define MPEG_TOP_FIELD		1
 #define MPEG_BOTTOM_FIELD	2
 #define MPEG_FRAME		3
