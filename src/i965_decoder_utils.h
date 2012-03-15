@@ -36,6 +36,14 @@ mpeg2_wa_slice_vertical_position(
 );
 
 void
+mpeg2_set_reference_surfaces(
+    VADriverContextP               ctx,
+    GenFrameStore                  ref_frames[MAX_GEN_REFERENCE_FRAMES],
+    struct decode_state           *decode_state,
+    VAPictureParameterBufferMPEG2 *pic_param
+);
+
+void
 avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix);
 
 void

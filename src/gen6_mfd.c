@@ -1101,7 +1101,6 @@ gen6_mfd_mpeg2_decode_init(VADriverContextP ctx,
     VAPictureParameterBufferMPEG2 *pic_param;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
-    int i;
     dri_bo *bo;
     unsigned int width_in_mbs;
 
@@ -1109,24 +1108,12 @@ gen6_mfd_mpeg2_decode_init(VADriverContextP ctx,
     pic_param = (VAPictureParameterBufferMPEG2 *)decode_state->pic_param->buffer;
     width_in_mbs = ALIGN(pic_param->horizontal_size, 16) / 16;
 
-    /* reference picture */
-    obj_surface = SURFACE(pic_param->forward_reference_picture);
-
-    if (obj_surface && obj_surface->bo)
-        gen6_mfd_context->reference_surface[0].surface_id = pic_param->forward_reference_picture;
-    else
-        gen6_mfd_context->reference_surface[0].surface_id = VA_INVALID_ID;
-
-    obj_surface = SURFACE(pic_param->backward_reference_picture);
-
-    if (obj_surface && obj_surface->bo)
-        gen6_mfd_context->reference_surface[1].surface_id = pic_param->backward_reference_picture;
-    else
-        gen6_mfd_context->reference_surface[1].surface_id = gen6_mfd_context->reference_surface[0].surface_id;
-
-    /* must do so !!! */
-    for (i = 2; i < ARRAY_ELEMS(gen6_mfd_context->reference_surface); i++)
-        gen6_mfd_context->reference_surface[i].surface_id = gen6_mfd_context->reference_surface[i % 2].surface_id;
+    mpeg2_set_reference_surfaces(
+        ctx,
+        gen6_mfd_context->reference_surface,
+        decode_state,
+        pic_param
+    );
 
     /* Current decoded picture */
     obj_surface = SURFACE(decode_state->current_render_target);
