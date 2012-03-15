@@ -21,34 +21,40 @@
 __INTER_START:
 mov  (16) tmp_reg0.0<1>:UD      0x0:UD {align1};
 mov  (16) tmp_reg2.0<1>:UD      0x0:UD {align1};
+mov  (16) tmp_reg3.0<1>:UD      0x0:UD {align1};
 
+shl  (2) vme_m0.8<1>:UW         orig_xy_ub<2,2,1>:UB 4:UW {align1};    /* Source =  (x, y) * 16 */
+        
+#ifdef DEV_SNB        
+shl  (2) vme_m0.0<1>:UW         orig_xy_ub<2,2,1>:UB 4:UW {align1};	
+add  (1) vme_m0.0<1>:W          vme_m0.0<2,2,1>:W -16:W {align1};		/* Reference = (x-16,y-12)-(x+32,y+24) */
+add  (1) vme_m0.2<1>:W          vme_m0.2<2,2,1>:W -12:W {align1};
+#else
+mov  (1) vme_m0.0<1>:W          -16:W {align1} ;                /* Reference = (x-16,y-12)-(x+32,y+24) */
+mov  (1) vme_m0.2<1>:W          -12:W {align1} ;
+#endif
+        
+mov  (1) vme_m0.12<1>:UD        INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};    /* 16x16 Source, 1/4 pixel, harr */
+mov  (1) vme_m0.20<1>:UB        thread_id_ub {align1};                  /* dispatch id */
+mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};               /* Reference Width&Height, 32x32 */
+
+mov  (1) vme_m1.4<1>:UD         MAX_NUM_MV:UD {align1};                                   /* Default value MAX 32 MVs */
+mov  (1) vme_m1.8<1>:UD         SEARCH_PATH_LEN:UD {align1};
+
+mul  (1) obw_m0.8<1>:UD         w_in_mb_uw<0,1,0>:UW orig_y_ub<0,1,0>:UB {align1};
+add  (1) obw_m0.8<1>:UD         obw_m0.8<0,1,0>:UD orig_x_ub<0,1,0>:UB {align1};
+shl  (1) obw_m0.8<1>:UD         obw_m0.8<0,1,0>:UD 0x2:UD {align1};
+mov  (1) obw_m0.20<1>:UB        thread_id_ub {align1};                  /* dispatch id */
+        
 /*
  * VME message
  */
-/* m0 */        
-mul  (2) tmp_reg0.8<1>:UW       orig_xy_ub<2,2,1>:UB 16:UW {align1};    /* Source =  (x, y) * 16 */
-        
-#ifdef DEV_SNB        
-mul  (2) tmp_reg0.0<1>:UW       orig_xy_ub<2,2,1>:UB 16:UW {align1};	
-add  (1) tmp_reg0.0<1>:W        tmp_reg0.0<2,2,1>:W -16:W {align1};		/* Reference = (x-16,y-12)-(x+32,y+24) */
-add  (1) tmp_reg0.2<1>:W        tmp_reg0.2<2,2,1>:W -12:W {align1};
-#else
-mov  (1) tmp_reg0.0<1>:W        -16:W {align1} ;                /* Reference = (x-16,y-12)-(x+32,y+24) */
-mov  (1) tmp_reg0.2<1>:W        -12:W {align1} ;
-#endif
-        
-mov  (1) tmp_reg0.12<1>:UD      INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};    /* 16x16 Source, 1/4 pixel, harr */
-        
-
-mov  (1) tmp_reg0.20<1>:UB      thread_id_ub {align1};                  /* dispatch id */
-mov  (1) tmp_reg0.22<1>:UW      REF_REGION_SIZE {align1};               /* Reference Width&Height, 32x32 */
-mov  (8) vme_msg_0.0<1>:UD      tmp_reg0.0<8,8,1>:UD {align1};
+/* m0 */
+__VME_LOOP:     
+mov  (8) vme_msg_0.0<1>:UD      vme_m0.0<8,8,1>:UD {align1};
         
 /* m1 */
-mov  (1) tmp_reg1.4<1>:UD       MAX_NUM_MV:UD {align1};                                   /* Default value MAX 32 MVs */
-mov  (1) tmp_reg1.8<1>:UD       SEARCH_PATH_LEN:UD {align1};
-
-mov  (8) vme_msg_1<1>:UD        tmp_reg1.0<8,8,1>:UD {align1};
+mov  (8) vme_msg_1<1>:UD        vme_m1.0<8,8,1>:UD {align1};
         
 /* m2 */        
 mov  (8) vme_msg_2<1>:UD        0x0:UD {align1};
@@ -72,27 +78,22 @@ send (8)
         mlen vme_msg_length
         rlen vme_inter_wb_length
         {align1};
-        
 /*
  * Oword Block Write message
  */
-mul  (1) tmp_reg3.8<1>:UD       w_in_mb_uw<0,1,0>:UW orig_y_ub<0,1,0>:UB {align1};
-add  (1) tmp_reg3.8<1>:UD       tmp_reg3.8<0,1,0>:UD orig_x_ub<0,1,0>:UB {align1};
-mul  (1) tmp_reg3.8<1>:UD       tmp_reg3.8<0,1,0>:UD 0x4:UD {align1};
-mov  (1) tmp_reg3.20<1>:UB      thread_id_ub {align1};                  /* dispatch id */
-mov  (8) msg_reg0.0<1>:UD       tmp_reg3.0<8,8,1>:UD {align1};
+mov  (8) msg_reg0.0<1>:UD       obw_m0.0<8,8,1>:UD {align1};
 
 #ifdef DEV_SNB        
-mov  (2) tmp_reg3.0<1>:UW       vme_wb1.0<2,2,1>:UB  {align1};
-add  (1) tmp_reg3.0<1>:W        tmp_reg3.0<2,2,1>:W -64:W {align1};
-add  (1) tmp_reg3.2<1>:W        tmp_reg3.2<2,2,1>:W -48:W {align1}; 
+mov  (2) obw_m1.0<1>:UW         vme_wb1.0<2,2,1>:UB  {align1};
+add  (1) obw_m1.0<1>:W          obw_m1.0<2,2,1>:W -64:W {align1};
+add  (1) obw_m1.2<1>:W          obw_m1.2<2,2,1>:W -48:W {align1}; 
 #else
-mov  (2) tmp_reg3.0<1>:UW       vme_wb1.0<2,2,1>:B  {align1};        
+mov  (2) obw_m1.0<1>:UW         vme_wb1.0<2,2,1>:B  {align1};        
 #endif       
         
-mov  (8) msg_reg1.0<1>:UD       tmp_reg3.0<8,8,0>:UD   {align1};
+mov  (8) msg_reg1.0<1>:UD       obw_m1.0<8,8,0>:UD   {align1};
 
-mov  (8) msg_reg2.0<1>:UD       tmp_reg3.0<8,8,0>:UD   {align1};
+mov  (8) msg_reg2.0<1>:UD       obw_m1.0<8,8,0>:UD   {align1};
 
 /* bind index 3, write 4 oword, msg type: 8(OWord Block Write) */
 send (16)
@@ -110,6 +111,29 @@ send (16)
         mlen 3
         rlen obw_wb_length
         {align1};
+
+add             (1)     orig_x_ub<1>:ub         orig_x_ub<0,1,0>:ub             1:uw {align1} ;
+add             (1)     vme_m0.8<1>:UW          vme_m0.8<0,1,0>:UW              16:UW {align1};    /* X += 16 */
+#ifdef DEV_SNB        
+add             (1)     vme_m0.0<1>:W           vme_m0.0<0,1,0>:W               16:W {align1};	   /* X += 16 */
+#endif
+
+cmp.e.f0.0      (1)     null<1>:uw              w_in_mb_uw<0,1,0>:uw            orig_x_ub<0,1,0>:ub {align1};
+/* (0, y + 1) */        
+(f0.0)mov       (1)     orig_x_ub<1>:ub         0:uw {align1} ;
+(f0.0)mov       (1)     vme_m0.8<1>:uw          0:uw {align1} ;
+(f0.0)add       (1)     vme_m0.10<1>:uw         vme_m0.10<0,1,0>:uw             16:uw {align1} ;
+#ifdef DEV_SNB        
+(f0.0)mov       (1)     vme_m0.0<1>:w           -16:W {align1};		        /* Reference = (x-16,y-12)-(x+32,y+24) */
+(f0.0)add       (1)     vme_m0.2<1>:w           vme_m0.2<0,1,0>:w               16:w {align1};
+#endif
+
+add             (1)     obw_m0.8<1>:UD          obw_m0.8<0,1,0>:UD              4:UW {align1} ;    /* offset += 4 */
+        
+add.z.f0.1      (1)     num_macroblocks<1>:w    num_macroblocks<0,1,0>:w        -1:w {align1} ;
+(-f0.1)jmpi     (1)     __VME_LOOP ;
+        
+__EXIT: 
         
 /*
  * kill thread

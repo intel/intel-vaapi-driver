@@ -2,12 +2,12 @@ VME_CORE	= batchbuffer.asm intra_frame.asm inter_frame.asm
 
 INTEL_G6B	= batchbuffer.g6b intra_frame.g6b inter_frame.g6b
 INTEL_G6A	= batchbuffer.g6a intra_frame.g6a inter_frame.g6a
-INTEL_GEN6_INC	= gen6_batchbuffer_header.inc gen6_vme_header.inc
+INTEL_GEN6_INC	= batchbuffer.inc vme.inc
 INTEL_GEN6_ASM	= $(INTEL_G6A:%.g6a=%.gen6.asm)
 
 INTEL_G7B	= batchbuffer.g7b intra_frame.g7b inter_frame.g7b
 INTEL_G7A	= batchbuffer.g7a intra_frame.g7a inter_frame.g7a
-INTEL_GEN7_INC	= gen7_batchbuffer_header.inc gen7_vme_header.inc
+INTEL_GEN7_INC	= batchbuffer.inc vme.inc
 INTEL_GEN7_ASM	= $(INTEL_G7A:%.g7a=%.gen7.asm)
 
 TARGETS  =
