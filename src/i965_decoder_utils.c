@@ -30,6 +30,27 @@
 #include "i965_drv_video.h"
 #include "i965_defines.h"
 
+/* Set reference surface if backing store exists */
+static inline int
+set_ref_frame(
+    struct i965_driver_data *i965,
+    GenFrameStore           *ref_frame,
+    VASurfaceID              va_surface
+)
+{
+    struct object_surface *obj_surface;
+
+    if (va_surface == VA_INVALID_ID)
+        return 0;
+
+    obj_surface = SURFACE(va_surface);
+    if (!obj_surface || !obj_surface->bo)
+        return 0;
+
+    ref_frame->surface_id = va_surface;
+    return 1;
+}
+
 /* Check wether codec layer incorrectly fills in slice_vertical_position */
 int
 mpeg2_wa_slice_vertical_position(
@@ -68,6 +89,71 @@ mpeg2_wa_slice_vertical_position(
         }
     }
     return 0;
+}
+
+/* Build MPEG-2 reference frames array */
+void
+mpeg2_set_reference_surfaces(
+    VADriverContextP               ctx,
+    GenFrameStore                  ref_frames[MAX_GEN_REFERENCE_FRAMES],
+    struct decode_state           *decode_state,
+    VAPictureParameterBufferMPEG2 *pic_param
+)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    VASurfaceID va_surface;
+    unsigned pic_structure, is_second_field, n = 0;
+
+    pic_structure = pic_param->picture_coding_extension.bits.picture_structure;
+    is_second_field = pic_structure != MPEG_FRAME &&
+        !pic_param->picture_coding_extension.bits.is_first_field;
+
+    /* Reference frames are indexed by frame store ID  (0:top, 1:bottom) */
+    switch (pic_param->picture_coding_type) {
+    case MPEG_P_PICTURE:
+        if (is_second_field && pic_structure == MPEG_BOTTOM_FIELD) {
+            va_surface = decode_state->current_render_target;
+            n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        }
+        va_surface = pic_param->forward_reference_picture;
+        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        break;
+
+    case MPEG_B_PICTURE:
+        va_surface = pic_param->forward_reference_picture;
+        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        va_surface = pic_param->backward_reference_picture;
+        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        break;
+    }
+
+    while (n != 2)
+        ref_frames[n++].surface_id = VA_INVALID_ID;
+
+    if (pic_param->picture_coding_extension.bits.progressive_frame)
+        return;
+
+    /* Bottom field pictures used as reference */
+    switch (pic_param->picture_coding_type) {
+    case MPEG_P_PICTURE:
+        if (is_second_field && pic_structure == MPEG_TOP_FIELD) {
+            va_surface = decode_state->current_render_target;
+            n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        }
+        va_surface = pic_param->forward_reference_picture;
+        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        break;
+
+    case MPEG_B_PICTURE:
+        va_surface = pic_param->forward_reference_picture;
+        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        va_surface = pic_param->backward_reference_picture;
+        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        break;
+    }
+
+    while (n != 4)
+        ref_frames[n++].surface_id = VA_INVALID_ID;
 }
 
 /* Generate flat scaling matrices for H.264 decoding */
