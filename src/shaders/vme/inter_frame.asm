@@ -34,12 +34,13 @@ mov  (1) vme_m0.0<1>:W          -16:W {align1} ;                /* Reference = (
 mov  (1) vme_m0.2<1>:W          -12:W {align1} ;
 #endif
         
-mov  (1) vme_m0.12<1>:UD        INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};    /* 16x16 Source, 1/4 pixel, harr */
+mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_DUAL_START + INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};    /* 16x16 Source, 1/4 pixel, harr */
 mov  (1) vme_m0.20<1>:UB        thread_id_ub {align1};                  /* dispatch id */
 mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};               /* Reference Width&Height, 32x32 */
 
-mov  (1) vme_m1.4<1>:UD         MAX_NUM_MV:UD {align1};                                   /* Default value MAX 32 MVs */
-mov  (1) vme_m1.8<1>:UD         SEARCH_PATH_LEN:UD {align1};
+mov  (1) vme_m1.0<1>:UD         ADAPTIVE_SEARCH_ENABLE:ud {align1} ;
+mov  (1) vme_m1.4<1>:UD         FB_PRUNING_ENABLE + MAX_NUM_MV:UD {align1};                                   /* Default value MAX 32 MVs */
+mov  (1) vme_m1.8<1>:UD         START_CENTER + SEARCH_PATH_LEN:UD {align1};
 
 mul  (1) obw_m0.8<1>:UD         w_in_mb_uw<0,1,0>:UW orig_y_ub<0,1,0>:UB {align1};
 add  (1) obw_m0.8<1>:UD         obw_m0.8<0,1,0>:UD orig_x_ub<0,1,0>:UB {align1};

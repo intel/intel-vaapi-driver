@@ -48,12 +48,21 @@ define(`INTRA_SAD_HAAR',                `0x00800000')
 
 define(`INTER_PART_MASK',               `0x7E000000')
 
+define(`SEARCH_CTRL_SINGLE',            `0x00000000')
+define(`SEARCH_CTRL_DUAL_START',        `0x00000100')
+define(`SEARCH_CTRL_DUAL_RECORD',       `0x00000300')
+define(`SEARCH_CTRL_DUAL_REFERENCE',    `0x00000700')
+
 define(`REF_REGION_SIZE',               `0x2830:UW')
 
 define(`BI_SUB_MB_PART_MASK',           `0x0c000000')
 define(`MAX_NUM_MV',                    `0x00000020')
-define(`SEARCH_PATH_LEN',               `0x00003F3F')
- 
+define(`FB_PRUNING_ENABLE',             `0x40000000')
+
+define(`SEARCH_PATH_LEN',               `0x00003F0C')
+define(`START_CENTER',                  `0x30000000')
+
+define(`ADAPTIVE_SEARCH_ENABLE',        `0x00000002') 
 define(`INTRA_PREDICTORE_MODE',         `0x11111111:UD')
 
 #ifdef DEV_SNB

@@ -342,19 +342,19 @@ static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,
     vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
 	
 	vme_state_message[0] = 0x01010101;
-	vme_state_message[1] = 0x01010110;
+	vme_state_message[1] = 0x10010101;
 	vme_state_message[2] = 0x0F0F0F0F;
-	vme_state_message[3] = 0x0F0F0F10;
+	vme_state_message[3] = 0x100F0F0F;
 	vme_state_message[4] = 0x01010101;
-	vme_state_message[5] = 0x01010110;
-	vme_state_message[6] = 0x0F0F0F0F;
-	vme_state_message[7] = 0x0F0F0F10;
-	vme_state_message[8] = 0x01010101;
-	vme_state_message[9] = 0x01010110;
-    vme_state_message[10] = 0x0F0F0F0F;
-    vme_state_message[11] = 0x0F0F0F10;
-    vme_state_message[12] = 0x01010101;
-    vme_state_message[13] = 0x01010100;
+	vme_state_message[5] = 0x00010101;
+	vme_state_message[5] = 0x01010101;
+	vme_state_message[7] = 0x10010101;
+	vme_state_message[8] = 0x0F0F0F0F;
+	vme_state_message[9] = 0x100F0F0F;
+	vme_state_message[10] = 0x01010101;
+	vme_state_message[11] = 0x00010101;
+        vme_state_message[12] = 0x00;
+        vme_state_message[13] = 0x00;
 
     for(i = 14; i < 32; i++) {
         vme_state_message[i] = 0x00000000;
