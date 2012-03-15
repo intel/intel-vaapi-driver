@@ -1051,7 +1051,7 @@ gen7_mfd_mpeg2_decode_init(VADriverContextP ctx,
     if (obj_surface && obj_surface->bo)
         gen7_mfd_context->reference_surface[1].surface_id = pic_param->backward_reference_picture;
     else
-        gen7_mfd_context->reference_surface[1].surface_id = pic_param->forward_reference_picture;
+        gen7_mfd_context->reference_surface[1].surface_id = gen7_mfd_context->reference_surface[0].surface_id;
 
     /* must do so !!! */
     for (i = 2; i < ARRAY_ELEMS(gen7_mfd_context->reference_surface); i++)
