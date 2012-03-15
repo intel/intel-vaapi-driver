@@ -82,6 +82,7 @@ send (16)
         
         mov             (8)     msg_reg0.0<1>:ud                tmp_mfc_batchbuffer<8,8,1>:ud {align1} ;
         mov             (8)     msg_reg1.0<1>:ud                pak_object_ud<8,8,1>:ud {align1} ;
+        mov             (8)     msg_reg2.0<1>:ud                pak_object8_ud<8,8,1>:ud {align1} ;        
 
         /* the new offset */
         add             (1)     tmp_vme_output.8<1>:ud          tmp_vme_output.8<0,1,0>:ud      1:ud {align1} ;
@@ -93,40 +94,18 @@ send (16)
         data_port(
                 OB_CACHE_TYPE,
                 OB_WRITE,
-                OB_CONTROL_2,
+                OB_CONTROL_3,
                 BIND_IDX_MFC_BATCHBUFFER,
                 OB_WRITE_COMMIT_CATEGORY,
                 OB_HEADER_PRESENT
         )
-        mlen 2
+        mlen 3
         rlen ob_write_wb_length
         {align1};
 
         /* the new offset */
-        add             (1)     tmp_mfc_batchbuffer.8<1>:ud     tmp_mfc_batchbuffer.8<0,1,0>:ud 2:ud {align1} ;
+        add             (1)     tmp_mfc_batchbuffer.8<1>:ud     tmp_mfc_batchbuffer.8<0,1,0>:ud 4:ud {align1} ;
 
-        mov             (8)     msg_reg0.0<1>:ud                tmp_mfc_batchbuffer<8,8,1>:ud {align1} ;
-        mov             (4)     msg_reg1.0<1>:ud                pak_object8_ud<4,4,1>:ud {align1} ;
-
-send (16)
-        msg_ind
-        ob_write_wb
-        null
-        data_port(
-                OB_CACHE_TYPE,
-                OB_WRITE,
-                OB_CONTROL_0,
-                BIND_IDX_MFC_BATCHBUFFER,
-                OB_WRITE_COMMIT_CATEGORY,
-                OB_HEADER_PRESENT
-        )
-        mlen 2
-        rlen ob_write_wb_length
-        {align1};
-
-        /* the new offset */
-        add             (1)     tmp_mfc_batchbuffer.8<1>:ud     tmp_mfc_batchbuffer.8<0,1,0>:ud    1:ud {align1} ;
-        
         add.z.f0.0      (1)	total_mbs<1>:w                  total_mbs<0,1,0>:w      -1:w {align1};
         (-f0.0)jmpi     (1)     __PAK_OBJECT_LOOP ;
         

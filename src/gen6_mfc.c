@@ -40,6 +40,8 @@
 #include "gen6_mfc.h"
 #include "gen6_vme.h"
 
+#define CMD_LEN_IN_OWORD        4
+
 static const uint32_t gen6_mfc_batchbuffer_avc_intra[][4] = {
 #include "shaders/utils/mfc_batchbuffer_avc_intra.g6b"
 };
@@ -1238,7 +1240,7 @@ gen6_mfc_batchbuffer_surfaces_output(VADriverContextP ctx,
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
     mfc_context->mfc_batchbuffer_surface.num_blocks = width_in_mbs * height_in_mbs + encode_state->num_slice_params_ext * 2 + 1;
-    mfc_context->mfc_batchbuffer_surface.size_block = 48; /* 3 OWORDs */
+    mfc_context->mfc_batchbuffer_surface.size_block = 16 * CMD_LEN_IN_OWORD; /* 3 OWORDs */
     mfc_context->mfc_batchbuffer_surface.pitch = 16;
     mfc_context->mfc_batchbuffer_surface.bo = dri_bo_alloc(i965->intel.bufmgr, 
                                                            "MFC batchbuffer",
@@ -1374,7 +1376,7 @@ gen6_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int total_mbs = slice_param->number_of_mbs;
-    int number_mb_cmds = 512;
+    int number_mb_cmds = 128;
     int starting_mb = 0;
     int last_object = 0;
     int first_object = 1;
@@ -1415,7 +1417,7 @@ gen6_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
             batchbuffer_offset += tail_size;
         }
 
-        batchbuffer_offset += number_mb_cmds * 3;
+        batchbuffer_offset += number_mb_cmds * CMD_LEN_IN_OWORD;
 
         first_object = 0;
     }
@@ -1553,7 +1555,7 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                                            qp,
                                            last_slice);
 
-    return head_size + tail_size + pSliceParameter->number_of_mbs * 3;
+    return head_size + tail_size + pSliceParameter->number_of_mbs * CMD_LEN_IN_OWORD;
 }
 
 static void
