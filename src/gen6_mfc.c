@@ -1141,6 +1141,9 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     if (is_intra) {
         dri_bo_map(vme_context->vme_output.bo , 1);
         msg = (unsigned int *)vme_context->vme_output.bo->virtual;
+        msg += pSliceParameter->starting_macroblock_address * 4;
+    } else {
+        offset = pSliceParameter->starting_macroblock_address * 64;
     }
    
     for (i = pSliceParameter->starting_macroblock_address; 
