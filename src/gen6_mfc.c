@@ -1183,19 +1183,18 @@ gen6_mfc_avc_software_batchbuffer(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD);
     dri_bo *batch_bo = batch->buffer;
-    int i, used;
+    int i;
 
     for (i = 0; i < encode_state->num_slice_params_ext; i++) {
         gen6_mfc_avc_pipeline_slice_programing(ctx, encode_state, encoder_context, i, batch);
     }
 
-    used = intel_batchbuffer_used_size(batch);
-
-    if ((used & 4) == 0) {
-        BEGIN_BCS_BATCH(batch, 2);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_END);
-    }
+    intel_batchbuffer_align(batch, 8);
+    
+    BEGIN_BCS_BATCH(batch, 2);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_END);
+    ADVANCE_BCS_BATCH(batch);
 
     dri_bo_reference(batch_bo);
     intel_batchbuffer_free(batch);
