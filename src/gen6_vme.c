@@ -342,19 +342,19 @@ static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,
     vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
 	
 	vme_state_message[0] = 0x01010101;
-	vme_state_message[1] = 0x01010110;
+	vme_state_message[1] = 0x10010101;
 	vme_state_message[2] = 0x0F0F0F0F;
-	vme_state_message[3] = 0x0F0F0F10;
+	vme_state_message[3] = 0x100F0F0F;
 	vme_state_message[4] = 0x01010101;
-	vme_state_message[5] = 0x01010110;
-	vme_state_message[6] = 0x0F0F0F0F;
-	vme_state_message[7] = 0x0F0F0F10;
-	vme_state_message[8] = 0x01010101;
-	vme_state_message[9] = 0x01010110;
-    vme_state_message[10] = 0x0F0F0F0F;
-    vme_state_message[11] = 0x0F0F0F10;
-    vme_state_message[12] = 0x01010101;
-    vme_state_message[13] = 0x01010100;
+	vme_state_message[5] = 0x00010101;
+	vme_state_message[5] = 0x01010101;
+	vme_state_message[7] = 0x10010101;
+	vme_state_message[8] = 0x0F0F0F0F;
+	vme_state_message[9] = 0x100F0F0F;
+	vme_state_message[10] = 0x01010101;
+	vme_state_message[11] = 0x00010101;
+        vme_state_message[12] = 0x00;
+        vme_state_message[13] = 0x00;
 
     for(i = 14; i < 32; i++) {
         vme_state_message[i] = 0x00000000;
@@ -374,72 +374,56 @@ gen6_vme_fill_vme_batchbuffer(VADriverContextP ctx,
                               int transform_8x8_mode_flag,
                               struct intel_encoder_context *encoder_context)
 {
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-    int mb_x, mb_y, i;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     int total_mbs = mb_width * mb_height;
-    int number_mb_cmds = 512;
-    int starting_mb = 0;
-    int last_object = 0;
+    int number_mb_cmds = 128;
+    int mb_x = 0, mb_y = 0;
+    int i, count = 0;
+    unsigned int *command_ptr;
+
+    dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
+    command_ptr = vme_context->vme_batchbuffer.bo->virtual;
 
     for (i = 0; i < total_mbs / number_mb_cmds; i++) {
-        mb_x = starting_mb % mb_width;
-        mb_y = starting_mb / mb_width;
-        last_object = (total_mbs - starting_mb) == number_mb_cmds;
-        starting_mb += number_mb_cmds;
+        mb_x = count % mb_width;
+        mb_y = count / mb_width;
 
-        BEGIN_BATCH(batch, 9);
-    
-        OUT_BATCH(batch, CMD_MEDIA_OBJECT | (9 - 2));
-        OUT_BATCH(batch, VME_BATCHBUFFER);
-        OUT_BATCH(batch, 0);
-        OUT_BATCH(batch, 0);
-        OUT_BATCH(batch, 0);
-        OUT_BATCH(batch, 0);
+        *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+        *command_ptr++ = kernel;
+        *command_ptr++ = 0;
+        *command_ptr++ = 0;
+        *command_ptr++ = 0;
+        *command_ptr++ = 0;
    
         /*inline data */
-        OUT_BATCH(batch, 
-                  kernel << 24 |
-                  transform_8x8_mode_flag << 16 |
-                  mb_width);
-        OUT_BATCH(batch,
-                  number_mb_cmds << 16 |
-                  mb_y << 8 |
-                  mb_x);
-        OUT_BATCH(batch, last_object);
+        *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
+        *command_ptr++ = (number_mb_cmds << 16 | transform_8x8_mode_flag);
 
-        ADVANCE_BATCH(batch);
+        count += number_mb_cmds;
     }
 
-    if (!last_object) {
-        number_mb_cmds = total_mbs % number_mb_cmds;
-        mb_x = starting_mb % mb_width;
-        mb_y = starting_mb / mb_width;
-        last_object = 1;
-        starting_mb += number_mb_cmds;
-
-        BEGIN_BATCH(batch, 9);
+    number_mb_cmds = total_mbs - count;
     
-        OUT_BATCH(batch, CMD_MEDIA_OBJECT | (9 - 2));
-        OUT_BATCH(batch, VME_BATCHBUFFER);
-        OUT_BATCH(batch, 0);
-        OUT_BATCH(batch, 0);
-        OUT_BATCH(batch, 0);
-        OUT_BATCH(batch, 0);
+    if (number_mb_cmds) {
+        mb_x = count % mb_width;
+        mb_y = count / mb_width;
+
+        *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+        *command_ptr++ = kernel;
+        *command_ptr++ = 0;
+        *command_ptr++ = 0;
+        *command_ptr++ = 0;
+        *command_ptr++ = 0;
    
         /*inline data */
-        OUT_BATCH(batch, 
-                  kernel << 24 |
-                  transform_8x8_mode_flag << 16 |
-                  mb_width);
-        OUT_BATCH(batch,
-                  number_mb_cmds << 16 |
-                  mb_y << 8 |
-                  mb_x);
-        OUT_BATCH(batch, last_object);
-
-        ADVANCE_BATCH(batch);
+        *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
+        *command_ptr++ = (number_mb_cmds << 16 | transform_8x8_mode_flag);
     }
 
+    *command_ptr++ = 0;
+    *command_ptr++ = MI_BATCH_BUFFER_END;
+
+    dri_bo_unmap(vme_context->vme_batchbuffer.bo);
 }
 
 static void gen6_vme_media_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
@@ -479,15 +463,14 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
-    intel_batchbuffer_start_atomic(batch, 0x1000);
-
-    gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
     gen6_vme_fill_vme_batchbuffer(ctx, 
                                   encode_state,
                                   width_in_mbs, height_in_mbs,
                                   is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
                                   pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
                                   encoder_context);
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
     gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));

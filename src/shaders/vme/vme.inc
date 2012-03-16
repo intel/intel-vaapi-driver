@@ -48,15 +48,32 @@ define(`INTRA_SAD_HAAR',                `0x00800000')
 
 define(`INTER_PART_MASK',               `0x7E000000')
 
+define(`SEARCH_CTRL_SINGLE',            `0x00000000')
+define(`SEARCH_CTRL_DUAL_START',        `0x00000100')
+define(`SEARCH_CTRL_DUAL_RECORD',       `0x00000300')
+define(`SEARCH_CTRL_DUAL_REFERENCE',    `0x00000700')
+
 define(`REF_REGION_SIZE',               `0x2830:UW')
 
 define(`BI_SUB_MB_PART_MASK',           `0x0c000000')
 define(`MAX_NUM_MV',                    `0x00000020')
-define(`SEARCH_PATH_LEN',               `0x00003F3F')
-        
+define(`FB_PRUNING_ENABLE',             `0x40000000')
+
+define(`SEARCH_PATH_LEN',               `0x00003F0C')
+define(`START_CENTER',                  `0x30000000')
+
+define(`ADAPTIVE_SEARCH_ENABLE',        `0x00000002') 
 define(`INTRA_PREDICTORE_MODE',         `0x11111111:UD')
 
+#ifdef DEV_SNB
+
+define(`OBW_CACHE_TYPE',                `5')
+
+#else
+
 define(`OBW_CACHE_TYPE',                `10')
+
+#endif
 
 define(`OBW_MESSAGE_TYPE',              `8')
 
@@ -67,7 +84,16 @@ define(`OBW_CONTROL_1',                 `1')    /* 1 OWord, high 128 bits */
 define(`OBW_CONTROL_2',                 `2')    /* 2 OWords */
 define(`OBW_CONTROL_3',                 `3')    /* 4 OWords */
 
+#ifdef DEV_SNB
+
+define(`OBW_WRITE_COMMIT_CATEGORY',     `1')    /* write commit on Sandybrige */
+
+#else
+
 define(`OBW_WRITE_COMMIT_CATEGORY',     `0')    /* category on Ivybridge */
+
+#endif
+
 
 define(`OBW_HEADER_PRESENT',            `1')
 
@@ -97,6 +123,7 @@ define(`orig_xy_ub',            `inline_reg0.0')
 define(`orig_x_ub',             `inline_reg0.0')    /* in macroblock */    
 define(`orig_y_ub',             `inline_reg0.1')
 define(`transform_8x8_ub',      `inline_reg0.4')
+define(`num_macroblocks',       `inline_reg0.6')
 
 /*
  * GRF 6~11 -- reserved
@@ -110,15 +137,24 @@ define(`vme_wb0',               `r12')
 define(`vme_wb1',               `r13')
 define(`vme_wb2',               `r14')
 define(`vme_wb3',               `r15')
-        
+
+#ifdef DEV_SNB        
+/*
+ * GRF 16 -- write back for Oword Block Write message with write commit bit
+ */        
+define(`obw_wb',                `r16')
+define(`obw_wb_length',         `1')
+
+#else
+
 /*
  * GRF 16 -- reserved
- */        
-/*
- * write commit is removed on Ivybridge
  */
 define(`obw_wb',                `null<1>:W')
 define(`obw_wb_length',         `0')
+
+#endif
+
 /*
  * GRF 18~21 -- Intra Neighbor Edge Pixels
  */
@@ -130,16 +166,37 @@ define(`INEP_COL1',             `r21')
  * temporary registers
  */
 define(`tmp_reg0',              `r32')
+define(`read0_header',          `tmp_reg0')
 define(`tmp_reg1',              `r33')
-define(`intra_part_mask_ub',    `tmp_reg1.28')        
-define(`mb_intra_struct_ub',    `tmp_reg1.29')
+define(`read1_header',          `tmp_reg1')
 define(`tmp_reg2',              `r34')
-define(`tmp_x_w',               `tmp_reg2.0')
-define(`tmp_reg3',              `r35')
+define(`vme_m0',                `tmp_reg2')
+define(`tmp_reg3',              `r35')                                
+define(`vme_m1',                `tmp_reg3')
+define(`intra_flag',            `vme_m1.28')
+define(`intra_part_mask_ub',    `vme_m1.28')        
+define(`mb_intra_struct_ub',    `vme_m1.29')
+define(`tmp_reg4',              `r36')
+define(`obw_m0',                `tmp_reg4')
+define(`tmp_reg5',              `r37')
+define(`obw_m1',                `tmp_reg5')
+define(`tmp_reg6',              `r38')
+define(`tmp_x_w',               `tmp_reg6.0')
 
 /*
- * Message Payload registers
- */
+ * MRF registers
+ */        
+#ifdef DEV_SNB
+
+define(`msg_ind',               `0')
+define(`msg_reg0',              `m0')               /* m0 */
+define(`msg_reg1',              `m1')               /* m1 */
+define(`msg_reg2',              `m2')               /* m2 */
+define(`msg_reg3',              `m3')               /* m3 */
+define(`msg_reg4',              `m4')               /* m4 */
+
+#else
+
 define(`msg_ind',               `64')
 define(`msg_reg0',              `g64')
 define(`msg_reg1',              `g65')
@@ -147,19 +204,40 @@ define(`msg_reg2',              `g66')
 define(`msg_reg3',              `g67')
 define(`msg_reg4',              `g68')
 
+#endif
+
 /*
  * VME message payload
  */
+
+#ifdef DEV_SNB
+
+define(`vme_msg_length',        `4')
+define(`vme_inter_wb_length',   `4')
+
+#else
+
 define(`vme_msg_length',        `5')
-define(`vme_intra_wb_length',   `1')
 define(`vme_inter_wb_length',   `6')
+
+#endif
+
+define(`vme_intra_wb_length',   `1')
+
 define(`vme_msg_ind',           `msg_ind')
 define(`vme_msg_0',             `msg_reg0')
 define(`vme_msg_1',             `msg_reg1')
 define(`vme_msg_2',             `msg_reg2')
+
+#ifdef DEV_SNB
+
+define(`vme_msg_3',             `vme_msg_2')
+define(`vme_msg_4',             `msg_reg3')
+
+#else
+
 define(`vme_msg_3',             `msg_reg3')
 define(`vme_msg_4',             `msg_reg4')
 
-
-
+#endif
 

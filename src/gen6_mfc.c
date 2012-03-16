@@ -40,6 +40,8 @@
 #include "gen6_mfc.h"
 #include "gen6_vme.h"
 
+#define CMD_LEN_IN_OWORD        4
+
 static const uint32_t gen6_mfc_batchbuffer_avc_intra[][4] = {
 #include "shaders/utils/mfc_batchbuffer_avc_intra.g6b"
 };
@@ -1136,6 +1138,9 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     if (is_intra) {
         dri_bo_map(vme_context->vme_output.bo , 1);
         msg = (unsigned int *)vme_context->vme_output.bo->virtual;
+        msg += pSliceParameter->starting_macroblock_address * 4;
+    } else {
+        offset = pSliceParameter->starting_macroblock_address * 64;
     }
    
     for (i = pSliceParameter->macroblock_address; 
@@ -1178,19 +1183,18 @@ gen6_mfc_avc_software_batchbuffer(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD);
     dri_bo *batch_bo = batch->buffer;
-    int i, used;
+    int i;
 
     for (i = 0; i < encode_state->num_slice_params_ext; i++) {
         gen6_mfc_avc_pipeline_slice_programing(ctx, encode_state, encoder_context, i, batch);
     }
 
-    used = intel_batchbuffer_used_size(batch);
-
-    if ((used & 4) == 0) {
-        BEGIN_BCS_BATCH(batch, 2);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_END);
-    }
+    intel_batchbuffer_align(batch, 8);
+    
+    BEGIN_BCS_BATCH(batch, 2);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_END);
+    ADVANCE_BCS_BATCH(batch);
 
     dri_bo_reference(batch_bo);
     intel_batchbuffer_free(batch);
@@ -1234,8 +1238,8 @@ gen6_mfc_batchbuffer_surfaces_output(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    mfc_context->mfc_batchbuffer_surface.num_blocks = width_in_mbs * height_in_mbs + encode_state->num_slice_params_ext * 2 + 1;
-    mfc_context->mfc_batchbuffer_surface.size_block = 48; /* 3 OWORDs */
+    mfc_context->mfc_batchbuffer_surface.num_blocks = width_in_mbs * height_in_mbs + encode_state->num_slice_params_ext * 8 + 1;
+    mfc_context->mfc_batchbuffer_surface.size_block = 16 * CMD_LEN_IN_OWORD; /* 3 OWORDs */
     mfc_context->mfc_batchbuffer_surface.pitch = 16;
     mfc_context->mfc_batchbuffer_surface.bo = dri_bo_alloc(i965->intel.bufmgr, 
                                                            "MFC batchbuffer",
@@ -1371,7 +1375,7 @@ gen6_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int total_mbs = slice_param->num_macroblocks;
-    int number_mb_cmds = 512;
+    int number_mb_cmds = 128;
     int starting_mb = 0;
     int last_object = 0;
     int first_object = 1;
@@ -1412,7 +1416,7 @@ gen6_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
             batchbuffer_offset += tail_size;
         }
 
-        batchbuffer_offset += number_mb_cmds * 3;
+        batchbuffer_offset += number_mb_cmds * CMD_LEN_IN_OWORD;
 
         first_object = 0;
     }
@@ -1546,7 +1550,7 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                                            qp,
                                            last_slice);
 
-    return head_size + tail_size + pSliceParameter->num_macroblocks * 3;
+    return head_size + tail_size + pSliceParameter->num_macroblocks * CMD_LEN_IN_OWORD;
 }
 
 static void
