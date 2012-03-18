@@ -94,6 +94,14 @@ struct intel_batchbuffer;
         RESTORE_BLOCKED_SIGSET();              \
     } while (0)
 
+#define WARN_ONCE(...) do {                     \
+        static int g_once = 1;                  \
+        if (g_once) {                           \
+            g_once = 0;                         \
+            printf("WARNING: " __VA_ARGS__);    \
+        }                                       \
+    } while (0)
+
 struct intel_driver_data 
 {
     int fd;
