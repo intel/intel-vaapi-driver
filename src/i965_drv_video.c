@@ -3506,9 +3506,6 @@ VAStatus i965_QueryVideoProcFilterCaps(
         cap->type = VAProcDeinterlacingBob;
         i++;
         cap++;
-        cap->type = VAProcDeinterlacingWeave;
-        i++;
-        cap++;
     }
 
     *num_filter_caps = i;
