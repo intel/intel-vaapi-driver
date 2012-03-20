@@ -3872,17 +3872,13 @@ i965_post_processing_init(VADriverContextP ctx)
     return True;
 }
 
-static const int procfilter_to_pp_flag[10] = {
+static const int procfilter_to_pp_flag[VAProcFilterCount] = {
     PP_NULL,    /* VAProcFilterNone */
-    PP_NULL,    /* VAProcFilterDering */
-    PP_NULL,    /* VAProcFilterDeblocking */
     PP_NV12_DN, /* VAProcFilterNoiseReduction */
     PP_NV12_DNDI, /* VAProcFilterDeinterlacing */
     PP_NULL,    /* VAProcFilterSharpening */
-    PP_NULL,    /* VAProcFilterColorEnhancement */
-    PP_NULL,    /* VAProcFilterProcAmp */
-    PP_NULL,    /* VAProcFilterComposition */
-    PP_NULL,    /* VAProcFilterFrameRateConversion */
+    PP_NULL,    /* VAProcFilterColorBalance */
+    PP_NULL,    /* VAProcFilterColorStandard */
 };
 
 static const int proc_frame_to_pp_frame[3] = {
