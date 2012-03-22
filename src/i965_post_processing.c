@@ -98,18 +98,24 @@ static VAStatus pp_null_initialize(VADriverContextP ctx, struct i965_post_proces
                                struct i965_surface *dst_surface,
                                const VARectangle *dst_rect,
                                void *filter_param);
-static VAStatus pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                                   const struct i965_surface *src_surface,
-                                   const VARectangle *src_rect,
-                                   struct i965_surface *dst_surface,
-                                   const VARectangle *dst_rect,
-                                   void *filter_param);
+static VAStatus pp_nv12_avs_initialize_nlas(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                                            const struct i965_surface *src_surface,
+                                            const VARectangle *src_rect,
+                                            struct i965_surface *dst_surface,
+                                            const VARectangle *dst_rect,
+                                            void *filter_param);
 static VAStatus pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                        const struct i965_surface *src_surface,
                                        const VARectangle *src_rect,
                                        struct i965_surface *dst_surface,
                                        const VARectangle *dst_rect,
                                        void *filter_param);
+static VAStatus gen6_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                                             const struct i965_surface *src_surface,
+                                             const VARectangle *src_rect,
+                                             struct i965_surface *dst_surface,
+                                             const VARectangle *dst_rect,
+                                             void *filter_param);
 static VAStatus pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                             const struct i965_surface *src_surface,
                                             const VARectangle *src_rect,
@@ -212,7 +218,7 @@ static struct pp_module pp_modules_gen5[] = {
             NULL,
         },
 
-        pp_nv12_avs_initialize,
+        pp_nv12_avs_initialize_nlas,
     },
 
     {
@@ -261,7 +267,7 @@ static const uint32_t pp_pl3_load_save_pl3_gen6[][4] = {
 };
 
 static const uint32_t pp_nv12_scaling_gen6[][4] = {
-#include "shaders/post_processing/gen5_6/nv12_scaling_nv12.g6b"
+#include "shaders/post_processing/gen5_6/nv12_avs_nv12.g6b"
 };
 
 static const uint32_t pp_nv12_avs_gen6[][4] = {
@@ -346,7 +352,7 @@ static struct pp_module pp_modules_gen6[] = {
             NULL,
         },
 
-        pp_nv12_scaling_initialize,
+        gen6_nv12_scaling_initialize,
     },
 
     {
@@ -358,7 +364,7 @@ static struct pp_module pp_modules_gen6[] = {
             NULL,
         },
 
-        pp_nv12_avs_initialize,
+        pp_nv12_avs_initialize_nlas,
     },
 
     {
@@ -1480,7 +1486,10 @@ pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context, int 
     float src_x_steping, src_y_steping, video_step_delta;
     int tmp_w = ALIGN(pp_avs_context->dest_h * pp_avs_context->src_w / pp_avs_context->src_h, 16);
 
-    if (tmp_w >= pp_avs_context->dest_w) {
+    if (pp_static_parameter->grf4.r4_2.avs.nlas == 0) {
+        src_x_steping = pp_inline_parameter->grf5.normalized_video_x_scaling_step;
+        pp_inline_parameter->grf5.r5_1.source_surface_block_normalized_horizontal_origin = src_x_steping * x * 16 + pp_avs_context->src_normalized_x;
+    } else if (tmp_w >= pp_avs_context->dest_w) {
         pp_inline_parameter->grf5.normalized_video_x_scaling_step = 1.0 / tmp_w;
         pp_inline_parameter->grf6.video_step_delta = 0;
         
@@ -1575,7 +1584,8 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
                        const VARectangle *src_rect,
                        struct i965_surface *dst_surface,
                        const VARectangle *dst_rect,
-                       void *filter_param)
+                       void *filter_param,
+                       int nlas)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
@@ -1832,7 +1842,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     pp_avs_context->src_w = src_rect->width;
     pp_avs_context->src_h = src_rect->height;
 
-    pp_static_parameter->grf4.r4_2.avs.nlas = 1;
+    pp_static_parameter->grf4.r4_2.avs.nlas = nlas;
     pp_static_parameter->grf1.r1_6.normalized_video_y_scaling_step = (float) src_rect->height / in_h / dst_rect->height;
 
     pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / dst_rect->width;
@@ -1845,6 +1855,40 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     dst_surface->flags = src_surface->flags;
 
     return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+pp_nv12_avs_initialize_nlas(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                            const struct i965_surface *src_surface,
+                            const VARectangle *src_rect,
+                            struct i965_surface *dst_surface,
+                            const VARectangle *dst_rect,
+                            void *filter_param)
+{
+    return pp_nv12_avs_initialize(ctx, pp_context,
+                                  src_surface,
+                                  src_rect,
+                                  dst_surface,
+                                  dst_rect,
+                                  filter_param,
+                                  1);
+}
+
+static VAStatus
+gen6_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                             const struct i965_surface *src_surface,
+                             const VARectangle *src_rect,
+                             struct i965_surface *dst_surface,
+                             const VARectangle *dst_rect,
+                             void *filter_param)
+{
+    return pp_nv12_avs_initialize(ctx, pp_context,
+                                  src_surface,
+                                  src_rect,
+                                  dst_surface,
+                                  dst_rect,
+                                  filter_param,
+                                  0);    
 }
 
 static int
