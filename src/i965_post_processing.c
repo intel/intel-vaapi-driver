@@ -4069,14 +4069,27 @@ i965_proc_picture(VADriverContextP ctx,
 
     dst_surface.id = proc_state->current_render_target;
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
-    i965_post_processing_internal(ctx, &proc_context->pp_context,
-                                  &src_surface,
-                                  &src_rect,
-                                  &dst_surface,
-                                  &dst_rect,
-                                  (pipeline_param->filter_flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC ?
-                                  PP_NV12_AVS : PP_NV12_SCALING,
-                                  NULL);
+
+    if (src_rect.width == dst_rect.width &&
+        src_rect.height == dst_rect.height) {
+        i965_post_processing_internal(ctx, &proc_context->pp_context,
+                                      &src_surface,
+                                      &src_rect,
+                                      &dst_surface,
+                                      &dst_rect,
+                                      PP_NV12_LOAD_SAVE_N12,
+                                      NULL);
+    } else {
+
+        i965_post_processing_internal(ctx, &proc_context->pp_context,
+                                      &src_surface,
+                                      &src_rect,
+                                      &dst_surface,
+                                      &dst_rect,
+                                      (pipeline_param->filter_flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC ?
+                                      PP_NV12_AVS : PP_NV12_SCALING,
+                                      NULL);
+    }
 
     if (num_tmp_surfaces)
         i965_DestroySurfaces(ctx,
