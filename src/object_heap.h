@@ -41,11 +41,12 @@ struct object_base {
 struct object_heap {
     int	object_size;
     int id_offset;
-    void *heap_index;
     int next_free;
     int heap_size;
     int heap_increment;
     _I965Mutex mutex;
+    void **bucket;
+    int num_buckets;
 };
 
 typedef int object_heap_iterator;
