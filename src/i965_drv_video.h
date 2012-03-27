@@ -209,6 +209,8 @@ struct hw_codec_info
 {
     struct hw_context *(*dec_hw_context_init)(VADriverContextP, VAProfile);
     struct hw_context *(*enc_hw_context_init)(VADriverContextP, VAProfile);
+    int max_width;
+    int max_height;
 };
 
 

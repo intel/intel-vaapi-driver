@@ -144,12 +144,16 @@ extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info g4x_hw_codec_info = {
     .dec_hw_context_init = g4x_dec_hw_context_init,
     .enc_hw_context_init = NULL,
+    .max_width = 2048,
+    .max_height = 2048,
 };
 
 extern struct hw_context *ironlake_dec_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info ironlake_hw_codec_info = {
     .dec_hw_context_init = ironlake_dec_hw_context_init,
     .enc_hw_context_init = NULL,
+    .max_width = 2048,
+    .max_height = 2048,
 };
 
 extern struct hw_context *gen6_dec_hw_context_init(VADriverContextP, VAProfile);
@@ -157,12 +161,16 @@ extern struct hw_context *gen6_enc_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info gen6_hw_codec_info = {
     .dec_hw_context_init = gen6_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
+    .max_width = 2048,
+    .max_height = 2048,
 };
 
 extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info gen7_hw_codec_info = {
     .dec_hw_context_init = gen7_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
+    .max_width = 4096,
+    .max_height = 4096,
 };
 
 VAStatus 
@@ -835,6 +843,12 @@ i965_CreateContext(VADriverContextP ctx,
 
     if (NULL == obj_config) {
         vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
+        return vaStatus;
+    }
+
+    if (picture_width > i965->codec_info->max_width ||
+        picture_height > i965->codec_info->max_height) {
+        vaStatus = VA_STATUS_ERROR_INVALID_PARAMETER;
         return vaStatus;
     }
 
