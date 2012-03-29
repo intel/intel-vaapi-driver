@@ -108,6 +108,8 @@ mpeg2_set_reference_surfaces(
     is_second_field = pic_structure != MPEG_FRAME &&
         !pic_param->picture_coding_extension.bits.is_first_field;
 
+    ref_frames[0].surface_id = VA_INVALID_ID;
+
     /* Reference frames are indexed by frame store ID  (0:top, 1:bottom) */
     switch (pic_param->picture_coding_type) {
     case MPEG_P_PICTURE:
@@ -128,10 +130,12 @@ mpeg2_set_reference_surfaces(
     }
 
     while (n != 2)
-        ref_frames[n++].surface_id = VA_INVALID_ID;
+        ref_frames[n++].surface_id = ref_frames[0].surface_id;
 
     if (pic_param->picture_coding_extension.bits.progressive_frame)
         return;
+
+    ref_frames[2].surface_id = VA_INVALID_ID;
 
     /* Bottom field pictures used as reference */
     switch (pic_param->picture_coding_type) {
@@ -153,7 +157,7 @@ mpeg2_set_reference_surfaces(
     }
 
     while (n != 4)
-        ref_frames[n++].surface_id = VA_INVALID_ID;
+        ref_frames[n++].surface_id = ref_frames[2].surface_id;
 }
 
 /* Generate flat scaling matrices for H.264 decoding */
