@@ -356,10 +356,14 @@ static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,
         vme_state_message[12] = 0x00;
         vme_state_message[13] = 0x00;
 
-    for(i = 14; i < 32; i++) {
-        vme_state_message[i] = 0x00000000;
-    }
+        vme_state_message[14] = 0x4a4a;
+        vme_state_message[15] = 0x0;
+        vme_state_message[16] = 0x4a4a4a4a;
+        vme_state_message[17] = 0x4a4a4a4a;
 
+        for(i = 18; i < 32; i++) {
+            vme_state_message[i] = 0;
+        }
     //vme_state_message[16] = 0x42424242;			//cost function LUT set 0 for Intra
 
     dri_bo_unmap( vme_context->vme_state.bo);
