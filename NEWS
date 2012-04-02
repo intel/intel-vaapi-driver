@@ -1,7 +1,7 @@
-libva-driver-intel NEWS -- summary of changes.  2012-03-DD
+libva-driver-intel NEWS -- summary of changes.  2012-04-02
 Copyright (C) 2009-2011 Intel Corporation
 
-Version 1.0.17 - DD.Mar.2012
+Version 1.0.17 - 02.Apr.2012
 * Add support for IMC1/IMC3 surface formats
 * Fix rendering of interlaced surfaces
 * Fix MPEG-2 decoding of interlaced streams (SNB, IVB)
