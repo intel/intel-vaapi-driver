@@ -3546,7 +3546,6 @@ VAStatus i965_QueryVideoProcPipelineCaps(
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     unsigned int i = 0;
 
-    pipeline_cap->flags = 0;
     pipeline_cap->pipeline_flags = 0;
     pipeline_cap->filter_flags = 0;
     pipeline_cap->num_forward_references = 0;
