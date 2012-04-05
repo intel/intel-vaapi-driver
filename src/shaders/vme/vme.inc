@@ -46,7 +46,7 @@ define(`INTER_SAD_HAAR',                `0x00200000')
 define(`INTRA_SAD_NONE',                `0x00000000')
 define(`INTRA_SAD_HAAR',                `0x00800000')
 
-define(`INTER_PART_MASK',               `0x7E000000')
+define(`INTER_PART_MASK',               `0x70000000')
 
 define(`SEARCH_CTRL_SINGLE',            `0x00000000')
 define(`SEARCH_CTRL_DUAL_START',        `0x00000100')
