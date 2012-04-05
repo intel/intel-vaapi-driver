@@ -33,7 +33,7 @@ __PAK_OBJECT:
         /* DW2 */
         mul             (1)     pak_object2_ud<1>:ud            width_in_mb<0,1,0>:uw           mb_y<0,1,0>:ub {align1};
         add             (1)     pak_object2_ud<1>:ud            pak_object2_ud<0,1,0>:ud        mb_x<0,1,0>:ub {align1};
-        shl             (1)     pak_object2_ud<1>:ud            pak_object2_ud<0,1,0>:ud        6:uw {align1} ;
+        mul             (1)     pak_object2_ud<1>:ud            pak_object2_ud<0,1,0>:ud        INTER_VME_OUTPUT_IN_BYTES:ud {align1} ;
         /* DW3 */
         mov             (1)     pak_object3_ud<1>:ud            MFC_AVC_PAK_OBJECT_INTER_DW3 ;
         /* DW5 */

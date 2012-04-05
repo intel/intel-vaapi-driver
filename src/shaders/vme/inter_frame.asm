@@ -44,7 +44,7 @@ mov  (1) vme_m1.8<1>:UD         START_CENTER + SEARCH_PATH_LEN:UD {align1};
 
 mul  (1) obw_m0.8<1>:UD         w_in_mb_uw<0,1,0>:UW orig_y_ub<0,1,0>:UB {align1};
 add  (1) obw_m0.8<1>:UD         obw_m0.8<0,1,0>:UD orig_x_ub<0,1,0>:UB {align1};
-shl  (1) obw_m0.8<1>:UD         obw_m0.8<0,1,0>:UD 0x2:UD {align1};
+mul  (1) obw_m0.8<1>:UD         obw_m0.8<0,1,0>:UD INTER_VME_OUTPUT_IN_OWS:UD {align1};
 mov  (1) obw_m0.20<1>:UB        thread_id_ub {align1};                  /* dispatch id */
         
 /*
@@ -129,7 +129,7 @@ cmp.e.f0.0      (1)     null<1>:uw              w_in_mb_uw<0,1,0>:uw            
 (f0.0)add       (1)     vme_m0.2<1>:w           vme_m0.2<0,1,0>:w               16:w {align1};
 #endif
 
-add             (1)     obw_m0.8<1>:UD          obw_m0.8<0,1,0>:UD              4:UW {align1} ;    /* offset += 4 */
+add             (1)     obw_m0.8<1>:UD          obw_m0.8<0,1,0>:UD              INTER_VME_OUTPUT_IN_OWS:UW {align1} ;
         
 add.z.f0.1      (1)     num_macroblocks<1>:w    num_macroblocks<0,1,0>:w        -1:w {align1} ;
 (-f0.1)jmpi     (1)     __VME_LOOP ;

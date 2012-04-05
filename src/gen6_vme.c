@@ -181,9 +181,9 @@ gen6_vme_output_buffer_setup(VADriverContextP ctx,
     vme_context->vme_output.pitch = 16; /* in bytes, always 16 */
 
     if (is_intra)
-        vme_context->vme_output.size_block = 16; /* in bytes */
+        vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES;
     else
-        vme_context->vme_output.size_block = 64; /* in bytes */
+        vme_context->vme_output.size_block = INTER_VME_OUTPUT_IN_BYTES;
 
     vme_context->vme_output.bo = dri_bo_alloc(i965->intel.bufmgr, 
                                               "VME output buffer",

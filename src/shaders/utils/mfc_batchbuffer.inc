@@ -59,6 +59,8 @@ define(`OB_WRITE_COMMIT_CATEGORY',      `0')    /* category on Ivybridge */
 
 define(`OB_HEADER_PRESENT',             `1')
 
+define(`INTER_VME_OUTPUT_IN_BYTES',     `160')
+
 define(`MFC_AVC_PAK_OBJECT_INTRA_DW0',  `0x71490009:UD')
 define(`MFC_AVC_PAK_OBJECT_INTRA_DW3',  `0x000e0000:UD')        /* CbpDC (1 << 19 | 1 << 18 | 1 << 17) */
 define(`MFC_AVC_PAK_OBJECT_INTRA_DW4',  `0xFFFF0000:UD')        /* CBP for Y */
@@ -67,7 +69,7 @@ define(`MFC_AVC_PAK_OBJECT_INTRA_DW6',  `0x04000000:UD')        /* the flag of t
 
 define(`MFC_AVC_PAK_OBJECT_INTER_DW0',  `MFC_AVC_PAK_OBJECT_INTRA_DW0')
 define(`MFC_AVC_PAK_OBJECT_INTER_DW1',  `0x20:UD')              /* 32 MVs */
-define(`MFC_AVC_PAK_OBJECT_INTER_DW2',  `0x40:UD')              /* offset, in bytes */
+define(`MFC_AVC_PAK_OBJECT_INTER_DW2',  `INTER_VME_OUTPUT_IN_BYTES:UD') /* offset, in bytes */
 define(`MFC_AVC_PAK_OBJECT_INTER_DW3',  `0x014e0120:UD')        /* 
                                                                  * (1 << 24) |     PackedMvNum, Debug
                                                                  * (4 << 20) |     8 MV, SNB don't use it

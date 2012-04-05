@@ -65,6 +65,9 @@ define(`START_CENTER',                  `0x30000000')
 define(`ADAPTIVE_SEARCH_ENABLE',        `0x00000002') 
 define(`INTRA_PREDICTORE_MODE',         `0x11111111:UD')
 
+define(`INTER_VME_OUTPUT_IN_OWS',       `10')
+define(`INTER_VME_OUTPUT_MV_IN_OWS',    `8')
+
 #ifdef DEV_SNB
 
 define(`OBW_CACHE_TYPE',                `5')
