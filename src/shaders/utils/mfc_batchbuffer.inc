@@ -60,6 +60,8 @@ define(`OB_WRITE_COMMIT_CATEGORY',      `0')    /* category on Ivybridge */
 define(`OB_HEADER_PRESENT',             `1')
 
 define(`INTER_VME_OUTPUT_IN_BYTES',     `160')
+define(`INTER_VME_OUTPUT_IN_OWS',       `10')
+define(`INTER_VME_OUTPUT_MV_IN_OWS',    `8')
 
 define(`MFC_AVC_PAK_OBJECT_INTRA_DW0',  `0x71490009:UD')
 define(`MFC_AVC_PAK_OBJECT_INTRA_DW3',  `0x000e0000:UD')        /* CbpDC (1 << 19 | 1 << 18 | 1 << 17) */
@@ -70,7 +72,7 @@ define(`MFC_AVC_PAK_OBJECT_INTRA_DW6',  `0x04000000:UD')        /* the flag of t
 define(`MFC_AVC_PAK_OBJECT_INTER_DW0',  `MFC_AVC_PAK_OBJECT_INTRA_DW0')
 define(`MFC_AVC_PAK_OBJECT_INTER_DW1',  `0x20:UD')              /* 32 MVs */
 define(`MFC_AVC_PAK_OBJECT_INTER_DW2',  `INTER_VME_OUTPUT_IN_BYTES:UD') /* offset, in bytes */
-define(`MFC_AVC_PAK_OBJECT_INTER_DW3',  `0x014e0120:UD')        /* 
+define(`MFC_AVC_PAK_OBJECT_INTER_DW3',  `0x014e0000:UD')        /* 
                                                                  * (1 << 24) |     PackedMvNum, Debug
                                                                  * (4 << 20) |     8 MV, SNB don't use it
                                                                  * (1 << 19) |     CbpDcY
@@ -151,7 +153,7 @@ define(`tmp_reg7',              `r15')
 define(`tmp_vme_output',        `tmp_reg0')
 define(`tmp_slice_header',      `tmp_reg1')
 define(`tmp_mfc_batchbuffer',   `tmp_reg2')
-
+define(`tmp_offset',            `tmp_reg7')
 /* 
  * GRF 16~23 write back for Oword Block Read message 
  */
@@ -167,7 +169,7 @@ define(`ob_read_wb7',           `r23')
 
 define(`ob_read_wb_len_slice_header',   `1')
 define(`ob_read_wb_len_vme_intra',      `1')
-define(`ob_read_wb_len_vme_inter',      `4')
+define(`ob_read_wb_len_vme_inter',      `2')
 
 #ifdef DEV_SNB
 
