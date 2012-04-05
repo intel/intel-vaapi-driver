@@ -86,6 +86,7 @@ define(`OBW_CONTROL_0',                 `0')    /* 1 OWord, low 128 bits */
 define(`OBW_CONTROL_1',                 `1')    /* 1 OWord, high 128 bits */
 define(`OBW_CONTROL_2',                 `2')    /* 2 OWords */
 define(`OBW_CONTROL_3',                 `3')    /* 4 OWords */
+define(`OBW_CONTROL_4',                 `4')    /* 8 OWords */
 
 #ifdef DEV_SNB
 

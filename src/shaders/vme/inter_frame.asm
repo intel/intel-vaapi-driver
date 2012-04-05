@@ -82,6 +82,8 @@ send (8)
 /*
  * Oword Block Write message
  */
+
+/* MV pairs */        
 mov  (8) msg_reg0.0<1>:UD       obw_m0.0<8,8,1>:UD {align1};
 
 #ifdef DEV_SNB        
@@ -96,7 +98,7 @@ mov  (8) msg_reg1.0<1>:UD       obw_m1.0<8,8,0>:UD   {align1};
 
 mov  (8) msg_reg2.0<1>:UD       obw_m1.0<8,8,0>:UD   {align1};
 
-/* bind index 3, write 4 oword, msg type: 8(OWord Block Write) */
+/* bind index 3, write 8 oword, msg type: 8(OWord Block Write) */
 send (16)
         msg_ind
         obw_wb
@@ -104,12 +106,34 @@ send (16)
         data_port(
                 OBW_CACHE_TYPE,
                 OBW_MESSAGE_TYPE,
-                OBW_CONTROL_3,
+                OBW_CONTROL_4,
                 OBW_BIND_IDX,
                 OBW_WRITE_COMMIT_CATEGORY,
                 OBW_HEADER_PRESENT
         )
-        mlen 3
+        mlen 5
+        rlen obw_wb_length
+        {align1};
+
+/* other info */        
+add             (1)     msg_reg0.8<1>:UD        obw_m0.8<0,1,0>:UD      INTER_VME_OUTPUT_MV_IN_OWS:UD {align1} ;        
+mov             (1)     msg_reg1.0<1>:UD        vme_wb0.0<0,1,0>:UD     {align1};
+mov             (1)     msg_reg1.4<1>:UD        vme_wb0.28<0,1,0>:UD    {align1};
+        
+/* bind index 3, write 1 oword, msg type: 8(OWord Block Write) */
+send (16)
+        msg_ind
+        obw_wb
+        null
+        data_port(
+                OBW_CACHE_TYPE,
+                OBW_MESSAGE_TYPE,
+                OBW_CONTROL_0,
+                OBW_BIND_IDX,
+                OBW_WRITE_COMMIT_CATEGORY,
+                OBW_HEADER_PRESENT
+        )
+        mlen 2
         rlen obw_wb_length
         {align1};
 
