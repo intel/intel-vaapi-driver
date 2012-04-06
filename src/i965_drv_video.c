@@ -3262,7 +3262,7 @@ i965_PutSurface(VADriverContextP ctx,
         return VA_STATUS_SUCCESS;
 #endif
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
-    struct dri_state *dri_state = (struct dri_state *)ctx->dri_state;
+    struct dri_state *dri_state = (struct dri_state *)ctx->drm_state;
     struct i965_render_state *render_state = &i965->render_state;
     struct dri_drawable *dri_drawable;
     union dri_buffer *buffer;
@@ -3275,7 +3275,7 @@ i965_PutSurface(VADriverContextP ctx,
     int pp_flag = 0;
 
     /* Currently don't support DRI1 */
-    if (dri_state->driConnectedFlag != VA_DRI2)
+    if (dri_state->base.auth_type != VA_DRM_AUTH_DRI2)
         return VA_STATUS_ERROR_UNKNOWN;
 
     /* Some broken sources such as H.264 conformance case FM2_SVA_C
