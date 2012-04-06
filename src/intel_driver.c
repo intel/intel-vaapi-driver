@@ -29,7 +29,7 @@
 
 #include <assert.h>
 
-#include <va/va_dricommon.h>
+#include <va/va_drmcommon.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_memman.h"
@@ -50,15 +50,17 @@ Bool
 intel_driver_init(VADriverContextP ctx)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
-    struct dri_state *dri_state = (struct dri_state *)ctx->dri_state;
+    struct drm_state * const drm_state = (struct drm_state *)ctx->drm_state;
     int has_exec2, has_bsd, has_blt;
 
-    assert(dri_state);
-    assert(dri_state->driConnectedFlag == VA_DRI2 || 
-           dri_state->driConnectedFlag == VA_DRI1);
+    assert(drm_state);
+    assert(drm_state->auth_type == VA_DRM_AUTH_DRI1 ||
+           drm_state->auth_type == VA_DRM_AUTH_DRI2 ||
+           drm_state->auth_type == VA_DRM_AUTH_CUSTOM);
 
-    intel->fd = dri_state->fd;
-    intel->dri2Enabled = (dri_state->driConnectedFlag == VA_DRI2);
+    intel->fd = drm_state->fd;
+    intel->dri2Enabled = (drm_state->auth_type == VA_DRM_AUTH_DRI2 ||
+                          drm_state->auth_type == VA_DRM_AUTH_CUSTOM);
 
     if (!intel->dri2Enabled) {
         return False;
