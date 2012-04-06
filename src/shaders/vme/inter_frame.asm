@@ -116,9 +116,23 @@ send (16)
         {align1};
 
 /* other info */        
-add             (1)     msg_reg0.8<1>:UD        obw_m0.8<0,1,0>:UD      INTER_VME_OUTPUT_MV_IN_OWS:UD {align1} ;        
-mov             (1)     msg_reg1.0<1>:UD        vme_wb0.0<0,1,0>:UD     {align1};
+add             (1)     msg_reg0.8<1>:UD        obw_m0.8<0,1,0>:UD      INTER_VME_OUTPUT_MV_IN_OWS:UD {align1} ;
+
+mov             (1)     tmp_uw1<1>:uw           0:uw {align1} ;
+mov             (1)     tmp_ud1<1>:ud           0:ud {align1} ;
+and.z.f0.0      (1)     null<1>:ud              vme_wb0.0<0,1,0>:ud     INTRAMBFLAG_MASK:ud {align1} ;
+(f0.0)and       (1)     tmp_uw1<1>:uw           vme_wb0.2<0,1,0>:uw     MVSIZE_UW_MASK:uw {align1} ;
+(f0.0)shr       (1)     tmp_ud1<1>:ud           tmp_uw1<1>:uw           4:w {align1} ;
+(f0.0)mul       (1)     tmp_ud1<1>:ud           tmp_ud1<0,1,0>:ud       96:ud {align1} ;
+(f0.0)add       (1)     tmp_ud1<1>:ud           tmp_ud1<0,1,0>:ud       32:uw {align1} ;
+(f0.0)shl       (1)     tmp_uw1<1>:uw           tmp_uw1<0,1,0>:uw       1:uw {align1} ;
+(f0.0)add       (1)     tmp_uw1<1>:uw           tmp_uw1<0,1,0>:uw       MVSIZE_UW_BASE:uw {align1} ;
+add             (1)     tmp_uw1<1>:uw           tmp_uw1<0,1,0>:uw       CBP_DC_YUV_UW:uw {align1} ;
+
+mov             (1)     msg_reg1.0<1>:uw        vme_wb0.0<0,1,0>:uw     {align1} ;
+mov             (1)     msg_reg1.2<1>:uw        tmp_uw1<0,1,0>:uw       {align1} ;
 mov             (1)     msg_reg1.4<1>:UD        vme_wb0.28<0,1,0>:UD    {align1};
+mov             (1)     msg_reg1.8<1>:ud        tmp_ud1<0,1,0>:ud       {align1} ;
         
 /* bind index 3, write 1 oword, msg type: 8(OWord Block Write) */
 send (16)

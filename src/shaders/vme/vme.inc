@@ -68,6 +68,11 @@ define(`INTRA_PREDICTORE_MODE',         `0x11111111:UD')
 define(`INTER_VME_OUTPUT_IN_OWS',       `10')
 define(`INTER_VME_OUTPUT_MV_IN_OWS',    `8')
 
+define(`INTRAMBFLAG_MASK',              `0x00002000')
+define(`MVSIZE_UW_MASK',                `0x0070')
+define(`MVSIZE_UW_BASE',                `0x0040')
+define(`CBP_DC_YUV_UW',                 `0x000E')
+
 #ifdef DEV_SNB
 
 define(`OBW_CACHE_TYPE',                `5')
@@ -186,6 +191,19 @@ define(`tmp_reg5',              `r37')
 define(`obw_m1',                `tmp_reg5')
 define(`tmp_reg6',              `r38')
 define(`tmp_x_w',               `tmp_reg6.0')
+define(`tmp_reg7',              `r39')
+define(`tmp_ud0',               `tmp_reg7.0')
+define(`tmp_ud1',               `tmp_reg7.4')
+define(`tmp_ud2',               `tmp_reg7.8')
+define(`tmp_ud3',               `tmp_reg7.12')
+define(`tmp_uw0',               `tmp_reg7.0')
+define(`tmp_uw1',               `tmp_reg7.2')
+define(`tmp_uw2',               `tmp_reg7.4')
+define(`tmp_uw3',               `tmp_reg7.6')
+define(`tmp_uw4',               `tmp_reg7.8')
+define(`tmp_uw5',               `tmp_reg7.10')
+define(`tmp_uw6',               `tmp_reg7.12')
+define(`tmp_uw7',               `tmp_reg7.14')
 
 /*
  * MRF registers

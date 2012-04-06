@@ -39,8 +39,7 @@ __PAK_OBJECT:
         mov             (16)    pak_object_ud<1>:ud             0x0:ud {align1} ;
         /* DW0 */
         mov             (1)     pak_object0_ud<1>:ud            MFC_AVC_PAK_OBJECT_INTER_DW0 ;
-        /* DW1 */
-        mov             (1)     pak_object1_ud<1>:ud            MFC_AVC_PAK_OBJECT_INTER_DW1 ;
+        
         /* DW2 */
         mul             (1)     pak_object2_ud<1>:ud            tmp_offset.0<0,1,0>:ud          INTER_VME_OUTPUT_IN_BYTES:ud {align1} ;
         
@@ -68,9 +67,11 @@ send (16)
         rlen ob_read_wb_len_vme_inter
         {align1};
 
+        /* DW1 must be 32 for 8 MVs and 128 for 32 MVs !!! */
+        mov             (1)     pak_object1_ud<1>:ud            ob_read_wb0.8<0,1,0>:ud {align1} ;
+        
         /* DW3 */
-        and             (1)     pak_object3_ud<1>:ud            ob_read_wb0.0<0,1,0>:ud         0xFFFF {align1} ;
-        add             (1)     pak_object3_ud<1>:ud            pak_object3_ud<0,1,0>:ud        MFC_AVC_PAK_OBJECT_INTER_DW3 {align1} ;
+        mov             (1)     pak_object3_ud<1>:ud            ob_read_wb0.0<0,1,0>:ud {align1} ;
         
         /* DW4 */
         add             (1)     pak_object4_ud<1>:ud            mb_xy<0,1,0>:uw                 MFC_AVC_PAK_OBJECT_INTER_DW4 {align1} ;
