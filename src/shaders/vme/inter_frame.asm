@@ -25,10 +25,10 @@ mov  (16) tmp_reg3.0<1>:UD      0x0:UD {align1};
 
 shl  (2) vme_m0.8<1>:UW         orig_xy_ub<2,2,1>:UB 4:UW {align1};    /* Source =  (x, y) * 16 */
         
-#ifdef DEV_SNB        
+#ifdef DEV_SNB
 shl  (2) vme_m0.0<1>:UW         orig_xy_ub<2,2,1>:UB 4:UW {align1};	
-add  (1) vme_m0.0<1>:W          vme_m0.0<2,2,1>:W -16:W {align1};		/* Reference = (x-16,y-12)-(x+32,y+24) */
-add  (1) vme_m0.2<1>:W          vme_m0.2<2,2,1>:W -12:W {align1};
+add  (1) vme_m0.0<1>:W          vme_m0.0<0,1,0>:W -16:W {align1};		/* Reference = (x-16,y-12)-(x+32,y+24) */
+add  (1) vme_m0.2<1>:W          vme_m0.2<0,1,0>:W -12:W {align1};
 #else
 mov  (1) vme_m0.0<1>:W          -16:W {align1} ;                /* Reference = (x-16,y-12)-(x+32,y+24) */
 mov  (1) vme_m0.2<1>:W          -12:W {align1} ;
@@ -88,15 +88,15 @@ mov  (8) msg_reg0.0<1>:UD       obw_m0.0<8,8,1>:UD {align1};
 
 #ifdef DEV_SNB        
 mov  (2) obw_m1.0<1>:UW         vme_wb1.0<2,2,1>:UB  {align1};
-add  (1) obw_m1.0<1>:W          obw_m1.0<2,2,1>:W -64:W {align1};
-add  (1) obw_m1.2<1>:W          obw_m1.2<2,2,1>:W -48:W {align1}; 
+add  (1) obw_m1.0<1>:W          obw_m1.0<0,1,0>:W -64:W {align1};
+add  (1) obw_m1.2<1>:W          obw_m1.2<0,1,0>:W -48:W {align1}; 
 #else
 mov  (2) obw_m1.0<1>:UW         vme_wb1.0<2,2,1>:B  {align1};        
 #endif       
         
-mov  (8) msg_reg1.0<1>:UD       obw_m1.0<8,8,0>:UD   {align1};
+mov  (8) msg_reg1.0<1>:UD       obw_m1.0<0,1,0>:UD   {align1};
 
-mov  (8) msg_reg2.0<1>:UD       obw_m1.0<8,8,0>:UD   {align1};
+mov  (8) msg_reg2.0<1>:UD       obw_m1.0<0,1,0>:UD   {align1};
 
 /* bind index 3, write 8 oword, msg type: 8(OWord Block Write) */
 send (16)
