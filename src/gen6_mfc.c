@@ -1599,17 +1599,46 @@ gen6_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
 
 #endif
 
+int interlace_check(VADriverContextP ctx,
+                   struct encode_state *encode_state,
+                   struct intel_encoder_context *encoder_context) {
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncSliceParameterBufferH264 *pSliceParameter;
+    int i;
+    int mbCount = 0;
+    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
+    int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
+  
+    for (i = 0; i < encode_state->num_slice_params_ext; i++) {
+        pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[i]->buffer; 
+        mbCount += pSliceParameter->num_macroblocks; 
+    }
+    
+    if ( mbCount == ( width_in_mbs * height_in_mbs ) )
+        return 0;
+
+    return 1;
+}
+
+
 static void
 gen6_mfc_avc_pipeline_programing(VADriverContextP ctx,
                                  struct encode_state *encode_state,
                                  struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
+    dri_bo *slice_batch_bo;
+
+    if ( interlace_check(ctx, encode_state, encoder_context) ) {
+        fprintf(stderr, "Current VA driver don't support interlace mode!\n");
+        assert(0);
+        return; 
+    }
 
 #if __SOFTWARE__
-    dri_bo *slice_batch_bo = gen6_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
+    slice_batch_bo = gen6_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
 #else
-    dri_bo *slice_batch_bo = gen6_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
+    slice_batch_bo = gen6_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
 #endif
 
     // begin programing
