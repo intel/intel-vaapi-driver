@@ -87,16 +87,16 @@ send (8)
 mov  (8) msg_reg0.0<1>:UD       obw_m0.0<8,8,1>:UD {align1};
 
 #ifdef DEV_SNB        
-mov  (2) obw_m1.0<1>:UW         vme_wb1.0<2,2,1>:UB  {align1};
-add  (1) obw_m1.0<1>:W          obw_m1.0<0,1,0>:W -64:W {align1};
-add  (1) obw_m1.2<1>:W          obw_m1.2<0,1,0>:W -48:W {align1}; 
+mov  (16) obw_m1.0<1>:UW        vme_wb1.0<16,16,1>:UB  {align1};
+add  (8) obw_m1.0<2>:W          obw_m1.0<16,8,2>:W -64:W {align1};
+add  (8) obw_m1.2<2>:W          obw_m1.2<16,8,2>:W -48:W {align1}; 
 #else
-mov  (2) obw_m1.0<1>:UW         vme_wb1.0<2,2,1>:B  {align1};        
+mov  (16) obw_m1.0<1>:UW        vme_wb1.0<16,16,1>:B  {align1};        
 #endif       
         
-mov  (8) msg_reg1.0<1>:UD       obw_m1.0<0,1,0>:UD   {align1};
+mov  (8) msg_reg1.0<1>:UD       obw_m1.0<8,8,1>:UD   {align1};
 
-mov  (8) msg_reg2.0<1>:UD       obw_m1.0<0,1,0>:UD   {align1};
+mov  (8) msg_reg2.0<1>:UD       obw_m1.0<8,8,1>:UD   {align1};
 
 /* bind index 3, write 8 oword, msg type: 8(OWord Block Write) */
 send (16)
