@@ -132,6 +132,7 @@ define(`orig_xy_ub',            `inline_reg0.0')
 define(`orig_x_ub',             `inline_reg0.0')    /* in macroblock */    
 define(`orig_y_ub',             `inline_reg0.1')
 define(`transform_8x8_ub',      `inline_reg0.4')
+define(`slice_edge_ub',         `inline_reg0.4')
 define(`num_macroblocks',       `inline_reg0.6')
 
 /*

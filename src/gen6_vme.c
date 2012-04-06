@@ -381,49 +381,44 @@ gen6_vme_fill_vme_batchbuffer(VADriverContextP ctx,
                               struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    int total_mbs = mb_width * mb_height;
-    int number_mb_cmds = 128;
+    int number_mb_cmds;
     int mb_x = 0, mb_y = 0;
-    int i, count = 0;
+    int i, s;
     unsigned int *command_ptr;
 
     dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
     command_ptr = vme_context->vme_batchbuffer.bo->virtual;
 
-    for (i = 0; i < total_mbs / number_mb_cmds; i++) {
-        mb_x = count % mb_width;
-        mb_y = count / mb_width;
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+        VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
+        int slice_mb_begin = pSliceParameter->macroblock_address;
+        int slice_mb_number = pSliceParameter->num_macroblocks;
+        
+        for (i = 0; i < slice_mb_number;  ) {
+            int mb_count = i + slice_mb_begin;    
+            mb_x = mb_count % mb_width;
+            mb_y = mb_count / mb_width;
+            if( i == 0 ) {
+                number_mb_cmds = mb_width;          // we must mark the slice edge. 
+            } else if ( (i + 128 ) <= slice_mb_number) {
+                number_mb_cmds = 128;
+            } else {
+                number_mb_cmds = slice_mb_number - i;
+            }
 
-        *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
-        *command_ptr++ = kernel;
-        *command_ptr++ = 0;
-        *command_ptr++ = 0;
-        *command_ptr++ = 0;
-        *command_ptr++ = 0;
+            *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+            *command_ptr++ = kernel;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
    
-        /*inline data */
-        *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
-        *command_ptr++ = (number_mb_cmds << 16 | transform_8x8_mode_flag);
+            /*inline data */
+            *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
+            *command_ptr++ = (number_mb_cmds << 16 | transform_8x8_mode_flag | ((i==0) << 1));
 
-        count += number_mb_cmds;
-    }
-
-    number_mb_cmds = total_mbs - count;
-    
-    if (number_mb_cmds) {
-        mb_x = count % mb_width;
-        mb_y = count / mb_width;
-
-        *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
-        *command_ptr++ = kernel;
-        *command_ptr++ = 0;
-        *command_ptr++ = 0;
-        *command_ptr++ = 0;
-        *command_ptr++ = 0;
-   
-        /*inline data */
-        *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
-        *command_ptr++ = (number_mb_cmds << 16 | transform_8x8_mode_flag);
+            i += number_mb_cmds;
+        } 
     }
 
     *command_ptr++ = 0;
