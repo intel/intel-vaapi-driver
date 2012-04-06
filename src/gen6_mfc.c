@@ -1679,8 +1679,8 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
         /*Programing bcs pipeline*/
         gen6_mfc_avc_pipeline_programing(ctx, encode_state, encoder_context);	//filling the pipeline
         gen6_mfc_run(ctx, encode_state, encoder_context);
-        gen6_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
         if ( rate_control_mode == VA_RC_CBR) {
+            gen6_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
             //gen6_mfc_hrd_context_check(encode_state, mfc_context);
             if ( gen6_mfc_bit_rate_control_context_update( encode_state, mfc_context, current_frame_bits_size) ) {
                 gen6_mfc_hrd_context_update(encode_state, mfc_context);
