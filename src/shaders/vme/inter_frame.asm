@@ -89,14 +89,30 @@ mov  (8) msg_reg0.0<1>:UD       obw_m0.0<8,8,1>:UD {align1};
 #ifdef DEV_SNB        
 mov  (16) obw_m1.0<1>:UW        vme_wb1.0<16,16,1>:UB  {align1};
 add  (8) obw_m1.0<2>:W          obw_m1.0<16,8,2>:W -64:W {align1};
-add  (8) obw_m1.2<2>:W          obw_m1.2<16,8,2>:W -48:W {align1}; 
+add  (8) obw_m1.2<2>:W          obw_m1.2<16,8,2>:W -48:W {align1};
+mov  (16) obw_m2.0<1>:UW        vme_wb1.16<16,16,1>:UB  {align1};
+add  (8) obw_m2.0<2>:W          obw_m2.0<16,8,2>:W -64:W {align1};
+add  (8) obw_m2.2<2>:W          obw_m2.2<16,8,2>:W -48:W {align1}; 
+mov  (16) obw_m3.0<1>:UW        vme_wb2.0<16,16,1>:UB  {align1};
+add  (8) obw_m3.0<2>:W          obw_m3.0<16,8,2>:W -64:W {align1};
+add  (8) obw_m3.2<2>:W          obw_m3.2<16,8,2>:W -48:W {align1};
+mov  (16) obw_m4.0<1>:UW        vme_wb2.16<16,16,1>:UB  {align1};
+add  (8) obw_m4.0<2>:W          obw_m4.0<16,8,2>:W -64:W {align1};
+add  (8) obw_m4.2<2>:W          obw_m4.2<16,8,2>:W -48:W {align1}; 
 #else
-mov  (16) obw_m1.0<1>:UW        vme_wb1.0<16,16,1>:B  {align1};        
+mov  (16) obw_m1.0<1>:UW        vme_wb1.0<16,16,1>:B  {align1};
+mov  (16) obw_m2.0<1>:UW        vme_wb1.16<16,16,1>:B  {align1};
+mov  (16) obw_m3.0<1>:UW        vme_wb2.0<16,16,1>:B  {align1};
+mov  (16) obw_m4.0<1>:UW        vme_wb2.16<16,16,1>:B  {align1};                
 #endif       
         
 mov  (8) msg_reg1.0<1>:UD       obw_m1.0<8,8,1>:UD   {align1};
 
-mov  (8) msg_reg2.0<1>:UD       obw_m1.0<8,8,1>:UD   {align1};
+mov  (8) msg_reg2.0<1>:UD       obw_m2.0<8,8,1>:UD   {align1};
+
+mov  (8) msg_reg3.0<1>:UD       obw_m3.0<8,8,1>:UD   {align1};
+
+mov  (8) msg_reg4.0<1>:UD       obw_m4.0<8,8,1>:UD   {align1};                
 
 /* bind index 3, write 8 oword, msg type: 8(OWord Block Write) */
 send (16)
