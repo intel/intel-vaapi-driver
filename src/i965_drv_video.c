@@ -38,6 +38,10 @@
 # include "i965_output_dri.h"
 #endif
 
+#ifdef HAVE_VA_WAYLAND
+# include "i965_output_wayland.h"
+#endif
+
 #include "intel_driver.h"
 #include "intel_memman.h"
 #include "intel_batchbuffer.h"
@@ -86,6 +90,10 @@ static int get_sampling_from_fourcc(unsigned int fourcc);
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */
 #define IS_VA_X11(ctx) \
     (((ctx)->display_type & VA_DISPLAY_MAJOR_MASK) == VA_DISPLAY_X11)
+
+/* Check whether we are rendering to Wayland */
+#define IS_VA_WAYLAND(ctx) \
+    (((ctx)->display_type & VA_DISPLAY_MAJOR_MASK) == VA_DISPLAY_WAYLAND)
 
 enum {
     I965_SURFACETYPE_RGBA = 1,
@@ -1705,6 +1713,11 @@ i965_Init(VADriverContextP ctx)
     if (i965_render_init(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;
 
+#ifdef HAVE_VA_WAYLAND
+    if (IS_VA_WAYLAND(ctx) && !i965_output_wayland_init(ctx))
+        return VA_STATUS_ERROR_UNKNOWN;
+#endif
+
 #ifdef HAVE_VA_X11
     if (IS_VA_X11(ctx) && !i965_output_dri_init(ctx))
         return VA_STATUS_ERROR_UNKNOWN;
@@ -2430,6 +2443,11 @@ i965_Terminate(VADriverContextP ctx)
 #ifdef HAVE_VA_X11
     if (IS_VA_X11(ctx))
         i965_output_dri_terminate(ctx);
+#endif
+
+#ifdef HAVE_VA_WAYLAND
+    if (IS_VA_WAYLAND(ctx))
+        i965_output_wayland_terminate(ctx);
 #endif
 
     if (i965_render_terminate(ctx) == False)

@@ -238,6 +238,9 @@ struct i965_driver_data
 
     /* VA/DRI (X11) specific data */
     struct va_dri_output *dri_output;
+
+    /* VA/Wayland specific data */
+    struct va_wl_output *wl_output;
 };
 
 #define NEW_CONFIG_ID() object_heap_allocate(&i965->config_heap);

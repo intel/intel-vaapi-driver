@@ -111,5 +111,12 @@ source_c			+= i965_output_dri.c
 source_h			+= i965_output_dri.h
 endif
 
+if USE_WAYLAND
+source_c			+= i965_output_wayland.c
+source_h			+= i965_output_wayland.h
+driver_cflags			+= $(WAYLAND_CFLAGS) $(WAYLAND_DRM_CFLAGS)
+driver_libs			+= $(WAYLAND_LIBS) $(WAYLAND_DRM_LIBS)
+endif
+
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in

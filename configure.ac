@@ -51,6 +51,11 @@ AC_ARG_ENABLE(x11,
                     [build with VA/X11 API support @<:@default=yes@:>@])],
     [], [enable_x11="yes"])
 
+AC_ARG_ENABLE([wayland],
+    [AC_HELP_STRING([--enable-wayland],
+                    [build with VA/Wayland API support @<:@default=yes@:>@])],
+    [], [enable_wayland="yes"])
+
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_PROG_CC
@@ -125,6 +130,43 @@ fi
 AC_MSG_RESULT([$LIBVA_DRIVERS_PATH])
 AC_SUBST(LIBVA_DRIVERS_PATH)
 
+# Check for EGL
+if test "$enable_wayland" = "yes"; then
+    enable_egl="yes"
+fi
+
+USE_EGL="no"
+if test "$enable_egl" = "yes"; then
+    PKG_CHECK_MODULES([EGL], [egl], [USE_EGL="yes"], [USE_EGL="no"])
+    saved_CPPFLAGS="$CPPFLAGS"
+    saved_LIBS="$LIBS"
+    CPPFLAGS="$CPPFLAGS $EGL_CFLAGS"
+    LIBS="$LIBS $EGL_LIBS"
+    AC_CHECK_HEADERS([EGL/egl.h], [:], [USE_EGL="no"])
+    AC_CHECK_LIB([EGL], [eglGetDisplay], [:], [USE_EGL="no"])
+    CPPFLAGS="$saved_CPPFLAGS"
+    LIBS="$saved_LIBS"
+fi
+AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
+
+# Check for Wayland
+USE_WAYLAND="no"
+WAYLAND_DRM_CFLAGS=""
+WAYLAND_DRM_LIBS=""
+if test "$enable_wayland" = "yes"; then
+    PKG_CHECK_MODULES([WAYLAND], [wayland-client], [USE_WAYLAND="yes"], [:])
+    PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland],
+        [AC_DEFINE([HAVE_VA_WAYLAND], [1], [Defined to 1 if VA/Wayland API is enabled])],
+        [USE_WAYLAND="no"])
+    if test "$USE_EGL" = "yes"; then
+        WAYLAND_DRM_CFLAGS="$DRM_CFLAGS"
+        WAYLAND_DRM_LIBS="$DRM_LIBS $EGL_LIBS"
+    fi
+fi
+AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
+AC_SUBST([WAYLAND_DRM_CFLAGS])
+AC_SUBST([WAYLAND_DRM_LIBS])
+
 AC_OUTPUT([
     Makefile
     debian.upstream/Makefile 
@@ -144,6 +186,7 @@ dnl Print summary
 BACKENDS=""
 AS_IF([test "$USE_DRM" = "yes"], [BACKENDS="$BACKENDS drm"])
 AS_IF([test "$USE_X11" = "yes"], [BACKENDS="$BACKENDS x11"])
+AS_IF([test "$USE_WAYLAND" = "yes"], [BACKENDS="$BACKENDS wayland"])
 
 echo
 echo $PACKAGE configuration summary:
