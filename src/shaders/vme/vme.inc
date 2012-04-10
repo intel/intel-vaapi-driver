@@ -69,15 +69,21 @@ define(`INTER_VME_OUTPUT_IN_OWS',       `10')
 define(`INTER_VME_OUTPUT_MV_IN_OWS',    `8')
 
 define(`INTRAMBFLAG_MASK',              `0x00002000')
-define(`MVSIZE_UW_MASK',                `0x0070')
 define(`MVSIZE_UW_BASE',                `0x0040')
+define(`MFC_MV32_BIT_SHIFT',            `5')
 define(`CBP_DC_YUV_UW',                 `0x000E')
 
 #ifdef DEV_SNB
 
+define(`MV32_BIT_MASK',                 `0x0010')
+define(`MV32_BIT_SHIFT',                `4')
+
 define(`OBW_CACHE_TYPE',                `5')
 
 #else
+
+define(`MV32_BIT_MASK',                 `0x0020')
+define(`MV32_BIT_SHIFT',                `5')
 
 define(`OBW_CACHE_TYPE',                `10')
 
