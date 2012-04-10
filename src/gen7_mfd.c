@@ -31,6 +31,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "config.h"
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
 
