@@ -169,7 +169,7 @@ define(`ob_read_wb7',           `r23')
 
 define(`ob_read_wb_len_slice_header',   `1')
 define(`ob_read_wb_len_vme_intra',      `1')
-define(`ob_read_wb_len_vme_inter',      `2')
+define(`ob_read_wb_len_vme_inter',      `1')
 
 #ifdef DEV_SNB
 
