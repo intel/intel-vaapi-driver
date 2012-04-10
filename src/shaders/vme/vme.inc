@@ -164,8 +164,9 @@ define(`obw_wb_length',         `1')
 #else
 
 /*
- * GRF 16 -- reserved
+ * GRF 16 -- write back for VME message
  */
+define(`vme_wb4',               `r16')
 define(`obw_wb',                `null<1>:W')
 define(`obw_wb_length',         `0')
 

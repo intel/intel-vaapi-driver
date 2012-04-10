@@ -100,10 +100,10 @@ mov  (16) obw_m4.0<1>:UW        vme_wb2.16<16,16,1>:UB  {align1};
 add  (8) obw_m4.0<2>:W          obw_m4.0<16,8,2>:W -64:W {align1};
 add  (8) obw_m4.2<2>:W          obw_m4.2<16,8,2>:W -48:W {align1}; 
 #else
-mov  (16) obw_m1.0<1>:UW        vme_wb1.0<16,16,1>:B  {align1};
-mov  (16) obw_m2.0<1>:UW        vme_wb1.16<16,16,1>:B  {align1};
-mov  (16) obw_m3.0<1>:UW        vme_wb2.0<16,16,1>:B  {align1};
-mov  (16) obw_m4.0<1>:UW        vme_wb2.16<16,16,1>:B  {align1};                
+mov  (8) obw_m1.0<1>:ud         vme_wb1.0<8,8,1>:ud {align1};
+mov  (8) obw_m2.0<1>:ud         vme_wb2.0<8,8,1>:ud {align1};
+mov  (8) obw_m3.0<1>:ud         vme_wb3.0<8,8,1>:ud {align1};
+mov  (8) obw_m4.0<1>:ud         vme_wb4.0<8,8,1>:ud {align1};                
 #endif       
         
 mov  (8) msg_reg1.0<1>:UD       obw_m1.0<8,8,1>:UD   {align1};
