@@ -347,7 +347,7 @@ static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,
 	vme_state_message[3] = 0x100F0F0F;
 	vme_state_message[4] = 0x01010101;
 	vme_state_message[5] = 0x00010101;
-	vme_state_message[5] = 0x01010101;
+	vme_state_message[6] = 0x01010101;
 	vme_state_message[7] = 0x10010101;
 	vme_state_message[8] = 0x0F0F0F0F;
 	vme_state_message[9] = 0x100F0F0F;
