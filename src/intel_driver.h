@@ -166,6 +166,7 @@ struct intel_region
 #define PCI_CHIP_IVYBRIDGE_M_GT1        0x0156  /* Mobile */
 #define PCI_CHIP_IVYBRIDGE_M_GT2        0x0166
 #define PCI_CHIP_IVYBRIDGE_S_GT1        0x015a  /* Server */
+#define PCI_CHIP_IVYBRIDGE_S_GT2        0x016a
 
 #define IS_G45(devid)           (devid == PCI_CHIP_IGD_E_G ||   \
                                  devid == PCI_CHIP_Q45_G ||     \
@@ -193,6 +194,7 @@ struct intel_region
                                  devid == PCI_CHIP_IVYBRIDGE_GT2 ||     \
                                  devid == PCI_CHIP_IVYBRIDGE_M_GT1 ||   \
                                  devid == PCI_CHIP_IVYBRIDGE_M_GT2 ||   \
-                                 devid == PCI_CHIP_IVYBRIDGE_S_GT1)
+                                 devid == PCI_CHIP_IVYBRIDGE_S_GT1 ||   \
+                                 devid == PCI_CHIP_IVYBRIDGE_S_GT2)
 
 #endif /* _INTEL_DRIVER_H_ */
