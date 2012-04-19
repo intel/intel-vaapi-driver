@@ -420,7 +420,7 @@ static const uint32_t pp_nv12_avs_gen7[][4] = {
 };
 
 static const uint32_t pp_nv12_dndi_gen7[][4] = {
-#include "shaders/post_processing/gen7/dndi.g7b"
+// #include "shaders/post_processing/gen7/dndi.g7b"
 };
 
 static const uint32_t pp_nv12_dn_gen7[][4] = {
