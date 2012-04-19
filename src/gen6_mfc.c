@@ -74,6 +74,7 @@ gen6_mfc_pipe_mode_select(VADriverContextP ctx,
                           struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
     assert(standard_select == MFX_FORMAT_AVC);
 
@@ -82,8 +83,8 @@ gen6_mfc_pipe_mode_select(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_PIPE_MODE_SELECT | (4 - 2));
     OUT_BCS_BATCH(batch,
                   (1 << 10) | /* disable Stream-Out , advanced QP/bitrate control need enable it*/
-                  (1 << 9)  | /* Post Deblocking Output */
-                  (0 << 8)  | /* Pre Deblocking Output */
+                  ((!!mfc_context->post_deblocking_output.bo) << 9)  | /* Post Deblocking Output */
+                  ((!!mfc_context->pre_deblocking_output.bo) << 8)  | /* Pre Deblocking Output */
                   (0 << 7)  | /* disable TLB prefectch */
                   (0 << 5)  | /* not in stitch mode */
                   (1 << 4)  | /* encoding mode */
@@ -143,11 +144,19 @@ gen6_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_context 
 
     OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (24 - 2));
 
-    OUT_BCS_BATCH(batch, 0);											/* pre output addr   */
+    if (mfc_context->pre_deblocking_output.bo)
+        OUT_BCS_RELOC(batch, mfc_context->pre_deblocking_output.bo,
+                      I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                      0);
+    else
+        OUT_BCS_BATCH(batch, 0);											/* pre output addr   */
 
-    OUT_BCS_RELOC(batch, mfc_context->post_deblocking_output.bo,
-                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  0);											/* post output addr  */	
+    if (mfc_context->post_deblocking_output.bo)
+        OUT_BCS_RELOC(batch, mfc_context->post_deblocking_output.bo,
+                      I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                      0);											/* post output addr  */	
+    else
+        OUT_BCS_BATCH(batch, 0);
 
     OUT_BCS_RELOC(batch, mfc_context->uncompressed_picture_source.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
@@ -326,6 +335,7 @@ gen6_mfc_avc_directmode_state(VADriverContextP ctx, struct intel_encoder_context
 
 static void
 gen6_mfc_avc_slice_state(VADriverContextP ctx,
+                         VAEncPictureParameterBufferH264 *pic_param,
                          VAEncSliceParameterBufferH264 *slice_param,
                          struct encode_state *encode_state,
                          struct intel_encoder_context *encoder_context,
@@ -347,6 +357,7 @@ gen6_mfc_avc_slice_state(VADriverContextP ctx,
     int bit_rate_control_target, maxQpN, maxQpP;
     unsigned char correct[6], grow, shrink;
     int i;
+    int weighted_pred_idc = 0;
 
     if (batch == NULL)
         batch = encoder_context->base.batch;
@@ -355,6 +366,12 @@ gen6_mfc_avc_slice_state(VADriverContextP ctx,
         bit_rate_control_target = 0;
     else
         bit_rate_control_target = 1;
+
+    if (slice_type == SLICE_TYPE_P) {
+        weighted_pred_idc = pic_param->pic_fields.bits.weighted_pred_flag;
+    } else if (slice_type == SLICE_TYPE_B) {
+        weighted_pred_idc = pic_param->pic_fields.bits.weighted_bipred_idc;
+    }
 
     maxQpN = mfc_context->bit_rate_control_context[bit_rate_control_target].MaxQpNegModifier;
     maxQpP = mfc_context->bit_rate_control_context[bit_rate_control_target].MaxQpPosModifier;
@@ -379,10 +396,13 @@ gen6_mfc_avc_slice_state(VADriverContextP ctx,
     }
 
     OUT_BCS_BATCH(batch, 
+                  (weighted_pred_idc << 30) |
                   (slice_param->direct_spatial_mv_pred_flag<<29) |             /*Direct Prediction Type*/
-                  (0<<24) |                /*Enable deblocking operation*/
+                  (slice_param->disable_deblocking_filter_idc << 27) |
+                  (slice_param->cabac_init_idc << 24) |
                   (qp<<16) | 			/*Slice Quantization Parameter*/
-                  0x0202 );
+                  ((slice_param->slice_beta_offset_div2 & 0xf) << 8) |
+                  ((slice_param->slice_alpha_c0_offset_div2 & 0xf) << 0));
     OUT_BCS_BATCH(batch,
                   (beginy << 24) |			/*First MB X&Y , the begin postion of current slice*/
                   (beginx << 16) |
@@ -843,7 +863,28 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    int i;
+    int i, j, enable_avc_ildb = 0;
+    VAEncSliceParameterBufferH264 *slice_param;
+
+    for (j = 0; j < encode_state->num_slice_params_ext && enable_avc_ildb == 0; j++) {
+        assert(encode_state->slice_params_ext && encode_state->slice_params_ext[j]->buffer);
+        slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j]->buffer;
+
+        for (i = 0; i < encode_state->slice_params_ext[j]->num_elements; i++) {
+            assert((slice_param->slice_type == SLICE_TYPE_I) ||
+                   (slice_param->slice_type == SLICE_TYPE_SI) ||
+                   (slice_param->slice_type == SLICE_TYPE_P) ||
+                   (slice_param->slice_type == SLICE_TYPE_SP) ||
+                   (slice_param->slice_type == SLICE_TYPE_B));
+
+            if (slice_param->disable_deblocking_filter_idc != 1) {
+                enable_avc_ildb = 1;
+                break;
+            }
+
+            slice_param++;
+        }
+    }
 
     /*Setup all the input&output object*/
 
@@ -875,8 +916,13 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     dri_bo_reference(gen6_avc_surface->dmv_top);
     dri_bo_reference(gen6_avc_surface->dmv_bottom);
 
-    mfc_context->post_deblocking_output.bo = obj_surface->bo;
-    dri_bo_reference(mfc_context->post_deblocking_output.bo);
+    if (enable_avc_ildb) {
+        mfc_context->post_deblocking_output.bo = obj_surface->bo;
+        dri_bo_reference(mfc_context->post_deblocking_output.bo);
+    } else {
+        mfc_context->pre_deblocking_output.bo = obj_surface->bo;
+        dri_bo_reference(mfc_context->pre_deblocking_output.bo);
+    }
 
     mfc_context->surface_state.width = obj_surface->orig_width;
     mfc_context->surface_state.height = obj_surface->orig_height;
@@ -1116,7 +1162,9 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0, 0x0 };
 
-    gen6_mfc_avc_slice_state(ctx, pSliceParameter,
+    gen6_mfc_avc_slice_state(ctx, 
+                             pPicParameter,
+                             pSliceParameter,
                              encode_state, encoder_context,
                              (rate_control_mode == VA_RC_CBR), qp, slice_batch);
 
@@ -1476,6 +1524,7 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
     head_offset = old_used / 16;
     gen6_mfc_avc_slice_state(ctx,
+                             pPicParameter,
                              pSliceParameter,
                              encode_state,
                              encoder_context,

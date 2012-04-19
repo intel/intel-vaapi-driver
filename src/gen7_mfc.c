@@ -73,6 +73,7 @@ gen7_mfc_pipe_mode_select(VADriverContextP ctx,
                           struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
     assert(standard_select == MFX_FORMAT_MPEG2 ||
            standard_select == MFX_FORMAT_AVC);
@@ -83,8 +84,8 @@ gen7_mfc_pipe_mode_select(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   (MFX_LONG_MODE << 17) | /* Must be long format for encoder */
                   (MFD_MODE_VLD << 15) | /* VLD mode */
-                  (0 << 10) | /* disable Stream-Out */
-                  (1 << 9)  | /* Post Deblocking Output */
+                  ((!!mfc_context->post_deblocking_output.bo) << 9)  | /* Post Deblocking Output */
+                  ((!!mfc_context->pre_deblocking_output.bo) << 8)  | /* Pre Deblocking Output */
                   (0 << 8)  | /* Pre Deblocking Output */
                   (0 << 5)  | /* not in stitch mode */
                   (1 << 4)  | /* encoding mode */
@@ -189,8 +190,8 @@ gen7_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
                   (0 << 16) |	/* Chroma QP Offset */
                   (0 << 14) |   /* Max-bit conformance Intra flag */
                   (0 << 13) |   /* Max Macroblock size conformance Inter flag */
-                  (0 << 12) |   /* FIXME: Weighted_Pred_Flag */
-                  (0 << 10) |   /* FIXME: Weighted_BiPred_Idc */
+                  (pPicParameter->pic_fields.bits.weighted_pred_flag << 12) |   /*Weighted_Pred_Flag */
+                  (pPicParameter->pic_fields.bits.weighted_bipred_idc << 10) |  /* Weighted_BiPred_Idc */
                   (0 << 8)  |   /* FIXME: Image Structure */
                   (0 << 0) );   /* Current Decoed Image Frame Store ID, reserved in Encode mode */
     OUT_BCS_BATCH(batch,
