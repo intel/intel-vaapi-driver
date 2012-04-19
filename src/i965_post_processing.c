@@ -4040,8 +4040,10 @@ i965_proc_picture(VADriverContextP ctx,
         VAProcFilterParameterBufferBase *filter_param = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
         VAProcFilterType filter_type = filter_param->type;
         VASurfaceID out_surface_id = VA_INVALID_ID;
+        int kernel_index = procfilter_to_pp_flag[filter_type];
 
-        if (procfilter_to_pp_flag[filter_type] != PP_NULL) {
+        if (kernel_index != PP_NULL &&
+            proc_context->pp_context.pp_modules[kernel_index].kernel.bo != NULL) {
             status = i965_CreateSurfaces(ctx,
                                          in_width,
                                          in_height,
@@ -4059,7 +4061,7 @@ i965_proc_picture(VADriverContextP ctx,
                                                    &src_rect,
                                                    &dst_surface,
                                                    &src_rect,
-                                                   procfilter_to_pp_flag[filter_type],
+                                                   kernel_index,
                                                    filter_param);
 
             if (status == VA_STATUS_SUCCESS) {
