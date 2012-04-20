@@ -1028,6 +1028,24 @@ gen6_mfc_stop(VADriverContextP ctx,
     dri_bo_unmap(mfc_context->macroblock_status_buffer.bo);
 
     *encoded_bits_size = buffer_size_bits;
+    if ( buffer_size_bits == 0) { 	// FIXME: we can't get info in IVB.
+         struct i965_driver_data *i965 = i965_driver_data(ctx);
+	 struct object_buffer *obj_buffer;
+	 VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+	 obj_buffer = BUFFER (pPicParameter->coded_buf);
+         dri_bo_map(obj_buffer->buffer_store->bo, 1);
+	 unsigned char *coded_mem = (unsigned char *)(obj_buffer->buffer_store->bo->virtual) + ALIGN(sizeof(VACodedBufferSegment), 64);	
+	 for(i = 0; i < obj_buffer->size_element - ALIGN(sizeof(VACodedBufferSegment), 64) - 3 - 0x1000; i++) {
+	       if (!coded_mem[i] &&
+                    !coded_mem[i + 1] &&
+                    !coded_mem[i + 2] &&
+                    !coded_mem[i + 3] &&
+                    !coded_mem[i + 4])
+                    break;	
+	 }
+         dri_bo_unmap(obj_buffer->buffer_store->bo);
+	 *encoded_bits_size = i*8;
+    }
 
     return VA_STATUS_SUCCESS;
 }
