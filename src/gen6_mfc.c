@@ -1209,7 +1209,12 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
             gen6_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
             msg += INTRA_VME_OUTPUT_IN_DWS;
         } else {
-            gen6_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
+            if (msg[0] & INTRA_MB_FLAG_MASK) {
+                gen6_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+            } else {
+                gen6_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
+            }
+
             msg += INTER_VME_OUTPUT_IN_DWS;
             offset += INTER_VME_OUTPUT_IN_BYTES;
         }

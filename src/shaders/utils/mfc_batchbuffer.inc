@@ -28,6 +28,8 @@ define(`BIND_IDX_VME_OUTPUT',           `0')
 define(`BIND_IDX_MFC_SLICE_HEADER',     `1')
 define(`BIND_IDX_MFC_BATCHBUFFER',      `2')
 
+define(`INTRAMBFLAG_MASK',              `0x00002000')
+
 #ifdef DEV_SNB
 
 define(`OB_CACHE_TYPE',                 `5')

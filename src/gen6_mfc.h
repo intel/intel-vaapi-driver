@@ -40,6 +40,8 @@ struct encode_state;
 #define MAX_MFC_REFERENCE_SURFACES      16
 #define NUM_MFC_DMV_BUFFERS             34
 
+#define INTRA_MB_FLAG_MASK              0x00002000
+
 #define __SOFTWARE__    0
 
 #define SURFACE_STATE_PADDED_SIZE_0_GEN7        ALIGN(sizeof(struct gen7_surface_state), 32)
