@@ -976,7 +976,7 @@ gen7_mfd_avc_decode_init(VADriverContextP ctx,
     dri_bo_unreference(gen7_mfd_context->bsd_mpc_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "bsd mpc row store",
-                      width_in_mbs * 96,
+                      width_in_mbs * 64 * 2,
                       0x1000);
     assert(bo);
     gen7_mfd_context->bsd_mpc_row_store_scratch_buffer.bo = bo;
@@ -985,7 +985,7 @@ gen7_mfd_avc_decode_init(VADriverContextP ctx,
     dri_bo_unreference(gen7_mfd_context->mpr_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "mpr row store",
-                      width_in_mbs * 64,
+                      width_in_mbs * 64 * 2,
                       0x1000);
     assert(bo);
     gen7_mfd_context->mpr_row_store_scratch_buffer.bo = bo;
