@@ -1159,20 +1159,26 @@ gen7_mfd_mpeg2_qm_state(VADriverContextP ctx,
         VAIQMatrixBufferMPEG2 * const iq_matrix =
             (VAIQMatrixBufferMPEG2 *)decode_state->iq_matrix->buffer;
 
-        gen_iq_matrix->load_intra_quantiser_matrix =
-            iq_matrix->load_intra_quantiser_matrix;
-        if (iq_matrix->load_intra_quantiser_matrix) {
-            for (j = 0; j < 64; j++)
-                gen_iq_matrix->intra_quantiser_matrix[zigzag_direct[j]] =
-                    iq_matrix->intra_quantiser_matrix[j];
+        if (gen_iq_matrix->load_intra_quantiser_matrix == -1 ||
+            iq_matrix->load_intra_quantiser_matrix) {
+            gen_iq_matrix->load_intra_quantiser_matrix =
+                iq_matrix->load_intra_quantiser_matrix;
+            if (iq_matrix->load_intra_quantiser_matrix) {
+                for (j = 0; j < 64; j++)
+                    gen_iq_matrix->intra_quantiser_matrix[zigzag_direct[j]] =
+                        iq_matrix->intra_quantiser_matrix[j];
+            }
         }
 
-        gen_iq_matrix->load_non_intra_quantiser_matrix =
-            iq_matrix->load_non_intra_quantiser_matrix;
-        if (iq_matrix->load_non_intra_quantiser_matrix) {
-            for (j = 0; j < 64; j++)
-                gen_iq_matrix->non_intra_quantiser_matrix[zigzag_direct[j]] =
-                    iq_matrix->non_intra_quantiser_matrix[j];
+        if (gen_iq_matrix->load_non_intra_quantiser_matrix == -1 ||
+            iq_matrix->load_non_intra_quantiser_matrix) {
+            gen_iq_matrix->load_non_intra_quantiser_matrix =
+                iq_matrix->load_non_intra_quantiser_matrix;
+            if (iq_matrix->load_non_intra_quantiser_matrix) {
+                for (j = 0; j < 64; j++)
+                    gen_iq_matrix->non_intra_quantiser_matrix[zigzag_direct[j]] =
+                        iq_matrix->non_intra_quantiser_matrix[j];
+            }
         }
     }
 
@@ -2799,6 +2805,15 @@ gen7_mfd_context_destroy(void *hw_context)
     free(gen7_mfd_context);
 }
 
+static void gen7_mfd_mpeg2_context_init(VADriverContextP ctx,
+                                    struct gen7_mfd_context *gen7_mfd_context)
+{
+    gen7_mfd_context->iq_matrix.mpeg2.load_intra_quantiser_matrix = -1;
+    gen7_mfd_context->iq_matrix.mpeg2.load_non_intra_quantiser_matrix = -1;
+    gen7_mfd_context->iq_matrix.mpeg2.load_chroma_intra_quantiser_matrix = -1;
+    gen7_mfd_context->iq_matrix.mpeg2.load_chroma_non_intra_quantiser_matrix = -1;
+}
+
 struct hw_context *
 gen7_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
@@ -2818,6 +2833,11 @@ gen7_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     gen7_mfd_context->jpeg_wa_surface_id = VA_INVALID_SURFACE;
 
     switch (obj_config->profile) {
+    case VAProfileMPEG2Simple:
+    case VAProfileMPEG2Main:
+        gen7_mfd_mpeg2_context_init(ctx, gen7_mfd_context);
+        break;
+
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:
