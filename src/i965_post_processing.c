@@ -1305,6 +1305,7 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
     struct pp_load_save_context *pp_load_save_context = (struct pp_load_save_context *)&pp_context->private_context;
     int width[3], height[3], pitch[3], offset[3];
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
+    struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     const int Y = 0;
 
     /* source surface */
@@ -1324,6 +1325,9 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
 
     pp_inline_parameter->grf5.block_count_x = ALIGN(width[Y], 16) / 16;   /* 1 x N */
     pp_inline_parameter->grf5.number_blocks = ALIGN(width[Y], 16) / 16;
+
+    pp_static_parameter->grf3.horizontal_origin_offset = src_rect->x;
+    pp_static_parameter->grf3.vertical_origin_offset = src_rect->y;
 
     dst_surface->flags = src_surface->flags;
 
