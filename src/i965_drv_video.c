@@ -848,7 +848,7 @@ i965_CreateContext(VADriverContextP ctx,
 
     if (picture_width > i965->codec_info->max_width ||
         picture_height > i965->codec_info->max_height) {
-        vaStatus = VA_STATUS_ERROR_INVALID_PARAMETER;
+        vaStatus = VA_STATUS_ERROR_RESOLUTION_NOT_SUPPORTED;
         return vaStatus;
     }
 
