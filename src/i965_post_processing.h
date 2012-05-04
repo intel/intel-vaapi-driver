@@ -65,8 +65,8 @@ struct pp_scaling_context
     int dest_y; /* in pixel */
     int dest_w;
     int dest_h;
-    int src_normalized_x;
-    int src_normalized_y;
+    float src_normalized_x;
+    float src_normalized_y;
 };
 
 struct pp_avs_context
@@ -75,8 +75,8 @@ struct pp_avs_context
     int dest_y; /* in pixel */
     int dest_w;
     int dest_h;
-    int src_normalized_x;
-    int src_normalized_y;
+    float src_normalized_x;
+    float src_normalized_y;
     int src_w;
     int src_h;
 };
