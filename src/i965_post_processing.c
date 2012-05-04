@@ -3502,6 +3502,23 @@ i965_CreateSurfaces(VADriverContextP ctx,
                     int num_surfaces,
                     VASurfaceID *surfaces);
 
+static void
+rgb_to_yuv(unsigned int argb,
+           unsigned char *y,
+           unsigned char *u,
+           unsigned char *v,
+           unsigned char *a)
+{
+    int r = ((argb >> 16) & 0xff);
+    int g = ((argb >> 8) & 0xff);
+    int b = ((argb >> 0) & 0xff);
+    
+    *y = (257 * r + 504 * g + 98 * b) / 1000 + 16;
+    *v = (439 * r - 368 * g - 71 * b) / 1000 + 128;
+    *u = (-148 * r - 291 * g + 439 * b) / 1000 + 128;
+    *a = ((argb >> 24) & 0xff);
+}
+
 static void 
 i965_vpp_clear_surface(VADriverContextP ctx,
                        struct i965_post_processing_context *pp_context,
@@ -3514,10 +3531,13 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     unsigned int blt_cmd, br13;
     unsigned int tiling = 0, swizzle = 0;
     int pitch;
+    unsigned char y, u, v, a;
 
     /* Currently only support NV12 surface */
     if (!obj_surface || obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2'))
         return;
+
+    rgb_to_yuv(color, &y, &u, &v, &a);
 
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
     blt_cmd = XY_COLOR_BLT_CMD;
@@ -3552,7 +3572,11 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     OUT_RELOC(batch, obj_surface->bo, 
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
               0);
-    OUT_BATCH(batch, 0x10);
+    OUT_BATCH(batch, y);
+
+    br13 = 0xf0 << 16;
+    br13 |= BR13_565;
+    br13 |= pitch;
 
     OUT_BATCH(batch, blt_cmd);
     OUT_BATCH(batch, br13);
@@ -3561,11 +3585,11 @@ i965_vpp_clear_surface(VADriverContextP ctx,
               0);
     OUT_BATCH(batch,
               obj_surface->height / 2 << 16 |
-              obj_surface->width);
+              obj_surface->width / 2);
     OUT_RELOC(batch, obj_surface->bo, 
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
               obj_surface->width * obj_surface->y_cb_offset);
-    OUT_BATCH(batch, 0x80);
+    OUT_BATCH(batch, v << 8 | u);
 
     ADVANCE_BATCH(batch);
     intel_batchbuffer_end_atomic(batch);
