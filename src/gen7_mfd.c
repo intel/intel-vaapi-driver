@@ -1114,11 +1114,18 @@ gen7_mfd_mpeg2_pic_state(VADriverContextP ctx,
                          struct decode_state *decode_state,
                          struct gen7_mfd_context *gen7_mfd_context)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     VAPictureParameterBufferMPEG2 *pic_param;
+    unsigned int slice_concealment_disable_bit = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferMPEG2 *)decode_state->pic_param->buffer;
+
+    if (IS_HASWELL(i965->intel.device_id)) {
+        /* XXX: disable concealment for now */
+        slice_concealment_disable_bit = 1;
+    }
 
     BEGIN_BCS_BATCH(batch, 13);
     OUT_BCS_BATCH(batch, MFX_MPEG2_PIC_STATE | (13 - 2));
@@ -1138,6 +1145,7 @@ gen7_mfd_mpeg2_pic_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   pic_param->picture_coding_type << 9);
     OUT_BCS_BATCH(batch,
+                  (slice_concealment_disable_bit << 31) |
                   ((ALIGN(pic_param->vertical_size, 16) / 16) - 1) << 16 |
                   ((ALIGN(pic_param->horizontal_size, 16) / 16) - 1));
     OUT_BCS_BATCH(batch, 0);
@@ -1219,6 +1227,7 @@ gen7_mfd_mpeg2_bsd_object(VADriverContextP ctx,
                           VASliceParameterBufferMPEG2 *next_slice_param,
                           struct gen7_mfd_context *gen7_mfd_context)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     unsigned int width_in_mbs = ALIGN(pic_param->horizontal_size, 16) / 16;
     int mb_count, vpos0, hpos0, vpos1, hpos1, is_field_pic_wa, is_field_pic = 0;
@@ -1256,7 +1265,8 @@ gen7_mfd_mpeg2_bsd_object(VADriverContextP ctx,
                   (next_slice_param == NULL) << 3 |
                   (slice_param->macroblock_offset & 0x7));
     OUT_BCS_BATCH(batch,
-                  slice_param->quantiser_scale_code << 24);
+                  (slice_param->quantiser_scale_code << 24) |
+                  (IS_HASWELL(i965->intel.device_id) ? (vpos1 << 8 | hpos1) : 0));
     ADVANCE_BCS_BATCH(batch);
 }
 
