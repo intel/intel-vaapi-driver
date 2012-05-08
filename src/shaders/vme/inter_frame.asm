@@ -105,6 +105,8 @@ mov  (8) vme_msg_1<1>:UD        vme_m1.0<8,8,1>:UD {align1};
 mov  (8) vme_msg_2<1>:UD        0x0:UD {align1};
 
 /* m3 */
+mov  (1) INEP_ROW.0<1>:UD       0x0:UD {align1};
+and  (1) INEP_ROW.4<1>:UD       INEP_ROW.4<0,1,0>:UD            0xFF000000:UD {align1};
 mov  (8) vme_msg_3<1>:UD        INEP_ROW.0<8,8,1>:UD {align1};        
 
 /* m4 */
