@@ -64,17 +64,23 @@ INTEL_G7B =				\
 	exa_wm_write.g7b 		\
 	exa_wm_yuv_rgb.g7b
 
+# XXX: only regenerate binary for EU code containing JMPI instructions
+INTEL_G7B_HASWELL = \
+	exa_wm_src_sample_planar.g7b.haswell	\
+	$(NULL)
+
 TARGETS  =
 if HAVE_GEN4ASM
 TARGETS += $(INTEL_G4B)
 TARGETS += $(INTEL_G4B_GEN5)
 TARGETS += $(INTEL_G6B)
 TARGETS += $(INTEL_G7B)
+TARGETS += $(INTEL_G7B_HASWELL)
 endif
 
 all-local: $(TARGETS)
 
-SUFFIXES = .g4a .g4s .g4b .g6a .g6s .g6b .g7a .g7s .g7b
+SUFFIXES = .g4a .g4s .g4b .g6a .g6s .g6b .g7a .g7s .g7b .g7b.haswell
 
 if HAVE_GEN4ASM
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
@@ -96,6 +102,8 @@ $(INTEL_G7S): $(INTEL_G7A) $(INTEL_G7I)
 	$(AM_V_GEN)m4 $< > $@
 .g7s.g7b:
 	$(AM_V_GEN)$(GEN4ASM) -g 7 -o $@ $<
+.g7s.g7b.haswell:
+	$(AM_V_GEN)$(GEN4ASM) -g 7.5 -o $@ $<
 endif
 
 CLEANFILES = \
@@ -113,6 +121,7 @@ EXTRA_DIST = \
 	$(INTEL_G6B)		\
 	$(INTEL_G7A)		\
 	$(INTEL_G7B)		\
+	$(INTEL_G7B_HASWELL)	\
 	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
