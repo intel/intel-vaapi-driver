@@ -10,7 +10,8 @@ m4_append([intel_driver_version], intel_driver_pre_version, [.pre])
 ])
 
 # libva minimum version requirement
-m4_define([libva_package_version], [1.0.14])
+m4_define([libva_version], [0.34])
+m4_define([libva_package_version], [1.2.0])
 
 # libdrm minimum version requirement
 m4_define([libdrm_version], [2.4.23])
@@ -63,7 +64,7 @@ AM_CONDITIONAL(HAVE_GEN4ASM, test x$gen4asm = xyes)
 AC_PATH_PROG([GEN4ASM], [intel-gen4asm])
 
 dnl Check for VA-API
-PKG_CHECK_MODULES(LIBVA_DEPS,	  [libva])
+PKG_CHECK_MODULES(LIBVA_DEPS,	  [libva >= libva_version])
 PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11])
 
 VA_VERSION=`$PKG_CONFIG --modversion libva`
