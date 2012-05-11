@@ -26,10 +26,14 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <va/va_dec_jpeg.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
@@ -2040,8 +2044,6 @@ gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
 
-    assert(pic_param->type == VA_JPEG_SOF0); /* only support BASELINE on Ivybridge */
-
     if (pic_param->num_components == 1)
         chroma_type = GEN7_YUV400;
     else if (pic_param->num_components == 3) {
@@ -2080,14 +2082,14 @@ gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
     if (chroma_type == GEN7_YUV400 ||
         chroma_type == GEN7_YUV444 ||
         chroma_type == GEN7_YUV422V_2Y) {
-        frame_width_in_blks = ((pic_param->image_width + 7) / 8);
-        frame_height_in_blks = ((pic_param->image_height + 7) / 8);
+        frame_width_in_blks = ((pic_param->picture_width + 7) / 8);
+        frame_height_in_blks = ((pic_param->picture_height + 7) / 8);
     } else if (chroma_type == GEN7_YUV411) {
-        frame_width_in_blks = ((pic_param->image_width + 31) / 32) * 4;
-        frame_height_in_blks = ((pic_param->image_height + 31) / 32) * 4;
+        frame_width_in_blks = ((pic_param->picture_width + 31) / 32) * 4;
+        frame_height_in_blks = ((pic_param->picture_height + 31) / 32) * 4;
     } else {
-        frame_width_in_blks = ((pic_param->image_width + 15) / 16) * 2;
-        frame_height_in_blks = ((pic_param->image_height + 15) / 16) * 2;
+        frame_width_in_blks = ((pic_param->picture_width + 15) / 16) * 2;
+        frame_height_in_blks = ((pic_param->picture_height + 15) / 16) * 2;
     }
 
     BEGIN_BCS_BATCH(batch, 3);
@@ -2126,10 +2128,10 @@ gen7_mfd_jpeg_huff_table_state(VADriverContextP ctx,
         BEGIN_BCS_BATCH(batch, 53);
         OUT_BCS_BATCH(batch, MFX_JPEG_HUFF_TABLE_STATE | (53 - 2));
         OUT_BCS_BATCH(batch, id);
-        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_bits, 12);
-        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_huffval, 12);
-        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_bits, 16);
-        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_huffval, 164);
+        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].num_dc_codes, 12);
+        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].dc_values, 12);
+        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].num_ac_codes, 16);
+        intel_batchbuffer_data(batch, huffman_table->huffman_table[index].ac_values, 164);
         ADVANCE_BCS_BATCH(batch);
     }
 }
@@ -2161,12 +2163,12 @@ gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
 
     for (index = 0; index < pic_param->num_components; index++) {
         int qm_type = va_to_gen7_jpeg_qm[pic_param->components[index].component_id - pic_param->components[0].component_id + 1];
-        unsigned char *qm = iq_matrix->quantiser_matrix[pic_param->components[index].quantiser_table_selector];
-        int precision = iq_matrix->precision[pic_param->components[index].quantiser_table_selector];
+        unsigned char *qm = iq_matrix->quantiser_table[pic_param->components[index].quantiser_table_selector];
+        unsigned char precision = pic_param->sample_precision;
         unsigned char raster_qm[64];
         int j;
 
-        assert(precision == 0);
+        assert(precision == 8);
 
         for (j = 0; j < 64; j++)
             raster_qm[zigzag_direct[j]] = qm[j];
@@ -2192,7 +2194,7 @@ gen7_mfd_jpeg_bsd_object(VADriverContextP ctx,
     assert(slice_param->num_components <= pic_param->num_components);
 
     for (i = 0; i < slice_param->num_components; i++) {
-        switch (slice_param->components[i].component_id - pic_param->components[0].component_id + 1) {
+        switch (slice_param->components[i].component_selector - pic_param->components[0].component_id + 1) {
         case 1:
             scan_component_mask |= (1 << 0);
             break;
@@ -2652,7 +2654,6 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
     pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
 
     /* Currently only support Baseline DCT */
-    assert(pic_param->type == VA_JPEG_SOF0);
     assert(pic_param->sample_precision == 8);
     gen7_mfd_jpeg_decode_init(ctx, decode_state, gen7_mfd_context);
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
@@ -2686,11 +2687,11 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
                 next_slice_param = next_slice_group_param;
 
             for (component = 0; component < slice_param->num_components; component++) {
-                if (max_selector < slice_param->components[component].dc_selector)
-                    max_selector = slice_param->components[component].dc_selector;
+                if (max_selector < slice_param->components[component].dc_table_selector)
+                    max_selector = slice_param->components[component].dc_table_selector;
 
-                if (max_selector < slice_param->components[component].ac_selector)
-                    max_selector = slice_param->components[component].ac_selector;
+                if (max_selector < slice_param->components[component].ac_table_selector)
+                    max_selector = slice_param->components[component].ac_table_selector;
             }
 
             slice_param++;
