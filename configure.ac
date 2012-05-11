@@ -97,10 +97,11 @@ AC_CACHE_CHECK([for JPEG decoding API], ac_cv_have_jpeg_decoding_api, [
     saved_LIBS="$LIBS"
     LIBS="$CFLAGS $LIBVA_DEPS_LIBS"
     AC_TRY_COMPILE(
-        [#include <va/va.h>],
+        [#include <va/va.h>
+         #include <va/va_dec_jpeg.h>],
         [VAPictureParameterBufferJPEG pic_param;
          VASliceParameterBufferJPEG slice_param;
-         VAIQMatrixBufferJPEG iq_matrix;],
+         VAIQMatrixParameterBufferJPEG iq_matrix;],
         [ac_cv_have_jpeg_decoding_api="yes"],
         [ac_cv_have_jpeg_decoding_api="no"]
     )
