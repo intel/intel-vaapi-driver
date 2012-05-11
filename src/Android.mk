@@ -31,12 +31,15 @@ LOCAL_SRC_FILES :=              \
         gen6_mfd.c              \
         gen6_vme.c              \
         gen7_mfd.c              \
+        gen7_mfc.c              \
         i965_avc_bsd.c          \
         i965_avc_hw_scoreboard.c\
         i965_avc_ildb.c         \
         i965_decoder_utils.c    \
         i965_drv_video.c        \
         i965_encoder.c          \
+        i965_encoder_utils.c    \
+        i965_gpe_utils.c        \
         i965_media.c            \
         i965_media_h264.c       \
         i965_media_mpeg2.c      \
