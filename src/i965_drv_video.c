@@ -26,8 +26,11 @@
  *    Zou Nan hai <nanhai.zou@intel.com>
  *
  */
-
+#ifdef ANDROID
+#include "config_android.h"
+#else
 #include "config.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3020,6 +3023,11 @@ i965_PutSurface(VADriverContextP ctx,
                 unsigned int number_cliprects, /* number of clip rects in the clip list */
                 unsigned int flags) /* de-interlacing flags */
 {
+#ifdef ANDROID
+        /*dummy function to keep libva API but android does not use this
+         * method to route information to display*/
+        return VA_STATUS_SUCCESS;
+#endif
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct dri_state *dri_state = (struct dri_state *)ctx->dri_state;
     struct i965_render_state *render_state = &i965->render_state;
