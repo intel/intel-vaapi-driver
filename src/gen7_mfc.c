@@ -84,6 +84,7 @@ gen7_mfc_pipe_mode_select(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   (MFX_LONG_MODE << 17) | /* Must be long format for encoder */
                   (MFD_MODE_VLD << 15) | /* VLD mode */
+                  (1 << 10) | /* Stream-Out Enable */
                   ((!!mfc_context->post_deblocking_output.bo) << 9)  | /* Post Deblocking Output */
                   ((!!mfc_context->pre_deblocking_output.bo) << 8)  | /* Pre Deblocking Output */
                   (0 << 8)  | /* Pre Deblocking Output */
