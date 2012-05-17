@@ -2350,7 +2350,15 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->pitches[2] = obj_surface->cb_cr_pitch; /* V */
         image->offsets[2] = w_pitch * obj_surface->y_cr_offset;
         break;
-
+    case VA_FOURCC('Y', 'U', 'Y', '2'):
+        image->num_planes = 1;
+        image->pitches[0] = obj_surface->width * 2; /* Y, width is aligned already */
+        image->offsets[0] = 0;
+        image->pitches[1] = obj_surface->width * 2; /* U */
+        image->offsets[1] = 0;
+        image->pitches[2] = obj_surface->width * 2; /* V */
+        image->offsets[2] = 0;
+        break;
     default:
         goto error;
     }
