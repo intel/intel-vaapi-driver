@@ -92,6 +92,10 @@ static const uint32_t pp_nv12_dn_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/nv12_dn_nv12.g4b.gen5"
 };
 
+static const uint32_t pp_nv12_load_save_pa_gen5[][4] = {
+#include "shaders/post_processing/gen5_6/nv12_load_save_pa.g4b.gen5"
+};
+
 static VAStatus pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                const struct i965_surface *src_surface,
                                const VARectangle *src_rect,
@@ -244,6 +248,19 @@ static struct pp_module pp_modules_gen5[] = {
 
         pp_nv12_dn_initialize,
     },
+
+    {
+        {
+            "NV12_PA module",
+            PP_NV12_LOAD_SAVE_PA,
+            pp_nv12_load_save_pa_gen5,
+            sizeof(pp_nv12_load_save_pa_gen5),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
+
 };
 
 static const uint32_t pp_null_gen6[][4] = {
@@ -280,6 +297,10 @@ static const uint32_t pp_nv12_dndi_gen6[][4] = {
 
 static const uint32_t pp_nv12_dn_gen6[][4] = {
 #include "shaders/post_processing/gen5_6/nv12_dn_nv12.g6b"
+};
+
+static const uint32_t pp_nv12_load_save_pa_gen6[][4] = {
+#include "shaders/post_processing/gen5_6/nv12_load_save_pa.g6b"
 };
 
 static struct pp_module pp_modules_gen6[] = {
@@ -390,6 +411,19 @@ static struct pp_module pp_modules_gen6[] = {
 
         pp_nv12_dn_initialize,
     },
+    {
+        {
+            "NV12_PA module",
+            PP_NV12_LOAD_SAVE_PA,
+            pp_nv12_load_save_pa_gen6,
+            sizeof(pp_nv12_load_save_pa_gen6),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
+    
+    
 };
 
 static const uint32_t pp_null_gen7[][4] = {
@@ -424,6 +458,8 @@ static const uint32_t pp_nv12_dndi_gen7[][4] = {
 };
 
 static const uint32_t pp_nv12_dn_gen7[][4] = {
+};
+static const uint32_t pp_nv12_load_save_pa_gen7[][4] = {
 };
 
 static VAStatus gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
@@ -553,6 +589,18 @@ static struct pp_module pp_modules_gen7[] = {
 
         gen7_pp_nv12_dn_initialize,
     },
+    {
+        {
+            "NV12_PA module",
+            PP_NV12_LOAD_SAVE_PA,
+            pp_nv12_load_save_pa_gen7,
+            sizeof(pp_nv12_load_save_pa_gen7),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
+    
 };
 
 static int
@@ -1039,7 +1087,9 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
     const int V = fourcc == VA_FOURCC('Y', 'V', '1', '2') ? 1 : 2;
     const int UV = 1;
     int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
-
+    int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') || fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')); 
+ 
+ 
     if (surface->flags == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = SURFACE(surface->id);
         bo = obj_surface->bo;
@@ -1048,7 +1098,11 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
         pitch[0] = obj_surface->width;
         offset[0] = 0;
 
-        if (interleaved_uv) {
+        if (packed_yuv ) {
+            width[0] = obj_surface->orig_width * 2; 
+            pitch[0] = obj_surface->width * 2;
+        }
+        else if (interleaved_uv) {
             width[1] = obj_surface->orig_width;
             height[1] = obj_surface->orig_height / 2;
             pitch[1] = obj_surface->width;
@@ -1094,23 +1148,25 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
                               width[Y] / 4, height[Y], pitch[Y], I965_SURFACEFORMAT_R8_UNORM,
                               base_index, is_target);
 
-    if (interleaved_uv) {
-        i965_pp_set_surface_state(ctx, pp_context,
-                                  bo, offset[UV],
-                                  width[UV] / 4, height[UV], pitch[UV], I965_SURFACEFORMAT_R8_UNORM,
-                                  base_index + 1, is_target);
-    } else {
-        /* U surface */
-        i965_pp_set_surface_state(ctx, pp_context,
-                                  bo, offset[U],
-                                  width[U] / 4, height[U], pitch[U], I965_SURFACEFORMAT_R8_UNORM,
-                                  base_index + 1, is_target);
+    if (!packed_yuv) {
+        if (interleaved_uv) {
+            i965_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[UV],
+                                      width[UV] / 4, height[UV], pitch[UV], I965_SURFACEFORMAT_R8_UNORM,
+                                      base_index + 1, is_target);
+        } else {
+            /* U surface */
+            i965_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[U],
+                                      width[U] / 4, height[U], pitch[U], I965_SURFACEFORMAT_R8_UNORM,
+                                      base_index + 1, is_target);
 
-        /* V surface */
-        i965_pp_set_surface_state(ctx, pp_context,
-                                  bo, offset[V],
-                                  width[V] / 4, height[V], pitch[V], I965_SURFACEFORMAT_R8_UNORM,
-                                  base_index + 2, is_target);
+            /* V surface */
+            i965_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[V],
+                                      width[V] / 4, height[V], pitch[V], I965_SURFACEFORMAT_R8_UNORM,
+                                      base_index + 2, is_target);
+        }
     }
 
 }
@@ -2925,6 +2981,44 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     return VA_STATUS_SUCCESS;
 }
 
+// update u/v offset when the surface format are packed yuv
+static void i965_update_src_surface_uv_offset(
+    VADriverContextP    ctx, 
+    struct i965_post_processing_context *pp_context,
+    const struct i965_surface *surface)
+{
+    struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+    int fourcc = pp_get_surface_fourcc(ctx, surface);
+    
+    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+        pp_static_parameter->grf1.source_packed_u_offset = 1;
+        pp_static_parameter->grf1.source_packed_v_offset = 3;
+    } 
+    else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        pp_static_parameter->grf1.source_packed_y_offset = 1;
+        pp_static_parameter->grf1.source_packed_v_offset = 2;
+    }
+    
+}
+
+static void i965_update_dst_surface_uv_offset(
+    VADriverContextP    ctx, 
+    struct i965_post_processing_context *pp_context,
+    const struct i965_surface *surface)
+{
+    struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+    int fourcc = pp_get_surface_fourcc(ctx, surface);
+    
+    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_u_offset = 1;
+        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_v_offset = 3;
+    } 
+    else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_y_offset = 1;
+        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_v_offset = 2;
+    }
+    
+}
 
 static VAStatus
 ironlake_pp_initialize(
@@ -3014,6 +3108,11 @@ ironlake_pp_initialize(
     
     memset(pp_context->pp_static_parameter, 0, static_param_size);
     memset(pp_context->pp_inline_parameter, 0, inline_param_size);
+    
+    // update u/v offset for packed yuv
+    i965_update_src_surface_uv_offset (ctx, pp_context, src_surface);
+    i965_update_dst_surface_uv_offset (ctx, pp_context, dst_surface);
+
     assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
     pp_context->current_pp = pp_index;
     pp_module = &pp_context->pp_modules[pp_index];
@@ -3142,7 +3241,12 @@ gen6_pp_initialize(
     
     memset(&pp_static_parameter, 0, sizeof(*pp_static_parameter));
     memset(&pp_inline_parameter, 0, sizeof(*pp_inline_parameter));
-    assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
+
+    // update u/v offset for packed yuv
+    i965_update_src_surface_uv_offset (ctx, pp_context, src_surface);
+    i965_update_dst_surface_uv_offset (ctx, pp_context, dst_surface);
+    
+     assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
     pp_context->current_pp = pp_index;
     pp_module = &pp_context->pp_modules[pp_index];
     
@@ -3744,13 +3848,22 @@ i965_image_pl2_processing(VADriverContextP ctx,
                                       dst_rect,
                                       PP_NV12_LOAD_SAVE_N12,
                                       NULL);
-    } else {
+    } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') || 
+               fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
         i965_post_processing_internal(ctx, i965->pp_context,
                                       src_surface,
                                       src_rect,
                                       dst_surface,
                                       dst_rect,
                                       PP_NV12_LOAD_SAVE_PL3,
+                                      NULL);
+    } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+        i965_post_processing_internal(ctx, i965->pp_context,
+                                      src_surface,
+                                      src_rect,
+                                      dst_surface,
+                                      dst_rect,
+                                      PP_NV12_LOAD_SAVE_PA,
                                       NULL);
     }
 

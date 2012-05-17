@@ -48,6 +48,7 @@ enum
     PP_NV12_AVS,
     PP_NV12_DNDI,
     PP_NV12_DN,
+    PP_NV12_LOAD_SAVE_PA,
     NUM_PP_MODULES,
 };
 
