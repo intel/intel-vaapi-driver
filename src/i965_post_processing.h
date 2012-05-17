@@ -47,9 +47,10 @@ enum
     PP_NV12_AVS,
     PP_NV12_DNDI,
     PP_NV12_DN,
+    PP_NV12_LOAD_SAVE_PA,
 };
 
-#define NUM_PP_MODULES                  9
+#define NUM_PP_MODULES                  10
 
 struct i965_post_processing_context;
 
