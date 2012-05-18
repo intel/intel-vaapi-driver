@@ -731,7 +731,7 @@ gen7_render_set_surface_tiling(struct gen7_surface_state *ss, uint32_t tiling)
 }
 
 /* Set "Shader Channel Select" */
-static void
+void
 gen7_render_set_surface_scs(struct gen7_surface_state *ss)
 {
     ss->ss7.shader_chanel_select_r = HSW_SCS_RED;
