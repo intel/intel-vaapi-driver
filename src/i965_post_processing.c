@@ -1145,6 +1145,7 @@ gen7_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_cont
                           int width, int height, int pitch, int format, 
                           int index, int is_target)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);  
     struct gen7_surface_state *ss;
     dri_bo *ss_bo;
     unsigned int tiling;
@@ -1165,6 +1166,8 @@ gen7_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_cont
     ss->ss2.height = height - 1;
     ss->ss3.pitch = pitch - 1;
     gen7_pp_set_surface_tiling(ss, tiling);
+    if (IS_HASWELL(i965->intel.device_id))
+        gen7_render_set_surface_scs(ss);
     dri_bo_emit_reloc(ss_bo,
                       I915_GEM_DOMAIN_RENDER, is_target ? I915_GEM_DOMAIN_RENDER : 0,
                       surf_bo_offset,
