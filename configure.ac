@@ -167,6 +167,10 @@ AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
 AC_SUBST([WAYLAND_DRM_CFLAGS])
 AC_SUBST([WAYLAND_DRM_LIBS])
 
+m4_ifdef([WAYLAND_SCANNER_RULES],
+    [WAYLAND_SCANNER_RULES(['$(top_srcdir)/src/wayland'])],
+    [wayland_scanner_rules=""; AC_SUBST(wayland_scanner_rules)])
+
 AC_OUTPUT([
     Makefile
     debian.upstream/Makefile 
@@ -183,6 +187,7 @@ AC_OUTPUT([
     src/shaders/render/Makefile
     src/shaders/utils/Makefile
     src/shaders/vme/Makefile
+    src/wayland/Makefile
 ])
 
 dnl Print summary

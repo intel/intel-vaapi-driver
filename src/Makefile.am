@@ -123,5 +123,11 @@ driver_cflags			+= $(WAYLAND_CFLAGS) $(WAYLAND_DRM_CFLAGS)
 driver_libs			+= $(WAYLAND_LIBS) $(WAYLAND_DRM_LIBS)
 endif
 
+# Wayland protocol
+i965_output_wayland.c: $(protocol_source_h)
+@wayland_scanner_rules@
+
+DIST_SUBDIRS = wayland
+
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in
