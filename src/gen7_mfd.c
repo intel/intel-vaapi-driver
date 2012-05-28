@@ -2121,6 +2121,8 @@ gen7_mfd_jpeg_huff_table_state(VADriverContextP ctx,
 
     for (index = 0; index < num_tables; index++) {
         int id = va_to_gen7_jpeg_hufftable[index];
+        if (!huffman_table->load_huffman_table[index])
+            continue;
         BEGIN_BCS_BATCH(batch, 53);
         OUT_BCS_BATCH(batch, MFX_JPEG_HUFF_TABLE_STATE | (53 - 2));
         OUT_BCS_BATCH(batch, id);
@@ -2163,6 +2165,9 @@ gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
         unsigned char precision = pic_param->sample_precision;
         unsigned char raster_qm[64];
         int j;
+
+        if (!iq_matrix->load_quantiser_table[pic_param->components[index].quantiser_table_selector])
+            continue;
 
         assert(precision == 8);
 
