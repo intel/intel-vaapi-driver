@@ -3687,13 +3687,16 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     unsigned int blt_cmd, br13;
     unsigned int tiling = 0, swizzle = 0;
     int pitch;
-    unsigned char y, u, v, a;
+    unsigned char y, u, v, a = 0;
 
     /* Currently only support NV12 surface */
     if (!obj_surface || obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2'))
         return;
 
     rgb_to_yuv(color, &y, &u, &v, &a);
+
+    if (a == 0)
+        return;
 
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
     blt_cmd = XY_COLOR_BLT_CMD;
