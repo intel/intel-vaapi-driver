@@ -4315,7 +4315,7 @@ i965_proc_picture(VADriverContextP ctx,
 
     obj_surface = SURFACE(proc_state->current_render_target);
     i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-    i965_vpp_clear_surface(ctx, i965->pp_context, proc_state->current_render_target, pipeline_param->output_background_color); 
+    i965_vpp_clear_surface(ctx, &proc_context->pp_context, proc_state->current_render_target, pipeline_param->output_background_color); 
     
     for (i = 0; i < pipeline_param->num_filters; i++) {
         struct object_buffer *obj_buffer = BUFFER(pipeline_param->filters[i]);
