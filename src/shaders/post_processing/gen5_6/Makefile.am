@@ -19,6 +19,7 @@ INTEL_PP_G4B_GEN5 = \
 	nv12_load_save_pa.g4b.gen5				\
 	pl3_load_save_pa.g4b.gen5				\
 	pa_load_save_nv12.g4b.gen5				\
+	pa_load_save_pl3.g4b.gen5				\
 	$(NULL)
 
 INTEL_PP_G6B = \
@@ -33,6 +34,7 @@ INTEL_PP_G6B = \
 	nv12_load_save_pa.g6b				\
 	pl3_load_save_pa.g6b				\
 	pa_load_save_nv12.g6b				\
+	pa_load_save_pl3.g6b				\
 	$(NULL)
 
 INTEL_PP_ASM = \
@@ -47,6 +49,7 @@ INTEL_PP_ASM = \
 	nv12_load_save_pa.asm				\
 	pl3_load_save_pa.asm				\
 	pa_load_save_nv12.asm				\
+	pa_load_save_pl3.asm				\
 	$(NULL)
 
 INTEL_PP_ASM += \
