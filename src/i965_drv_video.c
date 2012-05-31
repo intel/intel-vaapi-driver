@@ -84,6 +84,7 @@
                                          IS_GEN7((ctx)->intel.device_id))
 
 #define HAS_ACCELERATED_PUTIMAGE(ctx)   HAS_VPP(ctx)
+static int get_sampling_from_fourcc(unsigned int fourcc);
 
 enum {
     I965_SURFACETYPE_RGBA = 1,
@@ -2107,6 +2108,12 @@ i965_CreateImage(VADriverContextP ctx,
         image->offsets[1] = size;
         image->data_size  = size + 2 * size2;
         break;
+    case VA_FOURCC('Y','U','Y','2'):
+        image->num_planes = 1;
+        image->pitches[0] = width * 2;
+        image->offsets[0] = 0;
+        image->data_size  = size * 2;
+        break;
     default:
         goto error;
     }
@@ -2343,7 +2350,8 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         unsigned int is_tiled = 0;
         unsigned int fourcc = VA_FOURCC('Y', 'V', '1', '2');
         i965_guess_surface_format(ctx, surface, &fourcc, &is_tiled);
-        i965_check_alloc_surface_bo(ctx, obj_surface, is_tiled, fourcc, SUBSAMPLE_YUV420);
+        int sampling = get_sampling_from_fourcc(fourcc);
+        i965_check_alloc_surface_bo(ctx, obj_surface, is_tiled, fourcc, sampling);
     }
 
     assert(obj_surface->fourcc);
@@ -2516,6 +2524,27 @@ i965_SetImagePalette(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static int 
+get_sampling_from_fourcc(unsigned int fourcc)
+{
+    int surface_sampling = -1;
+    switch (fourcc) {
+    case VA_FOURCC('N', 'V', '1', '2'):
+    case VA_FOURCC('Y', 'V', '1', '2'):
+    case VA_FOURCC('I', '4', '2', '0'):
+    case VA_FOURCC('I', 'M', 'C', '1'):
+    case VA_FOURCC('I', 'M', 'C', '3'):
+        surface_sampling = SUBSAMPLE_YUV420;
+        break;
+    case VA_FOURCC('Y', 'U', 'Y', '2'):
+        surface_sampling = SUBSAMPLE_YUV422H;
+        break;
+    default:
+        break;
+    }
+    return surface_sampling;
+}
+
 static inline void
 memcpy_pic(uint8_t *dst, unsigned int dst_stride,
            const uint8_t *src, unsigned int src_stride,
@@ -2639,6 +2668,45 @@ get_image_nv12(struct object_image *obj_image, uint8_t *image_data,
         dri_bo_unmap(obj_surface->bo);
 }
 
+static void
+get_image_yuy2(struct object_image *obj_image, uint8_t *image_data,
+               struct object_surface *obj_surface,
+               const VARectangle *rect)
+{
+    uint8_t *dst, *src;
+    unsigned int tiling, swizzle;
+
+    if (!obj_surface->bo)
+        return;
+
+    assert(obj_surface->fourcc);
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+
+    if (tiling != I915_TILING_NONE)
+        drm_intel_gem_bo_map_gtt(obj_surface->bo);
+    else
+        dri_bo_map(obj_surface->bo, 0);
+
+    if (!obj_surface->bo->virtual)
+        return;
+
+    /* Both dest VA image and source surface have YUYV format */
+    dst = image_data + obj_image->image.offsets[0];
+    src = (uint8_t *)obj_surface->bo->virtual;
+
+    /* Y plane */
+    dst += rect->y * obj_image->image.pitches[0] + rect->x*2;
+    src += rect->y * obj_surface->width + rect->x*2;
+    memcpy_pic(dst, obj_image->image.pitches[0],
+               src, obj_surface->width*2,
+               rect->width*2, rect->height);
+
+    if (tiling != I915_TILING_NONE)
+        drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
+    else
+        dri_bo_unmap(obj_surface->bo);
+}
+
 static VAStatus 
 i965_sw_getimage(VADriverContextP ctx,
                  VASurfaceID surface,
@@ -2668,6 +2736,9 @@ i965_sw_getimage(VADriverContextP ctx,
         y + height > obj_image->image.height)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
+    if (obj_surface->fourcc != obj_image->image.format.fourcc)
+        return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
+
     VAStatus va_status;
     void *image_data = NULL;
 
@@ -2694,6 +2765,10 @@ i965_sw_getimage(VADriverContextP ctx,
         if (!render_state->interleaved_uv)
             goto operation_failed;
         get_image_nv12(obj_image, image_data, obj_surface, &rect);
+        break;
+    case VA_FOURCC('Y','U','Y','2'):
+        /* YUY2 is the format supported by overlay plane */
+        get_image_yuy2(obj_image, image_data, obj_surface, &rect);
         break;
     default:
     operation_failed:
@@ -2739,6 +2814,7 @@ i965_hw_getimage(VADriverContextP ctx,
 
     if (!obj_surface->bo)
         return VA_STATUS_SUCCESS;
+    assert(obj_image->bo); // image bo is always created, see i965_CreateImage()
 
     rect.x = x;
     rect.y = y;
@@ -2906,6 +2982,49 @@ put_image_nv12(struct object_surface *obj_surface,
         dri_bo_unmap(obj_surface->bo);
 }
 
+static void
+put_image_yuy2(struct object_surface *obj_surface,
+               const VARectangle *dst_rect,
+               struct object_image *obj_image, uint8_t *image_data,
+               const VARectangle *src_rect)
+{
+    uint8_t *dst, *src;
+    unsigned int tiling, swizzle;
+
+    if (!obj_surface->bo)
+        return;
+
+    assert(obj_surface->fourcc);
+    assert(dst_rect->width == src_rect->width);
+    assert(dst_rect->height == src_rect->height);
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+
+    if (tiling != I915_TILING_NONE)
+        drm_intel_gem_bo_map_gtt(obj_surface->bo);
+    else
+        dri_bo_map(obj_surface->bo, 0);
+
+    if (!obj_surface->bo->virtual)
+        return;
+
+    /* Both dest VA image and source surface have YUY2 format */
+    dst = (uint8_t *)obj_surface->bo->virtual;
+    src = image_data + obj_image->image.offsets[0];
+
+    /* YUYV packed plane */
+    dst += dst_rect->y * obj_surface->width + dst_rect->x*2;
+    src += src_rect->y * obj_image->image.pitches[0] + src_rect->x*2;
+    memcpy_pic(dst, obj_surface->width*2,
+               src, obj_image->image.pitches[0],
+               src_rect->width*2, src_rect->height);
+
+    if (tiling != I915_TILING_NONE)
+        drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
+    else
+        dri_bo_unmap(obj_surface->bo);
+}
+
+
 static VAStatus
 i965_sw_putimage(VADriverContextP ctx,
                  VASurfaceID surface,
@@ -2957,7 +3076,7 @@ i965_sw_putimage(VADriverContextP ctx,
             obj_surface,
             0, /* XXX: don't use tiled surface */
             obj_image->image.format.fourcc,
-            SUBSAMPLE_YUV420);
+            get_sampling_from_fourcc (obj_image->image.format.fourcc));
     }
 
     VAStatus va_status;
@@ -2984,6 +3103,9 @@ i965_sw_putimage(VADriverContextP ctx,
         break;
     case VA_FOURCC('N','V','1','2'):
         put_image_nv12(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        break;
+    case VA_FOURCC('Y','U','Y','2'):
+        put_image_yuy2(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
         break;
     default:
         va_status = VA_STATUS_ERROR_OPERATION_FAILED;
@@ -3034,13 +3156,14 @@ i965_hw_putimage(VADriverContextP ctx,
 
     if (!obj_surface->bo) {
         unsigned int tiling, swizzle;
+        int surface_sampling = get_sampling_from_fourcc (obj_image->image.format.fourcc);;
         dri_bo_get_tiling(obj_image->bo, &tiling, &swizzle);
 
         i965_check_alloc_surface_bo(ctx,
                                     obj_surface,
                                     !!tiling,
                                     obj_image->image.format.fourcc,
-                                    SUBSAMPLE_YUV420);
+                                    surface_sampling);
     }
 
     assert(obj_surface->fourcc);
