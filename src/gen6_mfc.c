@@ -624,16 +624,15 @@ static void gen6_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
                                                     struct intel_batchbuffer *slice_batch)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    static int count = 0;
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
+    int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
 
-    if (encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {
+    if (encode_state->packed_header_data[idx]) {
         VAEncPackedHeaderParameterBuffer *param = NULL;
-        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]->buffer;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
         unsigned int length_in_bits;
 
-        assert(encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]);
-        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_SPS]->buffer;
+        assert(encode_state->packed_header_param[idx]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
         length_in_bits = param->bit_length;
 
         mfc_context->insert_object(ctx,
@@ -648,13 +647,15 @@ static void gen6_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
                                    slice_batch);
     }
 
-    if (encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]) {
+    idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_PPS);
+
+    if (encode_state->packed_header_data[idx]) {
         VAEncPackedHeaderParameterBuffer *param = NULL;
-        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[VAEncPackedHeaderH264_PPS]->buffer;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
         unsigned int length_in_bits;
 
-        assert(encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]);
-        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[VAEncPackedHeaderH264_PPS]->buffer;
+        assert(encode_state->packed_header_param[idx]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
         length_in_bits = param->bit_length;
 
         mfc_context->insert_object(ctx,
@@ -669,47 +670,28 @@ static void gen6_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
                                    slice_batch);
     }
     
-    if ( (rate_control_mode == VA_RC_CBR) && encode_state->packed_header_data[VAEncPackedHeaderH264_SPS]) {       // this is frist AU
-        struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SEI);
 
-        unsigned char *sei_data = NULL;
-        int length_in_bits = build_avc_sei_buffering_period(mfc_context->vui_hrd.i_initial_cpb_removal_delay_length, 
-                                                            mfc_context->vui_hrd.i_initial_cpb_removal_delay, 0, &sei_data);
+    if (encode_state->packed_header_data[idx]) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+        unsigned int length_in_bits;
+
+        assert(encode_state->packed_header_param[idx]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+        length_in_bits = param->bit_length;
+
         mfc_context->insert_object(ctx,
                                    encoder_context,
-                                   (unsigned int *)sei_data,
+                                   header_data,
                                    ALIGN(length_in_bits, 32) >> 5,
                                    length_in_bits & 0x1f,
-                                   4,   
-                                   0,   
-                                   0,   
-                                   1,
-                                   slice_batch);  
-        free(sei_data);
-    }    
-
-    // SEI pic_timing header
-    if (rate_control_mode == VA_RC_CBR) {   
-        struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-        unsigned char *sei_data = NULL;
-        int length_in_bits = build_avc_sei_pic_timing( mfc_context->vui_hrd.i_cpb_removal_delay_length,
-                                                       mfc_context->vui_hrd.i_cpb_removal_delay * mfc_context->vui_hrd.i_frame_number,
-                                                       mfc_context->vui_hrd.i_dpb_output_delay_length,
-                                                       0, &sei_data);
-        mfc_context->insert_object(ctx,
-                                   encoder_context,
-                                   (unsigned int *)sei_data,
-                                   ALIGN(length_in_bits, 32) >> 5,
-                                   length_in_bits & 0x1f,
-                                   4,   
-                                   0,   
-                                   0,   
-                                   1,
-                                   slice_batch);  
-        free(sei_data);
-    }  
-    
-    count++;
+                                   5, /* FIXME: check it */
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   slice_batch);
+    }
 }
 
 static void gen6_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,

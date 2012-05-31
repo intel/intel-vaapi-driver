@@ -310,4 +310,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
                             unsigned int fourcc,
                             unsigned int subsampling);
 
+int
+va_enc_packed_type_to_idx(int packed_type);
+
 #endif /* _I965_DRV_VIDEO_H_ */
