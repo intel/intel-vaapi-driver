@@ -105,6 +105,8 @@ i965_image_formats_map[I965_MAX_IMAGE_FORMATS + 1] = {
       { VA_FOURCC('I','4','2','0'), VA_LSB_FIRST, 12, } },
     { I965_SURFACETYPE_YUV,
       { VA_FOURCC('N','V','1','2'), VA_LSB_FIRST, 12, } },
+    { I965_SURFACETYPE_YUV,
+      { VA_FOURCC('Y','U','Y','2'), VA_LSB_FIRST, 16, } },
 };
 
 /* List of supported subpicture formats */
