@@ -17,7 +17,7 @@
 //  Load 16x8 packed data block
 //  Packed data block should be loaded as 32x8 pixel block
     add  (2) rMSGSRC.0<1>:d     wORIX<2;2,1>:w    wSRC_H_ORI_OFFSET<2;2,1>:w       // Source Block origin
-    shl  (1) rMSGSRC.0<1>:d     acc0:w            1:w                              // H. block origin need to be doubled
+    shl  (1) rMSGSRC.0<1>:d     rMSGSRC.0<0;1,0>:w            1:w                  // H. block origin need to be doubled
     mov  (1) rMSGSRC.2<1>:ud    nDPR_BLOCK_SIZE_YUV:ud                             // Block width and height (32x8)
     mov  (8) mMSGHDRY<1>:ud     rMSGSRC<8;8,1>:ud
     send (8) udSRC_YUV(0)<1>    mMSGHDRY    udDUMMY_NULL    nDATAPORT_READ    nDPMR_MSGDSC+nDPR_MSG_SIZE_YUV+nBI_CURRENT_SRC_YUV:ud
