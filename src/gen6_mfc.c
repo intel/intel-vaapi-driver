@@ -1159,6 +1159,17 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0, 0x0 };
 
+    if (rate_control_mode == VA_RC_CBR) {
+        qp = mfc_context->bit_rate_control_context[1 - is_intra].QpPrimeY;
+        pSliceParameter->slice_qp_delta = qp - 26;
+    }
+
+    /* only support for 8-bit pixel bit-depth */
+    assert(pSequenceParameter->bit_depth_luma_minus8 == 0);
+    assert(pSequenceParameter->bit_depth_chroma_minus8 == 0);
+    assert(pPicParameter->pic_init_qp >= 0 && pPicParameter->pic_init_qp < 52);
+    assert(qp >= 0 && qp < 52);
+
     gen6_mfc_avc_slice_state(ctx, 
                              pPicParameter,
                              pSliceParameter,
@@ -1527,6 +1538,17 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
     long head_offset;
     int old_used = intel_batchbuffer_used_size(slice_batch), used;
     unsigned short head_size, tail_size;
+
+    if (rate_control_mode == VA_RC_CBR) {
+        qp = mfc_context->bit_rate_control_context[1 - is_intra].QpPrimeY;
+        pSliceParameter->slice_qp_delta = qp - 26;
+    }
+
+    /* only support for 8-bit pixel bit-depth */
+    assert(pSequenceParameter->bit_depth_luma_minus8 == 0);
+    assert(pSequenceParameter->bit_depth_chroma_minus8 == 0);
+    assert(pPicParameter->pic_init_qp >= 0 && pPicParameter->pic_init_qp < 52);
+    assert(qp >= 0 && qp < 52);
 
     head_offset = old_used / 16;
     gen6_mfc_avc_slice_state(ctx,
