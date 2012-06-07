@@ -2392,6 +2392,11 @@ i965_PutSurface(VADriverContextP ctx,
     Bool new_region = False;
     int pp_flag = 0;
 
+#ifdef HAVE_VA_DRM
+    if (ctx->display_type == VA_DISPLAY_DRM)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+#endif
+
     /* Currently don't support DRI1 */
     if (dri_state->base.auth_type != VA_DRM_AUTH_DRI2)
         return VA_STATUS_ERROR_UNKNOWN;

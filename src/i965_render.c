@@ -36,7 +36,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include <va/va_dricommon.h>
+#include <va/va_drmcommon.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
