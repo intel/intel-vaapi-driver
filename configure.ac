@@ -41,6 +41,11 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])], [
     AC_SUBST(AM_DEFAULT_VERBOSITY)
 ])
 
+AC_ARG_ENABLE(drm,
+    [AC_HELP_STRING([--enable-drm],
+                    [build with VA/DRM API support @<:@default=yes@:>@])],
+    [], [enable_drm="yes"])
+
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_PROG_CC
@@ -66,6 +71,23 @@ AC_PATH_PROG([GEN4ASM], [intel-gen4asm])
 dnl Check for VA-API
 PKG_CHECK_MODULES(LIBVA_DEPS,	  [libva >= libva_version])
 PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11])
+
+dnl Check for VA/DRM API
+USE_DRM="$enable_drm"
+if test "$USE_DRM" = "yes"; then
+    PKG_CHECK_MODULES(LIBVA_DRM_DEPS, [libva-drm],
+      [AC_DEFINE([HAVE_VA_DRM], [1], [Defined to 1 if VA/DRM API is enabled])],
+      [USE_DRM="no"])
+
+    # Check for <drm_fourcc.h>
+    if test "$USE_DRM" = "yes"; then
+        saved_CPPFLAGS="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS $DRM_CFLAGS"
+        AC_CHECK_HEADERS([drm_fourcc.h], [:], [USE_DRM="no"])
+        CPPFLAGS="$saved_CPPFLAGS"
+    fi
+fi
+AM_CONDITIONAL(USE_DRM, test "$USE_DRM" = "yes")
 
 VA_VERSION=`$PKG_CONFIG --modversion libva`
 VA_MAJOR_VERSION=`echo "$VA_VERSION" | cut -d'.' -f1`
@@ -109,9 +131,13 @@ AC_OUTPUT([
 ])
 
 dnl Print summary
+BACKENDS="x11"
+AS_IF([test "$USE_DRM" = "yes"], [BACKENDS="$BACKENDS drm"])
+
 echo
 echo $PACKAGE configuration summary:
 echo
 echo VA-API version ................... : $VA_VERSION_STR
 echo VA-API drivers path .............. : $LIBVA_DRIVERS_PATH
+echo Windowing systems ................ : $BACKENDS
 echo
