@@ -43,7 +43,6 @@ driver_libs = \
 	-lpthread		\
 	$(DRM_LIBS) -ldrm_intel	\
 	$(LIBVA_DEPS_LIBS)	\
-	$(LIBVA_X11_DEPS_LIBS)	\
 	$(NULL)
 
 source_c = \
@@ -106,6 +105,12 @@ i965_drv_video_la_LDFLAGS	= $(driver_ldflags)
 i965_drv_video_la_LIBADD	= $(driver_libs)
 i965_drv_video_la_SOURCES	= $(source_c)
 noinst_HEADERS			= $(source_h)
+
+if USE_X11
+source_c			+= i965_output_dri.c
+source_h			+= i965_output_dri.h
+driver_libs			+= $(LIBVA_X11_DEPS_LIBS)
+endif
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in

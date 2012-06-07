@@ -46,6 +46,11 @@ AC_ARG_ENABLE(drm,
                     [build with VA/DRM API support @<:@default=yes@:>@])],
     [], [enable_drm="yes"])
 
+AC_ARG_ENABLE(x11,
+    [AC_HELP_STRING([--enable-x11],
+                    [build with VA/X11 API support @<:@default=yes@:>@])],
+    [], [enable_x11="yes"])
+
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_PROG_CC
@@ -70,7 +75,6 @@ AC_PATH_PROG([GEN4ASM], [intel-gen4asm])
 
 dnl Check for VA-API
 PKG_CHECK_MODULES(LIBVA_DEPS,     [libva >= va_api_version])
-PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11])
 
 dnl Check for VA/DRM API
 USE_DRM="$enable_drm"
@@ -103,6 +107,15 @@ VA_DRIVER_INIT_FUNC="__vaDriverInit_${VA_MAJOR_VERSION}_${VA_MINOR_VERSION}"
 AC_DEFINE_UNQUOTED([VA_DRIVER_INIT_FUNC], [$VA_DRIVER_INIT_FUNC],
     [Define driver entry-point])
 
+dnl Check for VA/DRM API
+USE_X11="$enable_x11"
+if test "$USE_X11" = "yes"; then
+    PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11],
+      [AC_DEFINE([HAVE_VA_X11], [1], [Defined to 1 if VA/X11 API is enabled])],
+      [USE_X11="no"])
+fi
+AM_CONDITIONAL(USE_X11, test "$USE_X11" = "yes")
+
 dnl Check for VA-API drivers path
 AC_MSG_CHECKING([for VA drivers path])
 LIBVA_DRIVERS_PATH=`$PKG_CONFIG libva --variable driverdir`
@@ -128,8 +141,9 @@ AC_OUTPUT([
 ])
 
 dnl Print summary
-BACKENDS="x11"
+BACKENDS=""
 AS_IF([test "$USE_DRM" = "yes"], [BACKENDS="$BACKENDS drm"])
+AS_IF([test "$USE_X11" = "yes"], [BACKENDS="$BACKENDS x11"])
 
 echo
 echo $PACKAGE configuration summary:
