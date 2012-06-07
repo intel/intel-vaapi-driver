@@ -313,4 +313,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 int
 va_enc_packed_type_to_idx(int packed_type);
 
+/* reserve 1 byte for internal using */
+#define I965_CODEDBUFFER_SIZE   ALIGN(sizeof(VACodedBufferSegment) + 1, 64)
+
 #endif /* _I965_DRV_VIDEO_H_ */

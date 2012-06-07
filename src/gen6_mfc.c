@@ -858,6 +858,8 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i, j, enable_avc_ildb = 0;
     VAEncSliceParameterBufferH264 *slice_param;
+    VACodedBufferSegment *coded_buffer_segment;
+    unsigned char *flag = NULL;
 
     for (j = 0; j < encode_state->num_slice_params_ext && enable_avc_ildb == 0; j++) {
         assert(encode_state->slice_params_ext && encode_state->slice_params_ext[j]->buffer);
@@ -971,9 +973,15 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     bo = obj_buffer->buffer_store->bo;
     assert(bo);
     mfc_context->mfc_indirect_pak_bse_object.bo = bo;
-    mfc_context->mfc_indirect_pak_bse_object.offset = ALIGN(sizeof(VACodedBufferSegment), 64);
-    mfc_context->mfc_indirect_pak_bse_object.end_offset = ALIGN (obj_buffer->size_element - 0x1000, 0x1000);
+    mfc_context->mfc_indirect_pak_bse_object.offset = I965_CODEDBUFFER_SIZE;
+    mfc_context->mfc_indirect_pak_bse_object.end_offset = ALIGN(obj_buffer->size_element - 0x1000, 0x1000);
     dri_bo_reference(mfc_context->mfc_indirect_pak_bse_object.bo);
+    
+    dri_bo_map(bo, 1);
+    coded_buffer_segment = (VACodedBufferSegment *)bo->virtual;
+    flag = (unsigned char *)(coded_buffer_segment + 1);
+    *flag = 0;
+    dri_bo_unmap(bo);
 
     /*Programing bit rate control */
     if ( mfc_context->bit_rate_control_context[0].MaxSizeInWord == 0 )
@@ -997,48 +1005,28 @@ static VAStatus gen6_mfc_run(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+extern VAStatus 
+i965_MapBuffer(VADriverContextP ctx, 
+               VABufferID buf_id,       /* in */
+               void **pbuf);            /* out */
+extern VAStatus
+i965_UnmapBuffer(VADriverContextP ctx,
+                 VABufferID buf_id);
+
 static VAStatus
 gen6_mfc_stop(VADriverContextP ctx, 
               struct encode_state *encode_state,
               struct intel_encoder_context *encoder_context,
               int *encoded_bits_size)
 {
-    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    unsigned int *status_mem;
-    unsigned int buffer_size_bits = 0;
-    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
-    int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
-    int i;
-
-    dri_bo_map(mfc_context->macroblock_status_buffer.bo, 1);
-    status_mem = (unsigned int *)mfc_context->macroblock_status_buffer.bo->virtual;
-    //Detecting encoder buffer size and bit rate control result
-    for(i = 0; i < width_in_mbs * height_in_mbs; i++) {
-        unsigned short current_mb = status_mem[1] >> 16;
-        buffer_size_bits += current_mb;
-        status_mem += 4;
-    }    
-    dri_bo_unmap(mfc_context->macroblock_status_buffer.bo);
-
-    *encoded_bits_size = buffer_size_bits;
-    if ( buffer_size_bits == 0) { 	// FIXME: we can't get info in IVB.
-         struct i965_driver_data *i965 = i965_driver_data(ctx);
-	 struct object_buffer *obj_buffer;
-	 VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
-	 obj_buffer = BUFFER (pPicParameter->coded_buf);
-         dri_bo_map(obj_buffer->buffer_store->bo, 1);
-	 unsigned char *coded_mem = (unsigned char *)(obj_buffer->buffer_store->bo->virtual) + ALIGN(sizeof(VACodedBufferSegment), 64);	
-	 for(i = 0; i < obj_buffer->size_element - ALIGN(sizeof(VACodedBufferSegment), 64) - 3 - 0x1000; i++) {
-	       if (!coded_mem[i] &&
-                    !coded_mem[i + 1] &&
-                    !coded_mem[i + 2] &&
-                    !coded_mem[i + 3] &&
-                    !coded_mem[i + 4])
-                    break;	
-	 }
-         dri_bo_unmap(obj_buffer->buffer_store->bo);
-	 *encoded_bits_size = i*8;
-    }
+    VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
+    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VACodedBufferSegment *coded_buffer_segment;
+    
+    vaStatus = i965_MapBuffer(ctx, pPicParameter->coded_buf, (void **)&coded_buffer_segment);
+    assert(vaStatus == VA_STATUS_SUCCESS);
+    *encoded_bits_size = coded_buffer_segment->size * 8;
+    i965_UnmapBuffer(ctx, pPicParameter->coded_buf);
 
     return VA_STATUS_SUCCESS;
 }
@@ -1759,7 +1747,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
         if ( rate_control_mode == VA_RC_CBR) {
             gen6_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
             //gen6_mfc_hrd_context_check(encode_state, mfc_context);
-            if ( gen6_mfc_bit_rate_control_context_update( encode_state, mfc_context, current_frame_bits_size) ) {
+            if ( gen6_mfc_bit_rate_control_context_update(encode_state, mfc_context, current_frame_bits_size)) {
                 gen6_mfc_hrd_context_update(encode_state, mfc_context);
                 break;
             }
