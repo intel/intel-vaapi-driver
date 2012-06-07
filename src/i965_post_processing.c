@@ -3903,33 +3903,34 @@ i965_image_pl3_processing(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = i965->pp_context;
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+    VAStatus vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
 
     if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
-        i965_post_processing_internal(ctx, i965->pp_context,
-                                      src_surface,
-                                      src_rect,
-                                      dst_surface,
-                                      dst_rect,
-                                      PP_PL3_LOAD_SAVE_N12,
-                                      NULL);
+        vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
+                                                 src_surface,
+                                                 src_rect,
+                                                 dst_surface,
+                                                 dst_rect,
+                                                 PP_PL3_LOAD_SAVE_N12,
+                                                 NULL);
     } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') || 
                fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
-        i965_post_processing_internal(ctx, i965->pp_context,
-                                      src_surface,
-                                      src_rect,
-                                      dst_surface,
-                                      dst_rect,
-                                      PP_PL3_LOAD_SAVE_PL3,
-                                      NULL);
+        vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
+                                                 src_surface,
+                                                 src_rect,
+                                                 dst_surface,
+                                                 dst_rect,
+                                                 PP_PL3_LOAD_SAVE_PL3,
+                                                 NULL);
     } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
-        i965_post_processing_internal(ctx, i965->pp_context,
-                                      src_surface,
-                                      src_rect,
-                                      dst_surface,
-                                      dst_rect,
-                                      PP_PL3_LOAD_SAVE_PA,
-                                      NULL);
-
+        if (IS_GEN6(i965->intel.device_id))
+            vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
+                                                     src_surface,
+                                                     src_rect,
+                                                     dst_surface,
+                                                     dst_rect,
+                                                     PP_PL3_LOAD_SAVE_PA,
+                                                     NULL);
     }
     else {
         assert(0);
@@ -3937,7 +3938,7 @@ i965_image_pl3_processing(VADriverContextP ctx,
 
     intel_batchbuffer_flush(pp_context->batch);
 
-    return VA_STATUS_SUCCESS;
+    return vaStatus;
 }
 
 static VAStatus
@@ -3950,37 +3951,39 @@ i965_image_pl2_processing(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = i965->pp_context;
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+    VAStatus vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
 
     if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
-        i965_post_processing_internal(ctx, i965->pp_context,
-                                      src_surface,
-                                      src_rect,
-                                      dst_surface,
-                                      dst_rect,
-                                      PP_NV12_LOAD_SAVE_N12,
-                                      NULL);
+        vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
+                                                 src_surface,
+                                                 src_rect,
+                                                 dst_surface,
+                                                 dst_rect,
+                                                 PP_NV12_LOAD_SAVE_N12,
+                                                 NULL);
     } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') || 
                fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
-        i965_post_processing_internal(ctx, i965->pp_context,
-                                      src_surface,
-                                      src_rect,
-                                      dst_surface,
-                                      dst_rect,
-                                      PP_NV12_LOAD_SAVE_PL3,
-                                      NULL);
+        vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
+                                                 src_surface,
+                                                 src_rect,
+                                                 dst_surface,
+                                                 dst_rect,
+                                                 PP_NV12_LOAD_SAVE_PL3,
+                                                 NULL);
     } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
-        i965_post_processing_internal(ctx, i965->pp_context,
-                                      src_surface,
-                                      src_rect,
-                                      dst_surface,
-                                      dst_rect,
-                                      PP_NV12_LOAD_SAVE_PA,
-                                      NULL);
+        if (IS_GEN6(i965->intel.device_id))
+            vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
+                                                     src_surface,
+                                                     src_rect,
+                                                     dst_surface,
+                                                     dst_rect,
+                                                     PP_NV12_LOAD_SAVE_PA,
+                                                     NULL);
     }
 
     intel_batchbuffer_flush(pp_context->batch);
 
-    return VA_STATUS_SUCCESS;
+    return vaStatus;
 }
 
 static VAStatus
@@ -4047,11 +4050,12 @@ i965_image_processing(VADriverContextP ctx,
                                                dst_rect);
             break;
         case  VA_FOURCC('Y', 'U', 'Y', '2'):
-            status = i965_image_pl1_processing(ctx,
-                                               src_surface,
-                                               src_rect,
-                                               dst_surface,
-                                               dst_rect);
+            if (IS_GEN6(i965->intel.device_id))
+                status = i965_image_pl1_processing(ctx,
+                                                   src_surface,
+                                                   src_rect,
+                                                   dst_surface,
+                                                   dst_rect);
             break;
 
         default:
