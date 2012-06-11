@@ -144,7 +144,23 @@ struct gen6_mfc_context
 
         unsigned int target_mb_size;
         unsigned int target_frame_size;
-    } bit_rate_control_context[2];      //INTERNAL: 0 for intra frames, 1 for inter frames.
+    } bit_rate_control_context[3];      //INTERNAL: for I, P, B frames
+
+    struct {
+        int mode;
+        int gop_nums[3];
+        int target_frame_size[3]; // I,P,B
+        double bits_per_frame;
+        double qpf_rounding_accumulator;
+    } brc;
+
+    struct {
+        double current_buffer_fullness;
+        double target_buffer_fullness;
+        double buffer_capacity;
+        unsigned int buffer_size;
+        unsigned int violation_noted;
+    } hrd;
 
     //HRD control context
     struct {
@@ -200,5 +216,8 @@ VAStatus gen6_mfc_pipeline(VADriverContextP ctx,
                            struct encode_state *encode_state,
                            struct intel_encoder_context *encoder_context);
 void gen6_mfc_context_destroy(void *context);
+void gen6_mfc_brc_prepare(struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context);
+
 
 #endif	/* _GEN6_MFC_BCS_H_ */

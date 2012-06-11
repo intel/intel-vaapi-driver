@@ -54,6 +54,8 @@ struct intel_encoder_context
                              VAProfile profile,
                              struct encode_state *encode_state,
                              struct intel_encoder_context *encoder_context);
+    void (*mfc_brc_prepare)(struct encode_state *encode_state,
+                            struct intel_encoder_context *encoder_context);
 };
 
 #endif	/* _I965_ENCODER_H_ */

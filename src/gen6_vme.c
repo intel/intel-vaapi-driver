@@ -38,6 +38,7 @@
 #include "i965_drv_video.h"
 #include "i965_encoder.h"
 #include "gen6_vme.h"
+#include "gen6_mfc.h"
 
 #define SURFACE_STATE_PADDED_SIZE_0_GEN7        ALIGN(sizeof(struct gen7_surface_state), 32)
 #define SURFACE_STATE_PADDED_SIZE_1_GEN7        ALIGN(sizeof(struct gen7_surface_state2), 32)
@@ -387,17 +388,17 @@ static void gen6_vme_state_setup_fixup(VADriverContextP ctx,
                                        struct intel_encoder_context *encoder_context,
                                        unsigned int *vme_state_message)
 {
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
-
-    if (encoder_context->rate_control_mode != VA_RC_CQP)
-        return;
 
     if (slice_param->slice_type != SLICE_TYPE_I &&
         slice_param->slice_type != SLICE_TYPE_SI)
         return;
-
-    vme_state_message[16] = intra_mb_mode_cost_table[pic_param->pic_init_qp + slice_param->slice_qp_delta];
+    if (encoder_context->rate_control_mode == VA_RC_CQP)
+        vme_state_message[16] = intra_mb_mode_cost_table[pic_param->pic_init_qp + slice_param->slice_qp_delta];
+    else
+        vme_state_message[16] = intra_mb_mode_cost_table[mfc_context->bit_rate_control_context[slice_param->slice_type].QpPrimeY];
 }
 
 static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,

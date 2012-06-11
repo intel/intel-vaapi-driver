@@ -40,7 +40,7 @@ driver_ldflags = \
 	$(NULL)
 
 driver_libs = \
-	-lpthread		\
+	-lpthread -lm		\
 	$(DRM_LIBS) -ldrm_intel	\
 	$(LIBVA_DEPS_LIBS)	\
 	$(LIBVA_X11_DEPS_LIBS)	\

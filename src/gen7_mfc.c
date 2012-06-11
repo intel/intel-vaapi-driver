@@ -366,6 +366,7 @@ gen7_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encode
     encoder_context->mfc_context = mfc_context;
     encoder_context->mfc_context_destroy = gen6_mfc_context_destroy;
     encoder_context->mfc_pipeline = gen6_mfc_pipeline;
+    encoder_context->mfc_brc_prepare = gen6_mfc_brc_prepare;
 
     return True;
 }
