@@ -811,7 +811,7 @@ gen6_mfc_brc_init(struct encode_state *encode_state,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     VAEncMiscParameterBuffer* pMiscParamHRD = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer;
-    VAEncMiscParameterHRD* pParameterHRD = (VAEncMiscParameterBuffer*)pMiscParamHRD->data;
+    VAEncMiscParameterHRD* pParameterHRD = (VAEncMiscParameterHRD*)pMiscParamHRD->data;
     double bitrate = pSequenceParameter->bits_per_second;
     double framerate = (double)pSequenceParameter->time_scale /(2 * (double)pSequenceParameter->num_units_in_tick);
     int inum = 1, pnum = 0, bnum = 0; /* Gop structure: number of I, P, B frames in the Gop. */
@@ -1055,7 +1055,6 @@ static VAStatus gen6_mfc_avc_prepare(VADriverContextP ctx,
     struct gen6_mfc_avc_surface_aux* gen6_avc_surface;
     dri_bo *bo;
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i, j, enable_avc_ildb = 0;
     VAEncSliceParameterBufferH264 *slice_param;
