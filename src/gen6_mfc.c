@@ -1344,7 +1344,7 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
 
     if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
-        pSliceParameter->slice_qp_delta = qp - 26;
+        pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
     }
 
     /* only support for 8-bit pixel bit-depth */
@@ -1720,7 +1720,7 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
     if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
-        pSliceParameter->slice_qp_delta = qp - 26;
+        pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
     }
 
     /* only support for 8-bit pixel bit-depth */
