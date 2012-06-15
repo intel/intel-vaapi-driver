@@ -1479,6 +1479,9 @@ i965_SyncSurface(VADriverContextP ctx,
 
     assert(obj_surface);
 
+    if(obj_surface->bo)
+        drm_intel_bo_wait_rendering(obj_surface->bo);
+
     return VA_STATUS_SUCCESS;
 }
 
@@ -1492,15 +1495,16 @@ i965_QuerySurfaceStatus(VADriverContextP ctx,
 
     assert(obj_surface);
 
-    /* Usually GEM will handle synchronization with the graphics hardware */
-#if 0
     if (obj_surface->bo) {
-        dri_bo_map(obj_surface->bo, 0);
-        dri_bo_unmap(obj_surface->bo);
+        if (drm_intel_bo_busy(obj_surface->bo)){
+            *status = VASurfaceRendering;
+        }
+        else {
+            *status = VASurfaceReady;
+        }
+    } else {
+        *status = VASurfaceReady;
     }
-#endif
-    
-    *status = obj_surface->status;
 
     return VA_STATUS_SUCCESS;
 }
