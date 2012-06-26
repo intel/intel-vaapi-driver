@@ -965,6 +965,45 @@ ironlake_pp_pipeline_setup(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
 }
 
+// update u/v offset when the surface format are packed yuv
+static void i965_update_src_surface_uv_offset(
+    VADriverContextP    ctx, 
+    struct i965_post_processing_context *pp_context,
+    const struct i965_surface *surface)
+{
+    struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+    int fourcc = pp_get_surface_fourcc(ctx, surface);
+    
+    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+        pp_static_parameter->grf1.source_packed_u_offset = 1;
+        pp_static_parameter->grf1.source_packed_v_offset = 3;
+    } 
+    else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        pp_static_parameter->grf1.source_packed_y_offset = 1;
+        pp_static_parameter->grf1.source_packed_v_offset = 2;
+    }
+    
+}
+
+static void i965_update_dst_surface_uv_offset(
+    VADriverContextP    ctx, 
+    struct i965_post_processing_context *pp_context,
+    const struct i965_surface *surface)
+{
+    struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+    int fourcc = pp_get_surface_fourcc(ctx, surface);
+    
+    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_u_offset = 1;
+        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_v_offset = 3;
+    } 
+    else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_y_offset = 1;
+        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_v_offset = 2;
+    }
+    
+}
+
 static void
 i965_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                           dri_bo *surf_bo, unsigned long surf_bo_offset,
@@ -1432,6 +1471,10 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
 
     pp_static_parameter->grf3.horizontal_origin_offset = src_rect->x;
     pp_static_parameter->grf3.vertical_origin_offset = src_rect->y;
+
+    // update u/v offset for packed yuv
+    i965_update_src_surface_uv_offset (ctx, pp_context, src_surface);
+    i965_update_dst_surface_uv_offset (ctx, pp_context, dst_surface);
 
     dst_surface->flags = src_surface->flags;
 
@@ -3029,45 +3072,6 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     return VA_STATUS_SUCCESS;
 }
 
-// update u/v offset when the surface format are packed yuv
-static void i965_update_src_surface_uv_offset(
-    VADriverContextP    ctx, 
-    struct i965_post_processing_context *pp_context,
-    const struct i965_surface *surface)
-{
-    struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
-    int fourcc = pp_get_surface_fourcc(ctx, surface);
-    
-    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
-        pp_static_parameter->grf1.source_packed_u_offset = 1;
-        pp_static_parameter->grf1.source_packed_v_offset = 3;
-    } 
-    else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
-        pp_static_parameter->grf1.source_packed_y_offset = 1;
-        pp_static_parameter->grf1.source_packed_v_offset = 2;
-    }
-    
-}
-
-static void i965_update_dst_surface_uv_offset(
-    VADriverContextP    ctx, 
-    struct i965_post_processing_context *pp_context,
-    const struct i965_surface *surface)
-{
-    struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
-    int fourcc = pp_get_surface_fourcc(ctx, surface);
-    
-    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
-        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_u_offset = 1;
-        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_v_offset = 3;
-    } 
-    else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
-        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_y_offset = 1;
-        pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_v_offset = 2;
-    }
-    
-}
-
 static VAStatus
 ironlake_pp_initialize(
     VADriverContextP   ctx,
@@ -3152,10 +3156,6 @@ ironlake_pp_initialize(
     memset(pp_context->pp_static_parameter, 0, static_param_size);
     memset(pp_context->pp_inline_parameter, 0, inline_param_size);
     
-    // update u/v offset for packed yuv
-    i965_update_src_surface_uv_offset (ctx, pp_context, src_surface);
-    i965_update_dst_surface_uv_offset (ctx, pp_context, dst_surface);
-
     assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
     pp_context->current_pp = pp_index;
     pp_module = &pp_context->pp_modules[pp_index];
@@ -3291,11 +3291,8 @@ gen6_pp_initialize(
 
     memset(pp_context->pp_static_parameter, 0, static_param_size);
     memset(pp_context->pp_inline_parameter, 0, inline_param_size);
-    // update u/v offset for packed yuv
-    i965_update_src_surface_uv_offset (ctx, pp_context, src_surface);
-    i965_update_dst_surface_uv_offset (ctx, pp_context, dst_surface);
-    
-     assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
+
+    assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
     pp_context->current_pp = pp_index;
     pp_module = &pp_context->pp_modules[pp_index];
     
