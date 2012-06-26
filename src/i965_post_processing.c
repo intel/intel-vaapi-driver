@@ -3146,13 +3146,8 @@ ironlake_pp_initialize(
     assert(bo);
     pp_context->vfe_state.bo = bo;
 
-    if (IS_GEN7(i965->intel.device_id)) {
-        static_param_size = sizeof(struct gen7_pp_static_parameter);
-        inline_param_size = sizeof(struct gen7_pp_inline_parameter);
-    } else {
-        static_param_size = sizeof(struct pp_static_parameter);
-        inline_param_size = sizeof(struct pp_inline_parameter);
-    }
+    static_param_size = sizeof(struct pp_static_parameter);
+    inline_param_size = sizeof(struct pp_inline_parameter);
     
     memset(pp_context->pp_static_parameter, 0, static_param_size);
     memset(pp_context->pp_inline_parameter, 0, inline_param_size);
@@ -3224,8 +3219,7 @@ gen6_pp_initialize(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_module *pp_module;
     dri_bo *bo;
-    struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
-    struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+    int static_param_size, inline_param_size;
 
     dri_bo_unreference(pp_context->surface_state_binding_table.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -3287,9 +3281,16 @@ gen6_pp_initialize(
     assert(bo);
     pp_context->vfe_state.bo = bo;
     
-    memset(&pp_static_parameter, 0, sizeof(*pp_static_parameter));
-    memset(&pp_inline_parameter, 0, sizeof(*pp_inline_parameter));
+    if (IS_GEN7(i965->intel.device_id)) {
+        static_param_size = sizeof(struct gen7_pp_static_parameter);
+        inline_param_size = sizeof(struct gen7_pp_inline_parameter);
+    } else {
+        static_param_size = sizeof(struct pp_static_parameter);
+        inline_param_size = sizeof(struct pp_inline_parameter);
+    }
 
+    memset(pp_context->pp_static_parameter, 0, static_param_size);
+    memset(pp_context->pp_inline_parameter, 0, inline_param_size);
     // update u/v offset for packed yuv
     i965_update_src_surface_uv_offset (ctx, pp_context, src_surface);
     i965_update_dst_surface_uv_offset (ctx, pp_context, dst_surface);
