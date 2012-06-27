@@ -1301,7 +1301,7 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         offset[0] = obj_image->image.offsets[0];
 
         if (interleaved_uv) {
-            width[1] = obj_image->image.width;
+            width[1] = obj_image->image.width / 2;
             height[1] = obj_image->image.height / 2;
             pitch[1] = obj_image->image.pitches[1];
             offset[1] = obj_image->image.offsets[1];
