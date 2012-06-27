@@ -1,15 +1,31 @@
-libva-driver-intel NEWS -- summary of changes.  2012-02-DD
+libva-driver-intel NEWS -- summary of changes.  2012-07-DD
 Copyright (C) 2009-2011 Intel Corporation
 
-Version 1.0.16 - DD.Feb.2012
-* Fix MPEG-2 decoding of interlaced streams (SNB, IVB)
+Version 1.1.0 - DD.Jul.2012
+* Add JPEG decoding on Ivy Bridge
+
+Version 1.0.18 - DD.Jun.2012
+* Add support for a new Ivy Bridge chip
+* Add support for vaSyncSurface() and vaQuerySurfaceStatus() (Dmitry Ermilov)
+* Fix decoding of MPEG-2 videos with implicit IQ matrices
+* Fix concurrent creation of VA objects (MT safety)
+* Fix decoding of large resolution videos (up to 4K on IVB)
+
+Version 1.0.17 - 02.Apr.2012
+* Add support for IMC1/IMC3 surface formats
 * Fix rendering of interlaced surfaces
+* Fix MPEG-2 decoding of interlaced streams (SNB, IVB)
+* Fix H.264 weighted prediction indicator (SNB)
+* Fix and simplify calculation of H.264 macroblock bit offset (ILK, SNB, IVB)
+
+Version 1.0.16 - 14.Feb.2012
 * Fix VC-1 bitplane buffer size (SNB, IVB)
 * Fix VC-1 motion vector modes for Ivy Bridge
-* Fix weighted prediction indicator for Sandy Bridge
 * Fix MFX_QM_STATE for H.264 flat scaling lists (IVB)
 * Fix and simplify AVC_REF_IDX_STATE setup (ILK, SNB, IVB)
-* Fix and simplify first macroblock bit offset calculation (ILK, SNB, IVB)
+* Fix memory leak of encoder buffers
+* Fix check for internal VA surface format prior to rendering
+* Add support for B43 chipset (Alexander Inyukhin)
 
 Version 1.0.15 - 28.Oct.2011
 * Add auto-generated Debian packaging
