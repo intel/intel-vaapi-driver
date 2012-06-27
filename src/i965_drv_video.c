@@ -3569,7 +3569,7 @@ i965_GetSurfaceAttributes(
     if (obj_config == NULL)
         return VA_STATUS_ERROR_INVALID_CONFIG;
     
-    if (attrib_list == NULL || num_attribs)
+    if (attrib_list == NULL || num_attribs == 0)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     for (i = 0; i < num_attribs; i++) {
@@ -3638,7 +3638,8 @@ i965_GetSurfaceAttributes(
                     } else if (obj_config->profile == VAProfileNone) {
                         if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2') &&
                             attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0') &&
-                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2')) {
+                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2') && 
+                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'U', 'Y', '2')) {
                             attrib_list[i].value.value.i = 0;                            
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         }
@@ -3651,7 +3652,8 @@ i965_GetSurfaceAttributes(
                         obj_config->entrypoint == VAEntrypointVideoProc) {
                         if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2') &&
                             attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0') &&
-                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2')) {
+                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2') && 
+                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'U', 'Y', '2')) {
                             attrib_list[i].value.value.i = 0;                            
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         }
