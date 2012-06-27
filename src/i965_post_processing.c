@@ -3961,7 +3961,9 @@ i965_image_pl3_processing(VADriverContextP ctx,
                                                  PP_PL3_LOAD_SAVE_N12,
                                                  NULL);
     } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') || 
-               fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
+               fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
+               fourcc == VA_FOURCC('Y', 'V', '1', '2') || 
+               fourcc == VA_FOURCC('I', '4', '2', '0')) {
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4009,7 +4011,9 @@ i965_image_pl2_processing(VADriverContextP ctx,
                                                  PP_NV12_LOAD_SAVE_N12,
                                                  NULL);
     } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') || 
-               fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
+               fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
+               fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
+               fourcc == VA_FOURCC('I', '4', '2', '0') ) {
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
