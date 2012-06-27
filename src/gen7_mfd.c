@@ -195,8 +195,8 @@ gen7_mfd_init_avc_surface(VADriverContextP ctx,
     int width_in_mbs, height_in_mbs;
 
     obj_surface->free_private_data = gen7_mfd_free_avc_surface;
-    width_in_mbs = ((pic_param->picture_width_in_mbs_minus1 + 1) & 0xff);
-    height_in_mbs = ((pic_param->picture_height_in_mbs_minus1 + 1) & 0xff); /* frame height */
+    width_in_mbs = pic_param->picture_width_in_mbs_minus1 + 1;
+    height_in_mbs = pic_param->picture_height_in_mbs_minus1 + 1; /* frame height */
 
     if (!gen7_avc_surface) {
         gen7_avc_surface = calloc(sizeof(struct gen7_avc_surface), 1);
@@ -212,6 +212,7 @@ gen7_mfd_init_avc_surface(VADriverContextP ctx,
                                                  "direct mv w/r buffer",
                                                  width_in_mbs * height_in_mbs * 64,
                                                  0x1000);
+        assert(gen7_avc_surface->dmv_top);
     }
 
     if (gen7_avc_surface->dmv_bottom_flag &&
@@ -220,6 +221,7 @@ gen7_mfd_init_avc_surface(VADriverContextP ctx,
                                                     "direct mv w/r buffer",
                                                     width_in_mbs * height_in_mbs * 64,                                                    
                                                     0x1000);
+        assert(gen7_avc_surface->dmv_bottom);
     }
 }
 
@@ -502,8 +504,8 @@ gen7_mfd_avc_img_state(VADriverContextP ctx,
     mbaff_frame_flag = (pic_param->seq_fields.bits.mb_adaptive_frame_field_flag &&
                         !pic_param->pic_fields.bits.field_pic_flag);
 
-    width_in_mbs = ((pic_param->picture_width_in_mbs_minus1 + 1) & 0xff);
-    height_in_mbs = ((pic_param->picture_height_in_mbs_minus1 + 1) & 0xff); /* frame height */
+    width_in_mbs = pic_param->picture_width_in_mbs_minus1 + 1;
+    height_in_mbs = pic_param->picture_height_in_mbs_minus1 + 1; /* frame height */
 
     /* MFX unit doesn't support 4:2:2 and 4:4:4 picture */
     assert(pic_param->seq_fields.bits.chroma_format_idc == 0 || /* monochrome picture */
@@ -908,7 +910,7 @@ gen7_mfd_avc_decode_init(VADriverContextP ctx,
     struct object_surface *obj_surface;
     dri_bo *bo;
     int i, j, enable_avc_ildb = 0;
-    int width_in_mbs;
+    unsigned int width_in_mbs, height_in_mbs;
 
     for (j = 0; j < decode_state->num_slice_params && enable_avc_ildb == 0; j++) {
         assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
@@ -934,7 +936,10 @@ gen7_mfd_avc_decode_init(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
     gen7_mfd_avc_frame_store_index(ctx, pic_param, gen7_mfd_context);
-    width_in_mbs = ((pic_param->picture_width_in_mbs_minus1 + 1) & 0xff);
+    width_in_mbs = pic_param->picture_width_in_mbs_minus1 + 1;
+    height_in_mbs = pic_param->picture_height_in_mbs_minus1 + 1;
+    assert(width_in_mbs > 0 && width_in_mbs <= 256); /* 4K */
+    assert(height_in_mbs > 0 && height_in_mbs <= 256);
 
     /* Current decoded picture */
     va_pic = &pic_param->CurrPic;
