@@ -108,6 +108,8 @@ i965_image_formats_map[I965_MAX_IMAGE_FORMATS + 1] = {
       { VA_FOURCC('N','V','1','2'), VA_LSB_FIRST, 12, } },
     { I965_SURFACETYPE_YUV,
       { VA_FOURCC('Y','U','Y','2'), VA_LSB_FIRST, 16, } },
+    { I965_SURFACETYPE_YUV,
+      { VA_FOURCC('U','Y','V','Y'), VA_LSB_FIRST, 16, } },
 };
 
 /* List of supported subpicture formats */
@@ -2109,6 +2111,7 @@ i965_CreateImage(VADriverContextP ctx,
         image->data_size  = size + 2 * size2;
         break;
     case VA_FOURCC('Y','U','Y','2'):
+    case VA_FOURCC('U','Y','V','Y'):
         image->num_planes = 1;
         image->pitches[0] = width * 2;
         image->offsets[0] = 0;

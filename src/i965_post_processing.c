@@ -1365,7 +1365,7 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     const int V = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
                    fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 1 : 2;
     int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
-    int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2'));
+    int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') || fourcc == VA_FOURCC('U', 'Y', 'V', 'Y'));
 
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = SURFACE(surface->id);
@@ -1456,6 +1456,10 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         switch (fourcc) {
         case VA_FOURCC('Y', 'U', 'Y', '2'):
             format0 = SURFACE_FORMAT_YCRCB_NORMAL;
+            break;
+
+        case VA_FOURCC('U', 'Y', 'V', 'Y'):
+            format0 = SURFACE_FORMAT_YCRCB_SWAPY;
             break;
 
         default:
@@ -2203,6 +2207,10 @@ static void gen7_update_src_surface_uv_offset(VADriverContextP    ctx,
         pp_static_parameter->grf2.di_destination_packed_y_component_offset = 0;
         pp_static_parameter->grf2.di_destination_packed_u_component_offset = 1;
         pp_static_parameter->grf2.di_destination_packed_v_component_offset = 3;
+    } else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        pp_static_parameter->grf2.di_destination_packed_y_component_offset = 1;
+        pp_static_parameter->grf2.di_destination_packed_u_component_offset = 0;
+        pp_static_parameter->grf2.di_destination_packed_v_component_offset = 2;
     }
 }
 
@@ -4021,7 +4029,8 @@ i965_image_pl3_processing(VADriverContextP ctx,
                                                  dst_rect,
                                                  PP_PL3_LOAD_SAVE_PL3,
                                                  NULL);
-    } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+    } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') ||
+               fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4070,7 +4079,8 @@ i965_image_pl2_processing(VADriverContextP ctx,
                                                  dst_rect,
                                                  PP_NV12_LOAD_SAVE_PL3,
                                                  NULL);
-    } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+    } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') ||
+               fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4159,6 +4169,7 @@ i965_image_processing(VADriverContextP ctx,
                                                dst_rect);
             break;
         case  VA_FOURCC('Y', 'U', 'Y', '2'):
+        case VA_FOURCC('U', 'Y', 'V', 'Y'):
             status = i965_image_pl1_processing(ctx,
                                                src_surface,
                                                src_rect,
