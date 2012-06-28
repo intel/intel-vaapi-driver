@@ -1,8 +1,12 @@
 INTEL_PP_G7B = \
 	avs.g7b			\
 	dndi.g7b		\
+	pa_to_pl2.g7b		\
+	pa_to_pl3.g7b		\
+	pl2_to_pa.g7b		\
 	pl2_to_pl2.g7b		\
 	pl2_to_pl3.g7b		\
+	pl3_to_pa.g7b		\
 	pl3_to_pl2.g7b		\
 	pl3_to_pl3.g7b		\
 	$(NULL)
