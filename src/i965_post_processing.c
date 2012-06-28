@@ -521,11 +521,21 @@ static const uint32_t pp_nv12_dndi_gen7[][4] = {
 
 static const uint32_t pp_nv12_dn_gen7[][4] = {
 };
+
 static const uint32_t pp_nv12_load_save_pa_gen7[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pa.g7b"
 };
+
 static const uint32_t pp_pa_load_save_nv12_gen7[][4] = {
+#include "shaders/post_processing/gen7/pa_to_pl2.g7b"
 };
+
 static const uint32_t pp_pl3_load_save_pa_gen7[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pa.g7b"
+};
+
+static const uint32_t pp_pa_load_save_pl3_gen7[][4] = {
+#include "shaders/post_processing/gen7/pa_to_pl3.g7b"
 };
  
 static VAStatus gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
@@ -664,7 +674,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
     
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -676,7 +686,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
     
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -688,7 +698,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
     
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
     
 };
@@ -1319,6 +1329,7 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     const int V = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
                    fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 1 : 2;
     int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
+    int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2'));
 
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = SURFACE(surface->id);
@@ -1327,6 +1338,15 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         height[0] = obj_surface->orig_height;
         pitch[0] = obj_surface->width;
         offset[0] = 0;
+
+        if (packed_yuv) {
+            if (is_target)
+                width[0] = obj_surface->orig_width * 2; /* surface format is R8, so double the width */
+            else
+                width[0] = obj_surface->orig_width;     /* surface foramt is YCBCR, width is specified in units of pixels */
+
+            pitch[0] = obj_surface->width * 2;
+        }
 
         width[1] = obj_surface->cb_cr_width;
         height[1] = obj_surface->cb_cr_height;
@@ -1345,7 +1365,12 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         pitch[0] = obj_image->image.pitches[0];
         offset[0] = obj_image->image.offsets[0];
 
-        if (interleaved_uv) {
+        if (packed_yuv) {
+            if (is_target)
+                width[0] = obj_image->image.width * 2;  /* surface format is R8, so double the width */
+            else
+                width[0] = obj_image->image.width;      /* surface foramt is YCBCR, width is specified in units of pixels */
+        } else if (interleaved_uv) {
             width[1] = obj_image->image.width / 2;
             height[1] = obj_image->image.height / 2;
             pitch[1] = obj_image->image.pitches[1];
@@ -1369,52 +1394,67 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                                   I965_SURFACEFORMAT_R8_SINT,
                                   base_index, 1);
 
-        if (interleaved_uv) {
-            gen7_pp_set_surface_state(ctx, pp_context,
-                                      bo, offset[1],
-                                      width[1] / 2, height[1], pitch[1],
-                                      I965_SURFACEFORMAT_R8G8_SINT,
-                                      base_index + 1, 1);
-        } else {
-            gen7_pp_set_surface_state(ctx, pp_context,
-                                      bo, offset[1],
-                                      width[1] / 4, height[1], pitch[1],
-                                      I965_SURFACEFORMAT_R8_SINT,
-                                      base_index + 1, 1);
-            gen7_pp_set_surface_state(ctx, pp_context,
-                                      bo, offset[2],
-                                      width[2] / 4, height[2], pitch[2],
-                                      I965_SURFACEFORMAT_R8_SINT,
-                                      base_index + 2, 1);
+        if (!packed_yuv) {
+            if (interleaved_uv) {
+                gen7_pp_set_surface_state(ctx, pp_context,
+                                          bo, offset[1],
+                                          width[1] / 2, height[1], pitch[1],
+                                          I965_SURFACEFORMAT_R8G8_SINT,
+                                          base_index + 1, 1);
+            } else {
+                gen7_pp_set_surface_state(ctx, pp_context,
+                                          bo, offset[1],
+                                          width[1] / 4, height[1], pitch[1],
+                                          I965_SURFACEFORMAT_R8_SINT,
+                                          base_index + 1, 1);
+                gen7_pp_set_surface_state(ctx, pp_context,
+                                          bo, offset[2],
+                                          width[2] / 4, height[2], pitch[2],
+                                          I965_SURFACEFORMAT_R8_SINT,
+                                          base_index + 2, 1);
+            }
         }
     } else {
+        int format0 = SURFACE_FORMAT_Y8_UNORM;
+
+        switch (fourcc) {
+        case VA_FOURCC('Y', 'U', 'Y', '2'):
+            format0 = SURFACE_FORMAT_YCRCB_NORMAL;
+            break;
+
+        default:
+            break;
+        }
+
         gen7_pp_set_surface2_state(ctx, pp_context,
                                    bo, offset[0],
                                    width[0], height[0], pitch[0],
                                    0, 0,
-                                   SURFACE_FORMAT_Y8_UNORM, 0,
+                                   format0, 0,
                                    base_index);
 
-        if (interleaved_uv) {
-            gen7_pp_set_surface2_state(ctx, pp_context,
-                                       bo, offset[1],
-                                       width[1], height[1], pitch[1],
-                                       0, 0,
-                                       SURFACE_FORMAT_R8B8_UNORM, 0,
-                                       base_index + 1);
-        } else {
-            gen7_pp_set_surface2_state(ctx, pp_context,
-                                       bo, offset[1],
-                                       width[1], height[1], pitch[1],
-                                       0, 0,
-                                       SURFACE_FORMAT_R8_UNORM, 0,
-                                       base_index + 1);
-            gen7_pp_set_surface2_state(ctx, pp_context,
-                                       bo, offset[2],
-                                       width[2], height[2], pitch[2],
-                                       0, 0,
-                                       SURFACE_FORMAT_R8_UNORM, 0,
-                                       base_index + 2);
+        if (!packed_yuv) {
+            if (interleaved_uv) {
+                gen7_pp_set_surface2_state(ctx, pp_context,
+                                           bo, offset[1],
+                                           width[1], height[1], pitch[1],
+                                           0, 0,
+                                           SURFACE_FORMAT_R8B8_UNORM, 0,
+                                           base_index + 1);
+            } else {
+                gen7_pp_set_surface2_state(ctx, pp_context,
+                                           bo, offset[1],
+                                           width[1], height[1], pitch[1],
+                                           0, 0,
+                                           SURFACE_FORMAT_R8_UNORM, 0,
+                                           base_index + 1);
+                gen7_pp_set_surface2_state(ctx, pp_context,
+                                           bo, offset[2],
+                                           width[2], height[2], pitch[2],
+                                           0, 0,
+                                           SURFACE_FORMAT_R8_UNORM, 0,
+                                           base_index + 2);
+            }
         }
     }
 }
@@ -2117,6 +2157,20 @@ gen7_pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context,
     return 0;
 }
 
+static void gen7_update_src_surface_uv_offset(VADriverContextP    ctx, 
+                                              struct i965_post_processing_context *pp_context,
+                                              const struct i965_surface *surface)
+{
+    struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+    int fourcc = pp_get_surface_fourcc(ctx, surface);
+    
+    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+        pp_static_parameter->grf2.di_destination_packed_y_component_offset = 0;
+        pp_static_parameter->grf2.di_destination_packed_u_component_offset = 1;
+        pp_static_parameter->grf2.di_destination_packed_v_component_offset = 3;
+    }
+}
+
 static VAStatus
 gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                            const struct i965_surface *src_surface,
@@ -2298,6 +2352,8 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) 1.0 / pp_avs_context->dest_h;
     pp_static_parameter->grf5.sampler_load_vertical_frame_origin = -(float)pp_avs_context->dest_y / pp_avs_context->dest_h;
     pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = -(float)pp_avs_context->dest_x / pp_avs_context->dest_w;
+
+    gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
 
     dst_surface->flags = src_surface->flags;
 
