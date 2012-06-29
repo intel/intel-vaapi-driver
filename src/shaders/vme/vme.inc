@@ -59,7 +59,7 @@ define(`BI_SUB_MB_PART_MASK',           `0x0c000000')
 define(`MAX_NUM_MV',                    `0x00000020')
 define(`FB_PRUNING_ENABLE',             `0x40000000')
 
-define(`SEARCH_PATH_LEN',               `0x00003F0C')
+define(`SEARCH_PATH_LEN',               `0x00003030')
 define(`START_CENTER',                  `0x30000000')
 
 define(`ADAPTIVE_SEARCH_ENABLE',        `0x00000002') 

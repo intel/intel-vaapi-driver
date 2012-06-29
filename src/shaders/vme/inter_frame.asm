@@ -45,7 +45,7 @@ mov  (1) vme_m0.0<1>:W          -16:W {align1} ;                /* Reference = (
 mov  (1) vme_m0.2<1>:W          -12:W {align1} ;
 #endif
         
-mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_DUAL_START + INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};    /* 16x16 Source, 1/4 pixel, harr */
+mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};    /* 16x16 Source, 1/4 pixel, harr */
 mov  (1) vme_m0.20<1>:UB        thread_id_ub {align1};                  /* dispatch id */
 mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};               /* Reference Width&Height, 32x32 */
 
