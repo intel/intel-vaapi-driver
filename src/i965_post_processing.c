@@ -520,6 +520,7 @@ static const uint32_t pp_nv12_dndi_gen7[][4] = {
 };
 
 static const uint32_t pp_nv12_dn_gen7[][4] = {
+#include "shaders/post_processing/gen7/nv12_dn_nv12.g7b"
 };
 
 static const uint32_t pp_nv12_load_save_pa_gen7[][4] = {
@@ -2992,7 +2993,9 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
 static int
 gen7_pp_dn_x_steps(void *private_context)
 {
-    return 1;
+    struct pp_dn_context *pp_dn_context = private_context;
+
+    return pp_dn_context->dest_w / 16;
 }
 
 static int
@@ -3075,7 +3078,15 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
                                SURFACE_FORMAT_PLANAR_420_8, 1,
                                3);
 
-    /* source STMM surface index 5 */
+    /* source (temporal reference) YUV surface index 4 */
+    gen7_pp_set_surface2_state(ctx, pp_context,
+                               obj_surface->bo, 0,
+                               orig_w, orig_h, w,
+                               0, h,
+                               SURFACE_FORMAT_PLANAR_420_8, 1,
+                               4);
+
+    /* STMM / History Statistics input surface, index 5 */
     gen7_pp_set_surface_state(ctx, pp_context,
                               pp_context->stmm.bo, 0,
                               orig_w, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
@@ -3088,17 +3099,18 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     w = obj_surface->width;
     h = obj_surface->height;
 
-    /* destination Y surface index 7 */
+    /* destination Y surface index 24 */
     gen7_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, 0,
                               orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
-                              7, 1);
+                              24, 1);
 
-    /* destination UV surface index 8 */
+    /* destination UV surface index 25 */
     gen7_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, w * h,
                               orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
-                              8, 1);
+                              25, 1);
+
     /* sampler dn */
     dri_bo_map(pp_context->sampler_state_table.bo, True);
     assert(pp_context->sampler_state_table.bo->virtual);
