@@ -23,21 +23,86 @@
  */
 
 #include "config.h"
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <va/va_dricommon.h>
 #include "i965_drv_video.h"
 #include "i965_output_dri.h"
+#include "dso_utils.h"
+
+#define LIBVA_X11_NAME "libva-x11.so.1"
+
+typedef struct dri_drawable *(*dri_get_drawable_func)(
+    VADriverContextP ctx, XID drawable);
+typedef union dri_buffer *(*dri_get_rendering_buffer_func)(
+    VADriverContextP ctx, struct dri_drawable *d);
+typedef void (*dri_swap_buffer_func)(
+    VADriverContextP ctx, struct dri_drawable *d);
+
+struct dri_vtable {
+    dri_get_drawable_func               get_drawable;
+    dri_get_rendering_buffer_func       get_rendering_buffer;
+    dri_swap_buffer_func                swap_buffer;
+};
+
+struct va_dri_output {
+    struct dso_handle  *handle;
+    struct dri_vtable   vtable;
+};
 
 bool
 i965_output_dri_init(VADriverContextP ctx)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+    struct dso_handle *dso_handle;
+    struct dri_vtable *dri_vtable;
+
+    static const struct dso_symbol symbols[] = {
+        { "dri_get_drawable",
+          offsetof(struct dri_vtable, get_drawable) },
+        { "dri_get_rendering_buffer",
+          offsetof(struct dri_vtable, get_rendering_buffer) },
+        { "dri_swap_buffer",
+          offsetof(struct dri_vtable, swap_buffer) },
+        { NULL, }
+    };
+
+    i965->dri_output = calloc(1, sizeof(struct va_dri_output));
+    if (!i965->dri_output)
+        goto error;
+
+    i965->dri_output->handle = dso_open(LIBVA_X11_NAME);
+    if (!i965->dri_output->handle)
+        goto error;
+
+    dso_handle = i965->dri_output->handle;
+    dri_vtable = &i965->dri_output->vtable;
+    if (!dso_get_symbols(dso_handle, dri_vtable, sizeof(*dri_vtable), symbols))
+        goto error;
     return true;
+
+error:
+    i965_output_dri_terminate(ctx);
+    return false;
 }
 
 void
 i965_output_dri_terminate(VADriverContextP ctx)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+    struct va_dri_output * const dri_output = i965->dri_output;
+
+    if (!dri_output)
+        return;
+
+    if (dri_output->handle) {
+        dso_close(dri_output->handle);
+        dri_output->handle = NULL;
+    }
+
+    free(dri_output);
+    i965->dri_output = NULL;
 }
 
 VAStatus
@@ -53,6 +118,7 @@ i965_put_surface_dri(
 )
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+    struct dri_vtable * const dri_vtable = &i965->dri_output->vtable;
     struct dri_state * const dri_state = (struct dri_state *)ctx->drm_state;
     struct i965_render_state * const render_state = &i965->render_state;
     struct dri_drawable *dri_drawable;
@@ -77,10 +143,10 @@ i965_put_surface_dri(
 
     _i965LockMutex(&i965->render_mutex);
 
-    dri_drawable = dri_get_drawable(ctx, (Drawable)draw);
+    dri_drawable = dri_vtable->get_drawable(ctx, (Drawable)draw);
     assert(dri_drawable);
 
-    buffer = dri_get_rendering_buffer(ctx, dri_drawable);
+    buffer = dri_vtable->get_rendering_buffer(ctx, dri_drawable);
     assert(buffer);
     
     dest_region = render_state->draw_region;
@@ -129,7 +195,7 @@ i965_put_surface_dri(
         intel_render_put_subpicture(ctx, surface, src_rect, dst_rect);
     }
 
-    dri_swap_buffer(ctx, dri_drawable);
+    dri_vtable->swap_buffer(ctx, dri_drawable);
     obj_surface->flags |= SURFACE_DISPLAYED;
 
     if ((obj_surface->flags & SURFACE_ALL_MASK) == SURFACE_DISPLAYED) {

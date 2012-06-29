@@ -275,6 +275,9 @@ struct i965_driver_data
     char va_vendor[256];
     
     VAContextID current_context_id;
+
+    /* VA/DRI (X11) specific data */
+    struct va_dri_output *dri_output;
 };
 
 #define NEW_CONFIG_ID() object_heap_allocate(&i965->config_heap);
