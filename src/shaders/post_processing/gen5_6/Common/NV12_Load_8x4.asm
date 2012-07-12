@@ -29,14 +29,42 @@
     send (8) udSRC_U(0)<1>      mMSGHDRU    udDUMMY_NULL    nDATAPORT_READ    nDPMR_MSGDSC+nDPR_MSG_SIZE_UV+nBI_CURRENT_SRC_UV:ud
 
 // Convert to word-aligned format ----------------------------------------------
-#if !defined(LOAD_UV_ONLY)
+#if defined(FIX_POINT_CONVERSION) || defined(FLOAT_POINT_CONVERSION)
+    // load NV12 and save it as packed AYUV to dst (64x8)
+
+    $for (nY_NUM_OF_ROWS-1; >-1; -1) {
+        // #### Y
+        mov (8)  ubDEST_Y(0,%1*16*4)<4>             ubSRC_Y(0,%1*16)<0;8,1>
+        mov (8)  ubDEST_Y(0,(%1*16+8)*4)<4>         ubSRC_Y(0,%1*16+8)<0;8,1>
+
+        // #### U/V
+        // error from compile: "Invalid horiz size 8", so I have to repeat UV first
+        // mov (4)  ubDEST_Y(0,%1*16*4+1)<8>                   ubSRC_U(0,%1/2*16)<0;4,2>
+        // mov (4)  ubDEST_Y(0,%1*16*4+1+32)<8>                ubSRC_U(0,%1/2*16+8)<0;4,2>
+	
+        // repeate U/V for each one
+        mov (8)     REG2(r,nTEMP18,0)<2>:uw	            uwSRC_U(0,%1/2*8)<0;8,1>
+        mov (8)     REG2(r,nTEMP18,1)<2>:uw	            uwSRC_U(0,%1/2*8)<0;8,1>
+        
+        // mov U/V to ubDEST
+        mov (8)    ubDEST_Y(0,%1*16*4+1)<4>             REG2(r,nTEMP18,0)<0;8,2>:ub
+        mov (8)    ubDEST_Y(0,%1*16*4+1+32)<4>          REG2(r,nTEMP18,16)<0;8,2>:ub
+
+        mov (8)    ubDEST_Y(0,%1*16*4+2)<4>             REG2(r,nTEMP18,1)<0;8,2>:ub
+        mov (8)    ubDEST_Y(0,%1*16*4+2+32)<4>          REG2(r,nTEMP18,17)<0;8,2>:ub
+    }
+#else
+  #if !defined(LOAD_UV_ONLY)
     $for (nY_NUM_OF_ROWS-1; >-1; -1) {
         mov (16)  uwDEST_Y(0,%1*16)<1>      ubSRC_Y(0,%1*16)
     }
-#endif
+  #endif
     $for (nUV_NUM_OF_ROWS/2-1; >-1; -1) {
+        // why "mov (16)"? should it be 8?
         mov (16)  uwDEST_U(0,%1*16)<1>      ubSRC_U(0,%1*32)<32;16,2>
         mov (16)  uwDEST_V(0,%1*16)<1>      ubSRC_U(0,%1*32+1)<32;16,2>
     }
+
+#endif    
 
 // End of NV12_Load_8x4

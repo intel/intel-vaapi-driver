@@ -73,6 +73,9 @@
 #define uwDEST_U          uwTOP_U
 #define uwDEST_V          uwTOP_V
 
+#define ubDEST_Y          ubTOP_Y       // I'd like use them for color conversion
+#define uwSRC_U           uwBOT_U
+
 #define nSRC_REGION       nREGION_1     // REGION_1 will be the source region for first kernel
 
 // End of PL2_Load.inc
