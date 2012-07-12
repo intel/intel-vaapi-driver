@@ -20,6 +20,7 @@ INTEL_PP_G4B_GEN5 = \
 	pl3_load_save_pa.g4b.gen5				\
 	pa_load_save_nv12.g4b.gen5				\
 	pa_load_save_pl3.g4b.gen5				\
+	rgbx_load_save_nv12.g4b.gen5				\
 	$(NULL)
 
 INTEL_PP_G6B = \
@@ -35,6 +36,7 @@ INTEL_PP_G6B = \
 	pl3_load_save_pa.g6b				\
 	pa_load_save_nv12.g6b				\
 	pa_load_save_pl3.g6b				\
+	rgbx_load_save_nv12.g6b				\
 	$(NULL)
 
 INTEL_PP_ASM = \
@@ -50,6 +52,7 @@ INTEL_PP_ASM = \
 	pl3_load_save_pa.asm				\
 	pa_load_save_nv12.asm				\
 	pa_load_save_pl3.asm				\
+	rgbx_load_save_nv12.asm				\
 	$(NULL)
 
 INTEL_PP_ASM += \
@@ -86,6 +89,10 @@ INTEL_PP_ASM += \
 	Common/RGB16x8_Save_RGB16.asm			\
 	Common/RGB16x8_Save_Y416.asm			\
 	Common/RGB_Pack.asm				\
+	Common/RGBX_Load_16x8.asm			\
+	Common/RGBX_to_YUV_Coef.asm			\
+	Common/RGBX_Save_YUV_Fix.asm		\
+	Common/RGBX_Save_YUV_Float.asm		\
 	Common/SetupVPKernel.asm			\
 	Common/readSampler16x1.asm			\
 	Core_Kernels/AVS_SetupFirstBlock.asm		\
@@ -145,6 +152,7 @@ INTEL_PP_INC = \
 	Common/RGB16x8_Save_RGB.inc		\
 	Common/RGB16x8_Save_RGB16.inc		\
 	Common/RGB16x8_Save_Y416.inc		\
+	Common/RGBX_Load_16x8.inc		\
 	Common/common.inc			\
 	Common/undefall.inc			\
 	Core_Kernels/AVS_IEF.inc		\
