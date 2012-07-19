@@ -1059,40 +1059,64 @@ ironlake_pp_pipeline_setup(VADriverContextP ctx,
 }
 
 // update u/v offset when the surface format are packed yuv
-static void i965_update_src_surface_uv_offset(
+static void i965_update_src_surface_static_parameter(
     VADriverContextP    ctx, 
     struct i965_post_processing_context *pp_context,
     const struct i965_surface *surface)
 {
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     int fourcc = pp_get_surface_fourcc(ctx, surface);
-    
-    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+
+    switch (fourcc) {
+    case VA_FOURCC('Y', 'U', 'Y', '2'):
         pp_static_parameter->grf1.source_packed_u_offset = 1;
         pp_static_parameter->grf1.source_packed_v_offset = 3;
-    } 
-    else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        break;
+    case VA_FOURCC('U', 'Y', 'V', 'Y'):
         pp_static_parameter->grf1.source_packed_y_offset = 1;
         pp_static_parameter->grf1.source_packed_v_offset = 2;
+        break;
+    case VA_FOURCC('B', 'G', 'R', 'X'):
+    case VA_FOURCC('B', 'G', 'R', 'A'):
+        pp_static_parameter->grf1.source_rgb_layout = 0;
+        break;
+    case VA_FOURCC('R', 'G', 'B', 'X'):
+    case VA_FOURCC('R', 'G', 'B', 'A'):
+        pp_static_parameter->grf1.source_rgb_layout = 1;
+        break;
+    default:
+        break;
     }
     
 }
 
-static void i965_update_dst_surface_uv_offset(
+static void i965_update_dst_surface_static_parameter(
     VADriverContextP    ctx, 
     struct i965_post_processing_context *pp_context,
     const struct i965_surface *surface)
 {
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     int fourcc = pp_get_surface_fourcc(ctx, surface);
-    
-    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+
+    switch (fourcc) {
+    case VA_FOURCC('Y', 'U', 'Y', '2'):
         pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_u_offset = 1;
         pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_v_offset = 3;
-    } 
-    else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        break;
+    case VA_FOURCC('U', 'Y', 'V', 'Y'):
         pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_y_offset = 1;
         pp_static_parameter->grf1.r1_2.load_and_save.destination_packed_v_offset = 2;
+        break;
+    case VA_FOURCC('B', 'G', 'R', 'X'):
+    case VA_FOURCC('B', 'G', 'R', 'A'):
+        pp_static_parameter->grf1.r1_2.csc.destination_rgb_layout = 0;
+        break;
+    case VA_FOURCC('R', 'G', 'B', 'X'):
+    case VA_FOURCC('R', 'G', 'B', 'A'):
+        pp_static_parameter->grf1.r1_2.csc.destination_rgb_layout = 1;
+        break;
+    default:
+        break;
     }
     
 }
@@ -1610,8 +1634,8 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
     pp_static_parameter->grf3.vertical_origin_offset = src_rect->y;
 
     // update u/v offset for packed yuv
-    i965_update_src_surface_uv_offset (ctx, pp_context, src_surface);
-    i965_update_dst_surface_uv_offset (ctx, pp_context, dst_surface);
+    i965_update_src_surface_static_parameter (ctx, pp_context, src_surface);
+    i965_update_dst_surface_static_parameter (ctx, pp_context, dst_surface);
 
     dst_surface->flags = src_surface->flags;
 

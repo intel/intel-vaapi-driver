@@ -120,7 +120,7 @@ struct pp_static_parameter
         unsigned int source_packed_y_offset:8;
         unsigned int source_packed_u_offset:8;
         unsigned int source_packed_v_offset:8;
-        unsigned int pad0:8;
+        unsigned int source_rgb_layout:8;       // 1 for |R|G|B|X| layout, 0 for |B|G|R|X| layout
 
         union {
             /* Load and Save r1.2 */
@@ -133,8 +133,8 @@ struct pp_static_parameter
 
             /* CSC r1.2 */
             struct {
-                unsigned int destination_rgb_format:8;
                 unsigned int pad0:24;
+                unsigned int destination_rgb_layout:8;  // 1 for |R|G|B|X| layout, 0 for |B|G|R|X| layout
             } csc;
         } r1_2;
         
