@@ -2097,10 +2097,10 @@ i965_CreateImage(VADriverContextP ctx,
         image->component_order[1]  = 'G';
         image->component_order[2]  = 'B';
         break;
-    case VA_FOURCC('A','R','G','B'):
-    case VA_FOURCC('A','B','G','R'):
     case VA_FOURCC('B','G','R','A'):
     case VA_FOURCC('R','G','B','A'):
+    case VA_FOURCC('B','G','R','X'):
+    case VA_FOURCC('R','G','B','X'):
         image->num_planes = 1;
         image->pitches[0] = width * 4;
         image->offsets[0] = 0;
@@ -2196,7 +2196,11 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
         assert(fourcc == VA_FOURCC('N', 'V', '1', '2') ||
                fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
                fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
-               fourcc == VA_FOURCC('Y','U', 'Y', '2'));
+               fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
+               fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
+               fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
+               fourcc == VA_FOURCC('B', 'G', 'R', 'X') || 
+               fourcc == VA_FOURCC('Y', 'U', 'Y', '2'));
 
         obj_surface->width = ALIGN(obj_surface->orig_width, 128);
         obj_surface->height = ALIGN(obj_surface->orig_height, 32);
@@ -2212,6 +2216,12 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             obj_surface->cb_cr_pitch = obj_surface->width * 2;
             region_width = obj_surface->width * 2;
         }
+        else if (fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
+                 fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
+                 fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
+                 fourcc == VA_FOURCC('B', 'G', 'R', 'X')) {
+            region_width = obj_surface->width * 4;
+        }
         else {
             assert(0);
         }
@@ -2225,8 +2235,12 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             obj_surface->cb_cr_height = obj_surface->orig_height / 2;
             region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32);
         } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
-                   fourcc == VA_FOURCC('I', 'M', 'C', '3') ||
-                   fourcc == VA_FOURCC('Y','U', 'Y', '2')) {
+                   fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
+                   fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
+                   fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
+                   fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
+                   fourcc == VA_FOURCC('B', 'G', 'R', 'X') || 
+                   fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
             switch (subsampling) {
             case SUBSAMPLE_YUV400:
                 obj_surface->cb_cr_width = 0;
@@ -2257,7 +2271,8 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
                 obj_surface->cb_cr_width = obj_surface->orig_width / 4;
                 obj_surface->cb_cr_height = obj_surface->orig_height;
                 break;
-
+            case SUBSAMPLE_RGBX:
+                break;
             default:
                 assert(0);
                 break;
@@ -2277,11 +2292,20 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
                 obj_surface->y_cr_offset = 0; 
                 region_height = obj_surface->height;
             }
+            else if (fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
+                     fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
+                     fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
+                     fourcc == VA_FOURCC('B', 'G', 'R', 'X')) {
+                region_height = obj_surface->height;
+            }
         }
     } else {
         assert(fourcc != VA_FOURCC('I', 'M', 'C', '1') &&
                fourcc != VA_FOURCC('I', 'M', 'C', '3'));
-        assert(subsampling == SUBSAMPLE_YUV420 || subsampling == SUBSAMPLE_YUV422H || subsampling == SUBSAMPLE_YUV422V); // possbile for YUY2 goes here?
+        assert(subsampling == SUBSAMPLE_YUV420 || 
+               subsampling == SUBSAMPLE_YUV422H || 
+               subsampling == SUBSAMPLE_YUV422V || 
+               subsampling == SUBSAMPLE_RGBX);
 
         region_width = obj_surface->width;
         region_height = obj_surface->height;
@@ -2319,6 +2343,13 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             obj_surface->cb_cr_height = obj_surface->orig_height;
             obj_surface->cb_cr_pitch = obj_surface->width * 2;
             region_width = obj_surface->width * 2;
+            region_height = obj_surface->height;
+            break;
+        case VA_FOURCC('R', 'G', 'B', 'A'):
+        case VA_FOURCC('R', 'G', 'B', 'X'):
+        case VA_FOURCC('B', 'G', 'R', 'A'):
+        case VA_FOURCC('B', 'G', 'R', 'X'):
+            region_width = obj_surface->width * 4;
             region_height = obj_surface->height;
             break;
 
@@ -2452,6 +2483,13 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->pitches[2] = obj_surface->width * 2; /* V */
         image->offsets[2] = 0;
         break;
+    case VA_FOURCC('R', 'G', 'B', 'A'):
+    case VA_FOURCC('R', 'G', 'B', 'X'):
+    case VA_FOURCC('B', 'G', 'R', 'A'):
+    case VA_FOURCC('B', 'G', 'R', 'X'):
+        image->num_planes = 1;
+        image->pitches[0] = obj_surface->width * 4;
+        break;
     default:
         goto error;
     }
@@ -2565,6 +2603,12 @@ get_sampling_from_fourcc(unsigned int fourcc)
         break;
     case VA_FOURCC('Y', 'U', 'Y', '2'):
         surface_sampling = SUBSAMPLE_YUV422H;
+        break;
+    case VA_FOURCC('R','G','B','A'):
+    case VA_FOURCC('R','G','B','X'):
+    case VA_FOURCC('B','G','R','A'):
+    case VA_FOURCC('B','G','R','X'):
+    surface_sampling = SUBSAMPLE_RGBX; 
         break;
     default:
         break;
@@ -3584,12 +3628,20 @@ i965_GetSurfaceAttributes(
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         }
                     } else if (obj_config->profile == VAProfileNone) {
-                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2') &&
-                            attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0') &&
-                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2') && 
-                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'U', 'Y', '2')) {
+                        switch (attrib_list[i].value.value.i) {
+                        case VA_FOURCC('N', 'V', '1', '2'):
+                        case VA_FOURCC('I', '4', '2', '0'):
+                        case VA_FOURCC('Y', 'V', '1', '2'):
+                        case VA_FOURCC('Y', 'U', 'Y', '2'):
+                        case VA_FOURCC('B', 'G', 'R', 'A'):
+                        case VA_FOURCC('B', 'G', 'R', 'X'):
+                        case VA_FOURCC('R', 'G', 'B', 'X'):
+                        case VA_FOURCC('R', 'G', 'B', 'A'):
+                            break;
+                        default:
                             attrib_list[i].value.value.i = 0;                            
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                            break;
                         }
                     } else {
                         assert(0);
@@ -3598,12 +3650,20 @@ i965_GetSurfaceAttributes(
                 } else if (IS_GEN6(i965->intel.device_id)) {
                     if (obj_config->entrypoint == VAEntrypointEncSlice ||
                         obj_config->entrypoint == VAEntrypointVideoProc) {
-                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2') &&
-                            attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0') &&
-                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2') && 
-                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'U', 'Y', '2')) {
+                        switch (attrib_list[i].value.value.i) {
+                        case VA_FOURCC('N', 'V', '1', '2'):
+                        case VA_FOURCC('I', '4', '2', '0'):
+                        case VA_FOURCC('Y', 'V', '1', '2'):
+                        case VA_FOURCC('Y', 'U', 'Y', '2'):
+                        case VA_FOURCC('B', 'G', 'R', 'A'):
+                        case VA_FOURCC('B', 'G', 'R', 'X'):
+                        case VA_FOURCC('R', 'G', 'B', 'X'):
+                        case VA_FOURCC('R', 'G', 'B', 'A'):
+                            break;
+                        default:
                             attrib_list[i].value.value.i = 0;                            
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                            break;
                         }
                     } else {
                         if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2')) {
@@ -3614,11 +3674,15 @@ i965_GetSurfaceAttributes(
                 } else if (IS_GEN7(i965->intel.device_id)) {
                     if (obj_config->entrypoint == VAEntrypointEncSlice ||
                         obj_config->entrypoint == VAEntrypointVideoProc) {
-                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2') &&
-                            attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0') &&
-                            attrib_list[i].value.value.i != VA_FOURCC('Y', 'V', '1', '2')) {
+                        switch (attrib_list[i].value.value.i) {
+                        case VA_FOURCC('N', 'V', '1', '2'):
+                        case VA_FOURCC('I', '4', '2', '0'):
+                        case VA_FOURCC('Y', 'V', '1', '2'):
+                            break;
+                        default:
                             attrib_list[i].value.value.i = 0;                            
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
+                            break;
                         }
                     } else {
                         if (obj_config->profile == VAProfileJPEGBaseline) {

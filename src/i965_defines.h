@@ -723,6 +723,7 @@
 #define SUBSAMPLE_YUV422V       3
 #define SUBSAMPLE_YUV444        4
 #define SUBSAMPLE_YUV411        5
+#define SUBSAMPLE_RGBX          6
 
 #define URB_SIZE(intel)         (IS_GEN7(intel->device_id) ? 4096 :     \
                                  IS_GEN6(intel->device_id) ? 1024 :     \
