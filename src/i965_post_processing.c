@@ -107,6 +107,10 @@ static const uint32_t pp_pa_load_save_pl3_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/pa_load_save_pl3.g4b.gen5"
 };
 
+static const uint32_t pp_rgbx_load_save_nv12_gen5[][4] = {
+#include "shaders/post_processing/gen5_6/rgbx_load_save_nv12.g4b.gen5"
+};
+
 static VAStatus pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                    const struct i965_surface *src_surface,
                                    const VARectangle *src_rect,
@@ -307,6 +311,18 @@ static struct pp_module pp_modules_gen5[] = {
         pp_plx_load_save_plx_initialize,
     },
 
+    {
+        {
+            "RGBX_NV12 module",
+            PP_RGBX_LOAD_SAVE_NV12,
+            pp_rgbx_load_save_nv12_gen5,
+            sizeof(pp_rgbx_load_save_nv12_gen5),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
+            
 };
 
 static const uint32_t pp_null_gen6[][4] = {
@@ -359,6 +375,10 @@ static const uint32_t pp_pa_load_save_nv12_gen6[][4] = {
 
 static const uint32_t pp_pa_load_save_pl3_gen6[][4] = {
 #include "shaders/post_processing/gen5_6/pa_load_save_pl3.g6b"
+};
+
+static const uint32_t pp_rgbx_load_save_nv12_gen6[][4] = {
+#include "shaders/post_processing/gen5_6/rgbx_load_save_nv12.g6b"
 };
 
 static struct pp_module pp_modules_gen6[] = {
@@ -517,6 +537,18 @@ static struct pp_module pp_modules_gen6[] = {
         pp_plx_load_save_plx_initialize,
     },
     
+    {
+        {
+            "RGBX_NV12 module",
+            PP_RGBX_LOAD_SAVE_NV12,
+            pp_rgbx_load_save_nv12_gen6,
+            sizeof(pp_rgbx_load_save_nv12_gen6),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
+
 };
 
 static const uint32_t pp_null_gen7[][4] = {
@@ -563,6 +595,8 @@ static const uint32_t pp_pa_load_save_nv12_gen7[][4] = {
 };
 static const uint32_t pp_pa_load_save_pl3_gen7[][4] = {
 #include "shaders/post_processing/gen7/pa_to_pl3.g7b"
+};
+static const uint32_t pp_rgbx_load_save_nv12_gen7[][4] = {
 };
 
 static VAStatus gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
@@ -740,6 +774,18 @@ static struct pp_module pp_modules_gen7[] = {
         gen7_pp_plx_avs_initialize,
     },
     
+    {
+        {
+            "RGBX_NV12 module",
+            PP_RGBX_LOAD_SAVE_NV12,
+            pp_rgbx_load_save_nv12_gen7,
+            sizeof(pp_rgbx_load_save_nv12_gen7),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
+
 };
 
 static int
@@ -4035,6 +4081,35 @@ i965_post_processing(
 }       
 
 static VAStatus
+i965_image_pl1_rgbx_processing(VADriverContextP ctx,
+                          const struct i965_surface *src_surface,
+                          const VARectangle *src_rect,
+                          struct i965_surface *dst_surface,
+                          const VARectangle *dst_rect)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_post_processing_context *pp_context = i965->pp_context;
+    int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+
+    if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+        i965_post_processing_internal(ctx, i965->pp_context,
+                                      src_surface,
+                                      src_rect,
+                                      dst_surface,
+                                      dst_rect,
+                                      PP_RGBX_LOAD_SAVE_NV12,
+                                      NULL);
+    } else {
+        assert(0);
+        return VA_STATUS_ERROR_UNKNOWN;
+    }
+
+    intel_batchbuffer_flush(pp_context->batch);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
 i965_image_pl3_processing(VADriverContextP ctx,
                           const struct i965_surface *src_surface,
                           const VARectangle *src_rect,
@@ -4212,7 +4287,16 @@ i965_image_processing(VADriverContextP ctx,
                                                dst_surface,
                                                dst_rect);
             break;
-
+        case VA_FOURCC('B', 'G', 'R', 'A'):
+        case VA_FOURCC('B', 'G', 'R', 'X'):
+        case VA_FOURCC('R', 'G', 'B', 'A'):
+        case VA_FOURCC('R', 'G', 'B', 'X'):
+            status = i965_image_pl1_rgbx_processing(ctx,
+                                               src_surface,
+                                               src_rect,
+                                               dst_surface,
+                                               dst_rect);
+            break;
         default:
             status = VA_STATUS_ERROR_UNIMPLEMENTED;
             break;
