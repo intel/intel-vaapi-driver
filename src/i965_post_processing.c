@@ -1264,7 +1264,12 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
     const int UV = 1;
     int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
     int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') || fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')); 
-
+    int full_packed_format = (fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
+                              fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
+                              fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
+                              fourcc == VA_FOURCC('B', 'G', 'R', 'X'));
+    int scale_factor_of_1st_plane_width_in_byte = 1;
+                              
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = SURFACE(surface->id);
         bo = obj_surface->bo;
@@ -1273,8 +1278,12 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
         pitch[0] = obj_surface->width;
         offset[0] = 0;
 
-        if (packed_yuv ) {
-            width[0] = obj_surface->orig_width * 2; 
+        if (full_packed_format) {
+            scale_factor_of_1st_plane_width_in_byte = 4; 
+            pitch[0] = obj_surface->width * 4;
+        }
+        else if (packed_yuv ) {
+            scale_factor_of_1st_plane_width_in_byte =  2; 
             pitch[0] = obj_surface->width * 2;
         }
         else if (interleaved_uv) {
@@ -1300,8 +1309,11 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
         pitch[0] = obj_image->image.pitches[0];
         offset[0] = obj_image->image.offsets[0];
 
-        if (packed_yuv ) {
-            width[0] = obj_image->image.width * 2;
+        if (full_packed_format) {
+            scale_factor_of_1st_plane_width_in_byte = 4;
+        }
+        else if (packed_yuv ) {
+            scale_factor_of_1st_plane_width_in_byte = 2;
         }
         else if (interleaved_uv) {
             width[1] = obj_image->image.width;
@@ -1323,10 +1335,10 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
     /* Y surface */
     i965_pp_set_surface_state(ctx, pp_context,
                               bo, offset[Y],
-                              width[Y] / 4, height[Y], pitch[Y], I965_SURFACEFORMAT_R8_UNORM,
+                              width[Y] *scale_factor_of_1st_plane_width_in_byte / 4, height[Y], pitch[Y], I965_SURFACEFORMAT_R8_UNORM,
                               base_index, is_target);
 
-    if (!packed_yuv) {
+    if (!packed_yuv && !full_packed_format) {
         if (interleaved_uv) {
             i965_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[UV],
