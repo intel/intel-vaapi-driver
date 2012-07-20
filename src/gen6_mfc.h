@@ -64,6 +64,36 @@ struct encode_state;
 #define BIND_IDX_MFC_SLICE_HEADER       1
 #define BIND_IDX_MFC_BATCHBUFFER        2
 
+#define CMD_LEN_IN_OWORD        4
+
+#define BRC_CLIP(x, min, max) \
+{ \
+    x = ((x > (max)) ? (max) : ((x < (min)) ? (min) : x)); \
+}
+
+#define BRC_P_B_QP_DIFF 4
+#define BRC_I_P_QP_DIFF 2
+#define BRC_I_B_QP_DIFF (BRC_I_P_QP_DIFF + BRC_P_B_QP_DIFF)
+
+#define BRC_PWEIGHT 0.6  /* weight if P slice with comparison to I slice */
+#define BRC_BWEIGHT 0.25 /* weight if B slice with comparison to I slice */
+
+#define BRC_QP_MAX_CHANGE 5 /* maximum qp modification */
+#define BRC_CY 0.1 /* weight for */
+#define BRC_CX_UNDERFLOW 5.
+#define BRC_CX_OVERFLOW -4.
+
+#define BRC_PI_0_5 1.5707963267948966192313216916398
+
+typedef enum _gen6_brc_status
+{
+    BRC_NO_HRD_VIOLATION = 0,
+    BRC_UNDERFLOW = 1,
+    BRC_OVERFLOW = 2,
+    BRC_UNDERFLOW_WITH_MAX_QP = 3,
+    BRC_OVERFLOW_WITH_MIN_QP = 4,
+} gen6_brc_status;
+
 struct gen6_mfc_avc_surface_aux
 {
     dri_bo *dmv_top;
@@ -219,5 +249,6 @@ void gen6_mfc_context_destroy(void *context);
 void gen6_mfc_brc_prepare(struct encode_state *encode_state,
                           struct intel_encoder_context *encoder_context);
 
-
+extern
+Bool gen75_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 #endif	/* _GEN6_MFC_BCS_H_ */
