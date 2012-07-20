@@ -48,6 +48,7 @@ driver_libs = \
 source_c = \
 	dso_utils.c		\
 	gen6_mfc.c		\
+	gen6_mfc_common.c	\
 	gen6_mfd.c		\
 	gen6_vme.c		\
 	gen7_mfc.c		\
