@@ -128,6 +128,21 @@ gen75_vme_media_source_surface_state(VADriverContextP ctx,
 }
 
 static void
+gen75_vme_media_chroma_source_surface_state(VADriverContextP ctx,
+                                    int index,
+                                    struct object_surface *obj_surface,
+                                    struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+
+    vme_context->vme_media_chroma_surface_setup(ctx,
+                                            &vme_context->gpe_context,
+                                            obj_surface,
+                                            BINDING_TABLE_OFFSET(index),
+                                            SURFACE_STATE_OFFSET(index));
+}
+
+static void
 gen75_vme_output_buffer_setup(VADriverContextP ctx,
                              struct encode_state *encode_state,
                              int index,
@@ -205,6 +220,7 @@ gen75_vme_surface_setup(VADriverContextP ctx,
     assert(obj_surface);
     gen75_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen75_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
+    gen75_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);
 
     if (!is_intra) {
         /* reference 0 */
@@ -619,6 +635,7 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
         vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
         vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
         vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;
+        vme_context->vme_media_chroma_surface_setup = gen75_gpe_media_chroma_surface_setup;
 
     encoder_context->vme_context = vme_context;
     encoder_context->vme_context_destroy = gen75_vme_context_destroy;

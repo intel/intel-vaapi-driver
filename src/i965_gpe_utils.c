@@ -544,6 +544,35 @@ gen7_gpe_set_media_rw_surface_state(VADriverContextP ctx,
     gen7_gpe_set_surface_tiling(ss, tiling);
 }
 
+static void
+gen75_gpe_set_media_chroma_surface_state(VADriverContextP ctx,
+                                    struct object_surface *obj_surface,
+                                    struct gen7_surface_state *ss)
+{
+    int w, h, w_pitch;
+    unsigned int tiling, swizzle;
+    int cbcr_offset;
+
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+    w = obj_surface->orig_width;
+    h = obj_surface->orig_height;
+    w_pitch = obj_surface->width;
+
+    cbcr_offset = obj_surface->height * obj_surface->width;
+    memset(ss, 0, sizeof(*ss));
+    /* ss0 */
+    ss->ss0.surface_type = I965_SURFACE_2D;
+    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
+    /* ss1 */
+    ss->ss1.base_addr = obj_surface->bo->offset + cbcr_offset;
+    /* ss2 */
+    ss->ss2.width = w / 4 - 1;  /* in DWORDs for media read & write message */
+    ss->ss2.height = (obj_surface->height / 2) -1;
+    /* ss3 */
+    ss->ss3.pitch = w_pitch - 1;
+    gen7_gpe_set_surface_tiling(ss, tiling);
+}
+
 void
 gen7_gpe_media_rw_surface_setup(VADriverContextP ctx,
                                 struct i965_gpe_context *gpe_context,
@@ -569,6 +598,36 @@ gen7_gpe_media_rw_surface_setup(VADriverContextP ctx,
     *((unsigned int *)((char *)bo->virtual + binding_table_offset)) = surface_state_offset;
     dri_bo_unmap(bo);
 }
+
+void
+gen75_gpe_media_chroma_surface_setup(VADriverContextP ctx,
+                                struct i965_gpe_context *gpe_context,
+                                struct object_surface *obj_surface,
+                                unsigned long binding_table_offset,
+                                unsigned long surface_state_offset)
+{
+    struct gen7_surface_state *ss;
+    dri_bo *bo;
+    int cbcr_offset;
+
+	assert(obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'));
+    bo = gpe_context->surface_state_binding_table.bo;
+    dri_bo_map(bo, True);
+    assert(bo->virtual);
+
+    cbcr_offset = obj_surface->height * obj_surface->width;
+    ss = (struct gen7_surface_state *)((char *)bo->virtual + surface_state_offset);
+    gen75_gpe_set_media_chroma_surface_state(ctx, obj_surface, ss);
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_RENDER, 0,
+                      cbcr_offset,
+                      surface_state_offset + offsetof(struct gen7_surface_state, ss1),
+                      obj_surface->bo);
+
+    *((unsigned int *)((char *)bo->virtual + binding_table_offset)) = surface_state_offset;
+    dri_bo_unmap(bo);
+}
+
 
 static void
 gen7_gpe_set_buffer_surface_state(VADriverContextP ctx,

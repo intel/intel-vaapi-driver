@@ -115,4 +115,9 @@ void gen7_gpe_buffer_suface_setup(VADriverContextP ctx,
                                   struct i965_buffer_surface *buffer_surface,
                                   unsigned long binding_table_offset,
                                   unsigned long surface_state_offset);
+void gen75_gpe_media_chroma_surface_setup(VADriverContextP ctx,
+                                     struct i965_gpe_context *gpe_context,
+                                     struct object_surface *obj_surface,
+                                     unsigned long binding_table_offset,
+                                     unsigned long surface_state_offset);
 #endif /* _I965_GPE_UTILS_H_ */

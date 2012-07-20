@@ -76,6 +76,11 @@ struct gen6_vme_context
                                     struct i965_buffer_surface *buffer_surface,
                                     unsigned long binding_table_offset,
                                     unsigned long surface_state_offset);
+    void (*vme_media_chroma_surface_setup)(VADriverContextP ctx,
+                                            struct i965_gpe_context *gpe_context,
+                                            struct object_surface *obj_surface,
+                                            unsigned long binding_table_offset,
+                                            unsigned long surface_state_offset);
 };
 
 Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
