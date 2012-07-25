@@ -1953,10 +1953,10 @@ gen7_mfd_jpeg_decode_init(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
-    VAPictureParameterBufferJPEG *pic_param;
+    VAPictureParameterBufferJPEGBaseline *pic_param;
     int subsampling = SUBSAMPLE_YUV420;
 
-    pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
+    pic_param = (VAPictureParameterBufferJPEGBaseline *)decode_state->pic_param->buffer;
 
     if (pic_param->num_components == 1)
         subsampling = SUBSAMPLE_YUV400;
@@ -2037,13 +2037,13 @@ gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
                         struct gen7_mfd_context *gen7_mfd_context)
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-    VAPictureParameterBufferJPEG *pic_param;
+    VAPictureParameterBufferJPEGBaseline *pic_param;
     int chroma_type = GEN7_YUV420;
     int frame_width_in_blks;
     int frame_height_in_blks;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
-    pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
+    pic_param = (VAPictureParameterBufferJPEGBaseline *)decode_state->pic_param->buffer;
 
     if (pic_param->num_components == 1)
         chroma_type = GEN7_YUV400;
@@ -2096,7 +2096,7 @@ gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 3);
     OUT_BCS_BATCH(batch, MFX_JPEG_PIC_STATE | (3 - 2));
     OUT_BCS_BATCH(batch,
-                  (va_to_gen7_jpeg_rotation[pic_param->rotation] << 4) |    /* rotation */
+                  (va_to_gen7_jpeg_rotation[0] << 4) |    /* without rotation */
                   (chroma_type << 0));
     OUT_BCS_BATCH(batch,
                   ((frame_height_in_blks - 1) << 16) |   /* FrameHeightInBlks */
@@ -2115,14 +2115,14 @@ gen7_mfd_jpeg_huff_table_state(VADriverContextP ctx,
                                struct gen7_mfd_context *gen7_mfd_context,
                                int num_tables)
 {
-    VAHuffmanTableBufferJPEG *huffman_table;
+    VAHuffmanTableBufferJPEGBaseline *huffman_table;
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     int index;
 
     if (!decode_state->huffman_table || !decode_state->huffman_table->buffer)
         return;
 
-    huffman_table = (VAHuffmanTableBufferJPEG *)decode_state->huffman_table->buffer;
+    huffman_table = (VAHuffmanTableBufferJPEGBaseline *)decode_state->huffman_table->buffer;
 
     for (index = 0; index < num_tables; index++) {
         int id = va_to_gen7_jpeg_hufftable[index];
@@ -2152,29 +2152,26 @@ gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
                        struct decode_state *decode_state,
                        struct gen7_mfd_context *gen7_mfd_context)
 {
-    VAPictureParameterBufferJPEG *pic_param;
-    VAIQMatrixBufferJPEG *iq_matrix;
+    VAPictureParameterBufferJPEGBaseline *pic_param;
+    VAIQMatrixBufferJPEGBaseline *iq_matrix;
     int index;
 
     if (!decode_state->iq_matrix || !decode_state->iq_matrix->buffer)
         return;
 
-    iq_matrix = (VAIQMatrixBufferJPEG *)decode_state->iq_matrix->buffer;
-    pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
+    iq_matrix = (VAIQMatrixBufferJPEGBaseline *)decode_state->iq_matrix->buffer;
+    pic_param = (VAPictureParameterBufferJPEGBaseline *)decode_state->pic_param->buffer;
 
     assert(pic_param->num_components <= 3);
 
     for (index = 0; index < pic_param->num_components; index++) {
         int qm_type = va_to_gen7_jpeg_qm[pic_param->components[index].component_id - pic_param->components[0].component_id + 1];
         unsigned char *qm = iq_matrix->quantiser_table[pic_param->components[index].quantiser_table_selector];
-        unsigned char precision = pic_param->sample_precision;
         unsigned char raster_qm[64];
         int j;
 
         if (!iq_matrix->load_quantiser_table[pic_param->components[index].quantiser_table_selector])
             continue;
-
-        assert(precision == 8);
 
         for (j = 0; j < 64; j++)
             raster_qm[zigzag_direct[j]] = qm[j];
@@ -2185,9 +2182,9 @@ gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
 
 static void
 gen7_mfd_jpeg_bsd_object(VADriverContextP ctx,
-                         VAPictureParameterBufferJPEG *pic_param,
-                         VASliceParameterBufferJPEG *slice_param,
-                         VASliceParameterBufferJPEG *next_slice_param,
+                         VAPictureParameterBufferJPEGBaseline *pic_param,
+                         VASliceParameterBufferJPEGBaseline *slice_param,
+                         VASliceParameterBufferJPEGBaseline *next_slice_param,
                          dri_bo *slice_data_bo,
                          struct gen7_mfd_context *gen7_mfd_context)
 {
@@ -2651,16 +2648,15 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
                              struct gen7_mfd_context *gen7_mfd_context)
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-    VAPictureParameterBufferJPEG *pic_param;
-    VASliceParameterBufferJPEG *slice_param, *next_slice_param, *next_slice_group_param;
+    VAPictureParameterBufferJPEGBaseline *pic_param;
+    VASliceParameterBufferJPEGBaseline *slice_param, *next_slice_param, *next_slice_group_param;
     dri_bo *slice_data_bo;
     int i, j, max_selector = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
-    pic_param = (VAPictureParameterBufferJPEG *)decode_state->pic_param->buffer;
+    pic_param = (VAPictureParameterBufferJPEGBaseline *)decode_state->pic_param->buffer;
 
     /* Currently only support Baseline DCT */
-    assert(pic_param->sample_precision == 8);
     gen7_mfd_jpeg_decode_init(ctx, decode_state, gen7_mfd_context);
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
     gen7_mfd_jpeg_wa(ctx, gen7_mfd_context);
@@ -2673,14 +2669,14 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
 
     for (j = 0; j < decode_state->num_slice_params; j++) {
         assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
-        slice_param = (VASliceParameterBufferJPEG *)decode_state->slice_params[j]->buffer;
+        slice_param = (VASliceParameterBufferJPEGBaseline *)decode_state->slice_params[j]->buffer;
         slice_data_bo = decode_state->slice_datas[j]->bo;
         gen7_mfd_ind_obj_base_addr_state(ctx, slice_data_bo, MFX_FORMAT_JPEG, gen7_mfd_context);
 
         if (j == decode_state->num_slice_params - 1)
             next_slice_group_param = NULL;
         else
-            next_slice_group_param = (VASliceParameterBufferJPEG *)decode_state->slice_params[j + 1]->buffer;
+            next_slice_group_param = (VASliceParameterBufferJPEGBaseline *)decode_state->slice_params[j + 1]->buffer;
 
         for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
             int component;
@@ -2709,14 +2705,14 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
 
     for (j = 0; j < decode_state->num_slice_params; j++) {
         assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
-        slice_param = (VASliceParameterBufferJPEG *)decode_state->slice_params[j]->buffer;
+        slice_param = (VASliceParameterBufferJPEGBaseline *)decode_state->slice_params[j]->buffer;
         slice_data_bo = decode_state->slice_datas[j]->bo;
         gen7_mfd_ind_obj_base_addr_state(ctx, slice_data_bo, MFX_FORMAT_JPEG, gen7_mfd_context);
 
         if (j == decode_state->num_slice_params - 1)
             next_slice_group_param = NULL;
         else
-            next_slice_group_param = (VASliceParameterBufferJPEG *)decode_state->slice_params[j + 1]->buffer;
+            next_slice_group_param = (VASliceParameterBufferJPEGBaseline *)decode_state->slice_params[j + 1]->buffer;
 
         for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
             assert(slice_param->slice_data_flag == VA_SLICE_DATA_FLAG_ALL);
