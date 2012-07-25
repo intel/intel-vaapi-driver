@@ -984,9 +984,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncSequenceParameterBufferType:
     case VAEncPictureParameterBufferType:
     case VAEncSliceParameterBufferType:
-#ifdef HAVE_JPEG_DECODING
     case VAHuffmanTableBufferType:
-#endif
         /* Ok */
         break;
 
@@ -1334,11 +1332,9 @@ i965_decoder_render_picture(VADriverContextP ctx,
             vaStatus = I965_RENDER_DECODE_BUFFER(slice_data);
             break;
 
-#ifdef HAVE_JPEG_DECODING
         case VAHuffmanTableBufferType:
             vaStatus = I965_RENDER_DECODE_BUFFER(huffman_table);
             break;
-#endif
 
         default:
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
