@@ -54,7 +54,7 @@
         (-f0.1) mov (16)    ub2DEST_V(0, %1*8)<1>     ubSRC_V(0, %1*8)    //only works for Word aligned Byte data
 
         mov (1)             f0.1:uw                   uwMASK_TEMP(0,1+%1)<0;1,0>
-        (-f0.1) mov (16)    ub2DEST_Y(0, 1+%1*32)<2>  ubSRC_Y(0, 1+%1*16)
+        (-f0.1) mov (16)    ub2DEST_Y(0, (1+%1)*32)<2>  ubSRC_Y(0, (1+%1)*16)
     }
 
 WritePlanarToDataPort:
