@@ -1532,14 +1532,32 @@ pp_load_save_set_block_parameter(struct i965_post_processing_context *pp_context
 {
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
 
-    pp_inline_parameter->grf5.block_vertical_mask = 0xff;
-    pp_inline_parameter->grf5.block_horizontal_mask = 0xffff;
     pp_inline_parameter->grf5.destination_block_horizontal_origin = x * 16;
     pp_inline_parameter->grf5.destination_block_vertical_origin = y * 8;
 
     return 0;
 }
 
+static void calculate_boundary_block_mask(struct i965_post_processing_context *pp_context, int width, int height)
+{
+    #define BLOCK_WIDTH 16
+    #define BLOCK_HEIGHT 8
+    int i = 0;
+    if (width%BLOCK_WIDTH){
+        pp_context->block_horizontal_mask = (1 << (width%BLOCK_WIDTH)) - 1;
+    }
+    else {
+        pp_context->block_horizontal_mask = 0xffff;
+    }
+    
+    if (height%BLOCK_HEIGHT){
+        pp_context->block_vertical_mask = (1 << (height%BLOCK_HEIGHT)) - 1;
+    }
+    else {
+        pp_context->block_vertical_mask = 0xff;
+    }
+
+}
 static VAStatus
 pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                 const struct i965_surface *src_surface,
@@ -1566,7 +1584,7 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
     pp_context->pp_x_steps = pp_load_save_x_steps;
     pp_context->pp_y_steps = pp_load_save_y_steps;
     pp_context->pp_set_block_parameter = pp_load_save_set_block_parameter;
-    pp_load_save_context->dest_h = ALIGN(height[Y], 16);
+    pp_load_save_context->dest_h = ALIGN(height[Y], 8);
     pp_load_save_context->dest_w = ALIGN(width[Y], 16);
 
     pp_inline_parameter->grf5.block_count_x = ALIGN(width[Y], 16) / 16;   /* 1 x N */
@@ -1708,9 +1726,6 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / dst_rect->width;
     pp_inline_parameter->grf5.block_count_x = pp_scaling_context->dest_w / 16;   /* 1 x N */
     pp_inline_parameter->grf5.number_blocks = pp_scaling_context->dest_w / 16;
-    pp_inline_parameter->grf5.block_vertical_mask = 0xff;
-    pp_inline_parameter->grf5.block_horizontal_mask = 0xffff;
-
 
     dst_surface->flags = src_surface->flags;
 
@@ -2090,7 +2105,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     pp_avs_context->dest_x = dst_rect->x;
     pp_avs_context->dest_y = dst_rect->y;
     pp_avs_context->dest_w = ALIGN(dst_rect->width, 16);
-    pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
+    pp_avs_context->dest_h = ALIGN(dst_rect->height, 8);
     pp_avs_context->src_normalized_x = (float)src_rect->x / in_w;
     pp_avs_context->src_normalized_y = (float)src_rect->y / in_h;
     pp_avs_context->src_w = src_rect->width;
@@ -2102,8 +2117,6 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / dst_rect->width;
     pp_inline_parameter->grf5.block_count_x = 1;        /* M x 1 */
     pp_inline_parameter->grf5.number_blocks = pp_avs_context->dest_h / 8;
-    pp_inline_parameter->grf5.block_vertical_mask = 0xff;
-    pp_inline_parameter->grf5.block_horizontal_mask = 0xffff;
     pp_inline_parameter->grf6.video_step_delta = 0.0;
 
     dst_surface->flags = src_surface->flags;
@@ -3314,7 +3327,9 @@ ironlake_pp_initialize(
                                           filter_param);
     else
        va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
-    
+ 
+    calculate_boundary_block_mask(pp_context, dst_rect->width, dst_rect->height);
+   
     return va_status;
 }
 
@@ -3622,6 +3637,37 @@ gen6_interface_descriptor_load(VADriverContextP ctx,
     ADVANCE_BATCH(batch);
 }
 
+static void update_block_mask_parameter(struct i965_post_processing_context *pp_context, int x, int y, int x_steps, int y_steps) 
+{
+    struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
+
+    pp_inline_parameter->grf5.block_vertical_mask = 0xff;
+    pp_inline_parameter->grf5.block_horizontal_mask = 0xffff;
+    pp_inline_parameter->grf6.block_vertical_mask = pp_context->block_vertical_mask;
+    pp_inline_parameter->grf6.block_horizontal_mask = pp_context->block_horizontal_mask;
+
+    /* 1 x N */
+    if (x_steps == 1) {
+        if (y == y_steps-1) {
+            pp_inline_parameter->grf5.block_vertical_mask = pp_context->block_vertical_mask;
+        }
+        else {
+            pp_inline_parameter->grf6.block_vertical_mask = 0xff;
+        }
+    }
+
+    /* M x 1 */
+    if (y_steps == 1) {
+        if (x == x_steps-1) {
+            pp_inline_parameter->grf5.block_horizontal_mask = pp_context->block_horizontal_mask;
+        }
+        else {
+            pp_inline_parameter->grf6.block_horizontal_mask = 0xffff;
+        }
+    }
+
+}
+
 static void
 gen6_pp_object_walker(VADriverContextP ctx,
                       struct i965_post_processing_context *pp_context)
@@ -3652,6 +3698,9 @@ gen6_pp_object_walker(VADriverContextP ctx,
     for (y = 0; y < y_steps; y++) {
         for (x = 0; x < x_steps; x++) {
             if (!pp_context->pp_set_block_parameter(pp_context, x, y)) {
+                // some common block parameter update goes here, apply to all pp functions
+                update_block_mask_parameter (pp_context, x, y, x_steps, y_steps);
+                
                 *command_ptr++ = (CMD_MEDIA_OBJECT | (command_length_in_dws - 2));
                 *command_ptr++ = 0;
                 *command_ptr++ = 0;
