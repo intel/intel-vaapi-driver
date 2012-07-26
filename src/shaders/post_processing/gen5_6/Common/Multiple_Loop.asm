@@ -55,6 +55,11 @@ VIDEO_PROCESSING_LOOP:
 
 	(f0.0)jmpi	(1)	END_VIDEO_PROCESSING	// All blocks are done - Exit loop
 
+    // the last block?
+    cmp.e.f0.0  (1) null:w      wNUM_BLKS:w     1:w
+    (f0.0)  mov (1) uwBLOCK_MASK_H<1>:uw  uwBLOCK_MASK_H_RIGHT:uw
+    (f0.0)  mov (1) ubBLOCK_MASK_V<1>:ub  ubBLOCK_MASK_V_BOTTOM:ub
+    
 	(f0.1)jmpi	(1)	VIDEO_PROCESSING_LOOP	// If not the end of row, goto the beginning of the loop
 
 	//If end of row, restart Horizontal offset and calculate Vertical offsets next row.

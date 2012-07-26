@@ -229,6 +229,7 @@
 #define ubALPHA_MASK_Y          r5.22   // DWORD 5, byte 2.  :ub,V. alpha mask
 #define ubBLK_CNT_X             r5.23   // DWORD 5, byte 3,  :ub, Horizontal Block Count per thread
 
+// mask is used for each block. it will be reloaded from r6 below for the last block.
 #define udBLOCK_MASK            r5.6    // DWORD 6
 #define uwBLOCK_MASK_H          r5.12   // DWORD 6, byte 0-1 :uw, Block horizontal mask used in non-DWord aligned kernels
 #define ubBLOCK_MASK_V          r5.26   // DWORD 6, byte 2   :ub, Block vertical mask used in non-DWord aligned kernels
@@ -238,6 +239,11 @@
 
 // r6
 #define fVIDEO_STEP_DELTA       r6.0    // DWORD 0. :f, AVS normalized delta between 2 adjacent scaling steps (used for non-linear scaling)
+
+// mask is used for the last block (assume only M*1 and 1*N block partation aer supported)
+#define udBLOCK_MASK_2            r6.1    // DWORD 1
+#define uwBLOCK_MASK_H_RIGHT      r6.2    // DWORD 1, byte 0-1 :uw, Block horizontal mask used in non-DWord aligned kernels (right)
+#define ubBLOCK_MASK_V_BOTTOM     r6.6    // DWORD 1, byte 2   :ub, Block vertical mask used in non-DWord aligned kernels
 
 
 //====================== Binding table =========================================
