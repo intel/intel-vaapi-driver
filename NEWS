@@ -1,10 +1,8 @@
-libva-driver-intel NEWS -- summary of changes.  2012-07-DD
+libva-driver-intel NEWS -- summary of changes.  2012-08-02
 Copyright (C) 2009-2011 Intel Corporation
 
-Version 1.1.0 - DD.Jul.2012
+Version 1.0.18 - 02.Aug.2012
 * Add JPEG decoding on Ivy Bridge
-
-Version 1.0.18 - DD.Jun.2012
 * Add support for a new Ivy Bridge chip
 * Add support for vaSyncSurface() and vaQuerySurfaceStatus() (Dmitry Ermilov)
 * Fix decoding of MPEG-2 videos with implicit IQ matrices
