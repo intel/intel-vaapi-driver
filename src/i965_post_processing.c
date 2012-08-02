@@ -4777,8 +4777,12 @@ i965_proc_picture(VADriverContextP ctx,
 
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
     i965_vpp_clear_surface(ctx, &proc_context->pp_context, proc_state->current_render_target, pipeline_param->output_background_color); 
+
+    // load/save doesn't support different origin offset for src and dst surface
     if (src_rect.width == dst_rect.width &&
-        src_rect.height == dst_rect.height) {
+        src_rect.height == dst_rect.height &&
+        src_rect.x == dst_rect.x &&
+        src_rect.y == dst_rect.y) {
         i965_post_processing_internal(ctx, &proc_context->pp_context,
                                       &src_surface,
                                       &src_rect,
