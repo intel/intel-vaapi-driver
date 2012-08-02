@@ -60,6 +60,8 @@ struct i965_post_processing_context;
 
 struct pp_load_save_context
 {
+    int dest_x;
+    int dest_y;
     int dest_w;
     int dest_h;
 };
