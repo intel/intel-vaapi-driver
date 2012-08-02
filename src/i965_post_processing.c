@@ -1721,9 +1721,10 @@ static int
 pp_load_save_set_block_parameter(struct i965_post_processing_context *pp_context, int x, int y)
 {
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
+    struct pp_load_save_context *pp_load_save_context = (struct pp_load_save_context *)&pp_context->private_context;
 
-    pp_inline_parameter->grf5.destination_block_horizontal_origin = x * 16;
-    pp_inline_parameter->grf5.destination_block_vertical_origin = y * 8;
+    pp_inline_parameter->grf5.destination_block_horizontal_origin = x * 16 + pp_load_save_context->dest_x;
+    pp_inline_parameter->grf5.destination_block_vertical_origin = y * 8 + pp_load_save_context->dest_y;
 
     return 0;
 }
@@ -1787,11 +1788,15 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
     pp_context->pp_x_steps = pp_load_save_x_steps;
     pp_context->pp_y_steps = pp_load_save_y_steps;
     pp_context->pp_set_block_parameter = pp_load_save_set_block_parameter;
-    pp_load_save_context->dest_h = ALIGN(height[Y], 8);
-    pp_load_save_context->dest_w = ALIGN(width[Y], 16);
 
-    pp_inline_parameter->grf5.block_count_x = ALIGN(width[Y], 16) / 16;   /* 1 x N */
-    pp_inline_parameter->grf5.number_blocks = ALIGN(width[Y], 16) / 16;
+    int dst_left_edge_extend = dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;;
+    pp_load_save_context->dest_x = dst_rect->x - dst_left_edge_extend;
+    pp_load_save_context->dest_y = dst_rect->y;
+    pp_load_save_context->dest_h = ALIGN(dst_rect->height, 8);
+    pp_load_save_context->dest_w = ALIGN(dst_rect->width+dst_left_edge_extend, 16);
+
+    pp_inline_parameter->grf5.block_count_x = pp_load_save_context->dest_w / 16;   /* 1 x N */
+    pp_inline_parameter->grf5.number_blocks = pp_load_save_context->dest_w / 16;
 
     pp_static_parameter->grf3.horizontal_origin_offset = src_rect->x;
     pp_static_parameter->grf3.vertical_origin_offset = src_rect->y;
