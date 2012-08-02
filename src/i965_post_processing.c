@@ -56,6 +56,10 @@
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET                    SURFACE_STATE_OFFSET(MAX_PP_SURFACES)
 
+#define GPU_ASM_BLOCK_WIDTH         16
+#define GPU_ASM_BLOCK_HEIGHT        8
+#define GPU_ASM_X_OFFSET_ALIGNMENT  4
+
 static const uint32_t pp_null_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/null.g4b.gen5"
 };
@@ -1538,23 +1542,36 @@ pp_load_save_set_block_parameter(struct i965_post_processing_context *pp_context
     return 0;
 }
 
-static void calculate_boundary_block_mask(struct i965_post_processing_context *pp_context, int width, int height)
+static void calculate_boundary_block_mask(struct i965_post_processing_context *pp_context, const VARectangle *dst_rect)
 {
-    #define BLOCK_WIDTH 16
-    #define BLOCK_HEIGHT 8
-    int i = 0;
-    if (width%BLOCK_WIDTH){
-        pp_context->block_horizontal_mask = (1 << (width%BLOCK_WIDTH)) - 1;
+    int i;
+    /* x offset of dest surface must be dword aligned.
+     * so we have to extend dst surface on left edge, and mask out pixels not interested
+     */
+    if (dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT) {
+        pp_context->block_horizontal_mask_left = 0;
+        for (i=dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT; i<GPU_ASM_BLOCK_WIDTH; i++)
+        {
+            pp_context->block_horizontal_mask_left |= 1<<i;
+        }
     }
     else {
-        pp_context->block_horizontal_mask = 0xffff;
+        pp_context->block_horizontal_mask_left = 0xffff;
     }
     
-    if (height%BLOCK_HEIGHT){
-        pp_context->block_vertical_mask = (1 << (height%BLOCK_HEIGHT)) - 1;
+    int dst_width_adjust = dst_rect->width + dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT; 
+    if (dst_width_adjust%GPU_ASM_BLOCK_WIDTH){
+        pp_context->block_horizontal_mask_right = (1 << (dst_width_adjust%GPU_ASM_BLOCK_WIDTH)) - 1;
     }
     else {
-        pp_context->block_vertical_mask = 0xff;
+        pp_context->block_horizontal_mask_right = 0xffff;
+    }
+    
+    if (dst_rect->height%GPU_ASM_BLOCK_HEIGHT){
+        pp_context->block_vertical_mask_bottom = (1 << (dst_rect->height%GPU_ASM_BLOCK_HEIGHT)) - 1;
+    }
+    else {
+        pp_context->block_vertical_mask_bottom = 0xff;
     }
 
 }
@@ -2102,19 +2119,21 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     pp_context->pp_y_steps = pp_avs_y_steps;
     pp_context->pp_set_block_parameter = pp_avs_set_block_parameter;
 
-    pp_avs_context->dest_x = dst_rect->x;
+    int dst_left_edge_extend = dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;
+    float src_left_edge_extend = (float)dst_left_edge_extend*src_rect->width/dst_rect->width;
+    pp_avs_context->dest_x = dst_rect->x - dst_left_edge_extend;
     pp_avs_context->dest_y = dst_rect->y;
-    pp_avs_context->dest_w = ALIGN(dst_rect->width, 16);
+    pp_avs_context->dest_w = ALIGN(dst_rect->width + dst_left_edge_extend, 16);
     pp_avs_context->dest_h = ALIGN(dst_rect->height, 8);
-    pp_avs_context->src_normalized_x = (float)src_rect->x / in_w;
+    pp_avs_context->src_normalized_x = (float)(src_rect->x - src_left_edge_extend)/ in_w;
     pp_avs_context->src_normalized_y = (float)src_rect->y / in_h;
-    pp_avs_context->src_w = src_rect->width;
+    pp_avs_context->src_w = src_rect->width + src_left_edge_extend;
     pp_avs_context->src_h = src_rect->height;
 
     pp_static_parameter->grf4.r4_2.avs.nlas = nlas;
     pp_static_parameter->grf1.r1_6.normalized_video_y_scaling_step = (float) src_rect->height / in_h / dst_rect->height;
 
-    pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / dst_rect->width;
+    pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) (src_rect->width + src_left_edge_extend)/ in_w / (dst_rect->width + dst_left_edge_extend);
     pp_inline_parameter->grf5.block_count_x = 1;        /* M x 1 */
     pp_inline_parameter->grf5.number_blocks = pp_avs_context->dest_h / 8;
     pp_inline_parameter->grf6.video_step_delta = 0.0;
@@ -3328,8 +3347,6 @@ ironlake_pp_initialize(
     else
        va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
  
-    calculate_boundary_block_mask(pp_context, dst_rect->width, dst_rect->height);
-   
     return va_status;
 }
 
@@ -3466,6 +3483,8 @@ gen6_pp_initialize(
     else
         va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
  
+    calculate_boundary_block_mask(pp_context, dst_rect);
+
     return va_status;
 }
 
@@ -3642,27 +3661,36 @@ static void update_block_mask_parameter(struct i965_post_processing_context *pp_
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
 
     pp_inline_parameter->grf5.block_vertical_mask = 0xff;
-    pp_inline_parameter->grf5.block_horizontal_mask = 0xffff;
-    pp_inline_parameter->grf6.block_vertical_mask = pp_context->block_vertical_mask;
-    pp_inline_parameter->grf6.block_horizontal_mask = pp_context->block_horizontal_mask;
+    pp_inline_parameter->grf6.block_vertical_mask_bottom = pp_context->block_vertical_mask_bottom;
+    // for the first block, it always on the left edge. the second block will reload horizontal_mask from grf6.block_horizontal_mask_middle
+    pp_inline_parameter->grf5.block_horizontal_mask = pp_context->block_horizontal_mask_left;
+    pp_inline_parameter->grf6.block_horizontal_mask_middle = 0xffff;
+    pp_inline_parameter->grf6.block_horizontal_mask_right = pp_context->block_horizontal_mask_right;
 
     /* 1 x N */
     if (x_steps == 1) {
         if (y == y_steps-1) {
-            pp_inline_parameter->grf5.block_vertical_mask = pp_context->block_vertical_mask;
+            pp_inline_parameter->grf5.block_vertical_mask = pp_context->block_vertical_mask_bottom;
         }
         else {
-            pp_inline_parameter->grf6.block_vertical_mask = 0xff;
+            pp_inline_parameter->grf6.block_vertical_mask_bottom = 0xff;
         }
     }
 
     /* M x 1 */
     if (y_steps == 1) {
-        if (x == x_steps-1) {
-            pp_inline_parameter->grf5.block_horizontal_mask = pp_context->block_horizontal_mask;
+        if (x == 0) { // all blocks in this group are on the left edge
+            pp_inline_parameter->grf6.block_horizontal_mask_middle = pp_context->block_horizontal_mask_left;
+            pp_inline_parameter->grf6.block_horizontal_mask_right = pp_context->block_horizontal_mask_left; 
+        }
+        else if (x == x_steps-1) {
+            pp_inline_parameter->grf5.block_horizontal_mask = pp_context->block_horizontal_mask_right;
+            pp_inline_parameter->grf6.block_horizontal_mask_middle = pp_context->block_horizontal_mask_right;
         }
         else {
-            pp_inline_parameter->grf6.block_horizontal_mask = 0xffff;
+            pp_inline_parameter->grf5.block_horizontal_mask = 0xffff;
+            pp_inline_parameter->grf6.block_horizontal_mask_middle = 0xffff;
+            pp_inline_parameter->grf6.block_horizontal_mask_right = 0xffff;
         }
     }
 
