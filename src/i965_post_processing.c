@@ -1731,16 +1731,18 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_context->pp_y_steps = pp_scaling_y_steps;
     pp_context->pp_set_block_parameter = pp_scaling_set_block_parameter;
 
-    pp_scaling_context->dest_x = dst_rect->x;
+    int dst_left_edge_extend = dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;
+    float src_left_edge_extend = (float)dst_left_edge_extend*src_rect->width/dst_rect->width;
+    pp_scaling_context->dest_x = dst_rect->x - dst_left_edge_extend;
     pp_scaling_context->dest_y = dst_rect->y;
-    pp_scaling_context->dest_w = ALIGN(dst_rect->width, 16);
-    pp_scaling_context->dest_h = ALIGN(dst_rect->height, 16);
-    pp_scaling_context->src_normalized_x = (float)src_rect->x / in_w;
+    pp_scaling_context->dest_w = ALIGN(dst_rect->width + dst_left_edge_extend, 16);
+    pp_scaling_context->dest_h = ALIGN(dst_rect->height, 8);
+    pp_scaling_context->src_normalized_x = (float)(src_rect->x - src_left_edge_extend)/ in_w;
     pp_scaling_context->src_normalized_y = (float)src_rect->y / in_h;
 
     pp_static_parameter->grf1.r1_6.normalized_video_y_scaling_step = (float) src_rect->height / in_h / dst_rect->height;
 
-    pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) src_rect->width / in_w / dst_rect->width;
+    pp_inline_parameter->grf5.normalized_video_x_scaling_step = (float) (src_rect->width + src_left_edge_extend)/ in_w / (dst_rect->width + dst_left_edge_extend);
     pp_inline_parameter->grf5.block_count_x = pp_scaling_context->dest_w / 16;   /* 1 x N */
     pp_inline_parameter->grf5.number_blocks = pp_scaling_context->dest_w / 16;
 

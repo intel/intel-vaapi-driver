@@ -294,6 +294,9 @@ struct pp_inline_parameter
         unsigned int block_count_x:8;
 
         /* r5.6 */
+        /* we only support M*1 or 1*N block partitation now.
+         *   -- it means asm code only need update this mask from grf6 for the last block 
+         */
         unsigned int block_horizontal_mask:16;
         unsigned int block_vertical_mask:8;
         unsigned int number_blocks:8;
@@ -306,8 +309,17 @@ struct pp_inline_parameter
         /* AVS r6.0 */
         float video_step_delta;
 
-        /* r6.1-r6.7 */
-        unsigned int padx[7];
+        /* r6.1 */    // sizeof(int) == 4?    
+        unsigned int block_horizontal_mask_right:16;
+        unsigned int block_vertical_mask_bottom:8;
+        unsigned int pad1:8;
+
+        /* r6.2 */
+        unsigned int block_horizontal_mask_middle:16;
+        unsigned int pad2:16;
+
+        /* r6.3-r6.7 */
+        unsigned int padx[5];
     } grf6;
 };
 
@@ -462,7 +474,10 @@ struct i965_post_processing_context
     int (*pp_y_steps)(void *private_context);
     int (*pp_set_block_parameter)(struct i965_post_processing_context *pp_context, int x, int y);
     struct intel_batchbuffer *batch;
-
+    unsigned int block_horizontal_mask_left:16;
+    unsigned int block_horizontal_mask_right:16;
+    unsigned int block_vertical_mask_bottom:8;
+ 
     /* video process based on hsw vebox */ 
     struct intel_vebox_context *pp_vebox_context;
 };
