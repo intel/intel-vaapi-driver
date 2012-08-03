@@ -3372,15 +3372,15 @@ i965_Terminate(VADriverContextP ctx)
     if (i965_post_processing_terminate(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;
 
-    if (intel_driver_terminate(ctx) == False)
-        return VA_STATUS_ERROR_UNKNOWN;
-
     i965_destroy_heap(&i965->buffer_heap, i965_destroy_buffer);
     i965_destroy_heap(&i965->image_heap, i965_destroy_image);
     i965_destroy_heap(&i965->subpic_heap, i965_destroy_subpic);
     i965_destroy_heap(&i965->surface_heap, i965_destroy_surface);
     i965_destroy_heap(&i965->context_heap, i965_destroy_context);
     i965_destroy_heap(&i965->config_heap, i965_destroy_config);
+
+    if (intel_driver_terminate(ctx) == False)
+        return VA_STATUS_ERROR_UNKNOWN;
 
     free(ctx->pDriverData);
     ctx->pDriverData = NULL;
