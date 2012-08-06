@@ -151,21 +151,13 @@ AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
 
 # Check for Wayland
 USE_WAYLAND="no"
-WAYLAND_DRM_CFLAGS=""
-WAYLAND_DRM_LIBS=""
 if test "$enable_wayland" = "yes"; then
     PKG_CHECK_MODULES([WAYLAND], [wayland-client], [USE_WAYLAND="yes"], [:])
     PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland],
         [AC_DEFINE([HAVE_VA_WAYLAND], [1], [Defined to 1 if VA/Wayland API is enabled])],
         [USE_WAYLAND="no"])
-    if test "$USE_EGL" = "yes"; then
-        WAYLAND_DRM_CFLAGS="$DRM_CFLAGS"
-        WAYLAND_DRM_LIBS="$DRM_LIBS $EGL_LIBS"
-    fi
 fi
 AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
-AC_SUBST([WAYLAND_DRM_CFLAGS])
-AC_SUBST([WAYLAND_DRM_LIBS])
 
 m4_ifdef([WAYLAND_SCANNER_RULES],
     [WAYLAND_SCANNER_RULES(['$(top_srcdir)/src/wayland'])],
