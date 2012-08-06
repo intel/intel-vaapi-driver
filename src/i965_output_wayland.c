@@ -33,8 +33,37 @@
 #include "i965_output_wayland.h"
 #include "i965_drv_video.h"
 #include "i965_defines.h"
+#include "dso_utils.h"
+
+#define LIBEGL_NAME             "libEGL.so.1"
+#define LIBWAYLAND_CLIENT_NAME  "libwayland-client.so.0"
+
+typedef uint32_t (*wl_display_get_global_func)(struct wl_display *display,
+    const char *interface, uint32_t version);
+typedef void *(*wl_display_bind_func)(struct wl_display *display,
+    uint32_t name, const struct wl_interface *interface);
+typedef void (*wl_display_roundtrip_func)(struct wl_display *display);
+
+typedef struct wl_proxy *(*wl_proxy_create_func)(struct wl_proxy *factory,
+    const struct wl_interface *interface);
+typedef void (*wl_proxy_destroy_func)(struct wl_proxy *proxy);
+typedef void (*wl_proxy_marshal_func)(struct wl_proxy *p, uint32_t opcode, ...);
+
+struct wl_vtable {
+    const struct wl_interface  *buffer_interface;
+    const struct wl_interface  *drm_interface;
+    wl_display_get_global_func  display_get_global;
+    wl_display_bind_func        display_bind;
+    wl_display_roundtrip_func   display_roundtrip;
+    wl_proxy_create_func        proxy_create;
+    wl_proxy_destroy_func       proxy_destroy;
+    wl_proxy_marshal_func       proxy_marshal;
+};
 
 struct va_wl_output {
+    struct dso_handle  *libegl_handle;
+    struct dso_handle  *libwl_client_handle;
+    struct wl_vtable    vtable;
     struct wl_drm      *wl_drm;
 };
 
@@ -44,23 +73,60 @@ ensure_wl_output(VADriverContextP ctx)
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct va_wl_output * const wl_output = i965->wl_output;
+    struct wl_vtable * const wl_vtable = &wl_output->vtable;
     uint32_t id;
 
     if (wl_output->wl_drm)
         return true;
 
-    id = wl_display_get_global(ctx->native_dpy, "wl_drm", 1);
+    id = wl_vtable->display_get_global(ctx->native_dpy, "wl_drm", 1);
     if (!id) {
-        wl_display_roundtrip(ctx->native_dpy);
-        id = wl_display_get_global(ctx->native_dpy, "wl_drm", 1);
+        wl_vtable->display_roundtrip(ctx->native_dpy);
+        id = wl_vtable->display_get_global(ctx->native_dpy, "wl_drm", 1);
         if (!id)
             return false;
     }
 
-    wl_output->wl_drm = wl_display_bind(ctx->native_dpy, id, &wl_drm_interface);
+    wl_output->wl_drm =
+        wl_vtable->display_bind(ctx->native_dpy, id, wl_vtable->drm_interface);
     if (!wl_output->wl_drm)
         return false;
     return true;
+}
+
+/* Create planar YUV buffer */
+static struct wl_buffer *
+create_planar_buffer(
+    struct va_wl_output *wl_output,
+    uint32_t             name,
+    int32_t              width,
+    int32_t              height,
+    uint32_t             format,
+    int32_t              offsets[3],
+    int32_t              pitches[3]
+)
+{
+    struct wl_vtable * const wl_vtable = &wl_output->vtable;
+    struct wl_proxy *id;
+
+    id = wl_vtable->proxy_create(
+        (struct wl_proxy *)wl_output->wl_drm,
+        wl_vtable->buffer_interface
+    );
+    if (!id)
+        return NULL;
+
+    wl_vtable->proxy_marshal(
+        (struct wl_proxy *)wl_output->wl_drm,
+        WL_DRM_CREATE_PLANAR_BUFFER,
+        id,
+        name,
+        width, height, format,
+        offsets[0], pitches[0],
+        offsets[1], pitches[1],
+        offsets[2], pitches[2]
+    );
+    return (struct wl_buffer *)id;
 }
 
 /* Hook to return Wayland buffer associated with the VA surface */
@@ -137,15 +203,14 @@ va_GetSurfaceBufferWl(
         return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
     }
 
-    buffer = wl_drm_create_planar_buffer(
-        i965->wl_output->wl_drm,
+    buffer = create_planar_buffer(
+        i965->wl_output,
         name,
         obj_surface->orig_width,
         obj_surface->orig_height,
         drm_format,
-        offsets[0], pitches[0],
-        offsets[1], pitches[1],
-        offsets[2], pitches[2]
+        offsets,
+        pitches
     );
     if (!buffer)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
@@ -167,25 +232,83 @@ va_GetImageBufferWl(
 }
 
 bool
+ensure_driver_vtable(VADriverContextP ctx)
+{
+    struct VADriverVTableWayland * const vtable = ctx->vtable_wayland;
+
+    if (!vtable)
+        return false;
+
+    vtable->vaGetSurfaceBufferWl = va_GetSurfaceBufferWl;
+    vtable->vaGetImageBufferWl   = va_GetImageBufferWl;
+    return true;
+}
+
+bool
 i965_output_wayland_init(VADriverContextP ctx)
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
-    struct VADriverVTableWayland *vtable;
+    struct dso_handle *dso_handle;
+    struct wl_vtable *wl_vtable;
+
+    static const struct dso_symbol libegl_symbols[] = {
+        { "wl_drm_interface",
+          offsetof(struct wl_vtable, drm_interface) },
+        { NULL, }
+    };
+
+    static const struct dso_symbol libwl_client_symbols[] = {
+        { "wl_buffer_interface",
+          offsetof(struct wl_vtable, buffer_interface) },
+        { "wl_display_get_global",
+          offsetof(struct wl_vtable, display_get_global) },
+        { "wl_display_bind",
+          offsetof(struct wl_vtable, display_bind) },
+        { "wl_display_roundtrip",
+          offsetof(struct wl_vtable, display_roundtrip) },
+        { "wl_proxy_create",
+          offsetof(struct wl_vtable, proxy_create) },
+        { "wl_proxy_destroy",
+          offsetof(struct wl_vtable, proxy_destroy) },
+        { "wl_proxy_marshal",
+          offsetof(struct wl_vtable, proxy_marshal) },
+        { NULL, }
+    };
 
     if (ctx->display_type != VA_DISPLAY_WAYLAND)
         return false;
 
     i965->wl_output = calloc(1, sizeof(struct va_wl_output));
     if (!i965->wl_output)
-        return false;
+        goto error;
 
-    vtable = ctx->vtable_wayland;
-    if (!vtable)
-        return false;
+    i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME);
+    if (!i965->wl_output->libegl_handle)
+        goto error;
 
-    vtable->vaGetSurfaceBufferWl        = va_GetSurfaceBufferWl;
-    vtable->vaGetImageBufferWl          = va_GetImageBufferWl;
+    dso_handle = i965->wl_output->libegl_handle;
+    wl_vtable  = &i965->wl_output->vtable;
+    if (!dso_get_symbols(dso_handle, wl_vtable, sizeof(*wl_vtable),
+                         libegl_symbols))
+        goto error;
+
+    i965->wl_output->libwl_client_handle = dso_open(LIBWAYLAND_CLIENT_NAME);
+    if (!i965->wl_output->libwl_client_handle)
+        goto error;
+
+    dso_handle = i965->wl_output->libwl_client_handle;
+    wl_vtable  = &i965->wl_output->vtable;
+    if (!dso_get_symbols(dso_handle, wl_vtable, sizeof(*wl_vtable),
+                         libwl_client_symbols))
+        goto error;
+
+    if (!ensure_driver_vtable(ctx))
+        goto error;
     return true;
+
+error:
+    i965_output_wayland_terminate(ctx);
+    return false;
 }
 
 void
@@ -202,8 +325,18 @@ i965_output_wayland_terminate(VADriverContextP ctx)
         return;
 
     if (wl_output->wl_drm) {
-        wl_drm_destroy(wl_output->wl_drm);
+        wl_output->vtable.proxy_destroy((struct wl_proxy *)wl_output->wl_drm);
         wl_output->wl_drm = NULL;
+    }
+
+    if (wl_output->libegl_handle) {
+        dso_close(wl_output->libegl_handle);
+        wl_output->libegl_handle = NULL;
+    }
+
+    if (wl_output->libwl_client_handle) {
+        dso_close(wl_output->libwl_client_handle);
+        wl_output->libwl_client_handle = NULL;
     }
     free(wl_output);
     i965->wl_output = NULL;
