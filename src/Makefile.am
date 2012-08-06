@@ -47,6 +47,7 @@ driver_libs = \
 	$(NULL)
 
 source_c = \
+	dso_utils.c		\
 	gen6_mfc.c		\
 	gen6_mfd.c		\
 	gen6_vme.c		\
@@ -70,6 +71,7 @@ source_c = \
 	$(NULL)
 
 source_h = \
+	dso_utils.h		\
 	gen6_mfc.h		\
 	gen6_mfd.h		\
 	gen6_vme.h		\
