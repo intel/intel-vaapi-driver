@@ -81,6 +81,7 @@ struct gen6_vme_context
                                             struct object_surface *obj_surface,
                                             unsigned long binding_table_offset,
                                             unsigned long surface_state_offset);
+    void *vme_state_message;
 };
 
 Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
