@@ -244,6 +244,7 @@
 #define udBLOCK_MASK_2            r6.1    // DWORD 1
 #define uwBLOCK_MASK_H_RIGHT      r6.2    // DWORD 1, byte 0-1 :uw, Block horizontal mask used in non-DWord aligned kernels (right)
 #define ubBLOCK_MASK_V_BOTTOM     r6.6    // DWORD 1, byte 2   :ub, Block vertical mask used in non-DWord aligned kernels
+#define uwBLOCK_MASK_H_MIDDLE     r6.4    // DWORD 2, byte 0-1 :uw, Block horizontal mask used in non-DWord aligned kernels (left)
 
 
 //====================== Binding table =========================================
