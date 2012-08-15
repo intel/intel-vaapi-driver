@@ -1496,7 +1496,6 @@ i965_BeginPicture(VADriverContextP ctx,
         obj_context->codec_state.proc.current_render_target = render_target;
     } else if (obj_context->codec_type == CODEC_ENC) {
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
-        i965_release_buffer_store(&obj_context->codec_state.encode.seq_param);
 
         for (i = 0; i < obj_context->codec_state.encode.num_slice_params; i++) {
             i965_release_buffer_store(&obj_context->codec_state.encode.slice_params[i]);
@@ -1506,7 +1505,6 @@ i965_BeginPicture(VADriverContextP ctx,
 
         /* ext */
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param_ext);
-        i965_release_buffer_store(&obj_context->codec_state.encode.seq_param_ext);
 
         for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.packed_header_param); i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_param[i]);
