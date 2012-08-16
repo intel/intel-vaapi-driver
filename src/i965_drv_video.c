@@ -124,6 +124,10 @@ i965_image_formats_map[I965_MAX_IMAGE_FORMATS + 1] = {
       { VA_FOURCC('Y','U','Y','2'), VA_LSB_FIRST, 16, } },
     { I965_SURFACETYPE_YUV,
       { VA_FOURCC('U','Y','V','Y'), VA_LSB_FIRST, 16, } },
+    { I965_SURFACETYPE_RGBA,
+      { VA_FOURCC('R','G','B','X'), VA_LSB_FIRST, 32, 24, 0x000000ff, 0x0000ff00, 0x00ff0000 } },
+    { I965_SURFACETYPE_RGBA,
+      { VA_FOURCC('B','G','R','X'), VA_LSB_FIRST, 32, 24, 0x00ff0000, 0x0000ff00, 0x000000ff } },
 };
 
 /* List of supported subpicture formats */
