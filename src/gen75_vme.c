@@ -67,7 +67,7 @@ static const uint32_t gen75_vme_intra_frame[][4] = {
 };
 
 static const uint32_t gen75_vme_inter_frame[][4] = {
-#include "shaders/vme/inter_frame.g7b"
+#include "shaders/vme/inter_frame_haswell.g75b"
 };
 
 static const uint32_t gen75_vme_batchbuffer[][4] = {
@@ -165,7 +165,12 @@ gen75_vme_output_buffer_setup(VADriverContextP ctx,
     if (is_intra)
         vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 2;
     else
-        vme_context->vme_output.size_block = INTER_VME_OUTPUT_IN_BYTES;
+        vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 24;
+	/*
+	 * Inter MV . 32-byte Intra search + 16 IME info + 128 IME MV + 32 IME Ref
+	 * + 16 FBR Info + 128 FBR MV + 32 FBR Ref.
+	 * 16 * (2 + 2 * (1 + 8 + 2))= 16 * 24.
+	 */
 
     vme_context->vme_output.bo = dri_bo_alloc(i965->intel.bufmgr, 
                                               "VME output buffer",

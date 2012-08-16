@@ -95,8 +95,10 @@ define(`OBW_CONTROL_0',                 `0')    /* 1 OWord, low 128 bits */
 define(`OBW_CONTROL_1',                 `1')    /* 1 OWord, high 128 bits */
 define(`OBW_CONTROL_2',                 `2')    /* 2 OWords */
 define(`OBW_CONTROL_3',                 `3')    /* 4 OWords */
-define(`OBW_CONTROL_4',                 `4')    /* 8 OWords */
+define(`OBW_CONTROL_8',                 `4')    /* 8 OWords */
 
+define(`FBR_BME_ENABLE',                 `0x00000000')
+define(`FBR_BME_DISABLE',                `0x00040000')
 
 define(`OBW_WRITE_COMMIT_CATEGORY',     `0')    /* category on Ivybridge */
 
@@ -213,6 +215,7 @@ define(`tmp_uw5',               `tmp_rega.10')
 define(`tmp_uw6',               `tmp_rega.12')
 define(`tmp_uw7',               `tmp_rega.14')
 
+define(`vme_m2',                `r43')
 /*
  * MRF registers
  */        
@@ -239,7 +242,7 @@ define(`vme_intra_wb_length',   `1')
 define(`vme_wb_length',		`7')
 define(`sic_vme_msg_length',	`7')
 define(`fbr_vme_msg_length',	`7')
-define(`ime_vme_msg_length',	`10')
+define(`ime_vme_msg_length',	`5')
 
 define(`vme_msg_ind',           `msg_ind')
 define(`vme_msg_0',             `msg_reg0')

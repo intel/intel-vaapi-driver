@@ -70,6 +70,14 @@ static struct i965_kernel gen75_mfc_kernels[] = {
     },
 };
 
+#define		INTER_MODE_MASK		0x03
+#define		INTER_8X8		0x03
+#define		SUBMB_SHAPE_MASK	0x00FF00
+
+#define		INTER_MV8		(4 << 20)
+#define		INTER_MV32		(6 << 20)
+
+
 static void
 gen75_mfc_pipe_mode_select(VADriverContextP ctx,
                           int standard_select,
@@ -205,7 +213,7 @@ gen75_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
                   (0 << 13) |   /* CABAC 0 word insertion test enable */
                   (1 << 12) |   /* MVUnpackedEnable,compliant to DXVA */
                   (1 << 10) |   /* Chroma Format IDC, 4:2:0 */
-                  (0 << 9)  |   /* FIXME: MbMvFormatFlag */
+                  (0 << 8)  |   /* FIXME: MbMvFormatFlag */
                   (pPicParameter->pic_fields.bits.entropy_coding_mode_flag << 7)  |   /*0:CAVLC encoding mode,1:CABAC*/
                   (0 << 6)  |   /* Only valid for VLD decoding mode */
                   (0 << 5)  |   /* Constrained Intra Predition Flag, from PPS */
@@ -1016,7 +1024,7 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
                               struct intel_batchbuffer *batch)
 {
     int len_in_dwords = 11;
-
+	unsigned int inter_msg = 0;
     if (batch == NULL)
         batch = encoder_context->base.batch;
 
@@ -1024,10 +1032,22 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
 
     OUT_BCS_BATCH(batch, MFC_AVC_PAK_OBJECT | (len_in_dwords - 2));
 
-    OUT_BCS_BATCH(batch, msg[2]);         /* 32 MV*/
+	inter_msg = 32;
+ 	/* MV quantity */
+	if ((msg[0] & INTER_MODE_MASK) == INTER_8X8) {
+		if (msg[1] & SUBMB_SHAPE_MASK)
+			inter_msg = 128;
+	}
+    OUT_BCS_BATCH(batch, inter_msg);         /* 32 MV*/
     OUT_BCS_BATCH(batch, offset);
+	inter_msg = msg[0] & (0x1F00FFFF);
+	inter_msg |= INTER_MV8;
+	if (((msg[0] & INTER_MODE_MASK) == INTER_8X8) &&
+	     		(msg[1] & SUBMB_SHAPE_MASK)) {
+		inter_msg |= INTER_MV32;
+	}
 
-    OUT_BCS_BATCH(batch, msg[0]);
+    OUT_BCS_BATCH(batch, inter_msg);
 
     OUT_BCS_BATCH(batch, (0xFFFF<<16) | (y << 8) | x);        /* Code Block Pattern for Y*/
     OUT_BCS_BATCH(batch, 0x000F000F);                         /* Code Block Pattern */  
@@ -1041,9 +1061,9 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
     OUT_BCS_BATCH(batch, (end_mb << 26) | qp);	/* Last MB */
 #endif
 
-
+	inter_msg = msg[1] >> 8;
     /*Stuff for Inter MB*/
-    OUT_BCS_BATCH(batch, msg[1]);        
+    OUT_BCS_BATCH(batch, inter_msg);        
     OUT_BCS_BATCH(batch, 0x0);    
     OUT_BCS_BATCH(batch, 0x0);        
 
@@ -1055,6 +1075,12 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
 
     return len_in_dwords;
 }
+
+#define		INTRA_RDO_OFFSET	4
+#define		INTER_RDO_OFFSET	54
+#define		INTER_MSG_OFFSET	52
+#define		INTER_MV_OFFSET		224
+#define		RDO_MASK		0xFFFF
 
 static void 
 gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
@@ -1118,8 +1144,6 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
         msg = (unsigned int *) (msg_ptr + pSliceParameter->macroblock_address * vme_context->vme_output.size_block);
     } else {
         msg = (unsigned int *) (msg_ptr + pSliceParameter->macroblock_address * vme_context->vme_output.size_block);
-        msg += 32; /* the first 32 DWs are MVs */
-        offset = pSliceParameter->macroblock_address * INTER_VME_OUTPUT_IN_BYTES;
     }
    
     for (i = pSliceParameter->macroblock_address; 
@@ -1133,13 +1157,16 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
             assert(msg);
             gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
         } else {
-            if (msg[0] & INTRA_MB_FLAG_MASK) {
+	    int inter_rdo, intra_rdo;
+	    inter_rdo = msg[INTER_RDO_OFFSET] & RDO_MASK;
+	    intra_rdo = msg[INTRA_RDO_OFFSET] & RDO_MASK;
+	    offset = i * vme_context->vme_output.size_block + INTER_MV_OFFSET;
+	    if (intra_rdo < inter_rdo) { 
                 gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
             } else {
+		msg += INTER_MSG_OFFSET;
                 gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
             }
-
-            offset += INTER_VME_OUTPUT_IN_BYTES;
         }
     }
    
