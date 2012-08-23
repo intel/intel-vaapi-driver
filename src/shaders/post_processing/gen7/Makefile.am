@@ -17,6 +17,7 @@ INTEL_PP_G4A = \
 	DI_Save_NV12_16x4.g4a		\
 	DI_Save_PA_16x4.g4a		\
 	EOT.g4a				\
+	NV12_DI_NV12.g4a		\
 	NV12_DNDI_422CP.g4a		\
 	NV12_DNDI_PA.g4a		\
 	NV12_DNUV_NV12.g4a		\
