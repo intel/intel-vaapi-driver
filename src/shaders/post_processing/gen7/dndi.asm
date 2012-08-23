@@ -2,9 +2,7 @@
 .kernel DNDI
 .code
 
-#include "DI_Core.g4a"
-#include "DI_Save_NV12_16x4.g4a"
-#include "EOT.g4a"
+#include "NV12_DI_NV12.g4a"
 
 .end_code  
 
