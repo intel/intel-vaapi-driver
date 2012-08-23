@@ -504,6 +504,16 @@ i965_post_processing(
 );
 
 VAStatus
+i965_scaling_processing(
+    VADriverContextP   ctx,
+    VASurfaceID        src_surface_id,
+    const VARectangle *src_rect,
+    VASurfaceID        dst_surface_id,
+    const VARectangle *dst_rect,
+    unsigned int       flags
+);
+
+VAStatus
 i965_image_processing(VADriverContextP ctx,
                       const struct i965_surface *src_surface,
                       const VARectangle *src_rect,

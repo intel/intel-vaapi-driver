@@ -4132,6 +4132,50 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
 }
 
+VAStatus
+i965_scaling_processing(
+    VADriverContextP   ctx,
+    VASurfaceID        src_surface_id,
+    const VARectangle *src_rect,
+    VASurfaceID        dst_surface_id,
+    const VARectangle *dst_rect,
+    unsigned int       flags)
+{
+    VAStatus va_status = VA_STATUS_SUCCESS;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *src_surface_obj = SURFACE(src_surface_id);
+    struct object_surface *dst_surface_obj = SURFACE(dst_surface_id);
+ 
+    assert(src_surface_obj->fourcc == VA_FOURCC('N', 'V', '1', '2'));
+    assert(dst_surface_obj->fourcc == VA_FOURCC('N', 'V', '1', '2'));
+
+    if (HAS_PP(i965) && (flags & I965_PP_FLAG_AVS)) {
+        struct i965_surface src_surface;
+        struct i965_surface dst_surface;
+
+         _i965LockMutex(&i965->pp_mutex);
+
+         src_surface.id = src_surface_id;
+         src_surface.type = I965_SURFACE_TYPE_SURFACE;
+         src_surface.flags = I965_SURFACE_FLAG_FRAME;
+         dst_surface.id = dst_surface_id;
+         dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+         dst_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+         va_status = i965_post_processing_internal(ctx, i965->pp_context,
+                                                   &src_surface,
+                                                   src_rect,
+                                                   &dst_surface,
+                                                   dst_rect,
+                                                   PP_NV12_AVS,
+                                                   NULL);
+
+         _i965UnlockMutex(&i965->pp_mutex);
+    }
+
+    return va_status;
+}
+
 VASurfaceID
 i965_post_processing(
     VADriverContextP   ctx,
