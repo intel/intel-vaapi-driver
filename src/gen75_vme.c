@@ -440,7 +440,8 @@ gen75_vme_fill_vme_batchbuffer(VADriverContextP ctx,
         VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
         int slice_mb_begin = pSliceParameter->macroblock_address;
         int slice_mb_number = pSliceParameter->num_macroblocks;
-        unsigned int mb_intra_ub; 
+        unsigned int mb_intra_ub;
+	int slice_mb_x = pSliceParameter->macroblock_address % mb_width; 
         for (i = 0; i < slice_mb_number;  ) {
             int mb_count = i + slice_mb_begin;    
             mb_x = mb_count % mb_width;
@@ -456,9 +457,18 @@ gen75_vme_fill_vme_batchbuffer(VADriverContextP ctx,
 		if (mb_x != (mb_width -1))
 			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
 	    }
-	    if (i == 0)
+	    if (i < mb_width) {
+		if (i == 0)
+			mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_AE);
 		mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_BCD_MASK);
-	
+		if ((i == (mb_width - 1)) && slice_mb_x) {
+			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+		}
+	    }
+		
+	    if ((i == mb_width) && slice_mb_x) {
+		mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
+	    }
             *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
             *command_ptr++ = kernel;
             *command_ptr++ = 0;
