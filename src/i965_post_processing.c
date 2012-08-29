@@ -2207,10 +2207,13 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     struct i965_sampler_8x8_state *sampler_8x8_state;
     int index, i;
     int width[3], height[3], pitch[3], offset[3];
+    int src_width, src_height;
 
     /* source surface */
     gen7_pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 0, 0,
                                          width, height, pitch, offset);
+    src_width = width[0];
+    src_height = height[0];
 
     /* destination surface */
     gen7_pp_set_media_rw_message_surface(ctx, pp_context, dst_surface, 24, 1,
@@ -2379,7 +2382,7 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * dw);
 
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / pp_avs_context->dest_w;
-    pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) 1.0 / pp_avs_context->dest_h;
+    pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) src_rect->height / src_height / pp_avs_context->dest_h;
     pp_static_parameter->grf5.sampler_load_vertical_frame_origin = -(float)pp_avs_context->dest_y / pp_avs_context->dest_h;
     pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = -(float)pp_avs_context->dest_x / pp_avs_context->dest_w;
 
