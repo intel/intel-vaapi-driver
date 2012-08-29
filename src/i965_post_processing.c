@@ -2522,6 +2522,11 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     dw = MAX(dw, pp_avs_context->dest_w);
 
     pp_static_parameter->grf1.pointer_to_inline_parameter = 7;
+    pp_static_parameter->grf2.avs_wa_enable = 1; /* must be set for GEN7 */
+    pp_static_parameter->grf2.avs_wa_width = dw;
+    pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * dw);
+    pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * dw);
+
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
     pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) 1.0 / pp_avs_context->dest_h;
     pp_static_parameter->grf5.sampler_load_vertical_frame_origin = -(float)pp_avs_context->dest_y / pp_avs_context->dest_h;

@@ -13,8 +13,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-//   48    // Total instruction count
+//   84    // Total instruction count
 //    1    // Total kernel count
+
 
 
 // Module name: common.inc
@@ -50,6 +51,9 @@
                                     // YVYU               0       3      1
 
 //Color Pipe (IECP) parameters
+
+
+//ByteCopy
 
 
 //r4
@@ -140,7 +144,21 @@
 // Common Buffers
 
 
+// temp space for rotation
+
+.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+
+.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+
+.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+
+.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+
+.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+
+
 // End of common.inc
+
 
 // Module name: Save_AVS_PL3.asm
 //
@@ -167,10 +185,15 @@
 //------------------------------------------------------------------
 
 
+
 // Module name: Save.inc
 
 
+
+
 // Description: Includes all definitions explicit to Fast Composite.
+
+
 
 
 // End of common.inc
@@ -197,11 +220,16 @@
 //r2
 
 
+// Gen7 AVS WA
+
+
 // WiDi Definitions
 
 
 //Colorfill
 
+
+                                      // 0: 0-degree, 1: 90, 2: 180, 3: 270-degree, clockwise.	    
 
 .declare ubCOLOR_PIXEL_VAL      Base=r2.20      ElementSize=1       SrcRegion=<0;1,0>       DstRegion=<1>       Type=ub
 
@@ -338,6 +366,11 @@
 //Msg payload buffers; upto 4 full-size messages can be written
 
 
+.declare    mudMSGPAYLOAD0  Base=r29.0 ElementSize=4 SrcRegion=<8;8,1> Type=ud
+.declare    mudMSGPAYLOAD1  Base=r38.0 ElementSize=4 SrcRegion=<8;8,1> Type=ud
+.declare    mudMSGPAYLOAD2  Base=r47.0 ElementSize=4 SrcRegion=<8;8,1> Type=ud
+.declare    mudMSGPAYLOAD3  Base=r56.0 ElementSize=4 SrcRegion=<8;8,1> Type=ud
+
 .declare    muwMSGPAYLOAD0  Base=r29.0 ElementSize=2 SrcRegion=<16;16,1> Type=uw
 .declare    muwMSGPAYLOAD1  Base=r38.0 ElementSize=2 SrcRegion=<16;16,1> Type=uw
 .declare    muwMSGPAYLOAD2  Base=r47.0 ElementSize=2 SrcRegion=<16;16,1> Type=uw
@@ -347,6 +380,16 @@
 .declare    mubMSGPAYLOAD1  Base=r38.0 ElementSize=1 SrcRegion=<16;16,1> Type=ub
 .declare    mubMSGPAYLOAD2  Base=r47.0 ElementSize=1 SrcRegion=<16;16,1> Type=ub
 .declare    mubMSGPAYLOAD3  Base=r56.0 ElementSize=1 SrcRegion=<16;16,1> Type=ub
+.declare    mubMSGPAYLOAD4  Base=r32.0 ElementSize=1 SrcRegion=<16;16,1> Type=ub
+.declare    mubMSGPAYLOAD5  Base=r41.0 ElementSize=1 SrcRegion=<16;16,1> Type=ub
+.declare    mubMSGPAYLOAD6  Base=r50.0 ElementSize=1 SrcRegion=<16;16,1> Type=ub
+.declare    mubMSGPAYLOAD7  Base=r59.0 ElementSize=1 SrcRegion=<16;16,1> Type=ub
+
+
+	// the r17 register (nTEMP0) is originally defined from "Common.inc"
+	// instead of re-defining a nTEMP0 here, we use "SAVE_RGB" suffix for its naming
+
+	.declare uwTemp0 Base=r17.0 ElementSize=2 Type=uw
 
 
 //_SAVE_INC_
@@ -393,6 +436,71 @@
 //		1: ubBUFFER_1, ubBUFFER_0+16
 //		2: ubBUFFER_2
 //		3: ubBUFFER_3, ubBUFFER_2+16
+
+	//Y Rounding, first
+	add.sat (16) r[a0.1,0]<1>:uw		r[a0.1,0]<16;16,1>:uw		0x0080:uw		
+	add.sat (16) r[a0.1,32]<1>:uw		r[a0.1,32]<16;16,1>:uw	0x0080:uw		
+	add.sat (16) r[a0.1,64]<1>:uw		r[a0.1,64]<16;16,1>:uw	0x0080:uw		
+	add.sat (16) r[a0.1,96]<1>:uw		r[a0.1,96]<16;16,1>:uw	0x0080:uw		
+
+	// U rounding
+	add.sat (8) r[a0.2,0]<2>:uw		r[a0.2,0]<16;8,2>:uw		0x0080:uw		
+	add.sat (8) r[a0.2,64]<2>:uw		r[a0.2,64]<16;8,2>:uw		0x0080:uw		
+
+	// V rounding
+	add.sat (8) r[a0.0,0]<2>:uw		r[a0.0,0]<16;8,2>:uw		0x0080:uw		
+	add.sat (8) r[a0.0,64]<2>:uw		r[a0.0,64]<16;8,2>:uw		0x0080:uw		
+
+	add   (4) a0.0:uw   			r22.0<4;4,1>:w		1024:uw	//Update Buffer 2 pointers
+
+	//Y Rounding, second
+	add.sat (16) r[a0.5,0]<1>:uw		r[a0.5,0]<16;16,1>:uw		0x0080:uw		
+	add.sat (16) r[a0.5,32]<1>:uw		r[a0.5,32]<16;16,1>:uw	0x0080:uw		
+	add.sat (16) r[a0.5,64]<1>:uw		r[a0.5,64]<16;16,1>:uw	0x0080:uw		
+	add.sat (16) r[a0.5,96]<1>:uw		r[a0.5,96]<16;16,1>:uw	0x0080:uw		
+
+	// U rounding
+	add.sat (8) r[a0.6,0]<2>:uw		r[a0.6,0]<16;8,2>:uw		0x0080:uw		
+	add.sat (8) r[a0.6,64]<2>:uw		r[a0.6,64]<16;8,2>:uw		0x0080:uw		
+
+	// V rounding
+	add.sat (8) r[a0.4,0]<2>:uw		r[a0.4,0]<16;8,2>:uw		0x0080:uw		
+	add.sat (8) r[a0.4,64]<2>:uw		r[a0.4,64]<16;8,2>:uw		0x0080:uw		
+
+	add   (4) a0.4:uw   		r22.0<4;4,1>:w          1536:uw	//Update Buffer 3 pointers
+
+	//Y Rounding, third
+	add.sat (16) r[a0.1,0]<1>:uw		r[a0.1,0]<16;16,1>:uw		0x0080:uw		
+	add.sat (16) r[a0.1,32]<1>:uw		r[a0.1,32]<16;16,1>:uw	0x0080:uw		
+	add.sat (16) r[a0.1,64]<1>:uw		r[a0.1,64]<16;16,1>:uw	0x0080:uw		
+	add.sat (16) r[a0.1,96]<1>:uw		r[a0.1,96]<16;16,1>:uw	0x0080:uw		
+
+	// U rounding
+	add.sat (8) r[a0.2,0]<2>:uw		r[a0.2,0]<16;8,2>:uw		0x0080:uw		
+	add.sat (8) r[a0.2,64]<2>:uw		r[a0.2,64]<16;8,2>:uw		0x0080:uw		
+
+	// V rounding
+	add.sat (8) r[a0.0,0]<2>:uw		r[a0.0,0]<16;8,2>:uw		0x0080:uw		
+	add.sat (8) r[a0.0,64]<2>:uw		r[a0.0,64]<16;8,2>:uw		0x0080:uw		
+
+
+	//Y Rounding, fourth
+	add.sat (16) r[a0.5,0]<1>:uw		r[a0.5,0]<16;16,1>:uw		0x0080:uw		
+	add.sat (16) r[a0.5,32]<1>:uw		r[a0.5,32]<16;16,1>:uw	0x0080:uw		
+	add.sat (16) r[a0.5,64]<1>:uw		r[a0.5,64]<16;16,1>:uw	0x0080:uw		
+	add.sat (16) r[a0.5,96]<1>:uw		r[a0.5,96]<16;16,1>:uw	0x0080:uw		
+
+	// U rounding
+	add.sat (8) r[a0.6,0]<2>:uw		r[a0.6,0]<16;8,2>:uw		0x0080:uw		
+	add.sat (8) r[a0.6,64]<2>:uw		r[a0.6,64]<16;8,2>:uw		0x0080:uw		
+
+	// V rounding
+	add.sat (8) r[a0.4,0]<2>:uw		r[a0.4,0]<16;8,2>:uw		0x0080:uw		
+	add.sat (8) r[a0.4,64]<2>:uw		r[a0.4,64]<16;8,2>:uw		0x0080:uw		
+
+	// restore the TOP and BOT pointers
+	add   (4) a0.0:uw   r22.0<4;4,1>:w          0:uw
+	add   (4) a0.4:uw   r22.0<4;4,1>:w          512:uw
 
 //Buffer 0
 //Move Y to msg payload

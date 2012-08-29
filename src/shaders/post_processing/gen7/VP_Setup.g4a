@@ -13,8 +13,25 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-//   10    // Total instruction count
+/*
+ *  Copyright 2000-2011 Intel Corporation All Rights Reserved
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+//  326    // Total instruction count
 //    1    // Total kernel count
+
 
 
 // Module name: common.inc
@@ -50,6 +67,9 @@
                                     // YVYU               0       3      1
 
 //Color Pipe (IECP) parameters
+
+
+//ByteCopy
 
 
 //r4
@@ -140,14 +160,32 @@
 // Common Buffers
 
 
+// temp space for rotation
+
+.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+
+.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+
+.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+
+.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+
+.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+
+
 // End of common.inc
+
 
 // FileName:		VP_Setup.asm
 // Author:			Vivek Kumar
 // Description:		Sets up all parameters for the Video Processing Kernel
 
 
+
+
 // Description: Includes all definitions explicit to Fast Composite.
+
+
 
 
 // End of common.inc
@@ -174,11 +212,16 @@
 //r2
 
 
+// Gen7 AVS WA
+
+
 // WiDi Definitions
 
 
 //Colorfill
 
+
+                                      // 0: 0-degree, 1: 90, 2: 180, 3: 270-degree, clockwise.	    
 
 .declare ubCOLOR_PIXEL_VAL      Base=r2.20      ElementSize=1       SrcRegion=<0;1,0>       DstRegion=<1>       Type=ub
 
@@ -333,10 +376,478 @@ mov (8) r26:ud 	r0.0<8;8,1>:ud
 
 	cmp.e.f0.0 	(8)	null<1>:d				r2.26:ub 		1:uw
 
-	(-f0.0)mov	(8)	acc0:f					r6.0<8;8,1>:f
-	(-f0.0)mac	(8)	r6.0<1>:f		r3.0<8;8,1>:f		r8.5<0;1,0>:f
 
-	mov	(8)	acc0:f							r5.0<8;8,1>:f
-	mac	(8)	r5.0<1>:f				r4.0<8;8,1>:f		r8.6<0;1,0>:f
+    shr (1) r17.0<1>:uw    r2.2<0;1,0>:uw    0:uw
+    and (1) r17.0<1>:uw    r17.0<0;1,0>:uw           3:uw
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    1:uw
+    (f0.1) jmpi (1) ROTATE_90_L0
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    2:uw
+    (f0.1) jmpi (1) ROTATE_180_L0
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    3:uw
+    (f0.1) jmpi (1) ROTATE_270_L0
 
-// Calculate X(8) and Y(4), Y(8), Y(12) -vK
+  // rotate 0 degree
+ROTATE_0_L0:  
+    (-f0.0)mov	(1)	acc0.0:f					   r6.0<0;1,0>:f
+    (-f0.0)mac	(1)	r6.0<1>:f    r3.0<0;1,0>:f		r8.5<0;1,0>:f
+
+    mov	(1)	acc0.0:f            r5.0<0;1,0>:f
+    mac	(1)	r5.0<1>:f    r4.0<0;1,0>:f		    r8.6<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L0
+
+  // rotate 90 degree
+ROTATE_90_L0:  
+    (-f0.0)mov	(1)	acc0.0:f            r6.0<0;1,0>:f
+    (-f0.0)mac	(1)	r6.0<1>:f    r3.0<0;1,0>:f		r8.6<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
+
+    mov	(1)	acc0.0:f							r5.0<0;1,0>:f
+    mac	(1)	r5.0<1>:f     r4.0<0;1,0>:f		r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L0
+
+  // rotate 180 degree
+ROTATE_180_L0:  
+    (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.0:f             r6.0<0;1,0>:f
+    (-f0.0)mac (1) r6.0<1>:f     r3.0<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
+    mov	(1)	acc0.0:f             r5.0<0;1,0>:f
+    mac	(1)	r5.0<1>:f     r4.0<0;1,0>:f                 r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L0  
+
+  // rotate 270 degree
+ROTATE_270_L0:    
+    (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.0:f             r6.0<0;1,0>:f
+    (-f0.0)mac (1) r6.0<1>:f     r3.0<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov	(1)	acc0.0:f                    r5.0<0;1,0>:f
+    mac	(1)	r5.0<1>:f            r4.0<0;1,0>:f          r8.5<0;1,0>:f
+
+END_SRC_BLOCK_ORIG_COMP_L0:		
+    nop	
+    shr (1) r17.0<1>:uw    r2.2<0;1,0>:uw    2:uw
+    and (1) r17.0<1>:uw    r17.0<0;1,0>:uw           3:uw
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    1:uw
+    (f0.1) jmpi (1) ROTATE_90_L1
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    2:uw
+    (f0.1) jmpi (1) ROTATE_180_L1
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    3:uw
+    (f0.1) jmpi (1) ROTATE_270_L1
+
+  // rotate 0 degree
+ROTATE_0_L1:  
+    (-f0.0)mov	(1)	acc0.1:f					   r6.1<0;1,0>:f
+    (-f0.0)mac	(1)	r6.1<1>:f    r3.1<0;1,0>:f		r8.5<0;1,0>:f
+
+    mov	(1)	acc0.1:f            r5.1<0;1,0>:f
+    mac	(1)	r5.1<1>:f    r4.1<0;1,0>:f		    r8.6<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L1
+
+  // rotate 90 degree
+ROTATE_90_L1:  
+    (-f0.0)mov	(1)	acc0.1:f            r6.1<0;1,0>:f
+    (-f0.0)mac	(1)	r6.1<1>:f    r3.1<0;1,0>:f		r8.6<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
+
+    mov	(1)	acc0.1:f							r5.1<0;1,0>:f
+    mac	(1)	r5.1<1>:f     r4.1<0;1,0>:f		r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L1
+
+  // rotate 180 degree
+ROTATE_180_L1:  
+    (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.1:f             r6.1<0;1,0>:f
+    (-f0.0)mac (1) r6.1<1>:f     r3.1<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
+    mov	(1)	acc0.1:f             r5.1<0;1,0>:f
+    mac	(1)	r5.1<1>:f     r4.1<0;1,0>:f                 r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L1  
+
+  // rotate 270 degree
+ROTATE_270_L1:    
+    (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.1:f             r6.1<0;1,0>:f
+    (-f0.0)mac (1) r6.1<1>:f     r3.1<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov	(1)	acc0.1:f                    r5.1<0;1,0>:f
+    mac	(1)	r5.1<1>:f            r4.1<0;1,0>:f          r8.5<0;1,0>:f
+
+END_SRC_BLOCK_ORIG_COMP_L1:		
+    nop	
+    shr (1) r17.0<1>:uw    r2.2<0;1,0>:uw    4:uw
+    and (1) r17.0<1>:uw    r17.0<0;1,0>:uw           3:uw
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    1:uw
+    (f0.1) jmpi (1) ROTATE_90_L2
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    2:uw
+    (f0.1) jmpi (1) ROTATE_180_L2
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    3:uw
+    (f0.1) jmpi (1) ROTATE_270_L2
+
+  // rotate 0 degree
+ROTATE_0_L2:  
+    (-f0.0)mov	(1)	acc0.2:f					   r6.2<0;1,0>:f
+    (-f0.0)mac	(1)	r6.2<1>:f    r3.2<0;1,0>:f		r8.5<0;1,0>:f
+
+    mov	(1)	acc0.2:f            r5.2<0;1,0>:f
+    mac	(1)	r5.2<1>:f    r4.2<0;1,0>:f		    r8.6<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L2
+
+  // rotate 90 degree
+ROTATE_90_L2:  
+    (-f0.0)mov	(1)	acc0.2:f            r6.2<0;1,0>:f
+    (-f0.0)mac	(1)	r6.2<1>:f    r3.2<0;1,0>:f		r8.6<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
+
+    mov	(1)	acc0.2:f							r5.2<0;1,0>:f
+    mac	(1)	r5.2<1>:f     r4.2<0;1,0>:f		r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L2
+
+  // rotate 180 degree
+ROTATE_180_L2:  
+    (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.2:f             r6.2<0;1,0>:f
+    (-f0.0)mac (1) r6.2<1>:f     r3.2<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
+    mov	(1)	acc0.2:f             r5.2<0;1,0>:f
+    mac	(1)	r5.2<1>:f     r4.2<0;1,0>:f                 r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L2  
+
+  // rotate 270 degree
+ROTATE_270_L2:    
+    (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.2:f             r6.2<0;1,0>:f
+    (-f0.0)mac (1) r6.2<1>:f     r3.2<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov	(1)	acc0.2:f                    r5.2<0;1,0>:f
+    mac	(1)	r5.2<1>:f            r4.2<0;1,0>:f          r8.5<0;1,0>:f
+
+END_SRC_BLOCK_ORIG_COMP_L2:		
+    nop	
+    shr (1) r17.0<1>:uw    r2.2<0;1,0>:uw    6:uw
+    and (1) r17.0<1>:uw    r17.0<0;1,0>:uw           3:uw
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    1:uw
+    (f0.1) jmpi (1) ROTATE_90_L3
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    2:uw
+    (f0.1) jmpi (1) ROTATE_180_L3
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    3:uw
+    (f0.1) jmpi (1) ROTATE_270_L3
+
+  // rotate 0 degree
+ROTATE_0_L3:  
+    (-f0.0)mov	(1)	acc0.3:f					   r6.3<0;1,0>:f
+    (-f0.0)mac	(1)	r6.3<1>:f    r3.3<0;1,0>:f		r8.5<0;1,0>:f
+
+    mov	(1)	acc0.3:f            r5.3<0;1,0>:f
+    mac	(1)	r5.3<1>:f    r4.3<0;1,0>:f		    r8.6<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L3
+
+  // rotate 90 degree
+ROTATE_90_L3:  
+    (-f0.0)mov	(1)	acc0.3:f            r6.3<0;1,0>:f
+    (-f0.0)mac	(1)	r6.3<1>:f    r3.3<0;1,0>:f		r8.6<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
+
+    mov	(1)	acc0.3:f							r5.3<0;1,0>:f
+    mac	(1)	r5.3<1>:f     r4.3<0;1,0>:f		r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L3
+
+  // rotate 180 degree
+ROTATE_180_L3:  
+    (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.3:f             r6.3<0;1,0>:f
+    (-f0.0)mac (1) r6.3<1>:f     r3.3<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
+    mov	(1)	acc0.3:f             r5.3<0;1,0>:f
+    mac	(1)	r5.3<1>:f     r4.3<0;1,0>:f                 r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L3  
+
+  // rotate 270 degree
+ROTATE_270_L3:    
+    (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.3:f             r6.3<0;1,0>:f
+    (-f0.0)mac (1) r6.3<1>:f     r3.3<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov	(1)	acc0.3:f                    r5.3<0;1,0>:f
+    mac	(1)	r5.3<1>:f            r4.3<0;1,0>:f          r8.5<0;1,0>:f
+
+END_SRC_BLOCK_ORIG_COMP_L3:		
+    nop	
+    shr (1) r17.0<1>:uw    r2.2<0;1,0>:uw    8:uw
+    and (1) r17.0<1>:uw    r17.0<0;1,0>:uw           3:uw
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    1:uw
+    (f0.1) jmpi (1) ROTATE_90_L4
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    2:uw
+    (f0.1) jmpi (1) ROTATE_180_L4
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    3:uw
+    (f0.1) jmpi (1) ROTATE_270_L4
+
+  // rotate 0 degree
+ROTATE_0_L4:  
+    (-f0.0)mov	(1)	acc0.4:f					   r6.4<0;1,0>:f
+    (-f0.0)mac	(1)	r6.4<1>:f    r3.4<0;1,0>:f		r8.5<0;1,0>:f
+
+    mov	(1)	acc0.4:f            r5.4<0;1,0>:f
+    mac	(1)	r5.4<1>:f    r4.4<0;1,0>:f		    r8.6<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L4
+
+  // rotate 90 degree
+ROTATE_90_L4:  
+    (-f0.0)mov	(1)	acc0.4:f            r6.4<0;1,0>:f
+    (-f0.0)mac	(1)	r6.4<1>:f    r3.4<0;1,0>:f		r8.6<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
+
+    mov	(1)	acc0.4:f							r5.4<0;1,0>:f
+    mac	(1)	r5.4<1>:f     r4.4<0;1,0>:f		r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L4
+
+  // rotate 180 degree
+ROTATE_180_L4:  
+    (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.4:f             r6.4<0;1,0>:f
+    (-f0.0)mac (1) r6.4<1>:f     r3.4<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
+    mov	(1)	acc0.4:f             r5.4<0;1,0>:f
+    mac	(1)	r5.4<1>:f     r4.4<0;1,0>:f                 r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L4  
+
+  // rotate 270 degree
+ROTATE_270_L4:    
+    (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.4:f             r6.4<0;1,0>:f
+    (-f0.0)mac (1) r6.4<1>:f     r3.4<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov	(1)	acc0.4:f                    r5.4<0;1,0>:f
+    mac	(1)	r5.4<1>:f            r4.4<0;1,0>:f          r8.5<0;1,0>:f
+
+END_SRC_BLOCK_ORIG_COMP_L4:		
+    nop	
+    shr (1) r17.0<1>:uw    r2.2<0;1,0>:uw    10:uw
+    and (1) r17.0<1>:uw    r17.0<0;1,0>:uw           3:uw
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    1:uw
+    (f0.1) jmpi (1) ROTATE_90_L5
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    2:uw
+    (f0.1) jmpi (1) ROTATE_180_L5
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    3:uw
+    (f0.1) jmpi (1) ROTATE_270_L5
+
+  // rotate 0 degree
+ROTATE_0_L5:  
+    (-f0.0)mov	(1)	acc0.5:f					   r6.5<0;1,0>:f
+    (-f0.0)mac	(1)	r6.5<1>:f    r3.5<0;1,0>:f		r8.5<0;1,0>:f
+
+    mov	(1)	acc0.5:f            r5.5<0;1,0>:f
+    mac	(1)	r5.5<1>:f    r4.5<0;1,0>:f		    r8.6<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L5
+
+  // rotate 90 degree
+ROTATE_90_L5:  
+    (-f0.0)mov	(1)	acc0.5:f            r6.5<0;1,0>:f
+    (-f0.0)mac	(1)	r6.5<1>:f    r3.5<0;1,0>:f		r8.6<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
+
+    mov	(1)	acc0.5:f							r5.5<0;1,0>:f
+    mac	(1)	r5.5<1>:f     r4.5<0;1,0>:f		r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L5
+
+  // rotate 180 degree
+ROTATE_180_L5:  
+    (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.5:f             r6.5<0;1,0>:f
+    (-f0.0)mac (1) r6.5<1>:f     r3.5<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
+    mov	(1)	acc0.5:f             r5.5<0;1,0>:f
+    mac	(1)	r5.5<1>:f     r4.5<0;1,0>:f                 r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L5  
+
+  // rotate 270 degree
+ROTATE_270_L5:    
+    (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.5:f             r6.5<0;1,0>:f
+    (-f0.0)mac (1) r6.5<1>:f     r3.5<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov	(1)	acc0.5:f                    r5.5<0;1,0>:f
+    mac	(1)	r5.5<1>:f            r4.5<0;1,0>:f          r8.5<0;1,0>:f
+
+END_SRC_BLOCK_ORIG_COMP_L5:		
+    nop	
+    shr (1) r17.0<1>:uw    r2.2<0;1,0>:uw    12:uw
+    and (1) r17.0<1>:uw    r17.0<0;1,0>:uw           3:uw
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    1:uw
+    (f0.1) jmpi (1) ROTATE_90_L6
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    2:uw
+    (f0.1) jmpi (1) ROTATE_180_L6
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    3:uw
+    (f0.1) jmpi (1) ROTATE_270_L6
+
+  // rotate 0 degree
+ROTATE_0_L6:  
+    (-f0.0)mov	(1)	acc0.6:f					   r6.6<0;1,0>:f
+    (-f0.0)mac	(1)	r6.6<1>:f    r3.6<0;1,0>:f		r8.5<0;1,0>:f
+
+    mov	(1)	acc0.6:f            r5.6<0;1,0>:f
+    mac	(1)	r5.6<1>:f    r4.6<0;1,0>:f		    r8.6<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L6
+
+  // rotate 90 degree
+ROTATE_90_L6:  
+    (-f0.0)mov	(1)	acc0.6:f            r6.6<0;1,0>:f
+    (-f0.0)mac	(1)	r6.6<1>:f    r3.6<0;1,0>:f		r8.6<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
+
+    mov	(1)	acc0.6:f							r5.6<0;1,0>:f
+    mac	(1)	r5.6<1>:f     r4.6<0;1,0>:f		r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L6
+
+  // rotate 180 degree
+ROTATE_180_L6:  
+    (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.6:f             r6.6<0;1,0>:f
+    (-f0.0)mac (1) r6.6<1>:f     r3.6<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
+    mov	(1)	acc0.6:f             r5.6<0;1,0>:f
+    mac	(1)	r5.6<1>:f     r4.6<0;1,0>:f                 r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L6  
+
+  // rotate 270 degree
+ROTATE_270_L6:    
+    (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.6:f             r6.6<0;1,0>:f
+    (-f0.0)mac (1) r6.6<1>:f     r3.6<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov	(1)	acc0.6:f                    r5.6<0;1,0>:f
+    mac	(1)	r5.6<1>:f            r4.6<0;1,0>:f          r8.5<0;1,0>:f
+
+END_SRC_BLOCK_ORIG_COMP_L6:		
+    nop	
+    shr (1) r17.0<1>:uw    r2.2<0;1,0>:uw    14:uw
+    and (1) r17.0<1>:uw    r17.0<0;1,0>:uw           3:uw
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    1:uw
+    (f0.1) jmpi (1) ROTATE_90_L7
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    2:uw
+    (f0.1) jmpi (1) ROTATE_180_L7
+    cmp.e.f0.1 (1) null<1>:w    r17.0<0;1,0>:uw    3:uw
+    (f0.1) jmpi (1) ROTATE_270_L7
+
+  // rotate 0 degree
+ROTATE_0_L7:  
+    (-f0.0)mov	(1)	acc0.7:f					   r6.7<0;1,0>:f
+    (-f0.0)mac	(1)	r6.7<1>:f    r3.7<0;1,0>:f		r8.5<0;1,0>:f
+
+    mov	(1)	acc0.7:f            r5.7<0;1,0>:f
+    mac	(1)	r5.7<1>:f    r4.7<0;1,0>:f		    r8.6<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L7
+
+  // rotate 90 degree
+ROTATE_90_L7:  
+    (-f0.0)mov	(1)	acc0.7:f            r6.7<0;1,0>:f
+    (-f0.0)mac	(1)	r6.7<1>:f    r3.7<0;1,0>:f		r8.6<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
+
+    mov	(1)	acc0.7:f							r5.7<0;1,0>:f
+    mac	(1)	r5.7<1>:f     r4.7<0;1,0>:f		r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L7
+
+  // rotate 180 degree
+ROTATE_180_L7:  
+    (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
+    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.7:f             r6.7<0;1,0>:f
+    (-f0.0)mac (1) r6.7<1>:f     r3.7<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
+    mov	(1)	acc0.7:f             r5.7<0;1,0>:f
+    mac	(1)	r5.7<1>:f     r4.7<0;1,0>:f                 r17.0<0;1,0>:f
+    jmpi (1) END_SRC_BLOCK_ORIG_COMP_L7  
+
+  // rotate 270 degree
+ROTATE_270_L7:    
+    (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
+    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
+    (-f0.0)mov (1) acc0.7:f             r6.7<0;1,0>:f
+    (-f0.0)mac (1) r6.7<1>:f     r3.7<0;1,0>:f          r17.0<0;1,0>:f
+
+    mov	(1)	acc0.7:f                    r5.7<0;1,0>:f
+    mac	(1)	r5.7<1>:f            r4.7<0;1,0>:f          r8.5<0;1,0>:f
+
+END_SRC_BLOCK_ORIG_COMP_L7:		
+    nop	
+
+
