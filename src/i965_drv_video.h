@@ -234,6 +234,7 @@ struct i965_driver_data
  
     VADisplayAttribute *display_attributes;
     unsigned int num_display_attributes;
+    VADisplayAttribute *rotation_attrib;
 };
 
 #define NEW_CONFIG_ID() object_heap_allocate(&i965->config_heap);

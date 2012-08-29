@@ -83,6 +83,11 @@ enum {
 
 /* List of supported display attributes */
 static const VADisplayAttribute i965_display_attributes[] = {
+    {
+        VADisplayAttribRotation,
+        0, 3, VA_ROTATION_NONE,
+        VA_DISPLAY_ATTRIB_GETTABLE|VA_DISPLAY_ATTRIB_SETTABLE
+    },
 };
 
 /* List of supported image formats */
@@ -1542,6 +1547,10 @@ i965_display_attributes_init(VADriverContextP ctx)
         i965_display_attributes,
         sizeof(i965_display_attributes)
     );
+
+    i965->rotation_attrib = get_display_attribute(ctx, VADisplayAttribRotation);
+    if (!i965->rotation_attrib)
+        return false;
     return true;
 }
 

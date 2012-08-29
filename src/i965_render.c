@@ -911,18 +911,56 @@ i965_render_dest_surface_state(VADriverContextP ctx, int index)
     dri_bo_unmap(ss_bo);
 }
 
+static void
+i965_fill_vertex_buffer(
+    VADriverContextP ctx,
+    float tex_coords[4], /* [(u1,v1);(u2,v2)] */
+    float vid_coords[4]  /* [(x1,y1);(x2,y2)] */
+)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    float vb[12];
+
+    enum { X1, Y1, X2, Y2 };
+
+    static const unsigned int g_rotation_indices[][6] = {
+        [VA_ROTATION_NONE] = { X1, Y1, X2, Y1, X2, Y2 },
+        [VA_ROTATION_90]   = { X2, Y1, X2, Y2, X1, Y2 },
+        [VA_ROTATION_180]  = { X2, Y2, X1, Y2, X1, Y1 },
+        [VA_ROTATION_270]  = { X1, Y2, X1, Y1, X2, Y1 },
+    };
+
+    const unsigned int * const rotation_indices =
+        g_rotation_indices[i965->rotation_attrib->value];
+
+    vb[0]  = tex_coords[X1]; /* top-left corner */
+    vb[1]  = tex_coords[Y1];
+    vb[2]  = vid_coords[rotation_indices[0]];
+    vb[3]  = vid_coords[rotation_indices[1]];
+
+    vb[4]  = tex_coords[X2]; /* top-right corner */
+    vb[5]  = tex_coords[Y1];
+    vb[6]  = vid_coords[rotation_indices[2]];
+    vb[7]  = vid_coords[rotation_indices[3]];
+
+    vb[8]  = tex_coords[X2]; /* bottom-right corner */
+    vb[9]  = tex_coords[Y2];
+    vb[10] = vid_coords[rotation_indices[4]];
+    vb[11] = vid_coords[rotation_indices[5]];
+
+    dri_bo_subdata(i965->render_state.vb.vertex_buffer, 0, sizeof(vb), vb);
+}
+
 static void 
 i965_subpic_render_upload_vertex(VADriverContextP ctx,
                                  VASurfaceID surface,
                                  const VARectangle *output_rect)
 {    
     struct i965_driver_data  *i965         = i965_driver_data(ctx);
-    struct i965_render_state *render_state = &i965->render_state;
     struct object_surface    *obj_surface  = SURFACE(surface);
     struct object_subpic     *obj_subpic   = SUBPIC(obj_surface->subpic);
+    float tex_coords[4], vid_coords[4];
     VARectangle dst_rect;
-    float *vb, tx1, tx2, ty1, ty2, x1, x2, y1, y2;
-    int i = 0;
 
     if (obj_subpic->flags & VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD)
         dst_rect = obj_subpic->dst_rect;
@@ -935,35 +973,17 @@ i965_subpic_render_upload_vertex(VADriverContextP ctx,
         dst_rect.height = sy * obj_subpic->dst_rect.height;
     }
 
-    dri_bo_map(render_state->vb.vertex_buffer, 1);
-    assert(render_state->vb.vertex_buffer->virtual);
-    vb = render_state->vb.vertex_buffer->virtual;
+    tex_coords[0] = (float)obj_subpic->src_rect.x / obj_subpic->width;
+    tex_coords[1] = (float)obj_subpic->src_rect.y / obj_subpic->height;
+    tex_coords[2] = (float)(obj_subpic->src_rect.x + obj_subpic->src_rect.width) / obj_subpic->width;
+    tex_coords[3] = (float)(obj_subpic->src_rect.y + obj_subpic->src_rect.height) / obj_subpic->height;
 
-    tx1 = (float)obj_subpic->src_rect.x / obj_subpic->width;
-    ty1 = (float)obj_subpic->src_rect.y / obj_subpic->height;
-    tx2 = (float)(obj_subpic->src_rect.x + obj_subpic->src_rect.width) / obj_subpic->width;
-    ty2 = (float)(obj_subpic->src_rect.y + obj_subpic->src_rect.height) / obj_subpic->height;
+    vid_coords[0] = dst_rect.x;
+    vid_coords[1] = dst_rect.y;
+    vid_coords[2] = (float)(dst_rect.x + dst_rect.width);
+    vid_coords[3] = (float)(dst_rect.y + dst_rect.height);
 
-    x1 = (float)dst_rect.x;
-    y1 = (float)dst_rect.y;
-    x2 = (float)(dst_rect.x + dst_rect.width);
-    y2 = (float)(dst_rect.y + dst_rect.height);
-
-    vb[i++] = tx2;
-    vb[i++] = ty2;
-    vb[i++] = x2;
-    vb[i++] = y2;
-
-    vb[i++] = tx1;
-    vb[i++] = ty2;
-    vb[i++] = x1;
-    vb[i++] = y2;
-
-    vb[i++] = tx1;
-    vb[i++] = ty1;
-    vb[i++] = x1;
-    vb[i++] = y1;
-    dri_bo_unmap(render_state->vb.vertex_buffer);
+    i965_fill_vertex_buffer(ctx, tex_coords, vid_coords);
 }
 
 static void 
@@ -978,46 +998,26 @@ i965_render_upload_vertex(
     struct i965_render_state *render_state = &i965->render_state;
     struct intel_region *dest_region = render_state->draw_region;
     struct object_surface *obj_surface;
-    float *vb;
-
-    float u1, v1, u2, v2;
-    int i, width, height;
-    int box_x1 = dest_region->x + dst_rect->x;
-    int box_y1 = dest_region->y + dst_rect->y;
-    int box_x2 = box_x1 + dst_rect->width;
-    int box_y2 = box_y1 + dst_rect->height;
+    float tex_coords[4], vid_coords[4];
+    int width, height;
 
     obj_surface = SURFACE(surface);
     assert(surface);
-    width = obj_surface->orig_width;
+
+    width  = obj_surface->orig_width;
     height = obj_surface->orig_height;
 
-    u1 = (float)src_rect->x / width;
-    v1 = (float)src_rect->y / height;
-    u2 = (float)(src_rect->x + src_rect->width) / width;
-    v2 = (float)(src_rect->y + src_rect->height) / height;
+    tex_coords[0] = (float)src_rect->x / width;
+    tex_coords[1] = (float)src_rect->y / height;
+    tex_coords[2] = (float)(src_rect->x + src_rect->width) / width;
+    tex_coords[3] = (float)(src_rect->y + src_rect->height) / height;
 
-    dri_bo_map(render_state->vb.vertex_buffer, 1);
-    assert(render_state->vb.vertex_buffer->virtual);
-    vb = render_state->vb.vertex_buffer->virtual;
+    vid_coords[0] = dest_region->x + dst_rect->x;
+    vid_coords[1] = dest_region->y + dst_rect->y;
+    vid_coords[2] = vid_coords[0] + dst_rect->width;
+    vid_coords[3] = vid_coords[1] + dst_rect->height;
 
-    i = 0;
-    vb[i++] = u2;
-    vb[i++] = v2;
-    vb[i++] = (float)box_x2;
-    vb[i++] = (float)box_y2;
-    
-    vb[i++] = u1;
-    vb[i++] = v2;
-    vb[i++] = (float)box_x1;
-    vb[i++] = (float)box_y2;
-
-    vb[i++] = u1;
-    vb[i++] = v1;
-    vb[i++] = (float)box_x1;
-    vb[i++] = (float)box_y1;
-
-    dri_bo_unmap(render_state->vb.vertex_buffer);
+    i965_fill_vertex_buffer(ctx, tex_coords, vid_coords);
 }
 
 static void
