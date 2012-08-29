@@ -30,6 +30,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
@@ -78,6 +79,10 @@ enum {
     I965_SURFACETYPE_RGBA = 1,
     I965_SURFACETYPE_YUV,
     I965_SURFACETYPE_INDEXED
+};
+
+/* List of supported display attributes */
+static const VADisplayAttribute i965_display_attributes[] = {
 };
 
 /* List of supported image formats */
@@ -1505,6 +1510,52 @@ i965_QuerySurfaceStatus(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static VADisplayAttribute *
+get_display_attribute(VADriverContextP ctx, VADisplayAttribType type)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    unsigned int i;
+
+    if (!i965->display_attributes)
+        return NULL;
+
+    for (i = 0; i < i965->num_display_attributes; i++) {
+        if (i965->display_attributes[i].type == type)
+            return &i965->display_attributes[i];
+    }
+    return NULL;
+}
+
+static bool
+i965_display_attributes_init(VADriverContextP ctx)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+
+    i965->num_display_attributes = ARRAY_ELEMS(i965_display_attributes);
+    i965->display_attributes = malloc(
+        i965->num_display_attributes * sizeof(i965->display_attributes[0]));
+    if (!i965->display_attributes)
+        return false;
+
+    memcpy(
+        i965->display_attributes,
+        i965_display_attributes,
+        sizeof(i965_display_attributes)
+    );
+    return true;
+}
+
+static void
+i965_display_attributes_terminate(VADriverContextP ctx)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+
+    if (i965->display_attributes) {
+        free(i965->display_attributes);
+        i965->display_attributes = NULL;
+        i965->num_display_attributes = 0;
+    }
+}
 
 /* 
  * Query display attributes 
@@ -1513,12 +1564,19 @@ i965_QuerySurfaceStatus(VADriverContextP ctx,
  * returned in "attr_list" is returned in "num_attributes".
  */
 VAStatus 
-i965_QueryDisplayAttributes(VADriverContextP ctx,
-                            VADisplayAttribute *attr_list,    /* out */
-                            int *num_attributes)              /* out */
+i965_QueryDisplayAttributes(
+    VADriverContextP    ctx,
+    VADisplayAttribute *attribs,        /* out */
+    int                *num_attribs_ptr /* out */
+)
 {
-    if (num_attributes)
-        *num_attributes = 0;
+    const int num_attribs = ARRAY_ELEMS(i965_display_attributes);
+
+    if (attribs && num_attribs > 0)
+        memcpy(attribs, i965_display_attributes, sizeof(i965_display_attributes));
+
+    if (num_attribs_ptr)
+        *num_attribs_ptr = num_attribs;
 
     return VA_STATUS_SUCCESS;
 }
@@ -1530,12 +1588,27 @@ i965_QueryDisplayAttributes(VADriverContextP ctx,
  * from vaQueryDisplayAttributes() can have their values retrieved.  
  */
 VAStatus 
-i965_GetDisplayAttributes(VADriverContextP ctx,
-                          VADisplayAttribute *attr_list,    /* in/out */
-                          int num_attributes)
+i965_GetDisplayAttributes(
+    VADriverContextP    ctx,
+    VADisplayAttribute *attribs,        /* inout */
+    int                 num_attribs     /* in */
+)
 {
-    /* TODO */
-    return VA_STATUS_ERROR_UNIMPLEMENTED;
+    int i;
+
+    for (i = 0; i < num_attribs; i++) {
+        VADisplayAttribute *src_attrib, * const dst_attrib = &attribs[i];
+
+        src_attrib = get_display_attribute(ctx, dst_attrib->type);
+        if (src_attrib && (src_attrib->flags & VA_DISPLAY_ATTRIB_GETTABLE)) {
+            dst_attrib->min_value = src_attrib->min_value;
+            dst_attrib->max_value = src_attrib->max_value;
+            dst_attrib->value     = src_attrib->value;
+        }
+        else
+            dst_attrib->flags = VA_DISPLAY_ATTRIB_NOT_SUPPORTED;
+    }
+    return VA_STATUS_SUCCESS;
 }
 
 /* 
@@ -1545,12 +1618,32 @@ i965_GetDisplayAttributes(VADriverContextP ctx,
  * the value is out of range, the function returns VA_STATUS_ERROR_ATTR_NOT_SUPPORTED
  */
 VAStatus 
-i965_SetDisplayAttributes(VADriverContextP ctx,
-                          VADisplayAttribute *attr_list,
-                          int num_attributes)
+i965_SetDisplayAttributes(
+    VADriverContextP    ctx,
+    VADisplayAttribute *attribs,        /* in */
+    int                 num_attribs     /* in */
+)
 {
-    /* TODO */
-    return VA_STATUS_ERROR_UNIMPLEMENTED;
+    int i;
+
+    for (i = 0; i < num_attribs; i++) {
+        VADisplayAttribute *dst_attrib, * const src_attrib = &attribs[i];
+
+        dst_attrib = get_display_attribute(ctx, src_attrib->type);
+        if (!dst_attrib)
+            return VA_STATUS_ERROR_ATTR_NOT_SUPPORTED;
+
+        if (!(dst_attrib->flags & VA_DISPLAY_ATTRIB_SETTABLE))
+            continue;
+
+        if (src_attrib->value < dst_attrib->min_value ||
+            src_attrib->value > dst_attrib->max_value)
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+        dst_attrib->value = src_attrib->value;
+        /* XXX: track modified attributes through timestamps */
+    }
+    return VA_STATUS_SUCCESS;
 }
 
 VAStatus 
@@ -1580,6 +1673,9 @@ i965_Init(VADriverContextP ctx)
     else if (IS_GEN7(i965->intel.device_id))
         i965->codec_info = &gen7_hw_codec_info;
     else
+        return VA_STATUS_ERROR_UNKNOWN;
+
+    if (!i965_display_attributes_init(ctx))
         return VA_STATUS_ERROR_UNKNOWN;
 
     if (i965_post_processing_init(ctx) == False)
@@ -2395,6 +2491,8 @@ i965_Terminate(VADriverContextP ctx)
     if (i965_post_processing_terminate(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;
 
+    i965_display_attributes_terminate(ctx);
+
     i965_destroy_heap(&i965->buffer_heap, i965_destroy_buffer);
     i965_destroy_heap(&i965->image_heap, i965_destroy_image);
     i965_destroy_heap(&i965->subpic_heap, i965_destroy_subpic);
@@ -2580,7 +2678,7 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     ctx->max_attributes = I965_MAX_CONFIG_ATTRIBUTES;
     ctx->max_image_formats = I965_MAX_IMAGE_FORMATS;
     ctx->max_subpic_formats = I965_MAX_SUBPIC_FORMATS;
-    ctx->max_display_attributes = I965_MAX_DISPLAY_ATTRIBUTES;
+    ctx->max_display_attributes = 1 + ARRAY_ELEMS(i965_display_attributes);
 
     vtable->vaTerminate = i965_Terminate;
     vtable->vaQueryConfigEntrypoints = i965_QueryConfigEntrypoints;

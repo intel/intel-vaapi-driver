@@ -42,7 +42,6 @@
 #define I965_MAX_CONFIG_ATTRIBUTES              10
 #define I965_MAX_IMAGE_FORMATS                  3
 #define I965_MAX_SUBPIC_FORMATS                 4
-#define I965_MAX_DISPLAY_ATTRIBUTES             4
 
 #define INTEL_STR_DRIVER_VENDOR                 "Intel"
 #define INTEL_STR_DRIVER_NAME                   "i965"
@@ -232,6 +231,9 @@ struct i965_driver_data
     struct i965_render_state render_state;
     void *pp_context;
     char va_vendor[256];
+ 
+    VADisplayAttribute *display_attributes;
+    unsigned int num_display_attributes;
 };
 
 #define NEW_CONFIG_ID() object_heap_allocate(&i965->config_heap);
