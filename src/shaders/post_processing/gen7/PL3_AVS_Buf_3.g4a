@@ -13,8 +13,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-//   13    // Total instruction count
+//   45    // Total instruction count
 //    1    // Total kernel count
+
 
 
 // Module name: common.inc
@@ -50,6 +51,9 @@
                                     // YVYU               0       3      1
 
 //Color Pipe (IECP) parameters
+
+
+//ByteCopy
 
 
 //r4
@@ -140,11 +144,26 @@
 // Common Buffers
 
 
+// temp space for rotation
+
+.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+
+.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+
+.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+
+.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+
+.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+
+
 // End of common.inc
+
 
 // FileName:		PL3_AVS_Buf_3.asm
 // Author:			Tatiya, Rupesh
 // Description:		Loads 8x8 AVS/IEF PL3 data into Buffer 3
+
 
 
 // FileName     :   PL3_AVS_Buf.asm
@@ -152,10 +171,15 @@
 // Description  :   Loads 8x8 AVS/IEF PL3 data into Buffer N
 
 
+
 // Module name: Scaling.inc
 
 
+
+
 // Description: Includes all definitions explicit to Fast Composite.
+
+
 
 
 // End of common.inc
@@ -182,11 +206,16 @@
 //r2
 
 
+// Gen7 AVS WA
+
+
 // WiDi Definitions
 
 
 //Colorfill
 
+
+                                      // 0: 0-degree, 1: 90, 2: 180, 3: 270-degree, clockwise.	    
 
 .declare ubCOLOR_PIXEL_VAL      Base=r2.20      ElementSize=1       SrcRegion=<0;1,0>       DstRegion=<1>       Type=ub
 
@@ -419,8 +448,82 @@
 
     mov (8)     r17.0:ud      r25.0<8;8,1>:ud         // Copy msg payload mirrors to MRFs
 
+    // Gen7 AVS WA Only for YUV packed surfaces, NV12 and Y-channel only for Planar surfaces
+    //   if (((int)(u_left*width + 5.0/256) > (int)(u_left*width)) 
+    //   {
+    //       modified_u_coord = u_coord – 5.0/(256*width); //floating point
+    //   }
+    //   else if(((int)(u_left*width + 255.0/256) == (int)(u_left*width)) 
+    //   {
+    //       modified_u_coord = u_coord + 1.0/(256*width); //floating point
+    //   }
+    //   else{
+    //       modified_u_coord = u_coord;
+    //   }
+    //   Where u_left = u – 2*du + 3*ddu for IEF On
+    //   And u_left = u for IEF Off case
+    //   
+
+    // check whether Gen7 AVS WA is enabled,
+    mov  (1)    r14.8:uw            f0.0:uw                           // save f0.0
+    mov  (1)    r14.5:f             r17.2<0;1,0>:f           // save pixel 0 U for chroma
+
+    and.nz.f0.0  (1)     null<1>:uw     r2.3:uw    0x2:uw
+    (-f0.0)jmpi  (1)     GEN7_PL3_AVS_WA_DONE_L0_3_
+
+    // Gen7 AVS WA, check if IEF is ON for choosing Gen7 AVS WA formula
+
+    and.nz.f0.0  (8)     null<1>:uw     r2.3<0;1,0>:uw             0x4:uw
+    (f0.0)mov (8)    acc0.0:f          r17.2<0;1,0>:f
+    (f0.0)mac (8)    acc0.0:f          r17.4<0;1,0>:f    -2.0:f
+    (f0.0)mac (8)    acc0.0:f          r17.6<0;1,0>:f     3.0:f
+    (f0.0)mov (1)    r14.2:f        acc0:f                                 // IEF ON,  rTEMP3.2 = u_left
+    (-f0.0)mov (1)   r14.2:f        r17.2<0;1,0>:f                // IEF OFF, rTEMP3.2 = u_left
+
+    and (1)         r14.1:ud     r2.3:uw    0xFFF8:uw
+    asr (1)         r14.1:ud     r14.1:ud    3:d
+    mov (1)         r14.1:f      r14.1:ud
+
+    // Gen7 AVS WA, if (int)(u_left*width + 5.0/256) > (int)(u_left*width)
+    mul (1)          r14.0:f        r14.2:f                  r14.1:f    // rTEMP3.0 = u_left*width
+    add (1)          r14.2:f        r14.0:f                  0.01953125:f  // rTEMP3.2 = u_left*width + 5.0/256
+    add (1)          r14.3:f        r14.0:f                  0.99609375:f  // rTEMP3.3 = u_left*width + 255.0/256
+
+    //Check if the values are < 0 and account for (int) cast of negative numbers
+
+    //(int)(u_left*width)
+    cmp.l.f0.0 (1)   null<1>:f          r14.0:f                  0.00000000:f          
+    mov (1)          r14.0:d        r14.0:f
+    (f0.0)add (1)    r14.0:d        r14.0<0;1,0>:d           -1:d        
+
+    //(int)(u_left*width + 5.0/256)
+    cmp.l.f0.0 (1)   null<1>:f          r14.2:f                  0.00000000:f          
+    mov (1)          r14.2:d        r14.2:f        
+    (f0.0)add (1)    r14.2:d        r14.2<0;1,0>:d           -1:d        
+
+    //(int)(u_left*width + 255.0/256)
+    cmp.l.f0.0 (1)   null<1>:f          r14.3:f                  0.00000000:f          
+    mov (1)          r14.3:d        r14.3:f
+    (f0.0)add (1)    r14.3:d        r14.3<0;1,0>:d           -1:d        
+
+    mov  (1)    f0.0:uw                0:uw                   // clear flag
+    //if (((int)(u_left*width + 5.0/256) > (int)(u_left*width))
+    cmp.g.f1.0  (1)     null<1>:d        r14.2:d    r14.0:d
+    // modified_u_coord = u_coord – 5.0/(256*width); //floating point
+    (f1.0) add (1)     r17.2:f       r17.2<0;1,0>:f   -r2.3:f
+    //else if(((int)(u_left*width + 255.0/256) == (int)(u_left*width)) 
+    (-f1.0) cmp.e.f0.0  (1) null<1>:d    r14.3:d    r14.0:d
+    // modified_u_coord = u_coord + 1.0/(256*width); //floating point
+    (f0.0) add (1)     r17.2:f       r17.2<0;1,0>:f   r2.2:f
+
+GEN7_PL3_AVS_WA_DONE_L0_3_:
+    mov  (1)    f0.0:uw                r14.8:uw                   // restore f0.0
+
+
     send (1)    uwBUFFER_3(0)<1>   r16    0x2    a0.0:ud
     // Returns Y data in 4 GRFs in scrambled order
+
+    mov  (1)    r17.2:f       r14.5:f                    // restore pixel 0 U for chroma, No AVS WA for chroma
 
     add (1)     a0.0:ud     r23.5<0;1,0>:ud      0x44EB801:ud     // msg desc; 1 is added to change BI to UV
     mov (1)     r16.2:ud      0x0000E000:ud                           // Enable Red channel

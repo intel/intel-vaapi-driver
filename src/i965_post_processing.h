@@ -326,8 +326,25 @@ struct gen7_pp_static_parameter
     } grf1;
 
     struct {
-        /* r2.0-r2.6 */
-        unsigned int padx[7];
+        /* r2.0 */
+        unsigned int pad3;
+
+        /* r2.1 */
+        unsigned int pad2:16;
+        unsigned int save_avs_rgb_swap:1; /* 0: RGB, 1: BGR */
+        unsigned int avs_wa_enable:1; /* must enabled for GEN7 */
+        unsigned int pad1:1;
+        unsigned int avs_wa_width:13;
+
+        /* 2.2 */
+        float avs_wa_one_div_256_width;
+
+        /* 2.3 */
+        float avs_wa_five_div_256_width;
+        
+        /* 2.4 - 2.6 */
+        unsigned int padx[3];
+
         /* r2.7 */
         unsigned int di_destination_packed_y_component_offset:8;
         unsigned int di_destination_packed_u_component_offset:8;
