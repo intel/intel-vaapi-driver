@@ -4574,9 +4574,8 @@ i965_proc_picture(VADriverContextP ctx,
     src_surface.type = I965_SURFACE_TYPE_SURFACE;
     src_surface.flags = proc_frame_to_pp_frame[pipeline_param->filter_flags & 0x3];
 
+    VASurfaceID out_surface_id = VA_INVALID_ID;
     if (obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2')) {
-        VASurfaceID out_surface_id = VA_INVALID_ID;
-
         src_surface.id = pipeline_param->surface;
         src_surface.type = I965_SURFACE_TYPE_SURFACE;
         src_surface.flags = I965_SURFACE_FLAG_FRAME;
@@ -4640,15 +4639,11 @@ i965_proc_picture(VADriverContextP ctx,
         dst_rect.height = in_height;
     }
 
-    obj_surface = SURFACE(proc_state->current_render_target);
-    i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-    i965_vpp_clear_surface(ctx, &proc_context->pp_context, proc_state->current_render_target, pipeline_param->output_background_color); 
-    
     for (i = 0; i < pipeline_param->num_filters; i++) {
         struct object_buffer *obj_buffer = BUFFER(pipeline_param->filters[i]);
         VAProcFilterParameterBufferBase *filter_param = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
         VAProcFilterType filter_type = filter_param->type;
-        VASurfaceID out_surface_id = VA_INVALID_ID;
+        out_surface_id = VA_INVALID_ID;
         int kernel_index = procfilter_to_pp_flag[filter_type];
 
         if (kernel_index != PP_NULL &&
@@ -4681,9 +4676,29 @@ i965_proc_picture(VADriverContextP ctx,
         }
     }
 
-    dst_surface.id = proc_state->current_render_target;
-    dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+    obj_surface = SURFACE(proc_state->current_render_target);
+    int csc_needed = 0;
+    if (obj_surface->fourcc && obj_surface->fourcc !=  VA_FOURCC('N','V','1','2')){
+        csc_needed = 1;
+        out_surface_id = VA_INVALID_ID;
+        status = i965_CreateSurfaces(ctx,
+                                     obj_surface->orig_width,
+                                     obj_surface->orig_height,
+                                     VA_RT_FORMAT_YUV420, 
+                                     1,
+                                     &out_surface_id);
+        assert(status == VA_STATUS_SUCCESS);
+        tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
+        struct object_surface *csc_surface = SURFACE(out_surface_id);
+        i965_check_alloc_surface_bo(ctx, csc_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+        dst_surface.id = out_surface_id;
+    } else {
+        i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+        dst_surface.id = proc_state->current_render_target;
+    }
 
+    dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+    i965_vpp_clear_surface(ctx, &proc_context->pp_context, proc_state->current_render_target, pipeline_param->output_background_color); 
     if (src_rect.width == dst_rect.width &&
         src_rect.height == dst_rect.height) {
         i965_post_processing_internal(ctx, &proc_context->pp_context,
@@ -4705,6 +4720,15 @@ i965_proc_picture(VADriverContextP ctx,
                                       NULL);
     }
 
+    if (csc_needed) {
+        src_surface.id = dst_surface.id;
+        src_surface.type = dst_surface.type;
+        src_surface.flags = dst_surface.flags;
+        dst_surface.id = proc_state->current_render_target;
+        dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+        i965_image_processing(ctx, &src_surface, &dst_rect, &dst_surface, &dst_rect);
+    }
+    
     if (num_tmp_surfaces)
         i965_DestroySurfaces(ctx,
                              tmp_surfaces,
