@@ -3911,7 +3911,8 @@ gen6_pp_object_walker(VADriverContextP ctx,
         for (x = 0; x < x_steps; x++) {
             if (!pp_context->pp_set_block_parameter(pp_context, x, y)) {
                 // some common block parameter update goes here, apply to all pp functions
-                update_block_mask_parameter (pp_context, x, y, x_steps, y_steps);
+                if (IS_GEN6(i965->intel.device_id))
+                    update_block_mask_parameter (pp_context, x, y, x_steps, y_steps);
                 
                 *command_ptr++ = (CMD_MEDIA_OBJECT | (command_length_in_dws - 2));
                 *command_ptr++ = 0;
