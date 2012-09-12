@@ -44,6 +44,9 @@
 
 #define MFC_SOFTWARE_HASWELL	1
 
+#define B0_STEP_REV		2
+#define IS_STEPPING_BPLUS(i965)	((i965->intel.revision) >= B0_STEP_REV)
+
 static const uint32_t gen75_mfc_batchbuffer_avc_intra[][4] = {
 #include "shaders/utils/mfc_batchbuffer_avc_intra.g7b"
 };
@@ -147,12 +150,74 @@ gen75_mfc_surface_state(VADriverContextP ctx, struct intel_encoder_context *enco
 }
 
 static void
-gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+gen75_mfc_ind_obj_base_addr_state_bplus(VADriverContextP ctx,
+				struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
 
+    BEGIN_BCS_BATCH(batch, 26);
+
+    OUT_BCS_BATCH(batch, MFX_IND_OBJ_BASE_ADDR_STATE | (26 - 2));
+	/* the DW1-3 is for the MFX indirect bistream offset */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+	/* the DW4-5 is the MFX upper bound */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW6-10 is for MFX Indirect MV Object Base Address */
+    OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0x80000000); /* must set, up to 2G */
+    OUT_BCS_BATCH(batch, 0);
+
+     /* the DW11-15 is for MFX IT-COFF. Not used on encoder */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+     /* the DW16-20 is for MFX indirect DBLK. Not used on encoder */	
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW21-25 is for MFC Indirect PAK-BSE Object Base Address for Encoder*/	
+    OUT_BCS_RELOC(batch,
+                  mfc_context->mfc_indirect_pak_bse_object.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+	
+    OUT_BCS_RELOC(batch,
+                  mfc_context->mfc_indirect_pak_bse_object.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  mfc_context->mfc_indirect_pak_bse_object.end_offset);
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    if (IS_STEPPING_BPLUS(i965)) {
+	gen75_mfc_ind_obj_base_addr_state_bplus(ctx, encoder_context);
+	return;
+    }
     BEGIN_BCS_BATCH(batch, 11);
 
     OUT_BCS_BATCH(batch, MFX_IND_OBJ_BASE_ADDR_STATE | (11 - 2));
@@ -445,15 +510,116 @@ static void gen75_mfc_init(VADriverContextP ctx, struct intel_encoder_context *e
 }
 
 static void
-gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+gen75_mfc_pipe_buf_addr_state_bplus(VADriverContextP ctx,
+				struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int i;
 
-    BEGIN_BCS_BATCH(batch, 24);
+    BEGIN_BCS_BATCH(batch, 61);
 
-    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (24 - 2));
+    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (61 - 2));
+
+    /* the DW1-3 is for pre_deblocking */
+    if (mfc_context->pre_deblocking_output.bo)
+        OUT_BCS_RELOC(batch, mfc_context->pre_deblocking_output.bo,
+                      I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                      0);
+    else
+        OUT_BCS_BATCH(batch, 0);											/* pre output addr   */
+
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+     /* the DW4-6 is for the post_deblocking */
+
+    if (mfc_context->post_deblocking_output.bo)
+        OUT_BCS_RELOC(batch, mfc_context->post_deblocking_output.bo,
+                      I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                      0);											/* post output addr  */	
+    else
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+
+     /* the DW7-9 is for the uncompressed_picture */
+    OUT_BCS_RELOC(batch, mfc_context->uncompressed_picture_source.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0); /* uncompressed data */
+
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+
+     /* the DW10-12 is for the mb status */
+    OUT_BCS_RELOC(batch, mfc_context->macroblock_status_buffer.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0); /* StreamOut data*/
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+
+     /* the DW13-15 is for the intra_row_store_scratch */
+    OUT_BCS_RELOC(batch, mfc_context->intra_row_store_scratch_buffer.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);	
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+
+     /* the DW16-18 is for the deblocking filter */
+    OUT_BCS_RELOC(batch, mfc_context->deblocking_filter_row_store_scratch_buffer.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+
+    /* the DW 19-50 is for Reference pictures*/
+    for (i = 0; i < ARRAY_ELEMS(mfc_context->reference_surfaces); i++) {
+        if ( mfc_context->reference_surfaces[i].bo != NULL) {
+            OUT_BCS_RELOC(batch, mfc_context->reference_surfaces[i].bo,
+                          I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                          0);			
+        } else {
+            OUT_BCS_BATCH(batch, 0);
+        }
+	OUT_BCS_BATCH(batch, 0);
+    }
+        OUT_BCS_BATCH(batch, 0);
+
+	/* The DW 52-54 is for the MB status buffer */
+    OUT_BCS_RELOC(batch, mfc_context->macroblock_status_buffer.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);											/* Macroblock status buffer*/
+	
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+
+	/* the DW 55-57 is the ILDB buffer */
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+
+	/* the DW 58-60 is the second ILDB buffer */
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int i;
+
+    if (IS_STEPPING_BPLUS(i965)) {
+	gen75_mfc_pipe_buf_addr_state_bplus(ctx, encoder_context);
+	return;
+    }
+
+    BEGIN_BCS_BATCH(batch, 25);
+
+    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (25 - 2));
 
     if (mfc_context->pre_deblocking_output.bo)
         OUT_BCS_RELOC(batch, mfc_context->pre_deblocking_output.bo,
@@ -495,6 +661,54 @@ gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_context
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);											/* Macroblock status buffer*/
 
+        OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen75_mfc_avc_directmode_state_bplus(VADriverContextP ctx,
+				struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+
+    int i;
+
+    BEGIN_BCS_BATCH(batch, 71);
+
+    OUT_BCS_BATCH(batch, MFX_AVC_DIRECTMODE_STATE | (71 - 2));
+
+    /* Reference frames and Current frames */
+    /* the DW1-32 is for the direct MV for reference */
+    for(i = 0; i < NUM_MFC_DMV_BUFFERS - 2; i += 2) {
+        if ( mfc_context->direct_mv_buffers[i].bo != NULL) { 
+            OUT_BCS_RELOC(batch, mfc_context->direct_mv_buffers[i].bo,
+                          I915_GEM_DOMAIN_INSTRUCTION, 0,
+                          0);
+            OUT_BCS_BATCH(batch, 0);
+        } else {
+            OUT_BCS_BATCH(batch, 0);
+            OUT_BCS_BATCH(batch, 0);
+        }
+    }
+	OUT_BCS_BATCH(batch, 0);
+
+	/* the DW34-36 is the MV for the current reference */
+        OUT_BCS_RELOC(batch, mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 2].bo,
+                          I915_GEM_DOMAIN_INSTRUCTION, 0,
+                          0);
+
+	OUT_BCS_BATCH(batch, 0);
+	OUT_BCS_BATCH(batch, 0);
+
+    /* POL list */
+    for(i = 0; i < 32; i++) {
+        OUT_BCS_BATCH(batch, i/2);
+    }
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -503,8 +717,13 @@ gen75_mfc_avc_directmode_state(VADriverContextP ctx, struct intel_encoder_contex
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
+
+    if (IS_STEPPING_BPLUS(i965)) {
+	gen75_mfc_avc_directmode_state_bplus(ctx, encoder_context);
+	return;
+    }
 
     BEGIN_BCS_BATCH(batch, 69);
 
@@ -556,11 +775,47 @@ gen75_mfc_avc_ref_idx_state(VADriverContextP ctx, struct intel_encoder_context *
     ADVANCE_BCS_BATCH(batch);
 }
 
+
+static void
+gen75_mfc_bsp_buf_base_addr_state_bplus(VADriverContextP ctx,
+				struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+
+    BEGIN_BCS_BATCH(batch, 10);
+
+    OUT_BCS_BATCH(batch, MFX_BSP_BUF_BASE_ADDR_STATE | (10 - 2));
+    OUT_BCS_RELOC(batch, mfc_context->bsd_mpc_row_store_scratch_buffer.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+	
+	/* the DW4-6 is for MPR Row Store Scratch Buffer Base Address */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+	/* the DW7-9 is for Bitplane Read Buffer Base Address */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static void
 gen75_mfc_bsp_buf_base_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    if (IS_STEPPING_BPLUS(i965)) {
+	gen75_mfc_bsp_buf_base_addr_state_bplus(ctx, encoder_context);
+	return;
+    }
 
     BEGIN_BCS_BATCH(batch, 4);
 
@@ -975,7 +1230,7 @@ gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb,
                               unsigned char target_mb_size, unsigned char max_mb_size,
                               struct intel_batchbuffer *batch)
 {
-    int len_in_dwords = 11;
+    int len_in_dwords = 12;
     unsigned int intra_msg;
 #define		INTRA_MSG_FLAG		(1 << 13)
 #define		INTRA_MBTYPE_MASK	(0x1F0000)
@@ -1011,6 +1266,8 @@ gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb,
     OUT_BCS_BATCH(batch, (max_mb_size << 24) |
                   (target_mb_size << 16) );
 
+    OUT_BCS_BATCH(batch, 0);
+
     ADVANCE_BCS_BATCH(batch);
 
     return len_in_dwords;
@@ -1023,7 +1280,7 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
                               unsigned char target_mb_size,unsigned char max_mb_size, int slice_type,
                               struct intel_batchbuffer *batch)
 {
-    int len_in_dwords = 11;
+    int len_in_dwords = 12;
 	unsigned int inter_msg = 0;
     if (batch == NULL)
         batch = encoder_context->base.batch;
@@ -1070,6 +1327,8 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
     /*MaxSizeInWord and TargetSzieInWord*/
     OUT_BCS_BATCH(batch, (max_mb_size << 24) |
                   (target_mb_size << 16) );
+
+    OUT_BCS_BATCH(batch, 0x0);    
 
     ADVANCE_BCS_BATCH(batch);
 
