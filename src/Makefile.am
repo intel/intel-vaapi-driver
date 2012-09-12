@@ -53,6 +53,7 @@ source_c = \
 	gen6_vme.c		\
 	gen7_mfc.c		\
 	gen7_mfd.c		\
+	gen75_mfd.c		\
 	gen75_vme.c		\
 	gen75_mfc.c		\
 	i965_avc_bsd.c		\
