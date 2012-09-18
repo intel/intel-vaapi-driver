@@ -110,9 +110,9 @@ gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct gen6_encoder_context 
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     int i;
 
-    BEGIN_BCS_BATCH(batch, 24);
+    BEGIN_BCS_BATCH(batch, 25);
 
-    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (24 - 2));
+    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (25 - 2));
 
     OUT_BCS_BATCH(batch, 0);											/* pre output addr   */
 
@@ -143,6 +143,8 @@ gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct gen6_encoder_context 
     }
     OUT_BCS_BATCH(batch, 0);   											/* no block status  */
 
+    OUT_BCS_BATCH(batch, 0);
+
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -151,6 +153,7 @@ gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct gen6_encoder_cont
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
+    struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
 
     BEGIN_BCS_BATCH(batch, 11);
 
@@ -165,8 +168,11 @@ gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct gen6_encoder_cont
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     /*MFC Indirect PAK-BSE Object Base Address for Encoder*/	
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0x80000000); /* must set, up to 2G */
+    OUT_BCS_RELOC(batch,
+                  mfc_context->mfc_indirect_pak_bse_object.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);
+    OUT_BCS_BATCH(batch, 0x00000000); /* must set, up to 2G */
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -322,9 +328,8 @@ static void gen75_mfc_avc_slice_state(VADriverContextP ctx,
                   (1<<13) |	        /*RBSP NAL TYPE*/	
                   (0<<12) );	        /*CabacZeroWordInsertionEnable*/
 	
-    OUT_BCS_RELOC(batch, mfc_context->mfc_indirect_pak_bse_object.bo,
-                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  mfc_context->mfc_indirect_pak_bse_object.offset);
+
+    OUT_BCS_BATCH(batch, mfc_context->mfc_indirect_pak_bse_object.offset);
 
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
@@ -451,10 +456,17 @@ gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, i
                               struct gen6_encoder_context *gen6_encoder_context)
 {
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
-    int len_in_dwords = 11;
+    int len_in_dwords = 12;
+
+    unsigned int intra_msg;
+#define		INTRA_MSG_FLAG		(1 << 13)
+#define		INTRA_MBTYPE_MASK	(0x1F0000)
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
+    intra_msg = msg[0] & 0xC0FF;
+    intra_msg |= INTRA_MSG_FLAG;
+    intra_msg |= ((msg[0] & INTRA_MBTYPE_MASK) >> 8);
     OUT_BCS_BATCH(batch, MFC_AVC_PAK_OBJECT | (len_in_dwords - 2));
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
@@ -464,7 +476,7 @@ gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, i
                   (1 << 19) |		/* CbpDcY */
                   (1 << 18) |		/* CbpDcU */
                   (1 << 17) |		/* CbpDcV */
-                  (msg[0] & 0xFFFF) );
+                  intra_msg);
 
     OUT_BCS_BATCH(batch, (0xFFFF<<16) | (y << 8) | x);		/* Code Block Pattern for Y*/
     OUT_BCS_BATCH(batch, 0x000F000F);							/* Code Block Pattern */		
@@ -475,7 +487,8 @@ gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, i
     OUT_BCS_BATCH(batch, msg[2]);	
     OUT_BCS_BATCH(batch, msg[3]&0xFC);		
 
-    OUT_BCS_BATCH(batch, 0x8040000);	/*MaxSizeInWord and TargetSzieInWord*/
+    OUT_BCS_BATCH(batch, 0x00000);	/*MaxSizeInWord and TargetSzieInWord*/
+	OUT_BCS_BATCH(batch, 0);
 
     ADVANCE_BCS_BATCH(batch);
 
@@ -595,24 +608,29 @@ static void gen75_mfc_avc_pipeline_programing(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
     VAEncSliceParameterBuffer *pSliceParameter = (VAEncSliceParameterBuffer *)encode_state->slice_params[0]->buffer; /* FIXME: multi slices */
     unsigned int *msg = NULL, offset = 0;
+    unsigned char *msg_ptr = NULL;
     int emit_new_state = 1, object_len_in_bytes;
     int is_intra = pSliceParameter->slice_flags.bits.is_intra;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
-    int x,y;
+    int x,y, mb_index;
 
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000); 
 
+    dri_bo_map(vme_context->vme_output.bo , 1);
+    msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
     if (is_intra) {
-        dri_bo_map(vme_context->vme_output.bo , 1);
-        msg = (unsigned int *)vme_context->vme_output.bo->virtual;
+	msg = (unsigned int *) (msg_ptr + 0 * vme_context->vme_output.size_block);
+    } else {
+	msg = (unsigned int *) (msg_ptr + 0 * vme_context->vme_output.size_block);
+	offset = 0; 
     }
 
     for (y = 0; y < height_in_mbs; y++) {
         for (x = 0; x < width_in_mbs; x++) { 
             int last_mb = (y == (height_in_mbs-1)) && ( x == (width_in_mbs-1) );
             int qp = pSequenceParameter->initial_qp;
-
+	     mb_index = (y * width_in_mbs) + x;
             if (emit_new_state) {
                 intel_batchbuffer_emit_mi_flush(batch);
                 
@@ -626,16 +644,16 @@ static void gen75_mfc_avc_pipeline_programing(VADriverContextP ctx,
                     gen75_mfc_avc_img_state(ctx, gen6_encoder_context);
                     gen75_mfc_avc_qm_state(ctx, gen6_encoder_context);
                     gen75_mfc_avc_fqm_state(ctx, gen6_encoder_context);
+                    gen75_mfc_avc_directmode_state(ctx, gen6_encoder_context);
 
                 gen75_mfc_avc_ref_idx_state(ctx, gen6_encoder_context);
                 gen75_mfc_avc_slice_state(ctx, is_intra, gen6_encoder_context);
                 emit_new_state = 0;
             }
 
+	    msg = (unsigned int *) (msg_ptr + mb_index * vme_context->vme_output.size_block);
             if (is_intra) {
-                assert(msg);
                 object_len_in_bytes = gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, gen6_encoder_context);
-                msg += 4;
             } else {
                 object_len_in_bytes = gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, offset, gen6_encoder_context);
                 offset += 64;
@@ -650,8 +668,7 @@ static void gen75_mfc_avc_pipeline_programing(VADriverContextP ctx,
         }
     }
 
-    if (is_intra)
-        dri_bo_unmap(vme_context->vme_output.bo);
+    dri_bo_unmap(vme_context->vme_output.bo);
 	
     intel_batchbuffer_end_atomic(batch);
 }

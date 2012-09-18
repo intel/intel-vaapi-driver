@@ -57,9 +57,11 @@
 #define CURBE_ALLOCATION_SIZE   37              /* in 256-bit */
 #define CURBE_TOTAL_DATA_LENGTH (4 * 32)        /* in byte, it should be less than or equal to CURBE_ALLOCATION_SIZE * 32 */
 #define CURBE_URB_ENTRY_LENGTH  4               /* in 256-bit, it should be less than or equal to CURBE_TOTAL_DATA_LENGTH / 32 */
+
+#define VME_MSG_LENGTH		32
   
 static const uint32_t gen75_vme_intra_frame[][4] = {
-#include "shaders/vme/intra_frame.g7b"
+#include "shaders/vme/intra_frame_haswell.g75b"
 };
 
 static const uint32_t gen75_vme_inter_frame[][4] = {
@@ -245,15 +247,15 @@ gen75_vme_output_buffer_setup(VADriverContextP ctx,
     int num_entries;
 
     if ( is_intra ) {
-        vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs;
+        vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 2;
     } else {
-        vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs * 4;
+        vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 2;
     }
-    vme_context->vme_output.size_block = 16; /* an OWORD */
-    vme_context->vme_output.pitch = ALIGN(vme_context->vme_output.size_block, 16);
+    vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs;
+    vme_context->vme_output.pitch = 16;
     bo = dri_bo_alloc(i965->intel.bufmgr, 
                       "VME output buffer",
-                      vme_context->vme_output.num_blocks * vme_context->vme_output.pitch,
+                      vme_context->vme_output.num_blocks * vme_context->vme_output.size_block,
                       0x1000);
     assert(bo);
     vme_context->vme_output.bo = bo;
@@ -263,11 +265,10 @@ gen75_vme_output_buffer_setup(VADriverContextP ctx,
     assert(bo->virtual);
 
     ss = (struct gen7_surface_state *)((char *)bo->virtual + SURFACE_STATE_OFFSET(index));
-    ss = bo->virtual;
     memset(ss, 0, sizeof(*ss));
 
     /* always use 16 bytes as pitch on Sandy Bridge */
-    num_entries = vme_context->vme_output.num_blocks * vme_context->vme_output.pitch / 16;
+    num_entries = vme_context->vme_output.num_blocks * vme_context->vme_output.size_block / 16;
 
     ss->ss0.surface_type = I965_SURFACE_BUFFER;
 
@@ -304,22 +305,22 @@ static VAStatus gen75_vme_surface_setup(VADriverContextP ctx,
     /* current picture for encoding */
     obj_surface = SURFACE(encode_state->current_render_target);
     assert(obj_surface);
-    gen75_vme_source_surface_state(ctx, 1, obj_surface, gen6_encoder_context);
+    gen75_vme_source_surface_state(ctx, 0, obj_surface, gen6_encoder_context);
     gen75_vme_media_source_surface_state(ctx, 4, obj_surface, gen6_encoder_context);
 
     if ( ! is_intra ) {
         /* reference 0 */
         obj_surface = SURFACE(pPicParameter->reference_picture);
         assert(obj_surface);
-        gen75_vme_source_surface_state(ctx, 2, obj_surface, gen6_encoder_context);
+        gen75_vme_source_surface_state(ctx, 1, obj_surface, gen6_encoder_context);
         /* reference 1, FIXME: */
         // obj_surface = SURFACE(pPicParameter->reference_picture);
         // assert(obj_surface);
-        //gen7_vme_source_surface_state(ctx, 3, obj_surface);
+        //gen7_vme_source_surface_state(ctx, 2, obj_surface);
     }
 
     /* VME output */
-    gen75_vme_output_buffer_setup(ctx, encode_state, 0, gen6_encoder_context);
+    gen75_vme_output_buffer_setup(ctx, encode_state, 3, gen6_encoder_context);
 
     return VA_STATUS_SUCCESS;
 }
@@ -345,8 +346,8 @@ static VAStatus gen75_vme_interface_setup(VADriverContextP ctx,
         /*Setup the descritor table*/
         memset(desc, 0, sizeof(*desc));
         desc->desc0.kernel_start_pointer = (kernel->bo->offset >> 6);
-        desc->desc2.sampler_count = 1; /* FIXME: */
-        desc->desc2.sampler_state_pointer = (vme_context->vme_state.bo->offset >> 5);
+        desc->desc2.sampler_count = 0; /* FIXME: */
+        desc->desc2.sampler_state_pointer = 0;
         desc->desc3.binding_table_entry_count = 1; /* FIXME: */
         desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
         desc->desc4.constant_urb_entry_read_offset = 0;
@@ -358,12 +359,6 @@ static VAStatus gen75_vme_interface_setup(VADriverContextP ctx,
                           0,
                           i * sizeof(*desc) + offsetof(struct gen6_interface_descriptor_data, desc0),
                           kernel->bo);
-        /*Sampler State(VME state pointer)*/
-        dri_bo_emit_reloc(bo,
-                          I915_GEM_DOMAIN_INSTRUCTION, 0,
-                          (1 << 2),									//
-                          i * sizeof(*desc) + offsetof(struct gen6_interface_descriptor_data, desc2),
-                          vme_context->vme_state.bo);
         desc++;
     }
     dri_bo_unmap(bo);
@@ -382,7 +377,11 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
     assert(vme_context->curbe.bo->virtual);
     constant_buffer = vme_context->curbe.bo->virtual;
 	
-    /*TODO copy buffer into CURB*/
+	/* VME MV/Mb cost table is passed by using const buffer */
+	/* Now it uses the fixed search path. So it is constructed directly
+	 * in the GPU shader.
+	 */
+    memcpy(constant_buffer, (char *)vme_context->vme_state_message, 32);
 
     dri_bo_unmap( vme_context->curbe.bo);
 
@@ -399,25 +398,20 @@ static VAStatus gen75_vme_vme_state_setup(VADriverContextP ctx,
     int i;
 	
     //building VME state message
-    dri_bo_map(vme_context->vme_state.bo, 1);
-    assert(vme_context->vme_state.bo->virtual);
-    vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
-	
-	vme_state_message[0] = 0x10010101;
-	vme_state_message[1] = 0x100F0F0F;
-	vme_state_message[2] = 0x10010101;
-	vme_state_message[3] = 0x000F0F0F;
-	for(i = 4; i < 14; i++) {
-		vme_state_message[i] = 0x00000000;
-	}	
+    //pass the MV/Mb cost into VME message on HASWell
+    assert(vme_context->vme_state_message);
+    vme_state_message = (unsigned int *)vme_context->vme_state_message;
 
-    for(i = 14; i < 32; i++) {
-        vme_state_message[i] = 0x00000000;
-    }
+    vme_state_message[0] = 0x4a4a4a4a;
+    vme_state_message[1] = 0x4a4a4a4a;
+    vme_state_message[2] = 0x4a4a4a4a;
+    vme_state_message[3] = 0x22120200;
+    vme_state_message[4] = 0x62524232;
 
-    //vme_state_message[16] = 0x42424242;			//cost function LUT set 0 for Intra
+    for (i=5; i < 8; i++) {
+	vme_state_message[i] = 0;
+     }
 
-    dri_bo_unmap( vme_context->vme_state.bo);
     return VA_STATUS_SUCCESS;
 }
 
@@ -515,14 +509,14 @@ static void gen75_vme_idrt(VADriverContextP ctx, struct gen6_encoder_context *ge
 static int gen75_vme_media_object(VADriverContextP ctx, 
                                  struct encode_state *encode_state,
                                  int mb_x, int mb_y,
-                                 int kernel,
+                                 int kernel, unsigned int mb_intra_ub,
                                  struct gen6_encoder_context *gen6_encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct object_surface *obj_surface = SURFACE(encode_state->current_render_target);
     int mb_width = ALIGN(obj_surface->orig_width, 16) / 16;
-    int len_in_dowrds = 6 + 1;
+    int len_in_dowrds = 8;
 
     BEGIN_BATCH(batch, len_in_dowrds);
     
@@ -535,6 +529,8 @@ static int gen75_vme_media_object(VADriverContextP ctx,
    
     /*inline data */
     OUT_BATCH(batch, mb_width << 16 | mb_y << 8 | mb_x);			/*M0.0 Refrence0 X,Y, not used in Intra*/
+
+ 	OUT_BATCH(batch, ((mb_intra_ub << 8) | 0));
     ADVANCE_BATCH(batch);
 
     return len_in_dowrds * 4;
@@ -576,11 +572,7 @@ static void gen75_vme_media_init(VADriverContextP ctx, struct gen6_encoder_conte
 
     /* VME state */
     dri_bo_unreference(vme_context->vme_state.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "Buffer",
-                      1024*16, 64);
-    assert(bo);
-    vme_context->vme_state.bo = bo;
+    vme_context->vme_state.bo = NULL;
 
     vme_context->vfe_state.max_num_threads = 60 - 1;
     vme_context->vfe_state.num_urb_entries = 16;
@@ -588,6 +580,12 @@ static void gen75_vme_media_init(VADriverContextP ctx, struct gen6_encoder_conte
     vme_context->vfe_state.urb_entry_size = 59 - 1;
     vme_context->vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
 }
+
+#define		INTRA_PRED_AVAIL_FLAG_AE	0x60
+#define		INTRA_PRED_AVAIL_FLAG_B		0x10
+#define		INTRA_PRED_AVAIL_FLAG_C       	0x8
+#define		INTRA_PRED_AVAIL_FLAG_D		0x4
+#define		INTRA_PRED_AVAIL_FLAG_BCD_MASK	0x1C
 
 static void gen75_vme_pipeline_programing(VADriverContextP ctx, 
                                          struct encode_state *encode_state,
@@ -601,11 +599,23 @@ static void gen75_vme_pipeline_programing(VADriverContextP ctx,
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
     int emit_new_state = 1, object_len_in_bytes;
     int x, y;
+    unsigned int mb_intra_ub; 
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
 
     for(y = 0; y < height_in_mbs; y++){
         for(x = 0; x < width_in_mbs; x++){	
+	    mb_intra_ub = 0;
+	    if (x != 0) {
+		mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+	    }
+	    if (y != 0) {
+		mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+		if (x != 0)
+			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+		if (x != (width_in_mbs -1))
+			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+	    }
 
             if (emit_new_state) {
                 /*Step1: MI_FLUSH/PIPE_CONTROL*/
@@ -624,7 +634,7 @@ static void gen75_vme_pipeline_programing(VADriverContextP ctx,
             }
 
             /*Step4: Primitive commands*/
-            object_len_in_bytes = gen75_vme_media_object(ctx, encode_state, x, y, is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER, gen6_encoder_context);
+            object_len_in_bytes = gen75_vme_media_object(ctx, encode_state, x, y, is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER, mb_intra_ub, gen6_encoder_context);
 
             if (intel_batchbuffer_check_free_space(batch, object_len_in_bytes) == 0) {
                 assert(0);
@@ -651,8 +661,8 @@ static VAStatus gen75_vme_prepare(VADriverContextP ctx,
         gen75_vme_surface_setup(ctx, encode_state, is_intra, gen6_encoder_context);
 
     gen75_vme_interface_setup(ctx, encode_state, gen6_encoder_context);
-    gen75_vme_constant_setup(ctx, encode_state, gen6_encoder_context);
     gen75_vme_vme_state_setup(ctx, encode_state, is_intra, gen6_encoder_context);
+    gen75_vme_constant_setup(ctx, encode_state, gen6_encoder_context);
 
     /*Programing media pipeline*/
     gen75_vme_pipeline_programing(ctx, encode_state, gen6_encoder_context);
@@ -710,6 +720,7 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct gen6_vme_context *vme_c
         dri_bo_subdata(kernel->bo, 0, kernel->size, kernel->bin);
     }
     
+	vme_context->vme_state_message = malloc(VME_MSG_LENGTH * sizeof(int));
     return True;
 }
 
@@ -738,6 +749,11 @@ Bool gen75_vme_context_destroy(struct gen6_vme_context *vme_context)
 
         dri_bo_unreference(kernel->bo);
         kernel->bo = NULL;
+    }
+
+    if (vme_context->vme_state_message) {
+	free(vme_context->vme_state_message);
+	vme_context->vme_state_message = NULL;
     }
 
     return True;
