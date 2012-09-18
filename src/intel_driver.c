@@ -44,6 +44,19 @@ intel_driver_get_param(struct intel_driver_data *intel, int param, int *value)
    return drmCommandWriteRead(intel->fd, DRM_I915_GETPARAM, &gp, sizeof(gp)) == 0;
 }
 
+static void intel_driver_get_revid(struct intel_driver_data *intel, int *value)
+{
+#define PCI_REVID	8
+	FILE *fp;
+	char config_data[16];
+	
+	fp = fopen("/sys/devices/pci0000:00/0000:00:02.0/config", "r");
+	fread(config_data, 1, 16, fp);
+	fclose(fp);
+	*value = config_data[PCI_REVID];
+	return;
+}
+
 Bool 
 intel_driver_init(VADriverContextP ctx)
 {
@@ -74,7 +87,8 @@ intel_driver_init(VADriverContextP ctx)
         intel->has_bsd = has_bsd;
     if (intel_driver_get_param(intel, I915_PARAM_HAS_BLT, &has_blt))
         intel->has_blt = has_blt;
-
+   
+    intel_driver_get_revid(intel, &intel->revision);
     intel_memman_init(intel);
     return True;
 }

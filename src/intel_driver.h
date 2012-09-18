@@ -105,6 +105,7 @@ struct intel_driver_data
 {
     int fd;
     int device_id;
+    int revision;
 
     int dri2Enabled;
 
