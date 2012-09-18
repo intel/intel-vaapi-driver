@@ -2734,9 +2734,11 @@ gen7_emit_wm_state(VADriverContextP ctx, int kernel)
     struct intel_batchbuffer *batch = i965->batch;
     struct i965_render_state *render_state = &i965->render_state;
     unsigned int max_threads_shift = GEN7_PS_MAX_THREADS_SHIFT_IVB;
+    unsigned int num_samples = 0;
 
     if (IS_HASWELL(i965->intel.device_id)) {
         max_threads_shift = GEN7_PS_MAX_THREADS_SHIFT_HSW;
+        num_samples = 1 << GEN7_PS_SAMPLE_MASK_SHIFT_HSW;
     }
 
     BEGIN_BATCH(batch, 3);
@@ -2771,7 +2773,7 @@ gen7_emit_wm_state(VADriverContextP ctx, int kernel)
               (5 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT));
     OUT_BATCH(batch, 0); /* scratch space base offset */
     OUT_BATCH(batch, 
-              ((86 - 1) << max_threads_shift) |
+              ((86 - 1) << max_threads_shift) | num_samples |
               GEN7_PS_PUSH_CONSTANT_ENABLE |
               GEN7_PS_ATTRIBUTE_ENABLE |
               GEN7_PS_16_DISPATCH_ENABLE);
