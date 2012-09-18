@@ -43,4 +43,7 @@ struct gen_buffer {
     int         valid;
 };
 
+extern struct hw_context *
+gen75_dec_hw_context_init(VADriverContextP ctx, VAProfile profile);
+
 #endif /* I965_DECODER_H */

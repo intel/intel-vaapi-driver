@@ -42,6 +42,7 @@
 #include "intel_batchbuffer.h"
 #include "i965_defines.h"
 #include "i965_drv_video.h"
+#include "i965_decoder.h"
 #include "i965_encoder.h"
 
 #define CONFIG_ID_OFFSET                0x01000000
@@ -206,7 +207,7 @@ static struct hw_codec_info gen7_hw_codec_info = {
 };
 
 static struct hw_codec_info gen75_hw_codec_info = {
-    .dec_hw_context_init = gen7_dec_hw_context_init,
+    .dec_hw_context_init = gen75_dec_hw_context_init,
     .enc_hw_context_init = gen75_enc_hw_context_init,
     .max_width = 4096,
     .max_height = 4096,
