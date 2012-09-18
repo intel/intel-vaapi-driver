@@ -1,5 +1,5 @@
 VME_CORE	= intra_frame.asm inter_frame.asm
-VME75_CORE	= intra_frame_haswell.asm
+VME75_CORE	= intra_frame_haswell.asm inter_frame_haswell.asm
 
 INTEL_G6B	= intra_frame.g6b inter_frame.g6b
 INTEL_G6A	= intra_frame.g6a inter_frame.g6a
@@ -11,8 +11,8 @@ INTEL_G7A	= intra_frame.g7a inter_frame.g7a
 INTEL_GEN7_INC	= gen7_vme_header.inc
 INTEL_GEN7_ASM	= $(INTEL_G7A:%.g7a=%.gen7.asm)
 
-INTEL_G75B	= intra_frame_haswell.g75b
-INTEL_G75A	= intra_frame_haswell.g75a
+INTEL_G75B	= intra_frame_haswell.g75b inter_frame_haswell.g75b
+INTEL_G75A	= intra_frame_haswell.g75a inter_frame_haswell.g75a
 INTEL_GEN75_INC	= vme75.inc
 INTEL_GEN75_ASM	= $(INTEL_G75A:%.g75a=%.gen75.asm)
 
