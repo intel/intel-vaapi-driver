@@ -131,6 +131,14 @@ static const uint32_t ps_subpic_kernel_static_gen7[][4] = {
 #include "shaders/render/exa_wm_write.g7b"
 };
 
+/* Programs for Haswell */
+static const uint32_t ps_kernel_static_gen7_haswell[][4] = {
+#include "shaders/render/exa_wm_src_affine.g7b"
+#include "shaders/render/exa_wm_src_sample_planar.g7b.haswell"
+#include "shaders/render/exa_wm_yuv_rgb.g7b"
+#include "shaders/render/exa_wm_write.g7b"
+};
+
 #define SURFACE_STATE_PADDED_SIZE_I965  ALIGN(sizeof(struct i965_surface_state), 32)
 #define SURFACE_STATE_PADDED_SIZE_GEN7  ALIGN(sizeof(struct gen7_surface_state), 32)
 #define SURFACE_STATE_PADDED_SIZE       MAX(SURFACE_STATE_PADDED_SIZE_I965, SURFACE_STATE_PADDED_SIZE_GEN7)
@@ -243,6 +251,31 @@ static struct i965_kernel render_kernels_gen7[] = {
         PS_KERNEL,
         ps_kernel_static_gen7,
         sizeof(ps_kernel_static_gen7),
+        NULL
+    },
+
+    {
+        "PS_SUBPIC",
+        PS_SUBPIC_KERNEL,
+        ps_subpic_kernel_static_gen7,
+        sizeof(ps_subpic_kernel_static_gen7),
+        NULL
+    }
+};
+
+static struct i965_kernel render_kernels_gen7_haswell[] = {
+    {
+        "SF",
+        SF_KERNEL,
+        sf_kernel_static_gen7,
+        sizeof(sf_kernel_static_gen7),
+        NULL
+    },
+    {
+        "PS",
+        PS_KERNEL,
+        ps_kernel_static_gen7_haswell,
+        sizeof(ps_kernel_static_gen7_haswell),
         NULL
     },
 
@@ -3035,7 +3068,9 @@ i965_render_init(VADriverContextP ctx)
                                  sizeof(render_kernels_gen6[0])));
 
     if (IS_GEN7(i965->intel.device_id))
-        memcpy(render_state->render_kernels, render_kernels_gen7, sizeof(render_state->render_kernels));
+        memcpy(render_state->render_kernels,
+               (IS_HASWELL(i965->intel.device_id) ? render_kernels_gen7_haswell : render_kernels_gen7),
+               sizeof(render_state->render_kernels));
     else if (IS_GEN6(i965->intel.device_id))
         memcpy(render_state->render_kernels, render_kernels_gen6, sizeof(render_state->render_kernels));
     else if (IS_IRONLAKE(i965->intel.device_id))
