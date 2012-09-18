@@ -46,6 +46,9 @@ struct gen6_encoder_context
     struct gen6_mfc_context mfc_context;
 };
 
+extern struct hw_context *
+gen75_enc_hw_context_init(VADriverContextP ctx, VAProfile profile);
+
 #endif	/* _I965_ENCODER_H_ */
 
 

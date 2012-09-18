@@ -86,4 +86,11 @@ VAStatus gen6_vme_pipeline(VADriverContextP ctx,
 Bool gen6_vme_context_init(VADriverContextP ctx, struct gen6_vme_context *vme_context);
 Bool gen6_vme_context_destroy(struct gen6_vme_context *vme_context);
 
+VAStatus gen75_vme_pipeline(VADriverContextP ctx,
+                           VAProfile profile,
+                           struct encode_state *encode_state,
+                           struct gen6_encoder_context *gen6_encoder_context);
+
+Bool gen75_vme_context_init(VADriverContextP ctx, struct gen6_vme_context *vme_context);
+Bool gen75_vme_context_destroy(struct gen6_vme_context *vme_context);
 #endif /* _GEN6_VME_H_ */

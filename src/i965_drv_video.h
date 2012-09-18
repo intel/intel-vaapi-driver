@@ -276,4 +276,11 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
                             unsigned int fourcc,
                             unsigned int subsampling);
 
+
+extern VAStatus i965_MapBuffer(VADriverContextP ctx,
+		VABufferID buf_id,       /* in */
+		void **pbuf);            /* out */
+
+extern VAStatus i965_UnmapBuffer(VADriverContextP ctx, VABufferID buf_id);
+
 #endif /* _I965_DRV_VIDEO_H_ */

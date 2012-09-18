@@ -37,6 +37,8 @@
 #include "i965_defines.h"
 #include "i965_drv_video.h"
 #include "i965_encoder.h"
+#include "gen6_vme.h"
+#include "gen6_mfc.h"
 
 static void 
 gen6_encoder_end_picture(VADriverContextP ctx, 
@@ -76,6 +78,49 @@ gen6_enc_hw_context_init(VADriverContextP ctx, VAProfile profile)
 
     gen6_vme_context_init(ctx, &gen6_encoder_context->vme_context);
     gen6_mfc_context_init(ctx, &gen6_encoder_context->mfc_context);
+
+    return (struct hw_context *)gen6_encoder_context;
+}
+
+static void 
+gen75_encoder_end_picture(VADriverContextP ctx, 
+                         VAProfile profile, 
+                         union codec_state *codec_state,
+                         struct hw_context *hw_context)
+{
+    struct gen6_encoder_context *gen6_encoder_context = (struct gen6_encoder_context *)hw_context;
+    struct encode_state *encode_state = &codec_state->encode;
+    VAStatus vaStatus;
+
+    vaStatus = gen75_vme_pipeline(ctx, profile, encode_state, gen6_encoder_context);
+
+    if (vaStatus == VA_STATUS_SUCCESS)
+        gen75_mfc_pipeline(ctx, profile, encode_state, gen6_encoder_context);
+}
+static void
+gen75_encoder_context_destroy(void *hw_context)
+{
+    struct gen6_encoder_context *gen6_encoder_context = (struct gen6_encoder_context *)hw_context;
+
+    gen75_mfc_context_destroy(&gen6_encoder_context->mfc_context);
+    gen75_vme_context_destroy(&gen6_encoder_context->vme_context);
+    intel_batchbuffer_free(gen6_encoder_context->base.batch);
+    free(gen6_encoder_context);
+}
+
+
+struct hw_context *
+gen75_enc_hw_context_init(VADriverContextP ctx, VAProfile profile)
+{
+    struct intel_driver_data *intel = intel_driver_data(ctx);
+    struct gen6_encoder_context *gen6_encoder_context = calloc(1, sizeof(struct gen6_encoder_context));
+
+    gen6_encoder_context->base.destroy = gen75_encoder_context_destroy;
+    gen6_encoder_context->base.run = gen75_encoder_end_picture;
+    gen6_encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+
+    gen75_vme_context_init(ctx, &gen6_encoder_context->vme_context);
+    gen75_mfc_context_init(ctx, &gen6_encoder_context->mfc_context);
 
     return (struct hw_context *)gen6_encoder_context;
 }

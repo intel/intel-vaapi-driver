@@ -42,6 +42,7 @@
 #include "intel_batchbuffer.h"
 #include "i965_defines.h"
 #include "i965_drv_video.h"
+#include "i965_encoder.h"
 
 #define CONFIG_ID_OFFSET                0x01000000
 #define CONTEXT_ID_OFFSET               0x02000000
@@ -200,6 +201,13 @@ extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, VAProfile);
 static struct hw_codec_info gen7_hw_codec_info = {
     .dec_hw_context_init = gen7_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
+    .max_width = 4096,
+    .max_height = 4096,
+};
+
+static struct hw_codec_info gen75_hw_codec_info = {
+    .dec_hw_context_init = gen7_dec_hw_context_init,
+    .enc_hw_context_init = gen75_enc_hw_context_init,
     .max_width = 4096,
     .max_height = 4096,
 };
@@ -1706,7 +1714,9 @@ i965_Init(VADriverContextP ctx)
     if (intel_driver_init(ctx) == False)
         return VA_STATUS_ERROR_UNKNOWN;
 
-    if (IS_G4X(i965->intel.device_id))
+    if (IS_HASWELL(i965->intel.device_id))
+	i965->codec_info = &gen75_hw_codec_info;
+    else if (IS_G4X(i965->intel.device_id))
         i965->codec_info = &g4x_hw_codec_info;
     else if (IS_IRONLAKE(i965->intel.device_id))
         i965->codec_info = &ironlake_hw_codec_info;

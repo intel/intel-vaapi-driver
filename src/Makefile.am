@@ -51,6 +51,8 @@ source_c = \
 	gen6_mfd.c		\
 	gen6_vme.c		\
 	gen7_mfd.c		\
+	gen75_vme.c		\
+	gen75_mfc.c		\
 	i965_avc_bsd.c		\
 	i965_avc_hw_scoreboard.c\
 	i965_avc_ildb.c		\

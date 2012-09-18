@@ -103,4 +103,12 @@ gen6_mfc_pipeline(VADriverContextP ctx,
 Bool gen6_mfc_context_init(VADriverContextP ctx, struct gen6_mfc_context *mfc_context);
 Bool gen6_mfc_context_destroy(struct gen6_mfc_context *mfc_context);
 
+VAStatus 
+gen75_mfc_pipeline(VADriverContextP ctx,
+                  VAProfile profile,
+                  struct encode_state *encode_state,
+                  struct gen6_encoder_context *gen6_encoder_context);
+Bool gen75_mfc_context_init(VADriverContextP ctx, struct gen6_mfc_context *mfc_context);
+Bool gen75_mfc_context_destroy(struct gen6_mfc_context *mfc_context);
+
 #endif	/* _GEN6_MFC_BCS_H_ */
