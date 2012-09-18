@@ -695,6 +695,16 @@ gen7_render_set_surface_tiling(struct gen7_surface_state *ss, uint32_t tiling)
    }
 }
 
+/* Set "Shader Channel Select" */
+static void
+gen7_render_set_surface_scs(struct gen7_surface_state *ss)
+{
+    ss->ss7.shader_chanel_select_r = HSW_SCS_RED;
+    ss->ss7.shader_chanel_select_g = HSW_SCS_GREEN;
+    ss->ss7.shader_chanel_select_b = HSW_SCS_BLUE;
+    ss->ss7.shader_chanel_select_a = HSW_SCS_ALPHA;
+}
+
 static void
 gen7_render_set_surface_state(
     struct gen7_surface_state *ss,
@@ -765,6 +775,8 @@ i965_render_src_surface_state(
                                       region, offset,
                                       w, h,
                                       pitch, format, flags);
+        if (IS_HASWELL(i965->intel.device_id))
+            gen7_render_set_surface_scs(ss);
         dri_bo_emit_reloc(ss_bo,
                           I915_GEM_DOMAIN_SAMPLER, 0,
                           offset,
@@ -888,6 +900,8 @@ i965_render_dest_surface_state(VADriverContextP ctx, int index)
                                       dest_region->bo, 0,
                                       dest_region->width, dest_region->height,
                                       dest_region->pitch, format, 0);
+        if (IS_HASWELL(i965->intel.device_id))
+            gen7_render_set_surface_scs(ss);
         dri_bo_emit_reloc(ss_bo,
                           I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                           0,

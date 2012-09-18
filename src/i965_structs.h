@@ -1195,7 +1195,11 @@ struct gen7_surface_state
 
     struct {
         unsigned int resource_min_lod:12;
-        unsigned int pad0:16;
+        unsigned int pad0:4;
+        unsigned int shader_chanel_select_a:3;
+        unsigned int shader_chanel_select_b:3;
+        unsigned int shader_chanel_select_g:3;
+        unsigned int shader_chanel_select_r:3;
         unsigned int alpha_clear_color:1;
         unsigned int blue_clear_color:1;
         unsigned int green_clear_color:1;
