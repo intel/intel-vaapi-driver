@@ -546,6 +546,7 @@ i965_CreateSurfaces(VADriverContextP ctx,
 	        obj_surface->width = ALIGN(width, 128);
         	obj_surface->height = ALIGN(height, 32);
 	}
+
         obj_surface->flags = SURFACE_REFERENCED;
         obj_surface->fourcc = 0;
         obj_surface->bo = NULL;
