@@ -2425,6 +2425,10 @@ gen7_emit_urb(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965->batch;
+    unsigned int num_urb_entries = 32;
+
+    if (IS_HASWELL(i965->intel.device_id))
+        num_urb_entries = 64;
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS | (2 - 2));
@@ -2434,7 +2438,7 @@ gen7_emit_urb(VADriverContextP ctx)
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN7_3DSTATE_URB_VS | (2 - 2));
     OUT_BATCH(batch, 
-              (32 << GEN7_URB_ENTRY_NUMBER_SHIFT) | /* at least 32 */
+              (num_urb_entries << GEN7_URB_ENTRY_NUMBER_SHIFT) |
               (2 - 1) << GEN7_URB_ENTRY_SIZE_SHIFT |
               (1 << GEN7_URB_STARTING_ADDRESS_SHIFT));
    ADVANCE_BATCH(batch);
