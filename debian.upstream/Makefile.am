@@ -3,7 +3,7 @@ DEBIANFILES = \
 	compat					\
 	control.in				\
 	copyright				\
-	libva-driver-intel.install		\
+	libva-intel-driver.install		\
 	rules					\
 	$(NULL)
 
