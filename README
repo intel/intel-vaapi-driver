@@ -1,5 +1,5 @@
 
-  libva-driver-intel
+  libva-intel-driver
   VA driver for Intel G45 & HD Graphics family
 
   Copyright (C) 2009-2011 Intel Corporation
@@ -14,7 +14,7 @@ Please read the COPYING file available in this package.
 Overview
 --------
 
-libva-driver-intel is the VA-API implementation for Intel G45 chipsets
+libva-intel-driver is the VA-API implementation for Intel G45 chipsets
 and Intel HD Graphics for Intel Core processor family.
 
 Platform definitions:

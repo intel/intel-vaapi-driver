@@ -18,7 +18,7 @@ m4_define([libdrm_version], [2.4.23])
 
 AC_PREREQ([2.57])
 AC_INIT([intel_driver], [intel_driver_version], [haihao.xiang@intel.com],
-        [libva-driver-intel])
+        [libva-intel-driver])
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_INIT_AUTOMAKE([1.9 tar-ustar])
 
