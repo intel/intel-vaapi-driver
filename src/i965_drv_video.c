@@ -536,8 +536,13 @@ i965_CreateSurfaces(VADriverContextP ctx,
         obj_surface->orig_width = width;
         obj_surface->orig_height = height;
 
-        obj_surface->width = ALIGN(width, 16);
-        obj_surface->height = ALIGN(height, 16);
+	if (IS_G4X(i965->intel.device_id) || IS_IRONLAKE(i965->intel.device_id)) {
+	        obj_surface->width = ALIGN(width, 16);
+        	obj_surface->height = ALIGN(height, 16);
+	} else {
+	        obj_surface->width = ALIGN(width, 128);
+        	obj_surface->height = ALIGN(height, 32);
+	}
         obj_surface->flags = SURFACE_REFERENCED;
         obj_surface->fourcc = 0;
         obj_surface->bo = NULL;
