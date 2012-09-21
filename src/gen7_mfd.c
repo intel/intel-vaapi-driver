@@ -1633,8 +1633,19 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
 
     if (picture_type == GEN7_VC1_I_PICTURE || picture_type == GEN7_VC1_BI_PICTURE) /* I picture */
         trans_ac_y = pic_param->transform_fields.bits.transform_ac_codingset_idx2;
-    else
+    else {
         trans_ac_y = pic_param->transform_fields.bits.transform_ac_codingset_idx1;
+        /*
+         * 8.3.6.2.1 Transform Type Selection
+         * If variable-sized transform coding is not enabled,
+         * then the 8x8 transform shall be used for all blocks.
+         * it is also MFX_VC1_PIC_STATE requirement.
+         */
+        if (pic_param->transform_fields.bits.variable_sized_transform_flag == 0) {
+            pic_param->transform_fields.bits.mb_level_transform_type_flag   = 1;
+            pic_param->transform_fields.bits.frame_level_transform_type     = 0;
+        }
+    }
 
 
     if (picture_type == GEN7_VC1_B_PICTURE) {
