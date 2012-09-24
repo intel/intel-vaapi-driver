@@ -400,3 +400,68 @@ build_avc_sei_pic_timing(unsigned int cpb_removal_length, unsigned int cpb_remov
 }
 
 
+int 
+build_avc_sei_buffer_timing(unsigned int init_cpb_removal_length,
+				unsigned int init_cpb_removal_delay,
+				unsigned int init_cpb_removal_delay_offset,
+				unsigned int cpb_removal_length,
+				unsigned int cpb_removal_delay,
+				unsigned int dpb_output_length,
+				unsigned int dpb_output_delay,
+				unsigned char **sei_buffer)
+{
+    unsigned char *byte_buf;
+    int bp_byte_size, i, pic_byte_size;
+
+    avc_bitstream nal_bs;
+    avc_bitstream sei_bp_bs, sei_pic_bs;
+
+    avc_bitstream_start(&sei_bp_bs);
+    avc_bitstream_put_ue(&sei_bp_bs, 0);       /*seq_parameter_set_id*/
+    avc_bitstream_put_ui(&sei_bp_bs, init_cpb_removal_delay, cpb_removal_length); 
+    avc_bitstream_put_ui(&sei_bp_bs, init_cpb_removal_delay_offset, cpb_removal_length); 
+    if ( sei_bp_bs.bit_offset & 0x7) {
+        avc_bitstream_put_ui(&sei_bp_bs, 1, 1);
+    }
+    avc_bitstream_end(&sei_bp_bs);
+    bp_byte_size = (sei_bp_bs.bit_offset + 7) / 8;
+    
+    avc_bitstream_start(&sei_pic_bs);
+    avc_bitstream_put_ui(&sei_pic_bs, cpb_removal_delay, cpb_removal_length); 
+    avc_bitstream_put_ui(&sei_pic_bs, dpb_output_delay, dpb_output_length); 
+    if ( sei_pic_bs.bit_offset & 0x7) {
+        avc_bitstream_put_ui(&sei_pic_bs, 1, 1);
+    }
+    avc_bitstream_end(&sei_pic_bs);
+    pic_byte_size = (sei_pic_bs.bit_offset + 7) / 8;
+    
+    avc_bitstream_start(&nal_bs);
+    nal_start_code_prefix(&nal_bs);
+    nal_header(&nal_bs, NAL_REF_IDC_NONE, NAL_SEI);
+
+	/* Write the SEI buffer period data */    
+    avc_bitstream_put_ui(&nal_bs, 0, 8);
+    avc_bitstream_put_ui(&nal_bs, bp_byte_size, 8);
+    
+    byte_buf = (unsigned char *)sei_bp_bs.buffer;
+    for(i = 0; i < bp_byte_size; i++) {
+        avc_bitstream_put_ui(&nal_bs, byte_buf[i], 8);
+    }
+    free(byte_buf);
+	/* write the SEI timing data */
+    avc_bitstream_put_ui(&nal_bs, 0x01, 8);
+    avc_bitstream_put_ui(&nal_bs, pic_byte_size, 8);
+    
+    byte_buf = (unsigned char *)sei_pic_bs.buffer;
+    for(i = 0; i < pic_byte_size; i++) {
+        avc_bitstream_put_ui(&nal_bs, byte_buf[i], 8);
+    }
+    free(byte_buf);
+
+    avc_rbsp_trailing_bits(&nal_bs);
+    avc_bitstream_end(&nal_bs);
+
+    *sei_buffer = (unsigned char *)nal_bs.buffer; 
+   
+    return nal_bs.bit_offset;
+}

@@ -393,6 +393,7 @@ void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
 
     if (encode_state->packed_header_data[idx]) {
         VAEncPackedHeaderParameterBuffer *param = NULL;
@@ -459,6 +460,31 @@ void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
                                    0,
                                    !param->has_emulation_bytes,
                                    slice_batch);
+    } else if (rate_control_mode == VA_RC_CBR) {
+        // this is frist AU
+        struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+
+        unsigned char *sei_data = NULL;
+    
+        int length_in_bits = build_avc_sei_buffer_timing(
+			mfc_context->vui_hrd.i_initial_cpb_removal_delay_length,
+			mfc_context->vui_hrd.i_initial_cpb_removal_delay,
+			0,
+			mfc_context->vui_hrd.i_cpb_removal_delay_length,                                                       mfc_context->vui_hrd.i_cpb_removal_delay * mfc_context->vui_hrd.i_frame_number,
+			mfc_context->vui_hrd.i_dpb_output_delay_length,
+			0,
+			&sei_data);
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   (unsigned int *)sei_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   4,   
+                                   0,   
+                                   0,   
+                                   1,
+                                   slice_batch);  
+        free(sei_data);
     }
 }
 
