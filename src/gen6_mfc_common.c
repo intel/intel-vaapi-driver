@@ -386,3 +386,79 @@ void intel_mfc_brc_prepare(struct encode_state *encode_state,
     }
 }
 
+void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
+                                                    struct encode_state *encode_state,
+                                                    struct intel_encoder_context *encoder_context,
+                                                    struct intel_batchbuffer *slice_batch)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
+
+    if (encode_state->packed_header_data[idx]) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+        unsigned int length_in_bits;
+
+        assert(encode_state->packed_header_param[idx]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+        length_in_bits = param->bit_length;
+
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   5,   /* FIXME: check it */
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   slice_batch);
+    }
+
+    idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_PPS);
+
+    if (encode_state->packed_header_data[idx]) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+        unsigned int length_in_bits;
+
+        assert(encode_state->packed_header_param[idx]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+        length_in_bits = param->bit_length;
+
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   5, /* FIXME: check it */
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   slice_batch);
+    }
+    
+    idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SEI);
+
+    if (encode_state->packed_header_data[idx]) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+        unsigned int length_in_bits;
+
+        assert(encode_state->packed_header_param[idx]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+        length_in_bits = param->bit_length;
+
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   5, /* FIXME: check it */
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   slice_batch);
+    }
+}
+

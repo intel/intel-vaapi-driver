@@ -250,4 +250,9 @@ extern int intel_mfc_interlace_check(VADriverContextP ctx,
 
 extern void intel_mfc_brc_prepare(struct encode_state *encode_state,
                           struct intel_encoder_context *encoder_context);
+
+extern void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
+                                                    struct encode_state *encode_state,
+                                                    struct intel_encoder_context *encoder_context,
+                                                    struct intel_batchbuffer *slice_batch);
 #endif	/* _GEN6_MFC_BCS_H_ */

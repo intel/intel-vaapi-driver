@@ -1145,82 +1145,6 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
 }
 
 
-static void gen75_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
-                                                    struct encode_state *encode_state,
-                                                    struct intel_encoder_context *encoder_context,
-                                                    struct intel_batchbuffer *slice_batch)
-{
-    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
-
-    if (encode_state->packed_header_data[idx]) {
-        VAEncPackedHeaderParameterBuffer *param = NULL;
-        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
-        unsigned int length_in_bits;
-
-        assert(encode_state->packed_header_param[idx]);
-        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
-        length_in_bits = param->bit_length;
-
-        mfc_context->insert_object(ctx,
-                                   encoder_context,
-                                   header_data,
-                                   ALIGN(length_in_bits, 32) >> 5,
-                                   length_in_bits & 0x1f,
-                                   5,   /* FIXME: check it */
-                                   0,
-                                   0,
-                                   !param->has_emulation_bytes,
-                                   slice_batch);
-    }
-
-    idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_PPS);
-
-    if (encode_state->packed_header_data[idx]) {
-        VAEncPackedHeaderParameterBuffer *param = NULL;
-        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
-        unsigned int length_in_bits;
-
-        assert(encode_state->packed_header_param[idx]);
-        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
-        length_in_bits = param->bit_length;
-
-        mfc_context->insert_object(ctx,
-                                   encoder_context,
-                                   header_data,
-                                   ALIGN(length_in_bits, 32) >> 5,
-                                   length_in_bits & 0x1f,
-                                   5, /* FIXME: check it */
-                                   0,
-                                   0,
-                                   !param->has_emulation_bytes,
-                                   slice_batch);
-    }
-    
-    idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SEI);
-
-    if (encode_state->packed_header_data[idx]) {
-        VAEncPackedHeaderParameterBuffer *param = NULL;
-        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
-        unsigned int length_in_bits;
-
-        assert(encode_state->packed_header_param[idx]);
-        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
-        length_in_bits = param->bit_length;
-
-        mfc_context->insert_object(ctx,
-                                   encoder_context,
-                                   header_data,
-                                   ALIGN(length_in_bits, 32) >> 5,
-                                   length_in_bits & 0x1f,
-                                   5, /* FIXME: check it */
-                                   0,
-                                   0,
-                                   !param->has_emulation_bytes,
-                                   slice_batch);
-    }
-}
-
 #ifdef MFC_SOFTWARE_HASWELL
 
 static int
@@ -1386,7 +1310,7 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                              (rate_control_mode == VA_RC_CBR), qp, slice_batch);
 
     if ( slice_index == 0) 
-        gen75_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
+        intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
 
     slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 
@@ -1766,7 +1690,7 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                              slice_batch);
 
     if (slice_index == 0)
-        gen75_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
+        intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
 
     slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 
