@@ -322,6 +322,17 @@
 
 #define MFD_JPEG_BSD_OBJECT                     MFX(2, 7, 1, 8)
 
+#define VEB(pipeline, op, sub_opa, sub_opb)     \
+     (3 << 29 |                                 \
+     (pipeline) << 27 |                         \
+     (op) << 24 |                               \
+     (sub_opa) << 21 |                          \
+     (sub_opb) << 16)
+
+#define VEB_SURFACE_STATE                       VEB(2, 4, 0, 0)
+#define VEB_STATE                               VEB(2, 4, 0, 2)
+#define VEB_DNDI_IECP_STATE                     VEB(2, 4, 0, 3)
+
 #define I965_DEPTHFORMAT_D32_FLOAT              1
 
 #define BASE_ADDRESS_MODIFY             (1 << 0)

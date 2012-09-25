@@ -70,11 +70,12 @@ int intel_batchbuffer_check_free_space(struct intel_batchbuffer *batch, int size
 #define BEGIN_BATCH(batch, n)           __BEGIN_BATCH(batch, n, I915_EXEC_RENDER)
 #define BEGIN_BLT_BATCH(batch, n)       __BEGIN_BATCH(batch, n, I915_EXEC_BLT)
 #define BEGIN_BCS_BATCH(batch, n)       __BEGIN_BATCH(batch, n, I915_EXEC_BSD)
-
+#define BEGIN_VEB_BATCH(batch, n)       __BEGIN_BATCH(batch, n, I915_EXEC_VEBOX)
 
 #define OUT_BATCH(batch, d)             __OUT_BATCH(batch, d)
 #define OUT_BLT_BATCH(batch, d)         __OUT_BATCH(batch, d)
 #define OUT_BCS_BATCH(batch, d)         __OUT_BATCH(batch, d)
+#define OUT_VEB_BATCH(batch, d)         __OUT_BATCH(batch, d)
 
 #define OUT_RELOC(batch, bo, read_domains, write_domain, delta) \
     __OUT_RELOC(batch, bo, read_domains, write_domain, delta)
@@ -86,5 +87,6 @@ int intel_batchbuffer_check_free_space(struct intel_batchbuffer *batch, int size
 #define ADVANCE_BATCH(batch)            __ADVANCE_BATCH(batch)
 #define ADVANCE_BLT_BATCH(batch)        __ADVANCE_BATCH(batch)
 #define ADVANCE_BCS_BATCH(batch)        __ADVANCE_BATCH(batch)
+#define ADVANCE_VEB_BATCH(batch)        __ADVANCE_BATCH(batch)
 
 #endif /* _INTEL_BATCHBUFFER_H_ */
