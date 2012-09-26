@@ -2243,7 +2243,8 @@ i965_post_processing(
                                               PP_NV12_DNDI);
             }
 
-            if (flags & I965_PP_FLAG_AVS) {
+            if (flags & I965_PP_FLAG_AVS ||
+                flags & I965_PP_FLAG_SCALING) {
                 struct i965_render_state *render_state = &i965->render_state;
                 struct intel_region *dest_region = render_state->draw_region;
 
@@ -2259,11 +2260,18 @@ i965_post_processing(
                 assert(status == VA_STATUS_SUCCESS);
                 obj_surface = SURFACE(out_surface_id);
                 i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-                i965_post_processing_internal(ctx,
-                                              in_surface_id, out_surface_id,
-                                              src_rect, dst_rect,
-                                              PP_NV12_AVS);
 
+                if(flags & I965_PP_FLAG_SCALING){
+                    i965_post_processing_internal(ctx,
+                                                  in_surface_id, out_surface_id,
+                                                  src_rect, dst_rect,
+                                                  PP_NV12_SCALING);
+                }else {
+                    i965_post_processing_internal(ctx,
+                                                  in_surface_id, out_surface_id,
+                                                  src_rect, dst_rect,
+                                                  PP_NV12_AVS);
+                } 
                 if (in_surface_id != surface)
                     i965_DestroySurfaces(ctx, &in_surface_id, 1);
                 
