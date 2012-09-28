@@ -360,6 +360,9 @@ struct i965_post_processing_context
     int (*pp_x_steps)(void *private_context);
     int (*pp_y_steps)(void *private_context);
     int (*pp_set_block_parameter)(struct i965_post_processing_context *pp_context, int x, int y);
+ 
+    /* video process based on hsw vebox */ 
+    struct intel_vebox_context *pp_vebox_context;
 };
 
 VASurfaceID

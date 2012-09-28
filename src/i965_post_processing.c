@@ -36,6 +36,7 @@
 #include "i965_defines.h"
 #include "i965_structs.h"
 #include "i965_drv_video.h"
+#include "gen75_vpp_vebox.h"
 #include "i965_post_processing.h"
 #include "i965_render.h"
 
@@ -2177,6 +2178,29 @@ gen6_post_processing(
 }
 
 static void
+gen75_post_processing(
+    VADriverContextP   ctx,
+    VASurfaceID        in_surface_id,
+    VASurfaceID        out_surface_id,
+    const VARectangle *src_rect,
+    const VARectangle *dst_rect,
+    int                pp_index
+)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_post_processing_context *pp_context = i965->pp_context;
+    struct intel_vebox_context * vebox_ctx = pp_context->pp_vebox_context;
+
+    assert(pp_index == PP_NV12_DNDI);
+    
+    vebox_ctx->filters_mask    = VPP_DNDI_DI;
+    vebox_ctx->surface_input   = in_surface_id;
+    vebox_ctx->surface_output  = out_surface_id;
+  
+    gen75_vebox_process_picture(ctx, vebox_ctx);
+}
+
+static void
 i965_post_processing_internal(
     VADriverContextP   ctx,
     VASurfaceID        in_surface_id,
@@ -2188,11 +2212,15 @@ i965_post_processing_internal(
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (IS_GEN6(i965->intel.device_id) ||
-        IS_GEN7(i965->intel.device_id))
+    if(IS_HASWELL(i965->intel.device_id) && 
+        pp_index == PP_NV12_DNDI){
+        gen75_post_processing(ctx, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
+    }else if (IS_GEN6(i965->intel.device_id) ||
+              IS_GEN7(i965->intel.device_id)){
         gen6_post_processing(ctx, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
-    else
+    }else{
         ironlake_post_processing(ctx, in_surface_id, out_surface_id, src_rect, dst_rect, pp_index);
+    }
 }
 
 VAStatus 
@@ -2236,7 +2264,7 @@ i965_post_processing(
                                              &out_surface_id);
                 assert(status == VA_STATUS_SUCCESS);
                 obj_surface = SURFACE(out_surface_id);
-                i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+                i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
                 i965_post_processing_internal(ctx,
                                               in_surface_id, out_surface_id,
                                               src_rect, dst_rect,
@@ -2331,7 +2359,11 @@ i965_post_processing_terminate(VADriverContextP ctx)
                 dri_bo_unreference(pp_module->kernel.bo);
                 pp_module->kernel.bo = NULL;
             }
-
+   
+            if(IS_HASWELL(i965->intel.device_id)){
+                gen75_vebox_context_destroy(ctx, pp_context->pp_vebox_context);
+            }
+ 
             free(pp_context);
         }
 
@@ -2384,7 +2416,11 @@ i965_post_processing_init(VADriverContextP ctx)
                 dri_bo_subdata(pp_module->kernel.bo, 0, pp_module->kernel.size, pp_module->kernel.bin);
             }
         }
+        
+        if(IS_HASWELL(i965->intel.device_id)){
+            pp_context->pp_vebox_context = gen75_vebox_context_init(ctx);
+        }
     }
-
+    
     return True;
 }
