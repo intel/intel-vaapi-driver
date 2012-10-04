@@ -965,29 +965,29 @@ i965_fill_vertex_buffer(
     enum { X1, Y1, X2, Y2 };
 
     static const unsigned int g_rotation_indices[][6] = {
-        [VA_ROTATION_NONE] = { X1, Y1, X2, Y1, X2, Y2 },
+        [VA_ROTATION_NONE] = { X2, Y2, X1, Y2, X1, Y1 },
         [VA_ROTATION_90]   = { X2, Y1, X2, Y2, X1, Y2 },
-        [VA_ROTATION_180]  = { X2, Y2, X1, Y2, X1, Y1 },
+        [VA_ROTATION_180]  = { X1, Y1, X2, Y1, X2, Y2 },
         [VA_ROTATION_270]  = { X1, Y2, X1, Y1, X2, Y1 },
     };
 
     const unsigned int * const rotation_indices =
         g_rotation_indices[i965->rotation_attrib->value];
 
-    vb[0]  = tex_coords[X1]; /* top-left corner */
-    vb[1]  = tex_coords[Y1];
-    vb[2]  = vid_coords[rotation_indices[0]];
-    vb[3]  = vid_coords[rotation_indices[1]];
+    vb[0]  = tex_coords[rotation_indices[0]]; /* bottom-right corner */
+    vb[1]  = tex_coords[rotation_indices[1]];
+    vb[2]  = vid_coords[X2];
+    vb[3]  = vid_coords[Y2];
 
-    vb[4]  = tex_coords[X2]; /* top-right corner */
-    vb[5]  = tex_coords[Y1];
-    vb[6]  = vid_coords[rotation_indices[2]];
-    vb[7]  = vid_coords[rotation_indices[3]];
+    vb[4]  = tex_coords[rotation_indices[2]]; /* bottom-left corner */
+    vb[5]  = tex_coords[rotation_indices[3]];
+    vb[6]  = vid_coords[X1];
+    vb[7]  = vid_coords[Y2];
 
-    vb[8]  = tex_coords[X2]; /* bottom-right corner */
-    vb[9]  = tex_coords[Y2];
-    vb[10] = vid_coords[rotation_indices[4]];
-    vb[11] = vid_coords[rotation_indices[5]];
+    vb[8]  = tex_coords[rotation_indices[4]]; /* top-left corner */
+    vb[9]  = tex_coords[rotation_indices[5]];
+    vb[10] = vid_coords[X1];
+    vb[11] = vid_coords[Y1];
 
     dri_bo_subdata(i965->render_state.vb.vertex_buffer, 0, sizeof(vb), vb);
 }
