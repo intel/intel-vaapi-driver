@@ -121,7 +121,7 @@ endif
 i965_output_wayland.c: $(protocol_source_h)
 @wayland_scanner_rules@
 
-DIST_SUBDIRS = wayland
+DIST_SUBDIRS = $(SUBDIRS) wayland
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in
