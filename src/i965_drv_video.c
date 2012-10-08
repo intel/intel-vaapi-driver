@@ -229,9 +229,11 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileVC1Advanced;
     }
 
+#ifdef HAVE_VA_JPEG_DECODE
     if (HAS_JPEG(i965)) {
         profile_list[i++] = VAProfileJPEGBaseline;
     }
+#endif
 
     /* If the assert fails then I965_MAX_PROFILES needs to be bigger */
     assert(i <= I965_MAX_PROFILES);
@@ -1020,7 +1022,9 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAEncSequenceParameterBufferType:
     case VAEncPictureParameterBufferType:
     case VAEncSliceParameterBufferType:
-    case VAHuffmanTableBufferType:
+#ifdef HAVE_VA_JPEG_DECODE
+     case VAHuffmanTableBufferType:
+#endif
         /* Ok */
         break;
 
@@ -1368,9 +1372,11 @@ i965_decoder_render_picture(VADriverContextP ctx,
             vaStatus = I965_RENDER_DECODE_BUFFER(slice_data);
             break;
 
+#ifdef HAVE_VA_JPEG_DECODE
         case VAHuffmanTableBufferType:
             vaStatus = I965_RENDER_DECODE_BUFFER(huffman_table);
             break;
+#endif
 
         default:
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;

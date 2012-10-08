@@ -1923,6 +1923,7 @@ gen7_mfd_vc1_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_flush(batch);
 }
 
+#ifdef HAVE_VA_JPEG_DECODE
 static void
 gen7_mfd_jpeg_decode_init(VADriverContextP ctx,
                           struct decode_state *decode_state,
@@ -2705,6 +2706,7 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
 }
+#endif
 
 static void 
 gen7_mfd_decode_picture(VADriverContextP ctx, 
@@ -2738,9 +2740,11 @@ gen7_mfd_decode_picture(VADriverContextP ctx,
         gen7_mfd_vc1_decode_picture(ctx, decode_state, gen7_mfd_context);
         break;
 
+#ifdef HAVE_VA_JPEG_DECODE
     case VAProfileJPEGBaseline:
         gen7_mfd_jpeg_decode_picture(ctx, decode_state, gen7_mfd_context);
         break;
+#endif
 
     default:
         assert(0);

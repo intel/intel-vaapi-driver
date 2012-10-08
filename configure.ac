@@ -10,8 +10,8 @@ m4_append([intel_driver_version], intel_driver_pre_version, [.pre])
 ])
 
 # libva minimum version requirement
-m4_define([libva_package_version], [1.0.16])
-m4_define([va_api_version], [0.32.1])
+m4_define([libva_package_version], [1.0.14])
+m4_define([va_api_version], [0.32.0])
 
 # libdrm minimum version requirement
 m4_define([libdrm_version], [2.4.23])
@@ -162,6 +162,30 @@ AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
 m4_ifdef([WAYLAND_SCANNER_RULES],
     [WAYLAND_SCANNER_RULES(['$(top_srcdir)/src/wayland'])],
     [wayland_scanner_rules=""; AC_SUBST(wayland_scanner_rules)])
+
+dnl Check for JPEG decoding API
+AC_CACHE_CHECK([for JPEG decoding API], ac_cv_have_va_jpeg_decode, [
+    saved_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $LIBVA_DEPS_CFLAGS"
+    saved_LIBS="$LIBS"
+    LIBS="$LIBS $LIBVA_DEPS_LIBS"
+    AC_COMPILE_IFELSE(
+        [AC_LANG_PROGRAM(
+            [[#include <va/va.h>]],
+            [[VAPictureParameterBufferJPEGBaseline pic_param;
+              VASliceParameterBufferJPEGBaseline slice_param;
+              VAHuffmanTableBufferJPEGBaseline huffman_table;
+              VAIQMatrixBufferJPEGBaseline iq_matrix;]])],
+            [ac_cv_have_va_jpeg_decode="yes"],
+            [ac_cv_have_va_jpeg_decode="no"]
+    )
+    CPPFLAGS="$saved_CPPFLAGS"
+    LIBS="$saved_LIBS"
+])
+if test "$ac_cv_have_va_jpeg_decode" = "yes"; then
+    AC_DEFINE(HAVE_VA_JPEG_DECODE, 1,
+        [Defined to 1 if VA-API exposes JPEG decoding])
+fi
 
 AC_OUTPUT([
     Makefile
