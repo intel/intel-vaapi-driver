@@ -22,10 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "config.h"
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+#include "sysdeps.h"
 #include <va/va_dricommon.h>
 #include "i965_drv_video.h"
 #include "i965_output_dri.h"

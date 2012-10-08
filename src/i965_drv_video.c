@@ -27,12 +27,7 @@
  *
  */
 
-#include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
+#include "sysdeps.h"
 
 #ifdef HAVE_VA_X11
 # include "i965_output_dri.h"

@@ -96,6 +96,7 @@ source_h = \
 	intel_driver.h          \
 	intel_memman.h          \
 	object_heap.h           \
+	sysdeps.h		\
 	va_backend_compat.h	\
 	$(NULL)
 
