@@ -87,6 +87,7 @@
 #define HAS_ACCELERATED_PUTIMAGE(ctx)   HAS_VPP(ctx)
 static int get_sampling_from_fourcc(unsigned int fourcc);
 
+#if VA_CHECK_VERSION(0,33,0)
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */
 #define IS_VA_X11(ctx) \
     (((ctx)->display_type & VA_DISPLAY_MAJOR_MASK) == VA_DISPLAY_X11)
@@ -94,6 +95,11 @@ static int get_sampling_from_fourcc(unsigned int fourcc);
 /* Check whether we are rendering to Wayland */
 #define IS_VA_WAYLAND(ctx) \
     (((ctx)->display_type & VA_DISPLAY_MAJOR_MASK) == VA_DISPLAY_WAYLAND)
+#else
+/* Previous VA-API versions only supported VA/X11 (and VA/GLX) API */
+#define IS_VA_X11(ctx)          1
+#define IS_VA_WAYLAND(ctx)      0
+#endif
 
 enum {
     I965_SURFACETYPE_RGBA = 1,

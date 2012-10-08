@@ -10,6 +10,7 @@
 #include <intel_bufmgr.h>
 
 #include <va/va_backend.h>
+#include "va_backend_compat.h"
 
 #include "intel_compiler.h"
 

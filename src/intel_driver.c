@@ -29,8 +29,6 @@
 
 #include <assert.h>
 
-#include <va/va_drmcommon.h>
-
 #include "intel_batchbuffer.h"
 #include "intel_memman.h"
 #include "intel_driver.h"
@@ -54,13 +52,13 @@ intel_driver_init(VADriverContextP ctx)
     int has_exec2, has_bsd, has_blt;
 
     assert(drm_state);
-    assert(drm_state->auth_type == VA_DRM_AUTH_DRI1 ||
-           drm_state->auth_type == VA_DRM_AUTH_DRI2 ||
-           drm_state->auth_type == VA_DRM_AUTH_CUSTOM);
+    assert(VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI1) ||
+           VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2) ||
+           VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_CUSTOM));
 
     intel->fd = drm_state->fd;
-    intel->dri2Enabled = (drm_state->auth_type == VA_DRM_AUTH_DRI2 ||
-                          drm_state->auth_type == VA_DRM_AUTH_CUSTOM);
+    intel->dri2Enabled = (VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2) ||
+                          VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_CUSTOM));
 
     if (!intel->dri2Enabled) {
         return False;
