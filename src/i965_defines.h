@@ -296,6 +296,7 @@
 #define MFX_AVC_REF_IDX_STATE                   MFX(2, 1, 0, 4)
 #define MFX_AVC_WEIGHTOFFSET_STATE              MFX(2, 1, 0, 5)
 
+#define MFD_AVC_PICID_STATE                     MFX(2, 1, 1, 5)
 #define MFD_AVC_BSD_OBJECT                      MFX(2, 1, 1, 8)
 
 #define MFC_AVC_FQM_STATE                       MFX(2, 1, 2, 2)

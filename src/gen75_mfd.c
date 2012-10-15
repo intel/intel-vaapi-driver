@@ -784,6 +784,28 @@ gen75_mfd_avc_qm_state(VADriverContextP ctx,
     }
 }
 
+static void
+gen75_mfd_avc_picid_state(VADriverContextP ctx,
+                      struct decode_state *decode_state,
+                      struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 10);
+    OUT_BCS_BATCH(batch, MFD_AVC_PICID_STATE | (10 - 2));
+    OUT_BCS_BATCH(batch, 1); // disable Picture ID Remapping
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    ADVANCE_BCS_BATCH(batch);
+}
+
 
 static void
 gen75_mfd_avc_directmode_state_bplus(VADriverContextP ctx,
@@ -1302,6 +1324,7 @@ gen75_mfd_avc_decode_picture(VADriverContextP ctx,
     gen75_mfd_bsp_buf_base_addr_state(ctx, decode_state, MFX_FORMAT_AVC, gen7_mfd_context);
     gen75_mfd_avc_qm_state(ctx, decode_state, gen7_mfd_context);
     gen75_mfd_avc_img_state(ctx, decode_state, gen7_mfd_context);
+    gen75_mfd_avc_picid_state(ctx, decode_state, gen7_mfd_context);
 
     for (j = 0; j < decode_state->num_slice_params; j++) {
         assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
