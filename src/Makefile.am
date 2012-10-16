@@ -57,6 +57,7 @@ source_c = \
 	gen75_vme.c		\
 	gen75_mfc.c		\
 	gen75_vpp_vebox.c	\
+	gen75_vpp_gpe.c  	\
 	gen75_picture_process.c	\
 	i965_avc_bsd.c		\
 	i965_avc_hw_scoreboard.c\
@@ -86,6 +87,7 @@ source_h = \
 	gen6_vme.h		\
 	gen7_mfd.h		\
 	gen75_vpp_vebox.h	\
+	gen75_vpp_gpe.h 	\
 	gen75_picture_process.h	\
 	i965_avc_bsd.h		\
 	i965_avc_hw_scoreboard.h\

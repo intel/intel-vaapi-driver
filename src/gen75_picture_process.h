@@ -30,25 +30,26 @@
 
 #include <va/va_vpp.h>
 #include "i965_drv_video.h"
+#include "gen75_vpp_vebox.h"
+#include "gen75_vpp_gpe.h"
 
 struct intel_video_process_context
 {
     struct hw_context base;
     void* driver_context;
   
-    VASurfaceID surface_input;
-    VASurfaceID surface_output;
-
-    struct intel_vebox_context* vpp_vebox_ctx;
-    struct i965_proc_context *  vpp_fmt_cvt_ctx;
-    //struct intel_vpp_gpe_context *  vpp_gpe_ctx;
+    struct intel_vebox_context *vpp_vebox_ctx;
+    struct i965_proc_context   *vpp_fmt_cvt_ctx;
+    struct vpp_gpe_context     *vpp_gpe_ctx;
 
     VAProcPipelineParameterBuffer* pipeline_param;
-    unsigned int vpp_filter_flags;
+    VAProcFilterType filter_type;
 
+    VASurfaceID surface_render_output;
 };
 
 struct hw_context *
 gen75_proc_context_init(VADriverContextP ctx, struct object_config *obj_config);
 
 #endif
+
