@@ -72,11 +72,12 @@ void intel_batchbuffer_align(struct intel_batchbuffer *batch, unsigned int align
 #define BEGIN_BATCH(batch, n)           __BEGIN_BATCH(batch, n, I915_EXEC_RENDER)
 #define BEGIN_BLT_BATCH(batch, n)       __BEGIN_BATCH(batch, n, I915_EXEC_BLT)
 #define BEGIN_BCS_BATCH(batch, n)       __BEGIN_BATCH(batch, n, I915_EXEC_BSD)
-
+#define BEGIN_VEB_BATCH(batch, n)       __BEGIN_BATCH(batch, n, I915_EXEC_VEBOX)
 
 #define OUT_BATCH(batch, d)             __OUT_BATCH(batch, d)
 #define OUT_BLT_BATCH(batch, d)         __OUT_BATCH(batch, d)
 #define OUT_BCS_BATCH(batch, d)         __OUT_BATCH(batch, d)
+#define OUT_VEB_BATCH(batch, d)         __OUT_BATCH(batch, d)
 
 #define OUT_RELOC(batch, bo, read_domains, write_domain, delta) \
     __OUT_RELOC(batch, bo, read_domains, write_domain, delta)
@@ -88,5 +89,6 @@ void intel_batchbuffer_align(struct intel_batchbuffer *batch, unsigned int align
 #define ADVANCE_BATCH(batch)            __ADVANCE_BATCH(batch)
 #define ADVANCE_BLT_BATCH(batch)        __ADVANCE_BATCH(batch)
 #define ADVANCE_BCS_BATCH(batch)        __ADVANCE_BATCH(batch)
+#define ADVANCE_VEB_BATCH(batch)        __ADVANCE_BATCH(batch)
 
 #endif /* _INTEL_BATCHBUFFER_H_ */

@@ -39,7 +39,8 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch)
 
     assert(batch->flag == I915_EXEC_RENDER ||
            batch->flag == I915_EXEC_BLT ||
-           batch->flag == I915_EXEC_BSD);
+           batch->flag == I915_EXEC_BSD ||
+           batch->flag == I915_EXEC_VEBOX);
 
     dri_bo_unreference(batch->buffer);
     batch->buffer = dri_bo_alloc(intel->bufmgr, 
@@ -68,7 +69,8 @@ intel_batchbuffer_new(struct intel_driver_data *intel, int flag)
     struct intel_batchbuffer *batch = calloc(1, sizeof(*batch));
     assert(flag == I915_EXEC_RENDER ||
            flag == I915_EXEC_BSD ||
-           flag == I915_EXEC_BLT);
+           flag == I915_EXEC_BLT ||
+           flag == I915_EXEC_VEBOX);
 
     batch->intel = intel;
     batch->flag = flag;
@@ -188,6 +190,13 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
                 OUT_BLT_BATCH(batch, 0);
                 OUT_BLT_BATCH(batch, 0);
                 ADVANCE_BLT_BATCH(batch);
+            }else if (batch->flag == I915_EXEC_VEBOX) {
+                BEGIN_VEB_BATCH(batch, 4);
+                OUT_VEB_BATCH(batch, MI_FLUSH_DW);
+                OUT_VEB_BATCH(batch, 0);
+                OUT_VEB_BATCH(batch, 0);
+                OUT_VEB_BATCH(batch, 0);
+                ADVANCE_VEB_BATCH(batch);
             } else {
                 assert(batch->flag == I915_EXEC_BSD);
                 BEGIN_BCS_BATCH(batch, 4);
@@ -202,8 +211,8 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
         if (batch->flag == I915_EXEC_RENDER) {
             BEGIN_BATCH(batch, 1);
             OUT_BATCH(batch, MI_FLUSH | MI_FLUSH_STATE_INSTRUCTION_CACHE_INVALIDATE);
-            ADVANCE_BATCH(batch);
-        } else {
+            ADVANCE_BATCH(batch);		
+         } else {
             assert(batch->flag == I915_EXEC_BSD);
             BEGIN_BCS_BATCH(batch, 1);
             OUT_BCS_BATCH(batch, MI_FLUSH | MI_FLUSH_STATE_INSTRUCTION_CACHE_INVALIDATE);
@@ -230,7 +239,8 @@ intel_batchbuffer_check_batchbuffer_flag(struct intel_batchbuffer *batch, int fl
 {
     if (flag != I915_EXEC_RENDER &&
         flag != I915_EXEC_BLT &&
-        flag != I915_EXEC_BSD)
+        flag != I915_EXEC_BSD &&
+        flag != I915_EXEC_VEBOX)
         return;
 
     if (batch->flag == flag)
@@ -274,6 +284,13 @@ intel_batchbuffer_start_atomic_bcs(struct intel_batchbuffer *batch, unsigned int
 {
     intel_batchbuffer_start_atomic_helper(batch, I915_EXEC_BSD, size);
 }
+
+void
+intel_batchbuffer_start_atomic_veb(struct intel_batchbuffer *batch, unsigned int size)
+{
+    intel_batchbuffer_start_atomic_helper(batch, I915_EXEC_VEBOX, size);
+}
+
 
 void
 intel_batchbuffer_end_atomic(struct intel_batchbuffer *batch)
