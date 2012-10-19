@@ -4675,7 +4675,7 @@ static const int proc_frame_to_pp_frame[3] = {
     I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST
 };
 
-static void 
+void 
 i965_proc_picture(VADriverContextP ctx, 
                   VAProfile profile, 
                   union codec_state *codec_state,

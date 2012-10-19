@@ -225,10 +225,11 @@ static struct hw_codec_info gen7_hw_codec_info = {
     .max_height = 4096,
 };
 
+extern struct hw_context *gen75_proc_context_init(VADriverContextP, struct object_config *);
 static struct hw_codec_info gen75_hw_codec_info = {
     .dec_hw_context_init = gen75_dec_hw_context_init,
     .enc_hw_context_init = gen75_enc_hw_context_init,
-    .proc_hw_context_init = i965_proc_context_init,
+    .proc_hw_context_init = gen75_proc_context_init,
     .max_width = 4096,
     .max_height = 4096,
 };
@@ -627,8 +628,11 @@ i965_CreateSurfaces2(
         }
     }
 
-    /* support 420 & 422 format, 422 is only used for post-processing (including color conversion) */
-    if (VA_RT_FORMAT_YUV420 != format && VA_RT_FORMAT_YUV422 != format) {
+    /* support 420 & 422 & RGB32 format, 422 and RGB32 are only used
+     * for post-processing (including color conversion) */
+    if (VA_RT_FORMAT_YUV420 != format &&
+        VA_RT_FORMAT_YUV422 != format &&
+        VA_RT_FORMAT_RGB32  != format) {
         return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
     }
 
@@ -660,9 +664,11 @@ i965_CreateSurfaces2(
         if (expected_fourcc) {
             int tiling = HAS_TILED_SURFACE(i965);
 
-            if (expected_fourcc != VA_FOURCC('N', 'V', '1', '2'))
+            if (expected_fourcc != VA_FOURCC('N', 'V', '1', '2') &&
+                expected_fourcc != VA_FOURCC('R', 'G', 'B', 'X') &&
+                expected_fourcc != VA_FOURCC('R', 'G', 'B', 'A') )
                 tiling = 0;
-			// todo, should we disable tiling for 422 format?
+            // todo, should we disable tiling for 422 format?
 			
             if (VA_RT_FORMAT_YUV420 == format) {
                 obj_surface->subsampling = SUBSAMPLE_YUV420;
@@ -670,7 +676,10 @@ i965_CreateSurfaces2(
             else if (VA_RT_FORMAT_YUV422 == format) {
                 obj_surface->subsampling = SUBSAMPLE_YUV422H;
             }
-            else {
+            else if (VA_RT_FORMAT_RGB32 == format) {
+                obj_surface->subsampling = SUBSAMPLE_RGBX;
+            }
+             else {
                 assert(0);
             }
 
@@ -2493,7 +2502,9 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
                                                    &pitch,
                                                    0);
         assert(tiling_mode == I915_TILING_Y);
-        assert(pitch == obj_surface->width || pitch == obj_surface->width*2) ;
+        assert(pitch == obj_surface->width     || 
+               pitch == obj_surface->width * 2 ||
+               pitch == obj_surface->width * 4) ;
     } else {
         obj_surface->bo = dri_bo_alloc(i965->intel.bufmgr,
                                        "vaapi surface",
@@ -3860,6 +3871,12 @@ VAStatus i965_QueryVideoProcFilters(
         filters[i++] = VAProcFilterDeinterlacing;
     }
 
+    if(IS_HASWELL(i965->intel.device_id)){
+        filters[i++] = VAProcFilterNone;
+        filters[i++] = VAProcFilterColorBalance;
+        filters[i++] = VAProcFilterColorStandard;
+    }
+
     *num_filters = i;
 
     return VA_STATUS_SUCCESS;
@@ -3873,6 +3890,7 @@ VAStatus i965_QueryVideoProcFilterCaps(
     unsigned int       *num_filter_caps
     )
 {
+    struct i965_driver_data *const i965 = i965_driver_data(ctx);
     unsigned int i = 0;
 
     if (type == VAProcFilterNoiseReduction) {
@@ -3890,6 +3908,44 @@ VAStatus i965_QueryVideoProcFilterCaps(
         i++;
         cap++;
     }
+
+    if(IS_HASWELL(i965->intel.device_id)){
+       if(type == VAProcFilterColorBalance){
+         VAProcFilterCapColorBalance *cap = filter_caps;
+         cap->type = VAProcColorBalanceHue;
+         cap->range.min_value = -180.0;
+         cap->range.max_value = 180.0;
+         cap->range.default_value = 0.0;
+         cap->range.step = 1.0; 
+         i++;
+         cap ++; 
+ 
+         cap->type = VAProcColorBalanceSaturation;
+         cap->range.min_value = 0.0;
+         cap->range.max_value = 10.0;
+         cap->range.default_value = 0.0;
+         cap->range.step = 0.1; 
+         i++;
+         cap ++; 
+ 
+         cap->type = VAProcColorBalanceBrightness;
+         cap->range.min_value = -100.0;
+         cap->range.max_value = 100.0;
+         cap->range.default_value = 0.0;
+         cap->range.step = 1.0; 
+         i++;
+         cap ++; 
+ 
+         cap->type = VAProcColorBalanceContrast;
+         cap->range.min_value = 0.0;
+         cap->range.max_value = 10.0;
+         cap->range.default_value = 0.0;
+         cap->range.step = 0.1; 
+         i++;
+         cap ++; 
+      }
+    }
+
 
     *num_filter_caps = i;
 
