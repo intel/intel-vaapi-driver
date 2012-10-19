@@ -40,24 +40,24 @@
 
 typedef uint32_t (*wl_display_get_global_func)(struct wl_display *display,
     const char *interface, uint32_t version);
-typedef void *(*wl_display_bind_func)(struct wl_display *display,
-    uint32_t name, const struct wl_interface *interface);
 typedef void (*wl_display_roundtrip_func)(struct wl_display *display);
 
 typedef struct wl_proxy *(*wl_proxy_create_func)(struct wl_proxy *factory,
     const struct wl_interface *interface);
 typedef void (*wl_proxy_destroy_func)(struct wl_proxy *proxy);
 typedef void (*wl_proxy_marshal_func)(struct wl_proxy *p, uint32_t opcode, ...);
+typedef int (*wl_proxy_add_listener_func) (struct wl_proxy *proxy,
+    void (**implementation)(void), void *data);
 
 struct wl_vtable {
     const struct wl_interface  *buffer_interface;
     const struct wl_interface  *drm_interface;
-    wl_display_get_global_func  display_get_global;
-    wl_display_bind_func        display_bind;
+    const struct wl_interface  *registry_interface;
     wl_display_roundtrip_func   display_roundtrip;
     wl_proxy_create_func        proxy_create;
     wl_proxy_destroy_func       proxy_destroy;
     wl_proxy_marshal_func       proxy_marshal;
+    wl_proxy_add_listener_func  proxy_add_listener;
 };
 
 struct va_wl_output {
@@ -65,6 +65,89 @@ struct va_wl_output {
     struct dso_handle  *libwl_client_handle;
     struct wl_vtable    vtable;
     struct wl_drm      *wl_drm;
+    struct wl_registry *wl_registry;
+};
+
+/* These function are copied and adapted from the version inside
+ * wayland-client-protocol.h
+ */
+static void *
+registry_bind(
+    struct wl_vtable          *wl_vtable,
+    struct wl_registry        *wl_registry,
+    uint32_t                   name,
+    const struct wl_interface *interface,
+    uint32_t                   version
+)
+{
+    struct wl_proxy *id;
+
+    id = wl_vtable->proxy_create((struct wl_proxy *) wl_registry,
+                                 interface);
+    if (!id)
+      return NULL;
+
+    wl_vtable->proxy_marshal((struct wl_proxy *) wl_registry,
+                             WL_REGISTRY_BIND, name, interface->name,
+                             version, id);
+
+    return (void *) id;
+}
+
+static struct wl_registry *
+display_get_registry(
+    struct wl_vtable  *wl_vtable,
+    struct wl_display *wl_display
+)
+{
+    struct wl_proxy *callback;
+
+    callback = wl_vtable->proxy_create((struct wl_proxy *) wl_display,
+                                       wl_vtable->registry_interface);
+    if (!callback)
+      return NULL;
+
+    wl_vtable->proxy_marshal((struct wl_proxy *) wl_display,
+                             WL_DISPLAY_GET_REGISTRY, callback);
+
+    return (struct wl_registry *) callback;
+}
+
+static int
+registry_add_listener(
+    struct wl_vtable                  *wl_vtable,
+    struct wl_registry                *wl_registry,
+    const struct wl_registry_listener *listener,
+    void                              *data
+)
+{
+    return wl_vtable->proxy_add_listener((struct wl_proxy *) wl_registry,
+                                         (void (**)(void)) listener, data);
+}
+
+static void
+registry_handle_global(
+    void               *data,
+    struct wl_registry *registry,
+    uint32_t            id,
+    const char         *interface,
+    uint32_t            version
+)
+{
+    VADriverContextP ctx = data;
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    struct va_wl_output * const wl_output = i965->wl_output;
+    struct wl_vtable * const wl_vtable = &wl_output->vtable;
+
+    if (strcmp(interface, "wl_drm") == 0) {
+        wl_output->wl_drm = registry_bind(wl_vtable, wl_output->wl_registry,
+                                          id, wl_vtable->drm_interface, 1);
+    }
+}
+
+static const struct wl_registry_listener registry_listener = {
+    registry_handle_global,
+    NULL
 };
 
 /* Ensure wl_drm instance is created */
@@ -74,21 +157,14 @@ ensure_wl_output(VADriverContextP ctx)
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct va_wl_output * const wl_output = i965->wl_output;
     struct wl_vtable * const wl_vtable = &wl_output->vtable;
-    uint32_t id;
 
     if (wl_output->wl_drm)
         return true;
 
-    id = wl_vtable->display_get_global(ctx->native_dpy, "wl_drm", 1);
-    if (!id) {
-        wl_vtable->display_roundtrip(ctx->native_dpy);
-        id = wl_vtable->display_get_global(ctx->native_dpy, "wl_drm", 1);
-        if (!id)
-            return false;
-    }
-
-    wl_output->wl_drm =
-        wl_vtable->display_bind(ctx->native_dpy, id, wl_vtable->drm_interface);
+    wl_output->wl_registry = display_get_registry(wl_vtable, ctx->native_dpy);
+    registry_add_listener(wl_vtable, wl_output->wl_registry,
+                          &registry_listener, ctx);
+    wl_vtable->display_roundtrip(ctx->native_dpy);
     if (!wl_output->wl_drm)
         return false;
     return true;
@@ -260,10 +336,8 @@ i965_output_wayland_init(VADriverContextP ctx)
     static const struct dso_symbol libwl_client_symbols[] = {
         { "wl_buffer_interface",
           offsetof(struct wl_vtable, buffer_interface) },
-        { "wl_display_get_global",
-          offsetof(struct wl_vtable, display_get_global) },
-        { "wl_display_bind",
-          offsetof(struct wl_vtable, display_bind) },
+        { "wl_registry_interface",
+          offsetof(struct wl_vtable, registry_interface) },
         { "wl_display_roundtrip",
           offsetof(struct wl_vtable, display_roundtrip) },
         { "wl_proxy_create",
@@ -272,6 +346,8 @@ i965_output_wayland_init(VADriverContextP ctx)
           offsetof(struct wl_vtable, proxy_destroy) },
         { "wl_proxy_marshal",
           offsetof(struct wl_vtable, proxy_marshal) },
+        { "wl_proxy_add_listener",
+          offsetof(struct wl_vtable, proxy_add_listener) },
         { NULL, }
     };
 
