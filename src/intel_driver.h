@@ -285,4 +285,8 @@ struct intel_region
                                  devid == PCI_CHIP_IVYBRIDGE_S_GT2 ||   \
                                  IS_HASWELL(devid))
 
+#ifndef I915_EXEC_VEBOX
+#define I915_EXEC_VEBOX         4
+#endif
+
 #endif /* _INTEL_DRIVER_H_ */
