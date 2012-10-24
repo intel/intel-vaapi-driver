@@ -26,6 +26,10 @@
  *
  */
 
+#ifndef HAVE_GEN_AVC_SURFACE
+#define HAVE_GEN_AVC_SURFACE 1
+#endif
+
 #include "sysdeps.h"
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
@@ -162,38 +166,21 @@ gen7_mfd_avc_frame_store_index(VADriverContextP ctx,
     }
 }
 
-static void 
-gen7_mfd_free_avc_surface(void **data)
-{
-    struct gen7_avc_surface *gen7_avc_surface = *data;
-
-    if (!gen7_avc_surface)
-        return;
-
-    dri_bo_unreference(gen7_avc_surface->dmv_top);
-    gen7_avc_surface->dmv_top = NULL;
-    dri_bo_unreference(gen7_avc_surface->dmv_bottom);
-    gen7_avc_surface->dmv_bottom = NULL;
-
-    free(gen7_avc_surface);
-    *data = NULL;
-}
-
 static void
 gen7_mfd_init_avc_surface(VADriverContextP ctx, 
                           VAPictureParameterBufferH264 *pic_param,
                           struct object_surface *obj_surface)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct gen7_avc_surface *gen7_avc_surface = obj_surface->private_data;
+    GenAvcSurface *gen7_avc_surface = obj_surface->private_data;
     int width_in_mbs, height_in_mbs;
 
-    obj_surface->free_private_data = gen7_mfd_free_avc_surface;
+    obj_surface->free_private_data = gen_free_avc_surface;
     width_in_mbs = pic_param->picture_width_in_mbs_minus1 + 1;
     height_in_mbs = pic_param->picture_height_in_mbs_minus1 + 1; /* frame height */
 
     if (!gen7_avc_surface) {
-        gen7_avc_surface = calloc(sizeof(struct gen7_avc_surface), 1);
+        gen7_avc_surface = calloc(sizeof(GenAvcSurface), 1);
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = gen7_avc_surface;
     }
@@ -574,7 +561,7 @@ gen7_mfd_avc_directmode_state(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     struct object_surface *obj_surface;
-    struct gen7_avc_surface *gen7_avc_surface;
+    GenAvcSurface *gen7_avc_surface;
     VAPictureH264 *va_pic;
     int i, j;
 
