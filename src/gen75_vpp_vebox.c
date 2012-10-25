@@ -818,12 +818,23 @@ void hsw_veb_resource_prepare(VADriverContextP ctx,
     assert(va_status == VA_STATUS_SUCCESS);
 
     for(i = 0; i < FRAME_STORE_SUM; i ++) {
-        proc_ctx->frame_store[i].surface_id = surfaces[i];
-        struct object_surface* obj_surf = SURFACE(surfaces[i]);
+        if(proc_ctx->frame_store[i].bo){
+            continue; //refer external surface for vebox pipeline
+        }
+    
+        VASurfaceID new_surface;
+        va_status =   i965_CreateSurfaces(ctx,
+                                          proc_ctx ->width_input,
+                                          proc_ctx ->height_input,
+                                          VA_RT_FORMAT_YUV420,
+                                          1,
+                                          &new_surface);
+        assert(va_status == VA_STATUS_SUCCESS);
 
-        if( i == FRAME_IN_CURRENT) {
-           continue;
-        }else if( i == FRAME_IN_PREVIOUS || i == FRAME_OUT_CURRENT_DN) {
+        proc_ctx->frame_store[i].surface_id = new_surface;
+        struct object_surface* obj_surf = SURFACE(new_surface);
+
+        if( i <= FRAME_IN_PREVIOUS || i == FRAME_OUT_CURRENT_DN) {
            i965_check_alloc_surface_bo(ctx, obj_surf, input_tiling, input_fourcc, input_sampling);
         } else if( i == FRAME_IN_STMM || i == FRAME_OUT_STMM){
             i965_check_alloc_surface_bo(ctx, obj_surf, 1, input_fourcc, input_sampling);
@@ -833,7 +844,8 @@ void hsw_veb_resource_prepare(VADriverContextP ctx,
         proc_ctx->frame_store[i].bo = obj_surf->bo;
         dri_bo_reference(proc_ctx->frame_store[i].bo);
         proc_ctx->frame_store[i].is_internal_surface = 1;
-      }
+    }
+
     /* alloc dndi state table  */
     dri_bo_unreference(proc_ctx->dndi_state_table.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -892,7 +904,7 @@ void hsw_veb_surface_reference(VADriverContextP ctx,
      dri_bo_unreference(proc_ctx->frame_store[FRAME_IN_CURRENT].bo);
      proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id = vebox_in_id;
      proc_ctx->frame_store[FRAME_IN_CURRENT].bo = obj_surf->bo;
-     proc_ctx->frame_store[FRAME_IN_CURRENT].is_internal_surface = 1;
+     proc_ctx->frame_store[FRAME_IN_CURRENT].is_internal_surface = 0;
      dri_bo_reference(proc_ctx->frame_store[FRAME_IN_CURRENT].bo);
 
      /* update the output surface */ 
@@ -1134,12 +1146,11 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
    }
 
     hsw_veb_pre_format_convert(ctx, proc_ctx);
+    hsw_veb_surface_reference(ctx, proc_ctx);
 
     if(proc_ctx->is_first_frame){
         hsw_veb_resource_prepare(ctx, proc_ctx);
     }
-
-    hsw_veb_surface_reference(ctx, proc_ctx);
 
     intel_batchbuffer_start_atomic_veb(proc_ctx->batch, 0x1000);
     intel_batchbuffer_emit_mi_flush(proc_ctx->batch);
@@ -1171,34 +1182,33 @@ void gen75_vebox_context_destroy(VADriverContextP ctx,
 
     if(proc_ctx->surface_input_vebox != -1){
        obj_surf = SURFACE(proc_ctx->surface_input_vebox);
-       dri_bo_unreference(obj_surf->bo);
        i965_DestroySurfaces(ctx, &proc_ctx->surface_input_vebox, 1);
        proc_ctx->surface_input_vebox = -1;
      }
 
     if(proc_ctx->surface_output_vebox != -1){
        obj_surf = SURFACE(proc_ctx->surface_output_vebox);
-       dri_bo_unreference(obj_surf->bo);
        i965_DestroySurfaces(ctx, &proc_ctx->surface_output_vebox, 1);
        proc_ctx->surface_output_vebox = -1;
      }
 
     if(proc_ctx->surface_output_scaled != -1){
        obj_surf = SURFACE(proc_ctx->surface_output_scaled);
-       dri_bo_unreference(obj_surf->bo);
        i965_DestroySurfaces(ctx, &proc_ctx->surface_output_scaled, 1);
        proc_ctx->surface_output_scaled = -1;
      }
 
     for(i = 0; i < FRAME_STORE_SUM; i ++) {
-        if(proc_ctx->frame_store[i].is_internal_surface){
+        if(proc_ctx->frame_store[i].bo){
            dri_bo_unreference(proc_ctx->frame_store[i].bo);
            i965_DestroySurfaces(ctx, &proc_ctx->frame_store[i].surface_id, 1);
         }
-        proc_ctx->frame_store[i].surface_id = -1;
-        proc_ctx->frame_store[i].bo = NULL;
-        proc_ctx->frame_store[i].valid = 0;
+
+       proc_ctx->frame_store[i].surface_id = -1;
+       proc_ctx->frame_store[i].bo = NULL;
+       proc_ctx->frame_store[i].valid = 0;
     }
+
     /* dndi state table  */
     dri_bo_unreference(proc_ctx->dndi_state_table.bo);
     proc_ctx->dndi_state_table.bo = NULL;
