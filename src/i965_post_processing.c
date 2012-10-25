@@ -708,6 +708,240 @@ static struct pp_module pp_modules_gen7[] = {
     
 };
 
+static const uint32_t pp_null_gen75[][4] = {
+};
+
+static const uint32_t pp_nv12_load_save_nv12_gen75[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pl2.g75b"
+};
+
+static const uint32_t pp_nv12_load_save_pl3_gen75[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pl3.g75b"
+};
+
+static const uint32_t pp_pl3_load_save_nv12_gen75[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pl2.g75b"
+};
+
+static const uint32_t pp_pl3_load_save_pl3_gen75[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pl3.g75b"
+};
+
+static const uint32_t pp_nv12_scaling_gen75[][4] = {
+#include "shaders/post_processing/gen7/avs.g75b"
+};
+
+static const uint32_t pp_nv12_avs_gen75[][4] = {
+#include "shaders/post_processing/gen7/avs.g75b"
+};
+
+static const uint32_t pp_nv12_dndi_gen75[][4] = {
+// #include "shaders/post_processing/gen7/dndi.g75b"
+};
+
+static const uint32_t pp_nv12_dn_gen75[][4] = {
+// #include "shaders/post_processing/gen7/nv12_dn_nv12.g75b"
+};
+static const uint32_t pp_nv12_load_save_pa_gen75[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pa.g75b"
+};
+static const uint32_t pp_pl3_load_save_pa_gen75[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pa.g75b"
+};
+static const uint32_t pp_pa_load_save_nv12_gen75[][4] = {
+#include "shaders/post_processing/gen7/pa_to_pl2.g75b"
+};
+static const uint32_t pp_pa_load_save_pl3_gen75[][4] = {
+#include "shaders/post_processing/gen7/pa_to_pl3.g75b"
+};
+static const uint32_t pp_rgbx_load_save_nv12_gen75[][4] = {
+};
+static const uint32_t pp_nv12_load_save_rgbx_gen75[][4] = {
+};
+
+static struct pp_module pp_modules_gen75[] = {
+    {
+        {
+            "NULL module (for testing)",
+            PP_NULL,
+            pp_null_gen75,
+            sizeof(pp_null_gen75),
+            NULL,
+        },
+
+        pp_null_initialize,
+    },
+
+    {
+        {
+            "NV12_NV12",
+            PP_NV12_LOAD_SAVE_N12,
+            pp_nv12_load_save_nv12_gen75,
+            sizeof(pp_nv12_load_save_nv12_gen75),
+            NULL,
+        },
+
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12_PL3",
+            PP_NV12_LOAD_SAVE_PL3,
+            pp_nv12_load_save_pl3_gen75,
+            sizeof(pp_nv12_load_save_pl3_gen75),
+            NULL,
+        },
+        
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PL3_NV12",
+            PP_PL3_LOAD_SAVE_N12,
+            pp_pl3_load_save_nv12_gen75,
+            sizeof(pp_pl3_load_save_nv12_gen75),
+            NULL,
+        },
+
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PL3_PL3",
+            PP_PL3_LOAD_SAVE_N12,
+            pp_pl3_load_save_pl3_gen75,
+            sizeof(pp_pl3_load_save_pl3_gen75),
+            NULL,
+        },
+
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12 Scaling module",
+            PP_NV12_SCALING,
+            pp_nv12_scaling_gen75,
+            sizeof(pp_nv12_scaling_gen75),
+            NULL,
+        },
+
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12 AVS module",
+            PP_NV12_AVS,
+            pp_nv12_avs_gen75,
+            sizeof(pp_nv12_avs_gen75),
+            NULL,
+        },
+
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12 DNDI module",
+            PP_NV12_DNDI,
+            pp_nv12_dndi_gen75,
+            sizeof(pp_nv12_dndi_gen75),
+            NULL,
+        },
+
+        gen7_pp_nv12_dndi_initialize,
+    },
+
+    {
+        {
+            "NV12 DN module",
+            PP_NV12_DN,
+            pp_nv12_dn_gen75,
+            sizeof(pp_nv12_dn_gen75),
+            NULL,
+        },
+
+        gen7_pp_nv12_dn_initialize,
+    },
+    {
+        {
+            "NV12_PA module",
+            PP_NV12_LOAD_SAVE_PA,
+            pp_nv12_load_save_pa_gen75,
+            sizeof(pp_nv12_load_save_pa_gen75),
+            NULL,
+        },
+    
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PL3_PA module",
+            PP_PL3_LOAD_SAVE_PA,
+            pp_pl3_load_save_pa_gen75,
+            sizeof(pp_pl3_load_save_pa_gen75),
+            NULL,
+        },
+    
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PA_NV12 module",
+            PP_PA_LOAD_SAVE_NV12,
+            pp_pa_load_save_nv12_gen75,
+            sizeof(pp_pa_load_save_nv12_gen75),
+            NULL,
+        },
+    
+        gen7_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PA_PL3 module",
+            PP_PA_LOAD_SAVE_PL3,
+            pp_pa_load_save_pl3_gen75,
+            sizeof(pp_pa_load_save_pl3_gen75),
+            NULL,
+        },
+    
+        gen7_pp_plx_avs_initialize,
+    },
+    
+    {
+        {
+            "RGBX_NV12 module",
+            PP_RGBX_LOAD_SAVE_NV12,
+            pp_rgbx_load_save_nv12_gen75,
+            sizeof(pp_rgbx_load_save_nv12_gen75),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
+
+    {
+        {
+            "NV12_RGBX module",
+            PP_NV12_LOAD_SAVE_RGBX,
+            pp_nv12_load_save_rgbx_gen75,
+            sizeof(pp_nv12_load_save_rgbx_gen75),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
+            
+};
+
+
 static int
 pp_get_surface_fourcc(VADriverContextP ctx, const struct i965_surface *surface)
 {
@@ -4334,8 +4568,11 @@ i965_post_processing_context_init(VADriverContextP ctx,
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen5));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen7));
+    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen75));
 
-    if (IS_GEN7(i965->intel.device_id))
+    if (IS_HASWELL(i965->intel.device_id))
+        memcpy(pp_context->pp_modules, pp_modules_gen75, sizeof(pp_context->pp_modules));
+    else if (IS_GEN7(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen7, sizeof(pp_context->pp_modules));
     else if (IS_GEN6(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen6, sizeof(pp_context->pp_modules));
