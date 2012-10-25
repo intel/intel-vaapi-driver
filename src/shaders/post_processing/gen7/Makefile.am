@@ -65,9 +65,11 @@ INTEL_PP_G4A = \
 INTEL_PP_ASM = $(INTEL_PP_G7B:%.g7b=%.asm)
 INTEL_PP_GEN7_ASM = $(INTEL_PP_G7B:%.g7b=%.g7s)
 
+INTEL_PP_G75B = $(INTEL_PP_G7B:%.g7b=%.g75b)
+
 TARGETS  =
 if HAVE_GEN4ASM
-TARGETS += $(INTEL_PP_G7B)
+TARGETS += $(INTEL_PP_G7B) $(INTEL_PP_G75B)
 endif
 
 all-local: $(TARGETS)
@@ -82,10 +84,14 @@ $(INTEL_PP_GEN7_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G4A)
 .g7s.g7b:
 	$(AM_V_GEN)intel-gen4asm -a -o $@ -g 7 $<
 
+.g7s.g75b:
+	$(AM_V_GEN)intel-gen4asm -a -o $@ -g 7.5 $<
+
 CLEANFILES = $(INTEL_PP_GEN7_ASM)
 
 EXTRA_DIST = \
-	$(INTEL_PP_G7B)
+	$(INTEL_PP_G7B)		\
+	$(INTEL_PP_G75B)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in
