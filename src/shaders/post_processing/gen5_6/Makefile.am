@@ -11,21 +11,30 @@ INTEL_PP_G4B_GEN5 = \
 	nv12_avs_nv12.g4b.gen5			\
 	nv12_dndi_nv12.g4b.gen5			\
 	nv12_load_save_nv12.g4b.gen5		\
+	nv12_load_save_pl3.g4b.gen5		\
 	nv12_scaling_nv12.g4b.gen5		\
+	pl3_load_save_nv12.g4b.gen5		\
+	pl3_load_save_pl3.g4b.gen5		\
 	$(NULL)
 
 INTEL_PP_G6B = \
 	nv12_avs_nv12.g6b			\
 	nv12_dndi_nv12.g6b			\
 	nv12_load_save_nv12.g6b			\
+	nv12_load_save_pl3.g6b			\
 	nv12_scaling_nv12.g6b			\
+	pl3_load_save_nv12.g6b			\
+	pl3_load_save_pl3.g6b			\
 	$(NULL)
 
 INTEL_PP_ASM = \
 	nv12_avs_nv12.asm			\
 	nv12_dndi_nv12.asm			\
 	nv12_load_save_nv12.asm			\
+	nv12_load_save_pl3.asm			\
 	nv12_scaling_nv12.asm			\
+	pl3_load_save_nv12.asm			\
+	pl3_load_save_pl3.asm			\
 	$(NULL)
 
 INTEL_PP_ASM += \
@@ -142,36 +151,34 @@ all-local: $(TARGETS)
 
 SUFFIXES = .g4a .g4b .g6a .g6b .g5s .g6s .asm
 
-if HAVE_GEN4ASM
 .g4a.g4b:
-	$(AM_V_GEN)m4 $*.g4a > $*.g4m			&& \
-	$(AM_V_GEN)$(GEN4ASM) -o $@ $*.g4m		&& \
-	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@.gen5 $*.g4m	&& \
+	m4 $*.g4a > $*.g4m			&& \
+	intel-gen4asm -o $@ $*.g4m		&& \
+	intel-gen4asm -g 5 -o $@.gen5 $*.g4m	&& \
 	rm $*.g4m
 
 .g6a.g6b:
-	$(AM_V_GEN)m4 $< > $*.g6m			&& \
-	$(AM_V_GEN)$(GEN4ASM) -g 6 -o $@ $*.g6m		&& \
+	m4 $< > $*.g6m				&& \
+	intel-gen4asm -g 6 -o $@ $*.g6m		&& \
 	rm $*.g6m
 
 $(INTEL_G4B): $(INTEL_G4I)
 
 $(INTEL_PP_GEN5_ASM): $(INTEL_PP_ASM)
 .asm.g5s:
-	$(AM_V_GEN)cpp -D DEV_ILK -I Common/ -I Core_Kernels $< > _pp0.$@; \
+	cpp -D DEV_ILK -I Common/ -I Core_Kernels $< > _pp0.$@; \
 	../../gpp.py _pp0.$@ $@; \
 	rm _pp0.$@
 .g5s.g4b.gen5:
-	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 5 $<
+	intel-gen4asm -a -o $@ -g 5 $<
 
 $(INTEL_PP_GEN6_ASM): $(INTEL_PP_ASM)
 .asm.g6s:
-	$(AM_V_GEN)cpp -D GT -I Common/ -I Core_Kernels $< > _pp0.$@; \
+	cpp -D GT -I Common/ -I Core_Kernels $< > _pp0.$@; \
 	../../gpp.py _pp0.$@ $@; \
 	rm _pp0.$@
 .g6s.g6b:
-	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 6 $<
-endif
+	intel-gen4asm -a -o $@ -g 6 $<
 
 CLEANFILES = $(INTEL_PP_GEN5_ASM) $(INTEL_PP_GEN6_ASM)
 
