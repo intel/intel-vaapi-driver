@@ -56,7 +56,8 @@
 struct i965_surface
 {
     VAGenericID id;
-    int flag;
+    int type;
+    int flags;
 };
 
 struct i965_kernel 
