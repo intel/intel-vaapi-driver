@@ -29,7 +29,7 @@
 #ifndef __I965_POST_PROCESSING_H__
 #define __I965_POST_PROCESSING_H__
 
-#define MAX_PP_SURFACES 32
+#define MAX_PP_SURFACES  48
 
 #define I965_PP_FLAG_TOP_FIELD                 1
 #define I965_PP_FLAG_BOTTOM_FIELD              2
@@ -308,12 +308,87 @@ struct pp_inline_parameter
     } grf6;
 };
 
+struct gen7_pp_static_parameter
+{
+    struct {
+        /* r1.0-r1.5 */
+        unsigned int padx[6];
+        /* r1.6 */
+        unsigned int di_statistics_surface_pitch_div2:16;
+        unsigned int di_statistics_surface_height_div4:16;
+        /* r1.7 */
+        unsigned int di_top_field_first:8;
+        unsigned int pad0:16;
+        unsigned int pointer_to_inline_parameter:8; /* value: 7 */
+    } grf1;
+
+    struct {
+        /* r2.0-r2.6 */
+        unsigned int padx[7];
+        /* r2.7 */
+        unsigned int di_destination_packed_y_component_offset:8;
+        unsigned int di_destination_packed_u_component_offset:8;
+        unsigned int di_destination_packed_v_component_offset:8;
+        unsigned int pad0:8;
+    } grf2;
+
+    struct {
+        float sampler_load_horizontal_scaling_step_ratio;
+        unsigned int padx[7];
+    } grf3;
+
+    struct {
+        float sampler_load_vertical_scaling_step;
+        unsigned int pad0;
+        unsigned int di_hoffset_svf_from_dvf:16;
+        unsigned int di_voffset_svf_from_dvf:16;
+        unsigned int padx[5];
+    } grf4;
+
+    struct {
+        unsigned int sampler_load_vertical_frame_origin;
+        unsigned int padx[7];
+    } grf5;
+
+    struct {
+        unsigned int sampler_load_horizontal_frame_origin;
+        unsigned int padx[7];
+    } grf6;
+};
+
+struct gen7_pp_inline_parameter
+{
+    struct {
+        /* r7.0 */
+        unsigned int destination_block_horizontal_origin:16;
+        unsigned int destination_block_vertical_origin:16;
+        /* r7.1: 0xffffffff */
+        unsigned int constant_0;
+        /* r7.2 */
+        unsigned int pad0;
+        /* r7.3 */
+        unsigned int pad1;
+        /* r7.4 */
+        float sampler_load_main_video_x_scaling_step;
+        /* r7.5 */
+        unsigned int pad2;
+        /* r7.6: must be zero */
+        unsigned int avs_vertical_block_number;
+        /* r7.7: 0 */
+        unsigned int group_id_number;
+    } grf7;
+
+    struct {
+        unsigned int padx[8];
+    } grf8;
+};
+
 struct i965_post_processing_context
 {
     int current_pp;
     struct pp_module pp_modules[NUM_PP_MODULES];
-    struct pp_static_parameter pp_static_parameter;
-    struct pp_inline_parameter pp_inline_parameter;
+    void *pp_static_parameter;
+    void *pp_inline_parameter;
 
     struct {
         dri_bo *bo;
