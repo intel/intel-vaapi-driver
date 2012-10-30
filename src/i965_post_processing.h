@@ -376,14 +376,14 @@ i965_post_processing(
     unsigned int       flags,
     int                *has_done_scaling 
 );
-/*
+
 VAStatus
 i965_image_processing(VADriverContextP ctx,
                       const struct i965_surface *src_surface,
                       const VARectangle *src_rect,
                       const struct i965_surface *dst_surface,
                       const VARectangle *dst_rect);
-*/
+
 Bool
 i965_post_processing_terminate(VADriverContextP ctx);
 Bool

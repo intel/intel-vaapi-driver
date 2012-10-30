@@ -2178,6 +2178,111 @@ i965_post_processing(
     return out_surface_id;
 }       
 
+static VAStatus
+i965_image_i420_processing(VADriverContextP ctx,
+                           const struct i965_surface *src_surface,
+                           const VARectangle *src_rect,
+                           const struct i965_surface *dst_surface,
+                           const VARectangle *dst_rect)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_post_processing_context *pp_context = i965->pp_context;
+    int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+
+    if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+        i965_post_processing_internal(ctx, i965->pp_context,
+                                      src_surface,
+                                      src_rect,
+                                      dst_surface,
+                                      dst_rect,
+                                      PP_PL3_LOAD_SAVE_N12);
+    } else {
+        i965_post_processing_internal(ctx, i965->pp_context,
+                                      src_surface,
+                                      src_rect,
+                                      dst_surface,
+                                      dst_rect,
+                                      PP_PL3_LOAD_SAVE_PL3);
+    }
+
+    intel_batchbuffer_flush(pp_context->batch);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+i965_image_nv12_processing(VADriverContextP ctx,
+                           const struct i965_surface *src_surface,
+                           const VARectangle *src_rect,
+                           const struct i965_surface *dst_surface,
+                           const VARectangle *dst_rect)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_post_processing_context *pp_context = i965->pp_context;
+    int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+
+    if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+        i965_post_processing_internal(ctx, i965->pp_context,
+                                      src_surface,
+                                      src_rect,
+                                      dst_surface,
+                                      dst_rect,
+                                      PP_NV12_LOAD_SAVE_N12);
+    } else {
+        i965_post_processing_internal(ctx, i965->pp_context,
+                                      src_surface,
+                                      src_rect,
+                                      dst_surface,
+                                      dst_rect,
+                                      PP_NV12_LOAD_SAVE_PL3);
+    }
+
+    intel_batchbuffer_flush(pp_context->batch);
+
+    return VA_STATUS_SUCCESS;
+}
+
+VAStatus
+i965_image_processing(VADriverContextP ctx,
+                      const struct i965_surface *src_surface,
+                      const VARectangle *src_rect,
+                      const struct i965_surface *dst_surface,
+                      const VARectangle *dst_rect)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAStatus status = VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    if (HAS_PP(i965)) {
+        int fourcc = pp_get_surface_fourcc(ctx, src_surface);
+
+        switch (fourcc) {
+        case VA_FOURCC('Y', 'V', '1', '2'):
+        case VA_FOURCC('I', '4', '2', '0'):
+            status = i965_image_i420_processing(ctx,
+                                                src_surface,
+                                                src_rect,
+                                                dst_surface,
+                                                dst_rect);
+            break;
+
+        case  VA_FOURCC('N', 'V', '1', '2'):
+            status = i965_image_nv12_processing(ctx,
+                                                src_surface,
+                                                src_rect,
+                                                dst_surface,
+                                                dst_rect);
+            break;
+
+        default:
+            status = VA_STATUS_ERROR_UNIMPLEMENTED;
+            break;
+        }
+    }
+
+    return status;
+}     
+
+
 static void
 i965_post_processing_context_finalize(struct i965_post_processing_context *pp_context)
 {
