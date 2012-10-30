@@ -897,7 +897,7 @@ pp_get_surface_fourcc(VADriverContextP ctx, const struct i965_surface *surface)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int fourcc;
 
-    if (surface->flags == I965_SURFACE_TYPE_IMAGE) {
+    if (surface->type == I965_SURFACE_TYPE_IMAGE) {
         struct object_image *obj_image = IMAGE(surface->id);
         fourcc = obj_image->image.format.fourcc;
     } else {
@@ -1426,7 +1426,7 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
     int scale_factor_of_1st_plane_width_in_byte = 1;
                               
  
-    if (surface->flags == I965_SURFACE_TYPE_SURFACE) {
+    if (surface->type == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = SURFACE(surface->id);
         bo = obj_surface->bo;
         width[0] = obj_surface->orig_width;
@@ -4205,9 +4205,12 @@ i965_post_processing(
                 i965_vpp_clear_surface(ctx, i965->pp_context, out_surface_id, 0); 
 
                 src_surface.id = in_surface_id;
-                src_surface.flags = I965_SURFACE_TYPE_SURFACE;
+                src_surface.type = I965_SURFACE_TYPE_SURFACE;
+                src_surface.flags = (flags & I965_PP_FLAG_TOP_FIELD) ? 
+                    I965_SURFACE_FLAG_TOP_FIELD_FIRST : I965_SURFACE_FLAG_BOTTOM_FIELD_FIRST;
                 dst_surface.id = out_surface_id;
-                dst_surface.flags = I965_SURFACE_TYPE_SURFACE;
+                dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+                dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
                 i965_post_processing_internal(ctx, i965->pp_context,
                                               &src_surface,
@@ -4216,6 +4219,7 @@ i965_post_processing(
                                               dst_rect,
                                               PP_NV12_DNDI,
                                               NULL);
+               printf("Deinterlace is executed here\n");
             }
 
             if (flags & I965_PP_FLAG_AVS) {
@@ -4237,9 +4241,11 @@ i965_post_processing(
                 i965_vpp_clear_surface(ctx, i965->pp_context, out_surface_id, 0); 
 
                 src_surface.id = in_surface_id;
-                src_surface.flags = I965_SURFACE_TYPE_SURFACE;
+                src_surface.type = I965_SURFACE_TYPE_SURFACE;
+                src_surface.flags = I965_SURFACE_FLAG_FRAME;
                 dst_surface.id = out_surface_id;
-                dst_surface.flags = I965_SURFACE_TYPE_SURFACE;
+                dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+                dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
                 i965_post_processing_internal(ctx, i965->pp_context,
                                               &src_surface,
