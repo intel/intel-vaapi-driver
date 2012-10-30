@@ -46,9 +46,8 @@ enum
     PP_NV12_SCALING,
     PP_NV12_AVS,
     PP_NV12_DNDI,
+    NUM_PP_MODULES,
 };
-
-#define NUM_PP_MODULES                  5
 
 struct pp_load_save_context
 {
