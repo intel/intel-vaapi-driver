@@ -33,7 +33,6 @@
 #include <drm.h>
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
-#include <va/va_vpp.h>
 #include "i965_drv_video.h"
 
 #define INPUT_SURFACE  0
