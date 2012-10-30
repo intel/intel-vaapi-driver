@@ -1058,7 +1058,7 @@ ironlake_pp_upload_constants(struct i965_post_processing_context *pp_context)
     dri_bo_map(pp_context->curbe.bo, 1);
     assert(pp_context->curbe.bo->virtual);
     constant_buffer = pp_context->curbe.bo->virtual;
-    memcpy(constant_buffer, &pp_static_parameter, sizeof(*pp_static_parameter));
+    memcpy(constant_buffer, pp_static_parameter, sizeof(*pp_static_parameter));
     dri_bo_unmap(pp_context->curbe.bo);
 }
 
@@ -1181,8 +1181,8 @@ ironlake_pp_object_walker(VADriverContextP ctx,
                 OUT_BATCH(batch, 0);
 
                 /* inline data grf 5-6 */
-                assert(sizeof(pp_inline_parameter) == 64);
-                intel_batchbuffer_data(batch, &pp_inline_parameter, sizeof(*pp_inline_parameter));
+                assert(sizeof(*pp_inline_parameter) == 64);
+                intel_batchbuffer_data(batch, pp_inline_parameter, sizeof(*pp_inline_parameter));
 
                 ADVANCE_BATCH(batch);
             }
