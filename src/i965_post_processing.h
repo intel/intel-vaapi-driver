@@ -31,18 +31,18 @@
 
 #define MAX_PP_SURFACES 32
 
-#define I965_PP_FLAG_TOP_FIELD         0x00000001
-#define I965_PP_FLAG_BOTTOM_FIELD      0x00000002
+#define I965_PP_FLAG_TOP_FIELD          1
+#define I965_PP_FLAG_BOTTOM_FIELD       2
+#define I965_PP_FLAG_DEINTERLACING      4
+#define I965_PP_FLAG_AVS                8
 
-#define I965_PP_FLAG_SCALING           0x00000010
-#define I965_PP_FLAG_AVS               0x00000020
-#define I965_PP_FLAG_DEINTERLACING     0x00000100 /* XXX: don't support MCDI yet */
-#define I965_PP_FLAG_DENOISE           0x00000200
-
-enum
+ enum
 {
     PP_NULL = 0,
-    PP_NV12_LOAD_SAVE,
+    PP_NV12_LOAD_SAVE_N12,
+    PP_NV12_LOAD_SAVE_PL3,
+    PP_PL3_LOAD_SAVE_N12,
+    PP_PL3_LOAD_SAVE_PL3,
     PP_NV12_SCALING,
     PP_NV12_AVS,
     PP_NV12_DNDI,
@@ -88,9 +88,11 @@ struct pp_module
     struct i965_kernel kernel;
     
     /* others */
-    void (*initialize)(VADriverContextP ctx, 
-                       VASurfaceID in_surface_id, VASurfaceID out_surface_id,
-                       const VARectangle *src_rect, const VARectangle *dst_rect);
+    void (*initialize)(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                       const struct i965_surface *src_surface,
+                       const VARectangle *src_rect,
+                       const struct i965_surface *dst_surface,
+                       const VARectangle *dst_rect);
 };
 
 struct pp_static_parameter
@@ -359,7 +361,8 @@ struct i965_post_processing_context
     int (*pp_x_steps)(void *private_context);
     int (*pp_y_steps)(void *private_context);
     int (*pp_set_block_parameter)(struct i965_post_processing_context *pp_context, int x, int y);
- 
+    struct intel_batchbuffer *batch;
+
     /* video process based on hsw vebox */ 
     struct intel_vebox_context *pp_vebox_context;
 };
@@ -373,7 +376,14 @@ i965_post_processing(
     unsigned int       flags,
     int                *has_done_scaling 
 );
-
+/*
+VAStatus
+i965_image_processing(VADriverContextP ctx,
+                      const struct i965_surface *src_surface,
+                      const VARectangle *src_rect,
+                      const struct i965_surface *dst_surface,
+                      const VARectangle *dst_rect);
+*/
 Bool
 i965_post_processing_terminate(VADriverContextP ctx);
 Bool
