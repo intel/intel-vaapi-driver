@@ -100,12 +100,12 @@ static const uint32_t pp_nv12_load_save_pa_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/nv12_load_save_pa.g4b.gen5"
 };
 
-static const uint32_t pp_pa_load_save_nv12_gen5[][4] = {
-#include "shaders/post_processing/gen5_6/pa_load_save_nv12.g4b.gen5"
-};
-
 static const uint32_t pp_pl3_load_save_pa_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/pl3_load_save_pa.g4b.gen5"
+};
+
+static const uint32_t pp_pa_load_save_nv12_gen5[][4] = {
+#include "shaders/post_processing/gen5_6/pa_load_save_nv12.g4b.gen5"
 };
 
 static VAStatus pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
@@ -204,7 +204,7 @@ static struct pp_module pp_modules_gen5[] = {
     {
         {
             "PL3_PL3",
-            PP_PL3_LOAD_SAVE_N12,
+            PP_PL3_LOAD_SAVE_PL3,
             pp_pl3_load_save_pl3_gen5,
             sizeof(pp_pl3_load_save_pl3_gen5),
             NULL,
@@ -272,7 +272,17 @@ static struct pp_module pp_modules_gen5[] = {
     
         pp_plx_load_save_plx_initialize,
     },
-
+   {
+        {
+            "PL3_PA module",
+            PP_PL3_LOAD_SAVE_PA,
+            pp_pl3_load_save_pa_gen5,
+            sizeof(pp_pl3_load_save_pa_gen5),
+            NULL,
+        },
+    
+        pp_plx_load_save_plx_initialize,
+    },
     {
         {
             "PA_NV12 module",
@@ -284,19 +294,7 @@ static struct pp_module pp_modules_gen5[] = {
     
         pp_plx_load_save_plx_initialize,
     },
-
-    {
-        {
-            "PL3_PA module",
-            PP_PL3_LOAD_SAVE_PA,
-            pp_pl3_load_save_pa_gen5,
-            sizeof(pp_pl3_load_save_pa_gen5),
-            NULL,
-        },
-    
-        pp_plx_load_save_plx_initialize,
-    },
-
+ 
 };
 
 static const uint32_t pp_null_gen6[][4] = {
@@ -468,18 +466,6 @@ static struct pp_module pp_modules_gen6[] = {
     },
     {
         {
-            "PA_NV12 module",
-            PP_PA_LOAD_SAVE_NV12,
-            pp_pa_load_save_nv12_gen6,
-            sizeof(pp_pa_load_save_nv12_gen6),
-            NULL,
-        },
-    
-        pp_plx_load_save_plx_initialize,
-    },
-    
-    {
-        {
             "PL3_PA module",
             PP_PL3_LOAD_SAVE_PA,
             pp_pl3_load_save_pa_gen6,
@@ -489,7 +475,18 @@ static struct pp_module pp_modules_gen6[] = {
     
         pp_plx_load_save_plx_initialize,
     },
+    {
+        {
+            "PA_NV12 module",
+            PP_PA_LOAD_SAVE_NV12,
+            pp_pa_load_save_nv12_gen6,
+            sizeof(pp_pa_load_save_nv12_gen6),
+            NULL,
+        },
     
+        pp_plx_load_save_plx_initialize,
+    },
+
 };
 
 static const uint32_t pp_null_gen7[][4] = {
@@ -531,18 +528,14 @@ static const uint32_t pp_nv12_load_save_pa_gen7[][4] = {
 #include "shaders/post_processing/gen7/pl2_to_pa.g7b"
 };
 
-static const uint32_t pp_pa_load_save_nv12_gen7[][4] = {
-#include "shaders/post_processing/gen7/pa_to_pl2.g7b"
-};
-
 static const uint32_t pp_pl3_load_save_pa_gen7[][4] = {
 #include "shaders/post_processing/gen7/pl3_to_pa.g7b"
 };
 
-static const uint32_t pp_pa_load_save_pl3_gen7[][4] = {
-#include "shaders/post_processing/gen7/pa_to_pl3.g7b"
+static const uint32_t pp_pa_load_save_nv12_gen7[][4] = {
+#include "shaders/post_processing/gen7/pa_to_pl2.g7b"
 };
- 
+
 static VAStatus gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                            const struct i965_surface *src_surface,
                                            const VARectangle *src_rect,
@@ -681,19 +674,6 @@ static struct pp_module pp_modules_gen7[] = {
     
         gen7_pp_plx_avs_initialize,
     },
-
-    {
-        {
-            "PA_NV12 module",
-            PP_PA_LOAD_SAVE_NV12,
-            pp_pa_load_save_nv12_gen7,
-            sizeof(pp_pa_load_save_nv12_gen7),
-            NULL,
-        },
-    
-        gen7_pp_plx_avs_initialize,
-    },
-
     {
         {
             "PL3_PA module",
@@ -705,7 +685,18 @@ static struct pp_module pp_modules_gen7[] = {
     
         gen7_pp_plx_avs_initialize,
     },
+ 
+    {
+        {
+            "PA_NV12 module",
+            PP_PA_LOAD_SAVE_NV12,
+            pp_pa_load_save_nv12_gen7,
+            sizeof(pp_pa_load_save_nv12_gen7),
+            NULL,
+        },
     
+        gen7_pp_plx_avs_initialize,
+    },
 };
 
 static const uint32_t pp_null_gen75[][4] = {
@@ -745,18 +736,13 @@ static const uint32_t pp_nv12_dn_gen75[][4] = {
 static const uint32_t pp_nv12_load_save_pa_gen75[][4] = {
 #include "shaders/post_processing/gen7/pl2_to_pa.g75b"
 };
+
 static const uint32_t pp_pl3_load_save_pa_gen75[][4] = {
 #include "shaders/post_processing/gen7/pl3_to_pa.g75b"
 };
+
 static const uint32_t pp_pa_load_save_nv12_gen75[][4] = {
 #include "shaders/post_processing/gen7/pa_to_pl2.g75b"
-};
-static const uint32_t pp_pa_load_save_pl3_gen75[][4] = {
-#include "shaders/post_processing/gen7/pa_to_pl3.g75b"
-};
-static const uint32_t pp_rgbx_load_save_nv12_gen75[][4] = {
-};
-static const uint32_t pp_nv12_load_save_rgbx_gen75[][4] = {
 };
 
 static struct pp_module pp_modules_gen75[] = {
@@ -902,45 +888,8 @@ static struct pp_module pp_modules_gen75[] = {
     
         gen7_pp_plx_avs_initialize,
     },
-
-    {
-        {
-            "PA_PL3 module",
-            PP_PA_LOAD_SAVE_PL3,
-            pp_pa_load_save_pl3_gen75,
-            sizeof(pp_pa_load_save_pl3_gen75),
-            NULL,
-        },
-    
-        gen7_pp_plx_avs_initialize,
-    },
-    
-    {
-        {
-            "RGBX_NV12 module",
-            PP_RGBX_LOAD_SAVE_NV12,
-            pp_rgbx_load_save_nv12_gen75,
-            sizeof(pp_rgbx_load_save_nv12_gen75),
-            NULL,
-        },
-    
-        pp_plx_load_save_plx_initialize,
-    },
-
-    {
-        {
-            "NV12_RGBX module",
-            PP_NV12_LOAD_SAVE_RGBX,
-            pp_nv12_load_save_rgbx_gen75,
-            sizeof(pp_nv12_load_save_rgbx_gen75),
-            NULL,
-        },
-    
-        pp_plx_load_save_plx_initialize,
-    },
-            
+          
 };
-
 
 static int
 pp_get_surface_fourcc(VADriverContextP ctx, const struct i965_surface *surface)
