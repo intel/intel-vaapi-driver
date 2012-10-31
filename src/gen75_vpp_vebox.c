@@ -1235,7 +1235,7 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct intel_vebox_context *proc_context = calloc(1, sizeof(struct intel_vebox_context));
 
-    proc_context->batch = intel_batchbuffer_new(intel, I915_EXEC_VEBOX);
+    proc_context->batch = intel_batchbuffer_new(intel, I915_EXEC_VEBOX, 0);
     memset(proc_context->frame_store, 0, sizeof(VEBFrameStore)*FRAME_STORE_SUM);
   
     proc_context->filters_mask          = 0;

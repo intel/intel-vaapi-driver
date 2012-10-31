@@ -487,7 +487,7 @@ static void gen75_mfc_init(VADriverContextP ctx,
     if (mfc_context->aux_batchbuffer)
         intel_batchbuffer_free(mfc_context->aux_batchbuffer);
 
-    mfc_context->aux_batchbuffer = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD);
+    mfc_context->aux_batchbuffer = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD, 0);
     mfc_context->aux_batchbuffer_surface.bo = mfc_context->aux_batchbuffer->buffer;
     dri_bo_reference(mfc_context->aux_batchbuffer_surface.bo);
     mfc_context->aux_batchbuffer_surface.pitch = 16;
@@ -1220,10 +1220,17 @@ gen75_mfc_avc_software_batchbuffer(VADriverContextP ctx,
                                   struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD);
-    dri_bo *batch_bo = batch->buffer;
+    struct intel_batchbuffer *batch;
+    dri_bo *batch_bo;
     int i;
+    int buffer_size;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
+    buffer_size = width_in_mbs * height_in_mbs * 64;
+    batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD, buffer_size);
+    batch_bo = batch->buffer;
     for (i = 0; i < encode_state->num_slice_params_ext; i++) {
         gen75_mfc_avc_pipeline_slice_programing(ctx, encode_state, encoder_context, i, batch);
     }

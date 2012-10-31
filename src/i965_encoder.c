@@ -161,7 +161,7 @@ gen6_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 
     encoder_context->base.destroy = intel_encoder_context_destroy;
     encoder_context->base.run = intel_encoder_end_picture;
-    encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
     encoder_context->rate_control_mode = VA_RC_NONE;
 
     for (i = 0; i < obj_config->num_attribs; i++) {
@@ -193,7 +193,7 @@ gen7_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 
     encoder_context->base.destroy = intel_encoder_context_destroy;
     encoder_context->base.run = intel_encoder_end_picture;
-    encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
     encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
     encoder_context->is_tmp_id = 0;
     encoder_context->rate_control_mode = VA_RC_NONE;
@@ -227,7 +227,7 @@ gen75_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config
 
     encoder_context->base.destroy = intel_encoder_context_destroy;
     encoder_context->base.run = intel_encoder_end_picture;
-    encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
     encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
     encoder_context->is_tmp_id = 0;
     encoder_context->rate_control_mode = VA_RC_NONE;

@@ -5128,7 +5128,7 @@ i965_proc_context_init(VADriverContextP ctx, struct object_config *obj_config)
 
     proc_context->base.destroy = i965_proc_context_destroy;
     proc_context->base.run = i965_proc_picture;
-    proc_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    proc_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
     i965_post_processing_context_init(ctx, &proc_context->pp_context, proc_context->base.batch);
 
     return (struct hw_context *)proc_context;

@@ -26,7 +26,7 @@ struct intel_batchbuffer
                int DR4, unsigned int ring_flag);
 };
 
-struct intel_batchbuffer *intel_batchbuffer_new(struct intel_driver_data *intel, int flag);
+struct intel_batchbuffer *intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size);
 void intel_batchbuffer_free(struct intel_batchbuffer *batch);
 void intel_batchbuffer_start_atomic(struct intel_batchbuffer *batch, unsigned int size);
 void intel_batchbuffer_start_atomic_bcs(struct intel_batchbuffer *batch, unsigned int size);

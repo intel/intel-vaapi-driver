@@ -328,7 +328,7 @@ g4x_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 
     media_context->base.destroy = i965_media_context_destroy;
     media_context->base.run = i965_media_decode_picture;
-    media_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    media_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
 
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
@@ -358,7 +358,7 @@ ironlake_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_con
 
     media_context->base.destroy = i965_media_context_destroy;
     media_context->base.run = i965_media_decode_picture;
-    media_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    media_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
 
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:

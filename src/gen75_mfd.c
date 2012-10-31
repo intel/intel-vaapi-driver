@@ -3399,7 +3399,7 @@ gen75_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config
 
     gen7_mfd_context->base.destroy = gen75_mfd_context_destroy;
     gen7_mfd_context->base.run = gen75_mfd_decode_picture;
-    gen7_mfd_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    gen7_mfd_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
 
     for (i = 0; i < ARRAY_ELEMS(gen7_mfd_context->reference_surface); i++) {
         gen7_mfd_context->reference_surface[i].surface_id = VA_INVALID_ID;

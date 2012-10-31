@@ -614,7 +614,7 @@ static void gen6_mfc_init(VADriverContextP ctx,
     if (mfc_context->aux_batchbuffer)
         intel_batchbuffer_free(mfc_context->aux_batchbuffer);
 
-    mfc_context->aux_batchbuffer = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD);
+    mfc_context->aux_batchbuffer = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD, 0);
     mfc_context->aux_batchbuffer_surface.bo = mfc_context->aux_batchbuffer->buffer;
     dri_bo_reference(mfc_context->aux_batchbuffer_surface.bo);
     mfc_context->aux_batchbuffer_surface.pitch = 16;
@@ -873,7 +873,7 @@ gen6_mfc_avc_software_batchbuffer(VADriverContextP ctx,
                                   struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD);
+    struct intel_batchbuffer *batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD, 0);
     dri_bo *batch_bo = batch->buffer;
     int i;
 
