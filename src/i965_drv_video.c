@@ -2617,11 +2617,11 @@ i965_UnlockSurface(
 
     if (obj_surface == NULL) {
         vaStatus = VA_STATUS_ERROR_INVALID_PARAMETER;   // Surface is absent
-        goto error;
+        return vaStatus;
     }
     if (obj_surface->locked_image_id == VA_INVALID_ID) {
         vaStatus = VA_STATUS_ERROR_INVALID_PARAMETER;   // Surface is not locked
-        goto error;
+        return vaStatus;
     }
 
     locked_img = IMAGE(obj_surface->locked_image_id);
@@ -2648,6 +2648,8 @@ i965_UnlockSurface(
     locked_img->image.image_id = VA_INVALID_ID;
 
  error:
+    obj_surface->locked_image_id = VA_INVALID_ID;
+
     return vaStatus;
 }
 
