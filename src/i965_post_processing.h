@@ -96,6 +96,8 @@ struct pp_dn_context
     int dest_h;
 };
 
+struct i965_post_processing_context;
+ 
 struct pp_module
 {
     struct i965_kernel kernel;
