@@ -27,6 +27,10 @@
  *
  */
 
+#ifndef HAVE_GEN_AVC_SURFACE
+#define HAVE_GEN_AVC_SURFACE 1
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,6 +45,7 @@
 #include "i965_encoder_utils.h"
 #include "gen6_mfc.h"
 #include "gen6_vme.h"
+#include "intel_media.h"
 
 #define MFC_SOFTWARE_HASWELL	1
 
@@ -407,24 +412,6 @@ gen75_mfc_avc_insert_object(VADriverContextP ctx, struct intel_encoder_context *
     ADVANCE_BCS_BATCH(batch);
 }
 
-
-
-static void 
-gen75_mfc_free_avc_surface(void **data)
-{
-    struct gen6_mfc_avc_surface_aux *avc_surface = *data;
-
-    if (!avc_surface)
-        return;
-
-    dri_bo_unreference(avc_surface->dmv_top);
-    avc_surface->dmv_top = NULL;
-    dri_bo_unreference(avc_surface->dmv_bottom);
-    avc_surface->dmv_bottom = NULL;
-
-    free(avc_surface);
-    *data = NULL;
-}
 
 static void gen75_mfc_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
@@ -857,7 +844,7 @@ static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct object_surface *obj_surface;	
     struct object_buffer *obj_buffer;
-    struct gen6_mfc_avc_surface_aux* gen6_avc_surface;
+    GenAvcSurface *gen6_avc_surface;
     dri_bo *bo;
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
@@ -894,7 +881,7 @@ static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx,
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
     if ( obj_surface->private_data == NULL) {
-        gen6_avc_surface = calloc(sizeof(struct gen6_mfc_avc_surface_aux), 1);
+        gen6_avc_surface = calloc(sizeof(GenAvcSurface), 1);
         gen6_avc_surface->dmv_top = 
             dri_bo_alloc(i965->intel.bufmgr,
                          "Buffer",
@@ -908,9 +895,9 @@ static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx,
         assert(gen6_avc_surface->dmv_top);
         assert(gen6_avc_surface->dmv_bottom);
         obj_surface->private_data = (void *)gen6_avc_surface;
-        obj_surface->free_private_data = (void *)gen75_mfc_free_avc_surface; 
+        obj_surface->free_private_data = (void *)gen_free_avc_surface; 
     }
-    gen6_avc_surface = (struct gen6_mfc_avc_surface_aux*) obj_surface->private_data;
+    gen6_avc_surface = (GenAvcSurface *) obj_surface->private_data;
     mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 2].bo = gen6_avc_surface->dmv_top;
     mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 1].bo = gen6_avc_surface->dmv_bottom;
     dri_bo_reference(gen6_avc_surface->dmv_top);
@@ -941,7 +928,7 @@ static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx,
             /* Check DMV buffer */
             if ( obj_surface->private_data == NULL) {
                 
-                gen6_avc_surface = calloc(sizeof(struct gen6_mfc_avc_surface_aux), 1);
+                gen6_avc_surface = calloc(sizeof(GenAvcSurface), 1);
                 gen6_avc_surface->dmv_top = 
                     dri_bo_alloc(i965->intel.bufmgr,
                                  "Buffer",
@@ -955,10 +942,10 @@ static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx,
                 assert(gen6_avc_surface->dmv_top);
                 assert(gen6_avc_surface->dmv_bottom);
                 obj_surface->private_data = gen6_avc_surface;
-                obj_surface->free_private_data = gen75_mfc_free_avc_surface; 
+                obj_surface->free_private_data = gen_free_avc_surface; 
             }
     
-            gen6_avc_surface = (struct gen6_mfc_avc_surface_aux*) obj_surface->private_data;
+            gen6_avc_surface = (GenAvcSurface *) obj_surface->private_data;
             /* Setup DMV buffer */
             mfc_context->direct_mv_buffers[i*2].bo = gen6_avc_surface->dmv_top;
             mfc_context->direct_mv_buffers[i*2+1].bo = gen6_avc_surface->dmv_bottom; 

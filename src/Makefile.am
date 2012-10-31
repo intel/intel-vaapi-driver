@@ -109,6 +109,7 @@ source_h = \
 	intel_driver.h          \
 	intel_memman.h          \
 	object_heap.h           \
+	intel_media.h           \
 	$(NULL)
 
 i965_drv_video_la_LTLIBRARIES	= i965_drv_video.la

@@ -44,6 +44,7 @@
 #include "i965_decoder_utils.h"
 
 #include "gen7_mfd.h"
+#include "intel_media.h"
 
 static const uint32_t zigzag_direct[64] = {
     0,   1,  8, 16,  9,  2,  3, 10,

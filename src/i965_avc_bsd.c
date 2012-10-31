@@ -43,6 +43,7 @@
 #include "i965_media_h264.h"
 #include "i965_media.h"
 #include "i965_decoder_utils.h"
+#include "intel_media.h"
 
 static void
 i965_avc_bsd_init_avc_bsd_surface(VADriverContextP ctx, 

@@ -45,6 +45,7 @@
 #include "i965_decoder_utils.h"
 
 #include "gen7_mfd.h"
+#include "intel_media.h"
 
 #define B0_STEP_REV		2
 #define IS_STEPPING_BPLUS(i965)	((i965->intel.revision) >= B0_STEP_REV)
