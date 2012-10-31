@@ -35,13 +35,6 @@
 #include <intel_bufmgr.h>
 #include "i965_decoder.h"
 
-struct gen6_avc_surface
-{
-    dri_bo *dmv_top;
-    dri_bo *dmv_bottom;
-    int dmv_bottom_flag;
-};
-
 #define GEN6_VC1_I_PICTURE              0
 #define GEN6_VC1_P_PICTURE              1
 #define GEN6_VC1_B_PICTURE              2

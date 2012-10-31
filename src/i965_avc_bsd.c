@@ -30,6 +30,10 @@
 #include <string.h>
 #include <assert.h>
 
+#ifndef HAVE_GEN_AVC_SURFACE
+#define HAVE_GEN_AVC_SURFACE 1
+#endif
+
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
 
@@ -40,23 +44,6 @@
 #include "i965_media.h"
 #include "i965_decoder_utils.h"
 
-static void 
-i965_avc_bsd_free_avc_bsd_surface(void **data)
-{
-    struct i965_avc_bsd_surface *avc_bsd_surface = *data;
-
-    if (!avc_bsd_surface)
-        return;
-
-    dri_bo_unreference(avc_bsd_surface->dmv_top);
-    avc_bsd_surface->dmv_top = NULL;
-    dri_bo_unreference(avc_bsd_surface->dmv_bottom);
-    avc_bsd_surface->dmv_bottom = NULL;
-
-    free(avc_bsd_surface);
-    *data = NULL;
-}
-
 static void
 i965_avc_bsd_init_avc_bsd_surface(VADriverContextP ctx, 
                                   struct object_surface *obj_surface,
@@ -64,18 +51,16 @@ i965_avc_bsd_init_avc_bsd_surface(VADriverContextP ctx,
                                   struct i965_h264_context *i965_h264_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_avc_bsd_context *i965_avc_bsd_context = &i965_h264_context->i965_avc_bsd_context;
-    struct i965_avc_bsd_surface *avc_bsd_surface = obj_surface->private_data;
+    GenAvcSurface *avc_bsd_surface = obj_surface->private_data;
 
-    obj_surface->free_private_data = i965_avc_bsd_free_avc_bsd_surface;
+    obj_surface->free_private_data = gen_free_avc_surface;
 
     if (!avc_bsd_surface) {
-        avc_bsd_surface = calloc(sizeof(struct i965_avc_bsd_surface), 1);
+        avc_bsd_surface = calloc(sizeof(GenAvcSurface), 1);
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = avc_bsd_surface;
     }
 
-    avc_bsd_surface->ctx = i965_avc_bsd_context;
     avc_bsd_surface->dmv_bottom_flag = (pic_param->pic_fields.bits.field_pic_flag &&
                                         !pic_param->seq_fields.bits.direct_8x8_inference_flag);
 
@@ -404,7 +389,7 @@ i965_avc_bsd_buf_base_state(VADriverContextP ctx,
     int i, j;
     VAPictureH264 *va_pic;
     struct object_surface *obj_surface;
-    struct i965_avc_bsd_surface *avc_bsd_surface;
+    GenAvcSurface *avc_bsd_surface;
 
     i965_avc_bsd_context = &i965_h264_context->i965_avc_bsd_context;
 

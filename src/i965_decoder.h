@@ -26,6 +26,8 @@
 #define I965_DECODER_H
 
 #include <stdint.h>
+#include <stdlib.h>
+
 #include <va/va.h>
 #include <intel_bufmgr.h>
 
@@ -42,6 +44,35 @@ struct gen_buffer {
     dri_bo     *bo;
     int         valid;
 };
+
+#if HAVE_GEN_AVC_SURFACE
+
+typedef struct gen_avc_surface GenAvcSurface;
+struct gen_avc_surface
+{
+    dri_bo *dmv_top;
+    dri_bo *dmv_bottom;
+    int dmv_bottom_flag;
+};
+
+static void 
+gen_free_avc_surface(void **data)
+{
+    GenAvcSurface *avc_surface = *data;
+
+    if (!avc_surface)
+        return;
+
+    dri_bo_unreference(avc_surface->dmv_top);
+    avc_surface->dmv_top = NULL;
+    dri_bo_unreference(avc_surface->dmv_bottom);
+    avc_surface->dmv_bottom = NULL;
+
+    free(avc_surface);
+    *data = NULL;
+}
+
+#endif
 
 struct hw_context *
 gen75_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config);
