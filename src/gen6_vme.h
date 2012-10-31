@@ -82,6 +82,7 @@ struct gen6_vme_context
                                             unsigned long binding_table_offset,
                                             unsigned long surface_state_offset);
     void *vme_state_message;
+    unsigned int h264_level;
 };
 
 Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);

@@ -50,7 +50,9 @@ mov  (1) vme_m0.20<1>:UB        thread_id_ub {align1};                  /* dispa
 mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};               /* Reference Width&Height, 32x32 */
 
 mov  (1) vme_m1.0<1>:UD         ADAPTIVE_SEARCH_ENABLE:ud {align1} ;
-mov  (1) vme_m1.4<1>:UD         FB_PRUNING_ENABLE + MAX_NUM_MV:UD {align1};                                   /* Default value MAX 32 MVs */
+mov  (1) vme_m1.4<1>:UD         FB_PRUNING_ENABLE:UD {align1};
+/* MV num is passed by constant buffer. R4.28 */
+mov  (1) vme_m1.4<1>:UB		r4.28<0,1,0>:UB {align1};
 mov  (1) vme_m1.8<1>:UD         START_CENTER + SEARCH_PATH_LEN:UD {align1};
 
 mul  (1) obw_m0.8<1>:UD         w_in_mb_uw<0,1,0>:UW orig_y_ub<0,1,0>:UB {align1};

@@ -297,6 +297,16 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     unsigned char *constant_buffer;
+    unsigned int *vme_state_message;
+    int mv_num = 32;
+
+    vme_state_message = (unsigned int *)vme_context->vme_state_message;
+    if (vme_context->h264_level >= 30) {
+	mv_num = 16;
+	if (vme_context->h264_level >= 31)
+		mv_num = 8;
+    } 
+    vme_state_message[31] = mv_num;
 
     dri_bo_map(vme_context->gpe_context.curbe.bo, 1);
     assert(vme_context->gpe_context.curbe.bo->virtual);
@@ -306,7 +316,7 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
 	/* Now it uses the fixed search path. So it is constructed directly
 	 * in the GPU shader.
 	 */
-    memcpy(constant_buffer, (char *)vme_context->vme_state_message, 32);
+    memcpy(constant_buffer, (char *)vme_context->vme_state_message, 128);
 	
     dri_bo_unmap( vme_context->gpe_context.curbe.bo);
 
@@ -550,6 +560,13 @@ static VAStatus gen75_vme_prepare(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+
+    if (!vme_context->h264_level ||
+		(vme_context->h264_level != pSequenceParameter->level_idc)) {
+	vme_context->h264_level = pSequenceParameter->level_idc;	
+    }	
 	
     /*Setup all the memory object*/
     gen75_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);

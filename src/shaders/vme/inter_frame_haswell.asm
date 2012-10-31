@@ -193,7 +193,8 @@ mov  (1) vme_m0.4<1>:UD		vme_m0.0<0,1,0>:UD	{align1};
 mov  (8) vme_msg_0.0<1>:UD      vme_m0.0<8,8,1>:UD {align1};
 
 mov  (1) vme_m1.0<1>:UD         ADAPTIVE_SEARCH_ENABLE:ud {align1} ;
-mov  (1) vme_m1.4<1>:UD         MAX_NUM_MV:UD {align1};                                   /* Default value MAX 32 MVs */
+/* the Max MV number is passed by constant buffer */
+mov  (1) vme_m1.4<1>:UB         r4.28<0,1,0>:UB {align1};          
 mov  (1) vme_m1.8<1>:UD         START_CENTER + SEARCH_PATH_LEN:UD {align1};
 mov  (8) vme_msg_1.0<1>:UD      vme_m1.0<8,8,1>:UD {align1};
 

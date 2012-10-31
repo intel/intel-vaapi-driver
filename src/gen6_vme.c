@@ -316,10 +316,19 @@ static VAStatus gen6_vme_constant_setup(VADriverContextP ctx,
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     // unsigned char *constant_buffer;
+    unsigned int *vme_state_message;
+    int mv_num = 32;
+    if (vme_context->h264_level >= 30) {
+	mv_num = 16;
+	if (vme_context->h264_level >= 31)
+		mv_num = 8;
+    } 
 
     dri_bo_map(vme_context->gpe_context.curbe.bo, 1);
     assert(vme_context->gpe_context.curbe.bo->virtual);
     // constant_buffer = vme_context->curbe.bo->virtual;
+    vme_state_message = (unsigned int *)vme_context->gpe_context.curbe.bo->virtual;
+    vme_state_message[31] = mv_num;
 	
     /*TODO copy buffer into CURB*/
 
@@ -567,7 +576,13 @@ static VAStatus gen6_vme_prepare(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
-	
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+
+    if (!vme_context->h264_level ||
+		(vme_context->h264_level != pSequenceParameter->level_idc)) {
+	vme_context->h264_level = pSequenceParameter->level_idc;	
+    }	
     /*Setup all the memory object*/
     gen6_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
     gen6_vme_interface_setup(ctx, encode_state, encoder_context);
