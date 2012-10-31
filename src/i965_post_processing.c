@@ -4492,6 +4492,10 @@ i965_post_processing_terminate(VADriverContextP ctx)
     struct i965_post_processing_context *pp_context = i965->pp_context;
 
     if (pp_context) {
+       if(IS_HASWELL(i965->intel.device_id)){
+           gen75_vebox_context_destroy(ctx, pp_context->pp_vebox_context);
+        }
+ 
         i965_post_processing_context_finalize(pp_context);
         free(pp_context);
     }
@@ -4563,8 +4567,6 @@ i965_post_processing_context_init(VADriverContextP ctx,
         pp_context->pp_inline_parameter = calloc(sizeof(struct pp_inline_parameter), 1);
     }
 
-
-
     pp_context->batch = batch;
 }
 
@@ -4579,6 +4581,10 @@ i965_post_processing_init(VADriverContextP ctx)
             pp_context = calloc(1, sizeof(*pp_context));
             i965_post_processing_context_init(ctx, pp_context, i965->batch);
             i965->pp_context = pp_context;
+
+            if(IS_HASWELL(i965->intel.device_id)){
+                pp_context->pp_vebox_context = gen75_vebox_context_init(ctx);
+            }
         }
     }
 
