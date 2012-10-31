@@ -696,12 +696,17 @@ static int gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int
     return len_in_dwords;
 }
 
-static void gen6_mfc_init(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+static void gen6_mfc_init(VADriverContextP ctx,
+                          struct encode_state *encode_state,
+                          struct gen6_encoder_context *gen6_encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     dri_bo *bo;
     int i;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
     /*Encode common setup for MFC*/
     dri_bo_unreference(mfc_context->post_deblocking_output.bo);
@@ -730,7 +735,7 @@ static void gen6_mfc_init(VADriverContextP ctx, struct gen6_encoder_context *gen
     dri_bo_unreference(mfc_context->intra_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "Buffer",
-                      128 * 64,
+                      width_in_mbs * 64,
                       64);
     assert(bo);
     mfc_context->intra_row_store_scratch_buffer.bo = bo;
@@ -738,7 +743,7 @@ static void gen6_mfc_init(VADriverContextP ctx, struct gen6_encoder_context *gen
     dri_bo_unreference(mfc_context->deblocking_filter_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "Buffer",
-                      49152,  /* 6 * 128 * 64 */
+                      4 * width_in_mbs * 64,  /* 4 * width_in_mbs * 64 */
                       64);
     assert(bo);
     mfc_context->deblocking_filter_row_store_scratch_buffer.bo = bo;
@@ -746,7 +751,7 @@ static void gen6_mfc_init(VADriverContextP ctx, struct gen6_encoder_context *gen
     dri_bo_unreference(mfc_context->bsd_mpc_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "Buffer",
-                      12288, /* 1.5 * 128 * 64 */
+                      128 * width_in_mbs, /* 2 * widht_in_mbs * 64 */
                       0x1000);
     assert(bo);
     mfc_context->bsd_mpc_row_store_scratch_buffer.bo = bo;
@@ -921,7 +926,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
                             struct encode_state *encode_state,
                             struct gen6_encoder_context *gen6_encoder_context)
 {
-    gen6_mfc_init(ctx, gen6_encoder_context);
+    gen6_mfc_init(ctx, encode_state, gen6_encoder_context);
     gen6_mfc_avc_prepare(ctx, encode_state, gen6_encoder_context);
     gen6_mfc_run(ctx, encode_state, gen6_encoder_context);
     gen6_mfc_stop(ctx, encode_state, gen6_encoder_context);
