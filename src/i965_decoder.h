@@ -47,6 +47,8 @@ struct gen_buffer {
 
 #if HAVE_GEN_AVC_SURFACE
 
+static pthread_mutex_t free_avc_surface_lock = PTHREAD_MUTEX_INITIALIZER;
+
 typedef struct gen_avc_surface GenAvcSurface;
 struct gen_avc_surface
 {
@@ -58,10 +60,17 @@ struct gen_avc_surface
 static void 
 gen_free_avc_surface(void **data)
 {
-    GenAvcSurface *avc_surface = *data;
+    GenAvcSurface *avc_surface;
 
-    if (!avc_surface)
+    pthread_mutex_lock(&free_avc_surface_lock);
+
+    avc_surface = *data;
+
+    if (!avc_surface) {
+        pthread_mutex_unlock(&free_avc_surface_lock);
         return;
+    }
+
 
     dri_bo_unreference(avc_surface->dmv_top);
     avc_surface->dmv_top = NULL;
@@ -70,6 +79,8 @@ gen_free_avc_surface(void **data)
 
     free(avc_surface);
     *data = NULL;
+
+    pthread_mutex_unlock(&free_avc_surface_lock);
 }
 
 #endif
