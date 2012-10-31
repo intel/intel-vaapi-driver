@@ -255,4 +255,9 @@ extern void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
                                                     struct encode_state *encode_state,
                                                     struct intel_encoder_context *encoder_context,
                                                     struct intel_batchbuffer *slice_batch);
+
+extern VAStatus intel_mfc_avc_prepare(VADriverContextP ctx, 
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context);
+
 #endif	/* _GEN6_MFC_BCS_H_ */

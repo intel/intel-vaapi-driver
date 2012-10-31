@@ -27,10 +27,6 @@
  *
  */
 
-#ifndef HAVE_GEN_AVC_SURFACE
-#define HAVE_GEN_AVC_SURFACE 1
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -838,152 +834,6 @@ static void gen75_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
     mfc_context->avc_fqm_state(ctx, encoder_context);
     gen75_mfc_avc_directmode_state(ctx, encoder_context); 
     gen75_mfc_avc_ref_idx_state(ctx, encoder_context);
-}
-
-
-static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx, 
-                                     struct encode_state *encode_state,
-                                     struct intel_encoder_context *encoder_context)
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    struct object_surface *obj_surface;	
-    struct object_buffer *obj_buffer;
-    GenAvcSurface *gen6_avc_surface;
-    dri_bo *bo;
-    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
-    int i, j, enable_avc_ildb = 0;
-    VAEncSliceParameterBufferH264 *slice_param;
-    VACodedBufferSegment *coded_buffer_segment;
-    unsigned char *flag = NULL;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
-    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-
-    for (j = 0; j < encode_state->num_slice_params_ext && enable_avc_ildb == 0; j++) {
-        assert(encode_state->slice_params_ext && encode_state->slice_params_ext[j]->buffer);
-        slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j]->buffer;
-
-        for (i = 0; i < encode_state->slice_params_ext[j]->num_elements; i++) {
-            assert((slice_param->slice_type == SLICE_TYPE_I) ||
-                   (slice_param->slice_type == SLICE_TYPE_SI) ||
-                   (slice_param->slice_type == SLICE_TYPE_P) ||
-                   (slice_param->slice_type == SLICE_TYPE_SP) ||
-                   (slice_param->slice_type == SLICE_TYPE_B));
-
-            if (slice_param->disable_deblocking_filter_idc != 1) {
-                enable_avc_ildb = 1;
-                break;
-            }
-
-            slice_param++;
-        }
-    }
-
-    /*Setup all the input&output object*/
-
-    /* Setup current frame and current direct mv buffer*/
-    obj_surface = SURFACE(pPicParameter->CurrPic.picture_id);
-    assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-
-    if ( obj_surface->private_data == NULL) {
-        gen6_avc_surface = calloc(sizeof(GenAvcSurface), 1);
-        gen6_avc_surface->dmv_top = 
-            dri_bo_alloc(i965->intel.bufmgr,
-                         "Buffer",
-                         68* width_in_mbs * height_in_mbs, 
-                         64);
-        gen6_avc_surface->dmv_bottom = 
-            dri_bo_alloc(i965->intel.bufmgr,
-                         "Buffer",
-                         68* width_in_mbs * height_in_mbs, 
-                         64);
-        assert(gen6_avc_surface->dmv_top);
-        assert(gen6_avc_surface->dmv_bottom);
-        obj_surface->private_data = (void *)gen6_avc_surface;
-        obj_surface->free_private_data = (void *)gen_free_avc_surface; 
-    }
-    gen6_avc_surface = (GenAvcSurface *) obj_surface->private_data;
-    mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 2].bo = gen6_avc_surface->dmv_top;
-    mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 1].bo = gen6_avc_surface->dmv_bottom;
-    dri_bo_reference(gen6_avc_surface->dmv_top);
-    dri_bo_reference(gen6_avc_surface->dmv_bottom);
-
-    if (enable_avc_ildb) {
-        mfc_context->post_deblocking_output.bo = obj_surface->bo;
-        dri_bo_reference(mfc_context->post_deblocking_output.bo);
-    } else {
-        mfc_context->pre_deblocking_output.bo = obj_surface->bo;
-        dri_bo_reference(mfc_context->pre_deblocking_output.bo);
-    }
-
-    mfc_context->surface_state.width = obj_surface->orig_width;
-    mfc_context->surface_state.height = obj_surface->orig_height;
-    mfc_context->surface_state.w_pitch = obj_surface->width;
-    mfc_context->surface_state.h_pitch = obj_surface->height;
-    
-    /* Setup reference frames and direct mv buffers*/
-    for(i = 0; i < MAX_MFC_REFERENCE_SURFACES; i++) {
-        if ( pPicParameter->ReferenceFrames[i].picture_id != VA_INVALID_ID ) { 
-            obj_surface = SURFACE(pPicParameter->ReferenceFrames[i].picture_id);
-            assert(obj_surface);
-            if (obj_surface->bo != NULL) {
-                mfc_context->reference_surfaces[i].bo = obj_surface->bo;
-                dri_bo_reference(obj_surface->bo);
-            }
-            /* Check DMV buffer */
-            if ( obj_surface->private_data == NULL) {
-                
-                gen6_avc_surface = calloc(sizeof(GenAvcSurface), 1);
-                gen6_avc_surface->dmv_top = 
-                    dri_bo_alloc(i965->intel.bufmgr,
-                                 "Buffer",
-                                 68* width_in_mbs * height_in_mbs, 
-                                 64);
-                gen6_avc_surface->dmv_bottom = 
-                    dri_bo_alloc(i965->intel.bufmgr,
-                                 "Buffer",
-                                 68* width_in_mbs * height_in_mbs, 
-                                 64);
-                assert(gen6_avc_surface->dmv_top);
-                assert(gen6_avc_surface->dmv_bottom);
-                obj_surface->private_data = gen6_avc_surface;
-                obj_surface->free_private_data = gen_free_avc_surface; 
-            }
-    
-            gen6_avc_surface = (GenAvcSurface *) obj_surface->private_data;
-            /* Setup DMV buffer */
-            mfc_context->direct_mv_buffers[i*2].bo = gen6_avc_surface->dmv_top;
-            mfc_context->direct_mv_buffers[i*2+1].bo = gen6_avc_surface->dmv_bottom; 
-            dri_bo_reference(gen6_avc_surface->dmv_top);
-            dri_bo_reference(gen6_avc_surface->dmv_bottom);
-        } else {
-            break;
-        }
-    }
-	
-    obj_surface = SURFACE(encoder_context->input_yuv_surface);
-    assert(obj_surface && obj_surface->bo);
-    mfc_context->uncompressed_picture_source.bo = obj_surface->bo;
-    dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
-
-    obj_buffer = BUFFER (pPicParameter->coded_buf); /* FIXME: fix this later */
-    bo = obj_buffer->buffer_store->bo;
-    assert(bo);
-    mfc_context->mfc_indirect_pak_bse_object.bo = bo;
-    mfc_context->mfc_indirect_pak_bse_object.offset = I965_CODEDBUFFER_SIZE;
-    mfc_context->mfc_indirect_pak_bse_object.end_offset = ALIGN(obj_buffer->size_element - 0x1000, 0x1000);
-    dri_bo_reference(mfc_context->mfc_indirect_pak_bse_object.bo);
-    
-    dri_bo_map(bo, 1);
-    coded_buffer_segment = (VACodedBufferSegment *)bo->virtual;
-    flag = (unsigned char *)(coded_buffer_segment + 1);
-    *flag = 0;
-    dri_bo_unmap(bo);
-
-    return vaStatus;
 }
 
 
@@ -1850,7 +1700,7 @@ gen75_mfc_avc_encode_picture(VADriverContextP ctx,
  
     for (;;) {
         gen75_mfc_init(ctx, encode_state, encoder_context);
-        gen75_mfc_avc_prepare(ctx, encode_state, encoder_context);
+        intel_mfc_avc_prepare(ctx, encode_state, encoder_context);
         /*Programing bcs pipeline*/
         gen75_mfc_avc_pipeline_programing(ctx, encode_state, encoder_context);	//filling the pipeline
         gen75_mfc_run(ctx, encode_state, encoder_context);
