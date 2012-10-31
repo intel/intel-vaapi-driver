@@ -76,6 +76,7 @@ source_c = \
 	intel_driver.c		\
 	intel_memman.c		\
 	object_heap.c		\
+	intel_media_common.c		\
 	$(NULL)
 
 source_h = \

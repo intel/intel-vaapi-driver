@@ -26,10 +26,6 @@
  *
  */
 
-#ifndef HAVE_GEN_AVC_SURFACE
-#define HAVE_GEN_AVC_SURFACE 1
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

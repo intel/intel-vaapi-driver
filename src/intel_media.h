@@ -31,9 +31,7 @@
 #include <va/va.h>
 #include <intel_bufmgr.h>
 
-#if HAVE_GEN_AVC_SURFACE
 
-static pthread_mutex_t free_avc_surface_lock = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct gen_avc_surface GenAvcSurface;
 struct gen_avc_surface
@@ -43,32 +41,6 @@ struct gen_avc_surface
     int dmv_bottom_flag;
 };
 
-static void 
-gen_free_avc_surface(void **data)
-{
-    GenAvcSurface *avc_surface;
-
-    pthread_mutex_lock(&free_avc_surface_lock);
-
-    avc_surface = *data;
-
-    if (!avc_surface) {
-        pthread_mutex_unlock(&free_avc_surface_lock);
-        return;
-    }
-
-
-    dri_bo_unreference(avc_surface->dmv_top);
-    avc_surface->dmv_top = NULL;
-    dri_bo_unreference(avc_surface->dmv_bottom);
-    avc_surface->dmv_bottom = NULL;
-
-    free(avc_surface);
-    *data = NULL;
-
-    pthread_mutex_unlock(&free_avc_surface_lock);
-}
-
-#endif
+extern void gen_free_avc_surface(void **data);
 
 #endif /* INTEL_MEDIA_H */

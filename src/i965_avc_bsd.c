@@ -30,10 +30,6 @@
 #include <string.h>
 #include <assert.h>
 
-#ifndef HAVE_GEN_AVC_SURFACE
-#define HAVE_GEN_AVC_SURFACE 1
-#endif
-
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
 
