@@ -31,11 +31,13 @@
 
 #include "intel_batchbuffer.h"
 
+#define MAX_BATCH_SIZE		0x400000
+
 static void 
-intel_batchbuffer_reset(struct intel_batchbuffer *batch)
+intel_batchbuffer_reset(struct intel_batchbuffer *batch, int buffer_size)
 {
     struct intel_driver_data *intel = batch->intel; 
-    int batch_size = BATCH_SIZE;
+    int batch_size = buffer_size;
 
     assert(batch->flag == I915_EXEC_RENDER ||
            batch->flag == I915_EXEC_BLT ||
@@ -64,7 +66,7 @@ intel_batchbuffer_space(struct intel_batchbuffer *batch)
 
 
 struct intel_batchbuffer * 
-intel_batchbuffer_new(struct intel_driver_data *intel, int flag)
+intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size)
 {
     struct intel_batchbuffer *batch = calloc(1, sizeof(*batch));
     assert(flag == I915_EXEC_RENDER ||
@@ -72,10 +74,19 @@ intel_batchbuffer_new(struct intel_driver_data *intel, int flag)
            flag == I915_EXEC_BLT ||
            flag == I915_EXEC_VEBOX);
 
+   if (!buffer_size || buffer_size < BATCH_SIZE) {
+	buffer_size = BATCH_SIZE;
+   }
+
+   /* the buffer size can't exceed 4M */
+   if (buffer_size > MAX_BATCH_SIZE) {
+	buffer_size = MAX_BATCH_SIZE;
+   }
+
     batch->intel = intel;
     batch->flag = flag;
     batch->run = drm_intel_bo_mrb_exec;
-    intel_batchbuffer_reset(batch);
+    intel_batchbuffer_reset(batch, buffer_size);
 
     return batch;
 }
@@ -110,7 +121,7 @@ intel_batchbuffer_flush(struct intel_batchbuffer *batch)
     dri_bo_unmap(batch->buffer);
     used = batch->ptr - batch->map;
     batch->run(batch->buffer, used, 0, 0, 0, batch->flag);
-    intel_batchbuffer_reset(batch);
+    intel_batchbuffer_reset(batch, batch->size);
 }
 
 void 

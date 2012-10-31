@@ -74,7 +74,7 @@ gen6_enc_hw_context_init(VADriverContextP ctx, VAProfile profile)
 
     gen6_encoder_context->base.destroy = gen6_encoder_context_destroy;
     gen6_encoder_context->base.run = gen6_encoder_end_picture;
-    gen6_encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    gen6_encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
 
     gen6_vme_context_init(ctx, &gen6_encoder_context->vme_context);
     gen6_mfc_context_init(ctx, &gen6_encoder_context->mfc_context);
@@ -117,7 +117,7 @@ gen75_enc_hw_context_init(VADriverContextP ctx, VAProfile profile)
 
     gen6_encoder_context->base.destroy = gen75_encoder_context_destroy;
     gen6_encoder_context->base.run = gen75_encoder_end_picture;
-    gen6_encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER);
+    gen6_encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
 
     gen75_vme_context_init(ctx, &gen6_encoder_context->vme_context);
     gen75_mfc_context_init(ctx, &gen6_encoder_context->mfc_context);

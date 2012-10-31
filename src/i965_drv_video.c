@@ -1728,7 +1728,7 @@ i965_Init(VADriverContextP ctx)
     else
         return VA_STATUS_ERROR_UNKNOWN;
 
-    i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER);
+    i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, 0);
 
     if (!i965_display_attributes_init(ctx))
         return VA_STATUS_ERROR_UNKNOWN;
