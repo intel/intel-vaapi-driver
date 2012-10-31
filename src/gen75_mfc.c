@@ -413,12 +413,17 @@ gen75_mfc_avc_insert_object(VADriverContextP ctx, struct intel_encoder_context *
 }
 
 
-static void gen75_mfc_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+static void gen75_mfc_init(VADriverContextP ctx,
+			struct encode_state *encode_state,
+			struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     dri_bo *bo;
     int i;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
     /*Encode common setup for MFC*/
     dri_bo_unreference(mfc_context->post_deblocking_output.bo);
@@ -448,7 +453,7 @@ static void gen75_mfc_init(VADriverContextP ctx, struct intel_encoder_context *e
     dri_bo_unreference(mfc_context->intra_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "Buffer",
-                      128 * 64,
+                      width_in_mbs * 64,
                       64);
     assert(bo);
     mfc_context->intra_row_store_scratch_buffer.bo = bo;
@@ -456,7 +461,7 @@ static void gen75_mfc_init(VADriverContextP ctx, struct intel_encoder_context *e
     dri_bo_unreference(mfc_context->macroblock_status_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "Buffer",
-                      128*128*16,
+                      width_in_mbs * height_in_mbs * 16,
                       64);
     assert(bo);
     mfc_context->macroblock_status_buffer.bo = bo;
@@ -464,7 +469,7 @@ static void gen75_mfc_init(VADriverContextP ctx, struct intel_encoder_context *e
     dri_bo_unreference(mfc_context->deblocking_filter_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "Buffer",
-                      49152,  /* 6 * 128 * 64 */
+                      4 * width_in_mbs * 64,  /* 4 * width_in_mbs * 64 */
                       64);
     assert(bo);
     mfc_context->deblocking_filter_row_store_scratch_buffer.bo = bo;
@@ -472,7 +477,7 @@ static void gen75_mfc_init(VADriverContextP ctx, struct intel_encoder_context *e
     dri_bo_unreference(mfc_context->bsd_mpc_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "Buffer",
-                      12288, /* 1.5 * 128 * 64 */
+                      2 * width_in_mbs * 64, /* 2 * width_in_mbs * 64 */
                       0x1000);
     assert(bo);
     mfc_context->bsd_mpc_row_store_scratch_buffer.bo = bo;
@@ -852,6 +857,9 @@ static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx,
     VAEncSliceParameterBufferH264 *slice_param;
     VACodedBufferSegment *coded_buffer_segment;
     unsigned char *flag = NULL;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
     for (j = 0; j < encode_state->num_slice_params_ext && enable_avc_ildb == 0; j++) {
         assert(encode_state->slice_params_ext && encode_state->slice_params_ext[j]->buffer);
@@ -885,12 +893,12 @@ static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx,
         gen6_avc_surface->dmv_top = 
             dri_bo_alloc(i965->intel.bufmgr,
                          "Buffer",
-                         68*8192, 
+                         68* width_in_mbs * height_in_mbs, 
                          64);
         gen6_avc_surface->dmv_bottom = 
             dri_bo_alloc(i965->intel.bufmgr,
                          "Buffer",
-                         68*8192, 
+                         68* width_in_mbs * height_in_mbs, 
                          64);
         assert(gen6_avc_surface->dmv_top);
         assert(gen6_avc_surface->dmv_bottom);
@@ -932,12 +940,12 @@ static VAStatus gen75_mfc_avc_prepare(VADriverContextP ctx,
                 gen6_avc_surface->dmv_top = 
                     dri_bo_alloc(i965->intel.bufmgr,
                                  "Buffer",
-                                 68*8192, 
+                                 68* width_in_mbs * height_in_mbs, 
                                  64);
                 gen6_avc_surface->dmv_bottom = 
                     dri_bo_alloc(i965->intel.bufmgr,
                                  "Buffer",
-                                 68*8192, 
+                                 68* width_in_mbs * height_in_mbs, 
                                  64);
                 assert(gen6_avc_surface->dmv_top);
                 assert(gen6_avc_surface->dmv_bottom);
@@ -1841,7 +1849,7 @@ gen75_mfc_avc_encode_picture(VADriverContextP ctx,
     int sts;
  
     for (;;) {
-        gen75_mfc_init(ctx, encoder_context);
+        gen75_mfc_init(ctx, encode_state, encoder_context);
         gen75_mfc_avc_prepare(ctx, encode_state, encoder_context);
         /*Programing bcs pipeline*/
         gen75_mfc_avc_pipeline_programing(ctx, encode_state, encoder_context);	//filling the pipeline
