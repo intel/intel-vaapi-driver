@@ -866,7 +866,8 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
                                          struct encode_state *encode_state,
                                          struct gen6_encoder_context *gen6_encoder_context)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *main_batch = gen6_encoder_context->base.batch;
     VAEncSliceParameterBuffer *pSliceParameter = (VAEncSliceParameterBuffer *)encode_state->slice_params[0]->buffer;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
     int is_intra = pSliceParameter->slice_flags.bits.is_intra;
@@ -874,8 +875,9 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
     int emit_new_state = 1, object_len_in_bytes;
     int x, y;
+    struct intel_batchbuffer *batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, width_in_mbs * height_in_mbs * 8 * 4 + 0x200);
 
-    intel_batchbuffer_start_atomic(batch, 0x1000);
+    intel_batchbuffer_start_atomic(batch, width_in_mbs * height_in_mbs * 8 * 4 + 0x100);
 
     for(y = 0; y < height_in_mbs; y++){
         for(x = 0; x < width_in_mbs; x++){	
@@ -909,7 +911,29 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
         }
     }
 
-    intel_batchbuffer_end_atomic(batch);	
+    intel_batchbuffer_align(batch, 8);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, MI_BATCH_BUFFER_END);
+    ADVANCE_BATCH(batch);
+
+    intel_batchbuffer_end_atomic(batch);
+
+    /* chain to the main batch buffer */
+    intel_batchbuffer_start_atomic(main_batch, 0x100);
+    intel_batchbuffer_emit_mi_flush(main_batch);
+    BEGIN_BATCH(main_batch, 2);
+    OUT_BATCH(main_batch, MI_BATCH_BUFFER_START | (2 << 6));
+    OUT_RELOC(main_batch,
+              batch->buffer,
+              I915_GEM_DOMAIN_COMMAND, 0,
+              0);
+    ADVANCE_BATCH(main_batch);
+    intel_batchbuffer_end_atomic(main_batch);
+
+    // end programing             
+    intel_batchbuffer_free(batch);
 }
 
 static VAStatus gen6_vme_prepare(VADriverContextP ctx, 
