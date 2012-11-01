@@ -44,10 +44,12 @@
 
 static void
 gen75_mfc_pipe_mode_select(VADriverContextP ctx,
-                          int standard_select,
-                          struct gen6_encoder_context *gen6_encoder_context)
+                           int standard_select,
+                           struct gen6_encoder_context *gen6_encoder_context,
+                           struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     assert(standard_select == MFX_FORMAT_MPEG2 ||
            standard_select == MFX_FORMAT_AVC);
@@ -87,10 +89,14 @@ gen75_mfc_pipe_mode_select(VADriverContextP ctx,
 
 
 static void
-gen75_mfc_surface_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+gen75_mfc_surface_state(VADriverContextP ctx,
+                        struct gen6_encoder_context *gen6_encoder_context,
+                        struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 6);
 
@@ -116,11 +122,14 @@ gen75_mfc_surface_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_
 
 static void
 gen75_mfc_pipe_buf_addr_state_bplus(VADriverContextP ctx,
-		struct gen6_encoder_context *gen6_encoder_context)
+                                    struct gen6_encoder_context *gen6_encoder_context,
+                                    struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     int i;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 61);
 
@@ -202,16 +211,19 @@ gen75_mfc_pipe_buf_addr_state_bplus(VADriverContextP ctx,
 }
 
 static void
-gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx,
+                              struct gen6_encoder_context *gen6_encoder_context,
+                              struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     int i;
-
     struct i965_driver_data *i965 = i965_driver_data(ctx);
  
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
+
     if (IS_STEPPING_BPLUS(i965)) {
-	gen75_mfc_pipe_buf_addr_state_bplus(ctx, gen6_encoder_context);
+	gen75_mfc_pipe_buf_addr_state_bplus(ctx, gen6_encoder_context, batch);
 	return;
     }
 
@@ -256,11 +268,14 @@ gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct gen6_encoder_context 
 
 static void
 gen75_mfc_ind_obj_base_addr_state_bplus(VADriverContextP ctx,
-		struct gen6_encoder_context *gen6_encoder_context)
+                                        struct gen6_encoder_context *gen6_encoder_context,
+                                        struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 26);
 
@@ -309,15 +324,19 @@ gen75_mfc_ind_obj_base_addr_state_bplus(VADriverContextP ctx,
 }
 
 static void
-gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
+                                  struct gen6_encoder_context *gen6_encoder_context,
+                                  struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_vme_context *vme_context = &gen6_encoder_context->vme_context;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
+
     if (IS_STEPPING_BPLUS(i965)) {
-	gen75_mfc_ind_obj_base_addr_state_bplus(ctx, gen6_encoder_context);
+	gen75_mfc_ind_obj_base_addr_state_bplus(ctx, gen6_encoder_context, batch);
 	return;
     }
 
@@ -345,10 +364,13 @@ gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct gen6_encoder_cont
 
 static void
 gen75_mfc_bsp_buf_base_addr_state_bplus(VADriverContextP ctx,
-		struct gen6_encoder_context *gen6_encoder_context)
+                                        struct gen6_encoder_context *gen6_encoder_context,
+                                        struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 10);
 
@@ -373,14 +395,18 @@ gen75_mfc_bsp_buf_base_addr_state_bplus(VADriverContextP ctx,
 }
 
 static void
-gen75_mfc_bsp_buf_base_addr_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+gen75_mfc_bsp_buf_base_addr_state(VADriverContextP ctx,
+                                  struct gen6_encoder_context *gen6_encoder_context,
+                                  struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
+
     if (IS_STEPPING_BPLUS(i965)) {
-	gen75_mfc_bsp_buf_base_addr_state_bplus(ctx, gen6_encoder_context);
+	gen75_mfc_bsp_buf_base_addr_state_bplus(ctx, gen6_encoder_context, batch);
 	return;
     }
  
@@ -398,13 +424,16 @@ gen75_mfc_bsp_buf_base_addr_state(VADriverContextP ctx, struct gen6_encoder_cont
 }
 
 static void
-gen75_mfc_avc_img_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+gen75_mfc_avc_img_state(VADriverContextP ctx,
+                        struct gen6_encoder_context *gen6_encoder_context,
+                        struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
-
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 16);
     OUT_BCS_BATCH(batch, MFX_AVC_IMG_STATE | (16 - 2));
@@ -458,12 +487,14 @@ gen75_mfc_avc_img_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_
 
 static void
 gen75_mfc_avc_directmode_state_bplus(VADriverContextP ctx,
-			struct gen6_encoder_context *gen6_encoder_context)
+                                     struct gen6_encoder_context *gen6_encoder_context,
+                                     struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
-
     int i;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 71);
 
@@ -502,15 +533,19 @@ gen75_mfc_avc_directmode_state_bplus(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-static void gen75_mfc_avc_directmode_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+static void gen75_mfc_avc_directmode_state(VADriverContextP ctx,
+                                           struct gen6_encoder_context *gen6_encoder_context,
+                                           struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
     int i;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
+
     if (IS_STEPPING_BPLUS(i965)) {
-	gen75_mfc_avc_directmode_state_bplus(ctx, gen6_encoder_context);
+	gen75_mfc_avc_directmode_state_bplus(ctx, gen6_encoder_context, batch);
 	return;
     }
 
@@ -552,11 +587,14 @@ static void gen75_mfc_avc_directmode_state(VADriverContextP ctx, struct gen6_enc
 }
 
 static void gen75_mfc_avc_slice_state(VADriverContextP ctx,
-                                     int intra_slice,
-                                     struct gen6_encoder_context *gen6_encoder_context)
+                                      int intra_slice,
+                                      struct gen6_encoder_context *gen6_encoder_context,
+                                      struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = &gen6_encoder_context->mfc_context;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 11);;
 
@@ -602,13 +640,16 @@ static void gen75_mfc_avc_slice_state(VADriverContextP ctx,
 
 static void
 gen75_mfc_qm_state(VADriverContextP ctx,
-                  int qm_type,
-                  unsigned int *qm,
-                  int qm_length,
-                  struct gen6_encoder_context *gen6_encoder_context)
+                   int qm_type,
+                   unsigned int *qm,
+                   int qm_length,
+                   struct gen6_encoder_context *gen6_encoder_context,
+                   struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     unsigned int qm_buffer[16];
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     assert(qm_length <= 16);
     assert(sizeof(*qm) == 4);
@@ -621,7 +662,9 @@ gen75_mfc_qm_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-static void gen75_mfc_avc_qm_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+static void gen75_mfc_avc_qm_state(VADriverContextP ctx,
+                                   struct gen6_encoder_context *gen6_encoder_context,
+                                   struct intel_batchbuffer *batch)
 {
     unsigned int qm[16] = {
         0x10101010, 0x10101010, 0x10101010, 0x10101010,
@@ -630,21 +673,24 @@ static void gen75_mfc_avc_qm_state(VADriverContextP ctx, struct gen6_encoder_con
         0x10101010, 0x10101010, 0x10101010, 0x10101010
     };
 
-    gen75_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, qm, 12, gen6_encoder_context);
-    gen75_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, qm, 12, gen6_encoder_context);
-    gen75_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, qm, 16, gen6_encoder_context);
-    gen75_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, qm, 16, gen6_encoder_context);
+    gen75_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, qm, 12, gen6_encoder_context, batch);
+    gen75_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, qm, 12, gen6_encoder_context, batch);
+    gen75_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, qm, 16, gen6_encoder_context, batch);
+    gen75_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, qm, 16, gen6_encoder_context, batch);
 }
 
 static void
 gen75_mfc_fqm_state(VADriverContextP ctx,
-                   int fqm_type,
-                   unsigned int *fqm,
-                   int fqm_length,
-                   struct gen6_encoder_context *gen6_encoder_context)
+                    int fqm_type,
+                    unsigned int *fqm,
+                    int fqm_length,
+                    struct gen6_encoder_context *gen6_encoder_context,
+                    struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     unsigned int fqm_buffer[32];
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     assert(fqm_length <= 32);
     assert(sizeof(*fqm) == 4);
@@ -657,7 +703,9 @@ gen75_mfc_fqm_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-static void gen75_mfc_avc_fqm_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+static void gen75_mfc_avc_fqm_state(VADriverContextP ctx,
+                                    struct gen6_encoder_context *gen6_encoder_context,
+                                    struct intel_batchbuffer *batch)
 {
     unsigned int qm[32] = {
         0x10001000, 0x10001000, 0x10001000, 0x10001000,
@@ -670,16 +718,20 @@ static void gen75_mfc_avc_fqm_state(VADriverContextP ctx, struct gen6_encoder_co
         0x10001000, 0x10001000, 0x10001000, 0x10001000
     };
 
-    gen75_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, qm, 24, gen6_encoder_context);
-    gen75_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, qm, 24, gen6_encoder_context);
-    gen75_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, qm, 32, gen6_encoder_context);
-    gen75_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, qm, 32, gen6_encoder_context);
+    gen75_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, qm, 24, gen6_encoder_context, batch);
+    gen75_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, qm, 24, gen6_encoder_context, batch);
+    gen75_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, qm, 32, gen6_encoder_context, batch);
+    gen75_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, qm, 32, gen6_encoder_context, batch);
 }
 
-static void gen75_mfc_avc_ref_idx_state(VADriverContextP ctx, struct gen6_encoder_context *gen6_encoder_context)
+static void gen75_mfc_avc_ref_idx_state(VADriverContextP ctx,
+                                        struct gen6_encoder_context *gen6_encoder_context,
+                                        struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     int i;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 10);
 
@@ -695,9 +747,12 @@ static void gen75_mfc_avc_ref_idx_state(VADriverContextP ctx, struct gen6_encode
 }
 	
 static void
-gen75_mfc_avc_insert_object(VADriverContextP ctx, int flush_data, struct gen6_encoder_context *gen6_encoder_context)
+gen75_mfc_avc_insert_object(VADriverContextP ctx, int flush_data,
+                            struct gen6_encoder_context *gen6_encoder_context,
+                            struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 4);
 
@@ -715,14 +770,17 @@ gen75_mfc_avc_insert_object(VADriverContextP ctx, int flush_data, struct gen6_en
 
 static int
 gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, int qp,unsigned int *msg,
-                              struct gen6_encoder_context *gen6_encoder_context)
+                               struct gen6_encoder_context *gen6_encoder_context,
+                               struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     int len_in_dwords = 12;
 
     unsigned int intra_msg;
 #define		INTRA_MSG_FLAG		(1 << 13)
 #define		INTRA_MBTYPE_MASK	(0x1F0000)
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
@@ -758,11 +816,14 @@ gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, i
 }
 
 static int gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, int qp,
-	unsigned int offset, unsigned int *msg, struct gen6_encoder_context *gen6_encoder_context)
+                                          unsigned int offset, unsigned int *msg, struct gen6_encoder_context *gen6_encoder_context,
+                                          struct intel_batchbuffer *batch)
 {
-    struct intel_batchbuffer *batch = gen6_encoder_context->base.batch;
     int len_in_dwords = 12;
     unsigned int inter_msg;
+
+    if (batch == NULL)
+        batch = gen6_encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
@@ -905,35 +966,35 @@ static void gen75_mfc_avc_pipeline_programing(VADriverContextP ctx,
             if (emit_new_state) {
                 intel_batchbuffer_emit_mi_flush(batch);
                 
-                    gen75_mfc_pipe_mode_select(ctx, MFX_FORMAT_AVC, gen6_encoder_context);
-                    gen75_mfc_surface_state(ctx, gen6_encoder_context);
-                    gen75_mfc_ind_obj_base_addr_state(ctx, gen6_encoder_context);
+                gen75_mfc_pipe_mode_select(ctx, MFX_FORMAT_AVC, gen6_encoder_context, batch);
+                gen75_mfc_surface_state(ctx, gen6_encoder_context, batch);
+                gen75_mfc_ind_obj_base_addr_state(ctx, gen6_encoder_context, batch);
 
-                gen75_mfc_pipe_buf_addr_state(ctx, gen6_encoder_context);
-                gen75_mfc_bsp_buf_base_addr_state(ctx, gen6_encoder_context);
+                gen75_mfc_pipe_buf_addr_state(ctx, gen6_encoder_context, batch);
+                gen75_mfc_bsp_buf_base_addr_state(ctx, gen6_encoder_context, batch);
 
-                    gen75_mfc_avc_img_state(ctx, gen6_encoder_context);
-                    gen75_mfc_avc_qm_state(ctx, gen6_encoder_context);
-                    gen75_mfc_avc_fqm_state(ctx, gen6_encoder_context);
-                    gen75_mfc_avc_directmode_state(ctx, gen6_encoder_context);
+                gen75_mfc_avc_img_state(ctx, gen6_encoder_context, batch);
+                gen75_mfc_avc_qm_state(ctx, gen6_encoder_context, batch);
+                gen75_mfc_avc_fqm_state(ctx, gen6_encoder_context, batch);
+                gen75_mfc_avc_directmode_state(ctx, gen6_encoder_context, batch);
 
-                gen75_mfc_avc_ref_idx_state(ctx, gen6_encoder_context);
-                gen75_mfc_avc_slice_state(ctx, is_intra, gen6_encoder_context);
+                gen75_mfc_avc_ref_idx_state(ctx, gen6_encoder_context, batch);
+                gen75_mfc_avc_slice_state(ctx, is_intra, gen6_encoder_context, batch);
                 emit_new_state = 0;
             }
 
 	    msg = (unsigned int *) (msg_ptr + mb_index * vme_context->vme_output.size_block);
             if (is_intra) {
-                object_len_in_bytes = gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, gen6_encoder_context);
+                object_len_in_bytes = gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, gen6_encoder_context, batch);
             } else {
 		inter_rdo = msg[INTER_RDO_OFFSET] & RDO_MASK;
 		intra_rdo = msg[INTRA_RDO_OFFSET] & RDO_MASK;
 		if (intra_rdo < inter_rdo) {
-                	object_len_in_bytes = gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, gen6_encoder_context);
+                    object_len_in_bytes = gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, gen6_encoder_context, batch);
 		} else {
-			msg += INTER_MSG_OFFSET;
-			offset = mb_index * vme_context->vme_output.size_block + INTER_MV_OFFSET;
-        	        object_len_in_bytes = gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, offset, msg, gen6_encoder_context);
+                    msg += INTER_MSG_OFFSET;
+                    offset = mb_index * vme_context->vme_output.size_block + INTER_MV_OFFSET;
+                    object_len_in_bytes = gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, offset, msg, gen6_encoder_context, batch);
 		}
 	    }
             if (intel_batchbuffer_check_free_space(batch, object_len_in_bytes) == 0) {
