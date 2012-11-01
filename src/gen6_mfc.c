@@ -420,46 +420,6 @@ gen7_mfc_avc_img_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-static void gen6_mfc_avc_directmode_state(VADriverContextP ctx,
-                                          struct gen6_encoder_context *gen6_encoder_context,
-                                          struct intel_batchbuffer *batch)
-{
-    int i;
-
-    if (batch == NULL)
-        batch = gen6_encoder_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 69);
-
-    OUT_BCS_BATCH(batch, MFX_AVC_DIRECTMODE_STATE | (69 - 2));
-    //TODO: reference DMV
-    for(i = 0; i < 16; i++){
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-    }
-
-    //TODO: current DMV just for test
-#if 0
-    OUT_BCS_RELOC(batch, mfc_context->direct_mv_buffers[0].bo,
-                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  0);
-#else
-    //drm_intel_bo_pin(mfc_context->direct_mv_buffers[0].bo, 0x1000);
-    //OUT_BCS_BATCH(batch, mfc_context->direct_mv_buffers[0].bo->offset);
-    OUT_BCS_BATCH(batch, 0);
-#endif
-
-
-    OUT_BCS_BATCH(batch, 0);
-
-    //TODO: POL list
-    for(i = 0; i < 34; i++) {
-        OUT_BCS_BATCH(batch, 0);
-    }
-
-    ADVANCE_BCS_BATCH(batch);
-}
-
 static void gen6_mfc_avc_slice_state(VADriverContextP ctx,
                                      int intra_slice,
                                      struct gen6_encoder_context *gen6_encoder_context,
@@ -659,28 +619,6 @@ static void gen6_mfc_avc_ref_idx_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 	
-static void
-gen6_mfc_avc_insert_object(VADriverContextP ctx, int flush_data, 
-                           struct gen6_encoder_context *gen6_encoder_context,
-                           struct intel_batchbuffer *batch)
-{
-    if (batch == NULL)
-        batch = gen6_encoder_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 4);
-
-    OUT_BCS_BATCH(batch, MFC_AVC_INSERT_OBJECT | (4 -2 ) );
-    OUT_BCS_BATCH(batch, (32<<8) | 
-                  (1 << 3) |
-                  (1 << 2) |
-                  (flush_data << 1) |
-                  (1<<0) );
-    OUT_BCS_BATCH(batch, 0x00000003);
-    OUT_BCS_BATCH(batch, 0xABCD1234);
-
-    ADVANCE_BCS_BATCH(batch);
-}
-
 static int
 gen6_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, int qp,unsigned int *msg,
                               struct gen6_encoder_context *gen6_encoder_context,
@@ -778,7 +716,6 @@ static void gen6_mfc_init(VADriverContextP ctx,
     int i;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
-    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
     /*Encode common setup for MFC*/
     dri_bo_unreference(mfc_context->post_deblocking_output.bo);

@@ -28,6 +28,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
@@ -704,7 +705,6 @@ static VAStatus gen75_vme_prepare(VADriverContextP ctx,
                                  struct encode_state *encode_state,
                                  struct gen6_encoder_context *gen6_encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSliceParameterBuffer *pSliceParameter = (VAEncSliceParameterBuffer *)encode_state->slice_params[0]->buffer;
     int is_intra = pSliceParameter->slice_flags.bits.is_intra;

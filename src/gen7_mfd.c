@@ -403,14 +403,6 @@ gen7_mfd_bsp_buf_base_addr_state(VADriverContextP ctx,
 }
 
 static void
-gen7_mfd_aes_state(VADriverContextP ctx,
-                   struct decode_state *decode_state,
-                   int standard_select)
-{
-    /* FIXME */
-}
-
-static void
 gen7_mfd_qm_state(VADriverContextP ctx,
                   int qm_type,
                   unsigned char *qm,
@@ -427,18 +419,6 @@ gen7_mfd_qm_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_QM_STATE | (18 - 2));
     OUT_BCS_BATCH(batch, qm_type << 0);
     intel_batchbuffer_data(batch, qm_buffer, 16 * 4);
-    ADVANCE_BCS_BATCH(batch);
-}
-static void
-gen7_mfd_wait(VADriverContextP ctx,
-              struct decode_state *decode_state,
-              int standard_select,
-              struct gen7_mfd_context *gen7_mfd_context)
-{
-    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 1);
-    OUT_BCS_BATCH(batch, MFX_WAIT | (1 << 8));
     ADVANCE_BCS_BATCH(batch);
 }
 

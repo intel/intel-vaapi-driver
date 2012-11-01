@@ -746,28 +746,6 @@ static void gen75_mfc_avc_ref_idx_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 	
-static void
-gen75_mfc_avc_insert_object(VADriverContextP ctx, int flush_data,
-                            struct gen6_encoder_context *gen6_encoder_context,
-                            struct intel_batchbuffer *batch)
-{
-    if (batch == NULL)
-        batch = gen6_encoder_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 4);
-
-    OUT_BCS_BATCH(batch, MFC_AVC_INSERT_OBJECT | (4 -2 ) );
-    OUT_BCS_BATCH(batch, (32<<8) | 
-                  (1 << 3) |
-                  (1 << 2) |
-                  (flush_data << 1) |
-                  (1<<0) );
-    OUT_BCS_BATCH(batch, 0x00000003);
-    OUT_BCS_BATCH(batch, 0xABCD1234);
-
-    ADVANCE_BCS_BATCH(batch);
-}
-
 static int
 gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb, int qp,unsigned int *msg,
                                struct gen6_encoder_context *gen6_encoder_context,
@@ -876,7 +854,6 @@ static void gen75_mfc_init(VADriverContextP ctx,
     int i;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param->buffer;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
-    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
     /*Encode common setup for MFC*/
     dri_bo_unreference(mfc_context->post_deblocking_output.bo);

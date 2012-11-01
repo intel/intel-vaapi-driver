@@ -31,6 +31,7 @@ void intel_batchbuffer_free(struct intel_batchbuffer *batch);
 void intel_batchbuffer_start_atomic(struct intel_batchbuffer *batch, unsigned int size);
 void intel_batchbuffer_start_atomic_bcs(struct intel_batchbuffer *batch, unsigned int size);
 void intel_batchbuffer_start_atomic_blt(struct intel_batchbuffer *batch, unsigned int size);
+void intel_batchbuffer_start_atomic_veb(struct intel_batchbuffer *batch, unsigned int size);
 void intel_batchbuffer_end_atomic(struct intel_batchbuffer *batch);
 void intel_batchbuffer_emit_dword(struct intel_batchbuffer *batch, unsigned int x);
 void intel_batchbuffer_emit_reloc(struct intel_batchbuffer *batch, dri_bo *bo, 

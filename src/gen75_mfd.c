@@ -622,14 +622,6 @@ gen75_mfd_bsp_buf_base_addr_state(VADriverContextP ctx,
 }
 
 static void
-gen75_mfd_aes_state(VADriverContextP ctx,
-                   struct decode_state *decode_state,
-                   int standard_select)
-{
-    /* FIXME */
-}
-
-static void
 gen75_mfd_qm_state(VADriverContextP ctx,
                   int qm_type,
                   unsigned char *qm,
@@ -646,18 +638,6 @@ gen75_mfd_qm_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_QM_STATE | (18 - 2));
     OUT_BCS_BATCH(batch, qm_type << 0);
     intel_batchbuffer_data(batch, qm_buffer, 16 * 4);
-    ADVANCE_BCS_BATCH(batch);
-}
-static void
-gen75_mfd_wait(VADriverContextP ctx,
-              struct decode_state *decode_state,
-              int standard_select,
-              struct gen7_mfd_context *gen7_mfd_context)
-{
-    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 1);
-    OUT_BCS_BATCH(batch, MFX_WAIT | (1 << 8));
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -776,7 +756,6 @@ gen75_mfd_avc_picid_state(VADriverContextP ctx,
                       struct decode_state *decode_state,
                       struct gen7_mfd_context *gen7_mfd_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 10);
@@ -3054,7 +3033,6 @@ static void
 gen75_jpeg_wa_ind_obj_base_addr_state_bplus(VADriverContextP ctx,
                                      struct gen7_mfd_context *gen7_mfd_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 26);

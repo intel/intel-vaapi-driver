@@ -2431,12 +2431,11 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     struct i965_sampler_8x8_state *sampler_8x8_state;
     int index, i;
     int width[3], height[3], pitch[3], offset[3];
-    int src_width, src_height;
+    int src_height;
 
     /* source surface */
     gen7_pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 0, 0,
                                          width, height, pitch, offset);
-    src_width = width[0];
     src_height = height[0];
 
     /* destination surface */

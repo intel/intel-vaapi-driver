@@ -395,27 +395,6 @@ gen6_mfd_bsp_buf_base_addr_state(VADriverContextP ctx,
 }
 
 static void
-gen6_mfd_aes_state(VADriverContextP ctx,
-                   struct decode_state *decode_state,
-                   int standard_select)
-{
-    /* FIXME */
-}
-
-static void
-gen6_mfd_wait(VADriverContextP ctx,
-              struct decode_state *decode_state,
-              int standard_select,
-              struct gen6_mfd_context *gen6_mfd_context)
-{
-    struct intel_batchbuffer *batch = gen6_mfd_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 1);
-    OUT_BCS_BATCH(batch, MFX_WAIT | (1 << 8));
-    ADVANCE_BCS_BATCH(batch);
-}
-
-static void
 gen6_mfd_avc_img_state(VADriverContextP ctx,
                        struct decode_state *decode_state,
                        struct gen6_mfd_context *gen6_mfd_context)

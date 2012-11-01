@@ -82,7 +82,6 @@
                                          IS_GEN7((ctx)->intel.device_id))
 
 #define HAS_ACCELERATED_PUTIMAGE(ctx)   HAS_VPP(ctx)
-static int get_sampling_from_fourcc(unsigned int fourcc);
 
 #if VA_CHECK_VERSION(0,33,0)
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */

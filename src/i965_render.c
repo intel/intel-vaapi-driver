@@ -891,16 +891,11 @@ i965_subpic_render_src_surfaces_state(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);  
     struct object_surface *obj_surface = SURFACE(surface);
-    int w, h;
-    dri_bo *region;
     dri_bo *subpic_region;
     struct object_subpic *obj_subpic = SUBPIC(obj_surface->subpic);
     struct object_image *obj_image = IMAGE(obj_subpic->image);
     assert(obj_surface);
     assert(obj_surface->bo);
-    w = obj_surface->width;
-    h = obj_surface->height;
-    region = obj_surface->bo;
     subpic_region = obj_image->bo;
     /*subpicture surface*/
     i965_render_src_surface_state(ctx, 1, subpic_region, 0, obj_subpic->width, obj_subpic->height, obj_subpic->pitch, obj_subpic->format, 0);     
