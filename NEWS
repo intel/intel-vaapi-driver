@@ -1,5 +1,17 @@
-libva-intel-driver NEWS -- summary of changes.  2012-08-02
+libva-intel-driver NEWS -- summary of changes.  2012-11-xx
 Copyright (C) 2009-2011 Intel Corporation
+
+Version 1.0.19 - xx.Nov.2012
+* Add support Haswell
+* Add raw DRM support (Dmitry Ermilov)
+* Add Wayland support
+* Add support for display rotation attribute
+* Support 4K encoding on IVB and HSW
+* Drop explicit dependency on X11 and libva-x11
+* Fix VC-1 decoding when vstransform is 0
+* Fix segment fault caused by use-after-free of the bufmgr (Stéphane Marchesin)
+* Fix thread safety issue (Gautam)
+* Fix libva trace issue in the driver
 
 Version 1.0.18 - 02.Aug.2012
 * Add JPEG decoding on Ivy Bridge
