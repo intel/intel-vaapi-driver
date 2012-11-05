@@ -21,9 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#include "sysdeps.h"
 #include <alloca.h>
 #include "intel_batchbuffer.h"
 #include "i965_decoder_utils.h"

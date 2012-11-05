@@ -27,8 +27,7 @@
  *
  */
 
-#include <assert.h>
-
+#include "sysdeps.h"
 #include "intel_batchbuffer.h"
 #include "intel_memman.h"
 #include "intel_driver.h"
