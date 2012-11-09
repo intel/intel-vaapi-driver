@@ -1,7 +1,7 @@
-libva-intel-driver NEWS -- summary of changes.  2012-11-xx
+libva-intel-driver NEWS -- summary of changes.  2012-11-09
 Copyright (C) 2009-2011 Intel Corporation
 
-Version 1.0.19 - xx.Nov.2012
+Version 1.0.19 - 09.Nov.2012
 * Add support for Haswell
 * Add raw DRM support (Dmitry Ermilov)
 * Add Wayland support
