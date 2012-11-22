@@ -254,6 +254,19 @@ struct hw_codec_info
     struct hw_context *(*proc_hw_context_init)(VADriverContextP, struct object_config *);
     int max_width;
     int max_height;
+
+    unsigned int has_mpeg2_decoding:1;
+    unsigned int has_mpeg2_encoding:1;
+    unsigned int has_h264_decoding:1;
+    unsigned int has_h264_encoding:1;
+    unsigned int has_vc1_decoding:1;
+    unsigned int has_vc1_encoding:1;
+    unsigned int has_jpeg_decoding:1;
+    unsigned int has_jpeg_encoding:1;
+    unsigned int has_vpp:1;
+    unsigned int has_accelerated_getimage:1;
+    unsigned int has_accelerated_putimage:1;
+    unsigned int has_tiled_surface:1;
 };
 
 

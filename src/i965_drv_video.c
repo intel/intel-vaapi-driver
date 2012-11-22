@@ -60,39 +60,29 @@
 #define IMAGE_ID_OFFSET                 0x0a000000
 #define SUBPIC_ID_OFFSET                0x10000000
 
-#define HAS_MPEG2(ctx)  (IS_G4X((ctx)->intel.device_id) ||      \
-                         IS_IRONLAKE((ctx)->intel.device_id) || \
-                         ((IS_GEN6((ctx)->intel.device_id) ||   \
-                           IS_GEN7((ctx)->intel.device_id)) &&  \
-                          (ctx)->intel.has_bsd))
+#define HAS_MPEG2_DECODING(ctx)  ((ctx)->codec_info->has_mpeg2_decoding && \
+                                  (ctx)->intel.has_bsd)
 
-#define HAS_H264(ctx)   ((IS_GEN7((ctx)->intel.device_id) ||            \
-                          IS_GEN6((ctx)->intel.device_id) ||            \
-                          IS_IRONLAKE((ctx)->intel.device_id)) &&       \
-                         (ctx)->intel.has_bsd)
-
-#define HAS_VC1(ctx)    ((IS_GEN7((ctx)->intel.device_id) ||    \
-                          IS_GEN6((ctx)->intel.device_id)) &&   \
-                         (ctx)->intel.has_bsd)
-
-#define HAS_TILED_SURFACE(ctx) ((IS_GEN7((ctx)->intel.device_id) ||     \
-                                 IS_GEN6((ctx)->intel.device_id)))
-
-#define HAS_ENCODER(ctx)        ((IS_GEN7((ctx)->intel.device_id) ||    \
-                                  IS_GEN6((ctx)->intel.device_id)) &&   \
+#define HAS_H264_DECODING(ctx)  ((ctx)->codec_info->has_h264_decoding && \
                                  (ctx)->intel.has_bsd)
 
-#define HAS_VPP(ctx)    (IS_IRONLAKE((ctx)->intel.device_id) ||     \
-                         IS_GEN6((ctx)->intel.device_id) ||         \
-                         IS_GEN7((ctx)->intel.device_id))
+#define HAS_H264_ENCODING(ctx)  ((ctx)->codec_info->has_h264_encoding && \
+                                 (ctx)->intel.has_bsd)
 
-#define HAS_JPEG(ctx)   (IS_GEN7((ctx)->intel.device_id) &&     \
-                         (ctx)->intel.has_bsd)
+#define HAS_VC1_DECODING(ctx)   ((ctx)->codec_info->has_vc1_decoding && \
+                                 (ctx)->intel.has_bsd)
 
-#define HAS_ACCELERATED_GETIMAGE(ctx)   (IS_GEN6((ctx)->intel.device_id) ||     \
-                                         IS_GEN7((ctx)->intel.device_id))
+#define HAS_JPEG_DECODING(ctx)  ((ctx)->codec_info->has_jpeg_decoding && \
+                                 (ctx)->intel.has_bsd)
 
-#define HAS_ACCELERATED_PUTIMAGE(ctx)   HAS_VPP(ctx)
+#define HAS_VPP(ctx)    ((ctx)->codec_info->has_vpp)
+
+#define HAS_ACCELERATED_GETIMAGE(ctx)   ((ctx)->codec_info->has_accelerated_getimage)
+
+#define HAS_ACCELERATED_PUTIMAGE(ctx)   ((ctx)->codec_info->has_accelerated_putimage)
+
+#define HAS_TILED_SURFACE(ctx) ((ctx)->codec_info->has_tiled_surface)
+
 static int get_sampling_from_fourcc(unsigned int fourcc);
 
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */
@@ -200,6 +190,8 @@ static struct hw_codec_info g4x_hw_codec_info = {
     .proc_hw_context_init = NULL,
     .max_width = 2048,
     .max_height = 2048,
+
+    .has_mpeg2_decoding = 1,
 };
 
 extern struct hw_context *ironlake_dec_hw_context_init(VADriverContextP, struct object_config *);
@@ -209,6 +201,11 @@ static struct hw_codec_info ironlake_hw_codec_info = {
     .proc_hw_context_init = i965_proc_context_init,
     .max_width = 2048,
     .max_height = 2048,
+
+    .has_mpeg2_decoding = 1,
+    .has_h264_decoding = 1,
+    .has_vpp = 1,
+    .has_accelerated_putimage = 1,
 };
 
 extern struct hw_context *gen6_dec_hw_context_init(VADriverContextP, struct object_config *);
@@ -219,6 +216,15 @@ static struct hw_codec_info gen6_hw_codec_info = {
     .proc_hw_context_init = i965_proc_context_init,
     .max_width = 2048,
     .max_height = 2048,
+
+    .has_mpeg2_decoding = 1,
+    .has_h264_decoding = 1,
+    .has_h264_encoding = 1,
+    .has_vc1_decoding = 1,
+    .has_vpp = 1,
+    .has_accelerated_getimage = 1,
+    .has_accelerated_putimage = 1,
+    .has_tiled_surface = 1,
 };
 
 extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, struct object_config *);
@@ -229,6 +235,16 @@ static struct hw_codec_info gen7_hw_codec_info = {
     .proc_hw_context_init = i965_proc_context_init,
     .max_width = 4096,
     .max_height = 4096,
+
+    .has_mpeg2_decoding = 1,
+    .has_h264_decoding = 1,
+    .has_h264_encoding = 1,
+    .has_vc1_decoding = 1,
+    .has_jpeg_decoding = 1,
+    .has_vpp = 1,
+    .has_accelerated_getimage = 1,
+    .has_accelerated_putimage = 1,
+    .has_tiled_surface = 1,
 };
 
 extern struct hw_context *gen75_proc_context_init(VADriverContextP, struct object_config *);
@@ -238,6 +254,16 @@ static struct hw_codec_info gen75_hw_codec_info = {
     .proc_hw_context_init = gen75_proc_context_init,
     .max_width = 4096,
     .max_height = 4096,
+
+    .has_mpeg2_decoding = 1,
+    .has_h264_decoding = 1,
+    .has_h264_encoding = 1,
+    .has_vc1_decoding = 1,
+    .has_jpeg_decoding = 1,
+    .has_vpp = 1,
+    .has_accelerated_getimage = 1,
+    .has_accelerated_putimage = 1,
+    .has_tiled_surface = 1,
 };
 
 #define I965_PACKED_HEADER_BASE         0
@@ -289,18 +315,19 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     int i = 0;
 
-    if (HAS_MPEG2(i965)) {
+    if (HAS_MPEG2_DECODING(i965)) {
         profile_list[i++] = VAProfileMPEG2Simple;
         profile_list[i++] = VAProfileMPEG2Main;
     }
 
-    if (HAS_H264(i965)) {
+    if (HAS_H264_DECODING(i965) ||
+        HAS_H264_ENCODING(i965)) {
         profile_list[i++] = VAProfileH264Baseline;
         profile_list[i++] = VAProfileH264Main;
         profile_list[i++] = VAProfileH264High;
     }
 
-    if (HAS_VC1(i965)) {
+    if (HAS_VC1_DECODING(i965)) {
         profile_list[i++] = VAProfileVC1Simple;
         profile_list[i++] = VAProfileVC1Main;
         profile_list[i++] = VAProfileVC1Advanced;
@@ -310,7 +337,7 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileNone;
     }
 
-    if (HAS_JPEG(i965)) {
+    if (HAS_JPEG_DECODING(i965)) {
         profile_list[i++] = VAProfileJPEGBaseline;
     }
 
@@ -333,17 +360,17 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
     switch (profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
-        if (HAS_MPEG2(i965))
+        if (HAS_MPEG2_DECODING(i965))
             entrypoint_list[n++] = VAEntrypointVLD;
         break;
 
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:
-        if (HAS_H264(i965))
+        if (HAS_H264_DECODING(i965))
             entrypoint_list[n++] = VAEntrypointVLD;
         
-        if (HAS_ENCODER(i965))
+        if (HAS_H264_ENCODING(i965))
             entrypoint_list[n++] = VAEntrypointEncSlice;
 
         break;
@@ -351,7 +378,7 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
     case VAProfileVC1Simple:
     case VAProfileVC1Main:
     case VAProfileVC1Advanced:
-        if (HAS_VC1(i965))
+        if (HAS_VC1_DECODING(i965))
             entrypoint_list[n++] = VAEntrypointVLD;
         break;
 
@@ -361,7 +388,7 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
         break;
 
     case VAProfileJPEGBaseline:
-        if (HAS_JPEG(i965))
+        if (HAS_JPEG_DECODING(i965))
             entrypoint_list[n++] = VAEntrypointVLD;
         break;
 
@@ -463,7 +490,7 @@ i965_CreateConfig(VADriverContextP ctx,
     switch (profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
-        if (HAS_MPEG2(i965) && VAEntrypointVLD == entrypoint) {
+        if (HAS_MPEG2_DECODING(i965) && VAEntrypointVLD == entrypoint) {
             vaStatus = VA_STATUS_SUCCESS;
         } else {
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -473,8 +500,8 @@ i965_CreateConfig(VADriverContextP ctx,
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:
-        if ((HAS_H264(i965) && VAEntrypointVLD == entrypoint) ||
-            (HAS_ENCODER(i965) && VAEntrypointEncSlice == entrypoint)) {
+        if ((HAS_H264_DECODING(i965) && VAEntrypointVLD == entrypoint) ||
+            (HAS_H264_ENCODING(i965) && VAEntrypointEncSlice == entrypoint)) {
             vaStatus = VA_STATUS_SUCCESS;
         } else {
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -485,7 +512,7 @@ i965_CreateConfig(VADriverContextP ctx,
     case VAProfileVC1Simple:
     case VAProfileVC1Main:
     case VAProfileVC1Advanced:
-        if (HAS_VC1(i965) && VAEntrypointVLD == entrypoint) {
+        if (HAS_VC1_DECODING(i965) && VAEntrypointVLD == entrypoint) {
             vaStatus = VA_STATUS_SUCCESS;
         } else {
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -503,7 +530,7 @@ i965_CreateConfig(VADriverContextP ctx,
         break;
 
     case VAProfileJPEGBaseline:
-        if (HAS_JPEG(i965) && VAEntrypointVLD == entrypoint) {
+        if (HAS_JPEG_DECODING(i965) && VAEntrypointVLD == entrypoint) {
             vaStatus = VA_STATUS_SUCCESS;
         } else {
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -1153,7 +1180,8 @@ i965_CreateContext(VADriverContextP ctx,
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:
-        if (!HAS_H264(i965))
+        if (!HAS_H264_DECODING(i965) &&
+            !HAS_H264_ENCODING(i965))
             return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         render_state->interleaved_uv = 1;
         break;
