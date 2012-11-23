@@ -488,6 +488,8 @@
 #define I965_SURFACEFORMAT_R8G8_USCALED                   0x11D
 #define I965_SURFACEFORMAT_R16_SSCALED                    0x11E
 #define I965_SURFACEFORMAT_R16_USCALED                    0x11F
+#define I965_SURFACEFORMAT_P8A8_UNORM                     0x122 
+#define I965_SURFACEFORMAT_A8P8_UNORM                     0x123
 #define I965_SURFACEFORMAT_R8_UNORM                       0x140 
 #define I965_SURFACEFORMAT_R8_SNORM                       0x141 
 #define I965_SURFACEFORMAT_R8_SINT                        0x142 
