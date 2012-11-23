@@ -1887,7 +1887,7 @@ gen75_mfc_mpeg2_slicegroup_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   0 << 31 |                             /* MbRateCtrlFlag */
                   !!is_last_slice_group << 19 |         /* IsLastSliceGrp */
-                  !!is_fisrt_slice_group << 17 |        /* Insert Header before the first slice group data */
+                  1 << 17 |                             /* Insert Header before the first slice group data */
                   1 << 16 |                             /* SliceData PresentFlag: always 1 */
                   1 << 15 |                             /* TailPresentFlag: always 1 */
                   0 << 14 |                             /* FirstSliceHdrDisabled: slice header for each slice */
@@ -2077,6 +2077,18 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
     if (slice_index == 0) 
         intel_mfc_mpeg2_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
 
+    /* FIXME: remove this insertion, instead insert slice header */
+    mfc_context->insert_object(ctx,
+                               encoder_context,
+                               tail_data,
+                               1,
+                               8,
+                               1,
+                               1,
+                               0,
+                               0,
+                               slice_batch);
+
     for (i = 0; i < encode_state->slice_params_ext[slice_index]->num_elements; i++) {
         /* PAK for each macroblocks */
         for (j = 0; j < slice_param->num_macroblocks; j++) {
@@ -2107,33 +2119,32 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
             }
         }
 
-        /* tail data */
-        if (next_slice_group_param == NULL &&
-            i == encode_state->slice_params_ext[slice_index]->num_elements - 1) { /* end of a picture */
-            mfc_context->insert_object(ctx,
-                                       encoder_context,
-                                       tail_data,
-                                       2,
-                                       8,
-                                       2,
-                                       1,
-                                       1,
-                                       0,
-                                       slice_batch);
-        } else {        /* end of a lsice */
-            mfc_context->insert_object(ctx,
-                                       encoder_context,
-                                       tail_data,
-                                       1,
-                                       8,
-                                       1,
-                                       1,
-                                       1,
-                                       0,
-                                       slice_batch);
-        }
-
         slice_param++;
+    }
+
+    /* tail data */
+    if (next_slice_group_param == NULL) { /* end of a picture */
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   tail_data,
+                                   2,
+                                   8,
+                                   2,
+                                   1,
+                                   1,
+                                   0,
+                                   slice_batch);
+    } else {        /* end of a lsice group */
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   tail_data,
+                                   1,
+                                   8,
+                                   1,
+                                   1,
+                                   1,
+                                   0,
+                                   slice_batch);
     }
 }
 
