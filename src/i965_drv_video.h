@@ -214,6 +214,7 @@ struct object_subpic
     int width;
     int height;
     int pitch;
+    float global_alpha;
     dri_bo *bo;
     unsigned int flags;
 };

@@ -28,6 +28,8 @@
 /* Sample the src surface */
 
 include(`exa_wm.g4i')
+ 
+define(`global_alpha',     `r2.0<0,1,0>f')
 
 /* prepare sampler read back gX register, which would be written back to output */
 
@@ -45,3 +47,6 @@ send (16) src_msg_ind		/* msg reg index */
 	sampler (1,0,F)		/* sampler message description, (binding_table,sampler_index,datatype)
 				/* here(src->dst) we should use src_sampler and src_surface */
 	mlen 5 rlen 8 { align1 };   /* required message len 5, readback len 8 */
+
+mul (8) src_sample_a_01<1>f src_sample_a_01<1>f global_alpha { align1 };
+mul (8) src_sample_a_23<1>f src_sample_a_23<1>f global_alpha { align1 };

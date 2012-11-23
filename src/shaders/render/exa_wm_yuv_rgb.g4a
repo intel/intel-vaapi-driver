@@ -95,4 +95,4 @@ mac.sat(16) src_sample_b<1>F	Cbn<8,8,1>F     2.017F	    { compr align1 };
     /*
      * A = 1.0
      */
-//mov (16)    src_sample_a<1>F	1.0F			    { compr align1 };
+mov (16)    src_sample_a<1>F	1.0F			    { compr align1 };

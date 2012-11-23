@@ -1088,6 +1088,32 @@ i965_render_upload_constants(VADriverContextP ctx,
 }
 
 static void
+i965_subpic_render_upload_constants(VADriverContextP ctx,
+                             VASurfaceID surface)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    float *constant_buffer;
+    float global_alpha = 1.0;
+    struct object_surface *obj_surface = SURFACE(surface);
+
+    if(obj_surface->subpic != VA_INVALID_ID){
+        struct object_subpic *obj_subpic= SUBPIC(obj_surface->subpic);
+        if(obj_subpic->flags & VA_SUBPICTURE_GLOBAL_ALPHA){
+           global_alpha = obj_subpic->global_alpha;
+        }
+     }   
+
+    dri_bo_map(render_state->curbe.bo, 1);
+
+    assert(render_state->curbe.bo->virtual);
+    constant_buffer = render_state->curbe.bo->virtual;
+    *constant_buffer = global_alpha;
+
+    dri_bo_unmap(render_state->curbe.bo);
+}
+ 
+static void
 i965_surface_render_state_setup(
     VADriverContextP   ctx,
     VASurfaceID        surface,
@@ -1124,6 +1150,7 @@ i965_subpic_render_state_setup(
     i965_subpic_render_wm_unit(ctx);
     i965_render_cc_viewport(ctx);
     i965_subpic_render_cc_unit(ctx);
+    i965_subpic_render_upload_constants(ctx, surface);
     i965_subpic_render_upload_vertex(ctx, surface, dst_rect);
 }
 
@@ -2192,6 +2219,7 @@ gen6_subpicture_render_setup_states(
     gen6_render_color_calc_state(ctx);
     gen6_subpicture_render_blend_state(ctx);
     gen6_render_depth_stencil_state(ctx);
+    i965_subpic_render_upload_constants(ctx, surface);
     i965_subpic_render_upload_vertex(ctx, surface, dst_rect);
 }
 
@@ -2969,6 +2997,7 @@ gen7_subpicture_render_setup_states(
     gen7_render_color_calc_state(ctx);
     gen7_subpicture_render_blend_state(ctx);
     gen7_render_depth_stencil_state(ctx);
+    i965_subpic_render_upload_constants(ctx, surface);
     i965_subpic_render_upload_vertex(ctx, surface, dst_rect);
 }
 

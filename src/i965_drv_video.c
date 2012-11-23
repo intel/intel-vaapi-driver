@@ -689,6 +689,8 @@ i965_CreateSubpicture(VADriverContextP ctx,
     obj_subpic->height = obj_image->image.height;
     obj_subpic->pitch  = obj_image->image.pitches[0];
     obj_subpic->bo     = obj_image->bo;
+    obj_subpic->global_alpha = 1.0;
+ 
     return VA_STATUS_SUCCESS;
 }
 
@@ -727,8 +729,15 @@ i965_SetSubpictureGlobalAlpha(VADriverContextP ctx,
                               VASubpictureID subpicture,
                               float global_alpha)
 {
-    /* TODO */
-    return VA_STATUS_ERROR_UNIMPLEMENTED;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_subpic *obj_subpic = SUBPIC(subpicture);
+
+    if(global_alpha > 1.0 || global_alpha < 0.0){
+       return VA_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    obj_subpic->global_alpha  = global_alpha;
+
+    return VA_STATUS_SUCCESS;
 }
 
 VAStatus 
