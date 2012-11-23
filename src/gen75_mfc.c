@@ -101,10 +101,9 @@ gen75_mfc_pipe_mode_select(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   (MFX_LONG_MODE << 17) | /* Must be long format for encoder */
                   (MFD_MODE_VLD << 15) | /* VLD mode */
-                  (1 << 10) | /* Stream-Out Enable */
+                  (0 << 10) | /* Stream-Out Enable */
                   ((!!mfc_context->post_deblocking_output.bo) << 9)  | /* Post Deblocking Output */
                   ((!!mfc_context->pre_deblocking_output.bo) << 8)  | /* Pre Deblocking Output */
-                  (0 << 8)  | /* Pre Deblocking Output */
                   (0 << 5)  | /* not in stitch mode */
                   (1 << 4)  | /* encoding mode */
                   (standard_select << 0));  /* standard select: avc or mpeg2 */
@@ -1771,6 +1770,561 @@ gen75_mfc_avc_encode_picture(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+/*
+ * MPEG-2
+ */
+
+static const int
+va_to_gen75_mpeg2_picture_type[3] = {
+    1,  /* I */
+    2,  /* P */
+    3   /* B */
+};
+
+static void
+gen75_mfc_mpeg2_pic_state(VADriverContextP ctx,
+                          struct intel_encoder_context *encoder_context,
+                          struct encode_state *encode_state)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncPictureParameterBufferMPEG2 *pic_param;
+    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
+    int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
+
+    assert(encode_state->pic_param_ext && encode_state->pic_param_ext->buffer);
+    pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+
+    BEGIN_BCS_BATCH(batch, 13);
+    OUT_BCS_BATCH(batch, MFX_MPEG2_PIC_STATE | (13 - 2));
+    OUT_BCS_BATCH(batch,
+                  (pic_param->f_code[1][1] & 0xf) << 28 | /* f_code[1][1] */
+                  (pic_param->f_code[1][0] & 0xf) << 24 | /* f_code[1][0] */
+                  (pic_param->f_code[0][1] & 0xf) << 20 | /* f_code[0][1] */
+                  (pic_param->f_code[0][0] & 0xf) << 16 | /* f_code[0][0] */
+                  pic_param->picture_coding_extension.bits.intra_dc_precision << 14 |
+                  pic_param->picture_coding_extension.bits.picture_structure << 12 |
+                  pic_param->picture_coding_extension.bits.top_field_first << 11 |
+                  pic_param->picture_coding_extension.bits.frame_pred_frame_dct << 10 |
+                  pic_param->picture_coding_extension.bits.concealment_motion_vectors << 9 |
+                  pic_param->picture_coding_extension.bits.q_scale_type << 8 |
+                  pic_param->picture_coding_extension.bits.intra_vlc_format << 7 | 
+                  pic_param->picture_coding_extension.bits.alternate_scan << 6);
+    OUT_BCS_BATCH(batch,
+                  0 << 14 |     /* LoadSlicePointerFlag, 0 means only loading bitstream pointer once */
+                  va_to_gen75_mpeg2_picture_type[pic_param->picture_type] << 9 |
+                  0);
+    OUT_BCS_BATCH(batch,
+                  1 << 31 |     /* slice concealment */
+                  (height_in_mbs - 1) << 16 |
+                  (width_in_mbs - 1));
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch,
+                  0xFFF << 16 | /* InterMBMaxSize */
+                  0xFFF << 0 |  /* IntraMBMaxSize */
+                  0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen75_mfc_mpeg2_qm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    unsigned int qm[16] = {
+        0x10101010, 0x10101010, 0x10101010, 0x10101010,
+        0x10101010, 0x10101010, 0x10101010, 0x10101010,
+        0x10101010, 0x10101010, 0x10101010, 0x10101010,
+        0x10101010, 0x10101010, 0x10101010, 0x10101010
+    };
+
+    gen75_mfc_qm_state(ctx, MFX_QM_MPEG_INTRA_QUANTIZER_MATRIX, qm, 16, encoder_context);
+    gen75_mfc_qm_state(ctx, MFX_QM_MPEG_NON_INTRA_QUANTIZER_MATRIX, qm, 16,encoder_context);
+}
+
+static void
+gen75_mfc_mpeg2_fqm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    unsigned int qm[32] = {
+        0x10001000, 0x10001000, 0x10001000, 0x10001000,
+        0x10001000, 0x10001000, 0x10001000, 0x10001000,
+        0x10001000, 0x10001000, 0x10001000, 0x10001000,
+        0x10001000, 0x10001000, 0x10001000, 0x10001000,
+        0x10001000, 0x10001000, 0x10001000, 0x10001000,
+        0x10001000, 0x10001000, 0x10001000, 0x10001000,
+        0x10001000, 0x10001000, 0x10001000, 0x10001000,
+        0x10001000, 0x10001000, 0x10001000, 0x10001000
+    };
+
+    gen75_mfc_fqm_state(ctx, MFX_QM_MPEG_INTRA_QUANTIZER_MATRIX, qm, 32, encoder_context);
+    gen75_mfc_fqm_state(ctx, MFX_QM_MPEG_NON_INTRA_QUANTIZER_MATRIX, qm, 32, encoder_context);
+}
+
+static void
+gen75_mfc_mpeg2_slicegroup_state(VADriverContextP ctx,
+                                 struct intel_encoder_context *encoder_context,
+                                 int x, int y,
+                                 int next_x, int next_y,
+                                 int is_fisrt_slice_group,
+                                 int is_last_slice_group,
+                                 int intra_slice,
+                                 int qp,
+                                 struct intel_batchbuffer *batch)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+
+    if (batch == NULL)
+        batch = encoder_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 8);
+
+    OUT_BCS_BATCH(batch, MFC_MPEG2_SLICEGROUP_STATE | (8 - 2));
+    OUT_BCS_BATCH(batch,
+                  0 << 31 |                             /* MbRateCtrlFlag */
+                  !!is_last_slice_group << 19 |         /* IsLastSliceGrp */
+                  !!is_fisrt_slice_group << 17 |        /* Insert Header before the first slice group data */
+                  1 << 16 |                             /* SliceData PresentFlag: always 1 */
+                  1 << 15 |                             /* TailPresentFlag: always 1 */
+                  0 << 14 |                             /* FirstSliceHdrDisabled: slice header for each slice */
+                  !!intra_slice << 13 |                 /* IntraSlice */
+                  !!intra_slice << 12 |                 /* IntraSliceFlag */
+                  0);
+    OUT_BCS_BATCH(batch,
+                  next_y << 24 |
+                  next_x << 16 |
+                  y << 8 |
+                  x << 0 |
+                  0);
+    OUT_BCS_BATCH(batch, qp);   /* FIXME: SliceGroupQp */
+    /* bitstream pointer is only loaded once for the first slice of a frame when 
+     * LoadSlicePointerFlag is 0
+     */
+    OUT_BCS_BATCH(batch, mfc_context->mfc_indirect_pak_bse_object.offset);
+    OUT_BCS_BATCH(batch, 0);    /* FIXME: */
+    OUT_BCS_BATCH(batch, 0);    /* FIXME: CorrectPoints */
+    OUT_BCS_BATCH(batch, 0);    /* FIXME: CVxxx */
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static int
+gen75_mfc_mpeg2_pak_object_intra(VADriverContextP ctx,
+                                 struct intel_encoder_context *encoder_context,
+                                 int x, int y,
+                                 int first_mb_in_slice,
+                                 int last_mb_in_slice,
+                                 int first_mb_in_slice_group,
+                                 int last_mb_in_slice_group,
+                                 int mb_type,
+                                 int qp_scale_code,
+                                 int coded_block_pattern,
+                                 unsigned char target_size_in_word,
+                                 unsigned char max_size_in_word,
+                                 struct intel_batchbuffer *batch)
+{
+    int len_in_dwords = 9;
+
+    if (batch == NULL)
+        batch = encoder_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, len_in_dwords);
+
+    OUT_BCS_BATCH(batch, MFC_MPEG2_PAK_OBJECT | (len_in_dwords - 2));
+    OUT_BCS_BATCH(batch,
+                  0 << 24 |     /* PackedMvNum */
+                  0 << 20 |     /* MvFormat */
+                  7 << 17 |     /* CbpDcY/CbpDcU/CbpDcV */
+                  0 << 15 |     /* TransformFlag: frame DCT */
+                  0 << 14 |     /* FieldMbFlag */
+                  1 << 13 |     /* IntraMbFlag */
+                  mb_type << 8 |   /* MbType: Intra */
+                  0 << 2 |      /* SkipMbFlag */
+                  0 << 0 |      /* InterMbMode */
+                  0);
+    OUT_BCS_BATCH(batch, y << 16 | x);
+    OUT_BCS_BATCH(batch,
+                  max_size_in_word << 24 |
+                  target_size_in_word << 16 |
+                  coded_block_pattern << 0 |      /* CBP */
+                  0);
+    OUT_BCS_BATCH(batch,
+                  last_mb_in_slice << 31 |
+                  first_mb_in_slice << 30 |
+                  0 << 27 |     /* EnableCoeffClamp */
+                  last_mb_in_slice_group << 26 |
+                  0 << 25 |     /* MbSkipConvDisable */
+                  first_mb_in_slice_group << 24 |
+                  0 << 16 |     /* MvFieldSelect */
+                  qp_scale_code << 0 |
+                  0);
+    OUT_BCS_BATCH(batch, 0);    /* MV[0][0] */
+    OUT_BCS_BATCH(batch, 0);    /* MV[1][0] */
+    OUT_BCS_BATCH(batch, 0);    /* MV[0][1] */
+    OUT_BCS_BATCH(batch, 0);    /* MV[1][1] */
+
+    ADVANCE_BCS_BATCH(batch);
+
+    return len_in_dwords;
+}
+
+#define INTRA_RDO_OFFSET        4
+#define	INTER_RDO_OFFSET        54
+#define	INTER_MSG_OFFSET        52
+#define	INTER_MV_OFFSET         224
+#define	RDO_MASK                0xFFFF
+
+static void
+intel_mfc_mpeg2_pipeline_header_programing(VADriverContextP ctx,
+                                           struct encode_state *encode_state,
+                                           struct intel_encoder_context *encoder_context,
+                                           struct intel_batchbuffer *slice_batch)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderMPEG2_SPS);
+
+    if (encode_state->packed_header_data[idx]) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+        unsigned int length_in_bits;
+
+        assert(encode_state->packed_header_param[idx]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+        length_in_bits = param->bit_length;
+
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   5,   /* FIXME: check it */
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   slice_batch);
+    }
+
+    idx = va_enc_packed_type_to_idx(VAEncPackedHeaderMPEG2_PPS);
+
+    if (encode_state->packed_header_data[idx]) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+        unsigned int length_in_bits;
+
+        assert(encode_state->packed_header_param[idx]);
+        param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+        length_in_bits = param->bit_length;
+
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   5, /* FIXME: check it */
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   slice_batch);
+    }
+}
+
+static void 
+gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context,
+                                     int slice_index,
+                                     VAEncSliceParameterBufferMPEG2 *next_slice_group_param,
+                                     struct intel_batchbuffer *slice_batch)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    VAEncSliceParameterBufferMPEG2 *slice_param = NULL;
+    unsigned int tail_data[] = {0x0, 0x0, 0x0, 0x0};
+    int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
+    int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+    int i, j;
+    int h_start_pos, v_start_pos, h_next_start_pos, v_next_start_pos;
+
+    slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[slice_index]->buffer;
+    h_start_pos = slice_param->macroblock_address % width_in_mbs;
+    v_start_pos = slice_param->macroblock_address / width_in_mbs;
+    assert(h_start_pos + slice_param->num_macroblocks <= width_in_mbs);
+
+    if (next_slice_group_param) {
+        h_next_start_pos = next_slice_group_param->macroblock_address % width_in_mbs;
+        v_next_start_pos = next_slice_group_param->macroblock_address / width_in_mbs;
+    } else {
+        h_next_start_pos = 0;
+        v_next_start_pos = height_in_mbs;
+    }
+
+    gen75_mfc_mpeg2_slicegroup_state(ctx,
+                                     encoder_context,
+                                     h_start_pos,
+                                     v_start_pos,
+                                     h_next_start_pos,
+                                     v_next_start_pos,
+                                     slice_index == 0,
+                                     next_slice_group_param == NULL,
+                                     slice_param->is_intra_slice,
+                                     slice_param->quantiser_scale_code,
+                                     slice_batch);
+
+    if (slice_index == 0) 
+        intel_mfc_mpeg2_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
+
+    for (i = 0; i < encode_state->slice_params_ext[slice_index]->num_elements; i++) {
+        /* PAK for each macroblocks */
+        for (j = 0; j < slice_param->num_macroblocks; j++) {
+            int h_pos = (slice_param->macroblock_address + j) % width_in_mbs;
+            int v_pos = (slice_param->macroblock_address + j) / width_in_mbs;
+            int first_mb_in_slice = (j == 0);
+            int last_mb_in_slice = (j == slice_param->num_macroblocks - 1);
+            int first_mb_in_slice_group = (i == 0 && j == 0);
+            int last_mb_in_slice_group = (i == encode_state->slice_params_ext[slice_index]->num_elements - 1 &&
+                                          j == slice_param->num_macroblocks - 1);
+
+            if (slice_param->is_intra_slice) {
+                gen75_mfc_mpeg2_pak_object_intra(ctx,
+                                                 encoder_context,
+                                                 h_pos, v_pos,
+                                                 first_mb_in_slice,
+                                                 last_mb_in_slice,
+                                                 first_mb_in_slice_group,
+                                                 last_mb_in_slice_group,
+                                                 0x1a,
+                                                 slice_param->quantiser_scale_code,
+                                                 0x3f,
+                                                 0,
+                                                 0x3ff,
+                                                 slice_batch);
+            } else {
+                assert(0);
+            }
+        }
+
+        /* tail data */
+        if (next_slice_group_param == NULL &&
+            i == encode_state->slice_params_ext[slice_index]->num_elements - 1) { /* end of a picture */
+            mfc_context->insert_object(ctx,
+                                       encoder_context,
+                                       tail_data,
+                                       2,
+                                       8,
+                                       2,
+                                       1,
+                                       1,
+                                       0,
+                                       slice_batch);
+        } else {        /* end of a lsice */
+            mfc_context->insert_object(ctx,
+                                       encoder_context,
+                                       tail_data,
+                                       1,
+                                       8,
+                                       1,
+                                       1,
+                                       1,
+                                       0,
+                                       slice_batch);
+        }
+
+        slice_param++;
+    }
+}
+
+/* 
+ * A batch buffer for all slices, including slice state, 
+ * slice insert object and slice pak object commands
+ *
+ */
+static dri_bo *
+gen75_mfc_mpeg2_software_slice_batchbuffer(VADriverContextP ctx,
+                                           struct encode_state *encode_state,
+                                           struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    VAEncSliceParameterBufferMPEG2 *next_slice_group_param = NULL;
+    dri_bo *batch_bo;
+    int i;
+    int buffer_size;
+    int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
+    int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+
+    buffer_size = width_in_mbs * height_in_mbs * 64;
+    batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD, buffer_size);
+    batch_bo = batch->buffer;
+
+    for (i = 0; i < encode_state->num_slice_params_ext; i++) {
+        if (i == encode_state->num_slice_params_ext - 1)
+            next_slice_group_param = NULL;
+        else
+            next_slice_group_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[i + 1]->buffer;
+
+        gen75_mfc_mpeg2_pipeline_slice_group(ctx, encode_state, encoder_context, i, next_slice_group_param, batch);
+    }
+
+    intel_batchbuffer_align(batch, 8);
+    
+    BEGIN_BCS_BATCH(batch, 2);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_END);
+    ADVANCE_BCS_BATCH(batch);
+
+    dri_bo_reference(batch_bo);
+    intel_batchbuffer_free(batch);
+
+    return batch_bo;
+}
+
+static void
+gen75_mfc_mpeg2_pipeline_picture_programing(VADriverContextP ctx,
+                                            struct encode_state *encode_state,
+                                            struct intel_encoder_context *encoder_context)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+
+    mfc_context->pipe_mode_select(ctx, MFX_FORMAT_MPEG2, encoder_context);
+    mfc_context->set_surface_state(ctx, encoder_context);
+    mfc_context->ind_obj_base_addr_state(ctx, encoder_context);
+    gen75_mfc_pipe_buf_addr_state(ctx, encoder_context);
+    gen75_mfc_bsp_buf_base_addr_state(ctx, encoder_context);
+    gen75_mfc_mpeg2_pic_state(ctx, encoder_context, encode_state);
+    gen75_mfc_mpeg2_qm_state(ctx, encoder_context);
+    gen75_mfc_mpeg2_fqm_state(ctx, encoder_context);
+}
+
+static void
+gen75_mfc_mpeg2_pipeline_programing(VADriverContextP ctx,
+                                    struct encode_state *encode_state,
+                                    struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    dri_bo *slice_batch_bo;
+
+    slice_batch_bo = gen75_mfc_mpeg2_software_slice_batchbuffer(ctx, encode_state, encoder_context);
+
+    // begin programing
+    intel_batchbuffer_start_atomic_bcs(batch, 0x4000); 
+    intel_batchbuffer_emit_mi_flush(batch);
+    
+    // picture level programing
+    gen75_mfc_mpeg2_pipeline_picture_programing(ctx, encode_state, encoder_context);
+
+    BEGIN_BCS_BATCH(batch, 2);
+    OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8));
+    OUT_BCS_RELOC(batch,
+                  slice_batch_bo,
+                  I915_GEM_DOMAIN_COMMAND, 0, 
+                  0);
+    ADVANCE_BCS_BATCH(batch);
+
+    // end programing
+    intel_batchbuffer_end_atomic(batch);
+
+    dri_bo_unreference(slice_batch_bo);
+}
+
+static VAStatus
+intel_mfc_mpeg2_prepare(VADriverContextP ctx, 
+                        struct encode_state *encode_state,
+                        struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct object_surface *obj_surface;	
+    struct object_buffer *obj_buffer;
+    VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+    VACodedBufferSegment *coded_buffer_segment;
+    unsigned char *flag = NULL;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    dri_bo *bo;
+    int i;
+
+    /* reconstructed surface */
+    obj_surface = SURFACE(pic_param->reconstructed_picture);
+    assert(obj_surface);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    mfc_context->post_deblocking_output.bo = obj_surface->bo;
+    dri_bo_reference(mfc_context->post_deblocking_output.bo);
+    mfc_context->surface_state.width = obj_surface->orig_width;
+    mfc_context->surface_state.height = obj_surface->orig_height;
+    mfc_context->surface_state.w_pitch = obj_surface->width;
+    mfc_context->surface_state.h_pitch = obj_surface->height;
+
+    /* forward reference */
+    obj_surface = SURFACE(pic_param->forward_reference_picture);
+
+    if (obj_surface && obj_surface->bo) {
+        mfc_context->reference_surfaces[0].bo = obj_surface->bo;
+        dri_bo_reference(mfc_context->reference_surfaces[0].bo);
+    } else
+        mfc_context->reference_surfaces[0].bo = NULL;
+
+    /* backward reference */
+    obj_surface = SURFACE(pic_param->backward_reference_picture);
+
+    if (obj_surface && obj_surface->bo) {
+        mfc_context->reference_surfaces[1].bo = obj_surface->bo;
+        dri_bo_reference(mfc_context->reference_surfaces[1].bo);
+    } else {
+        mfc_context->reference_surfaces[1].bo = mfc_context->reference_surfaces[0].bo;
+
+        if (mfc_context->reference_surfaces[1].bo)
+            dri_bo_reference(mfc_context->reference_surfaces[1].bo);
+    }
+
+    for (i = 2; i < ARRAY_ELEMS(mfc_context->reference_surfaces); i++) {
+        mfc_context->reference_surfaces[i].bo = mfc_context->reference_surfaces[i & 1].bo;
+
+        if (mfc_context->reference_surfaces[i].bo)
+            dri_bo_reference(mfc_context->reference_surfaces[i].bo);
+    }
+    
+    /* input YUV surface */
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
+    assert(obj_surface && obj_surface->bo);
+    mfc_context->uncompressed_picture_source.bo = obj_surface->bo;
+    dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
+
+    /* coded buffer */
+    obj_buffer = BUFFER(pic_param->coded_buf);
+    bo = obj_buffer->buffer_store->bo;
+    assert(bo);
+    mfc_context->mfc_indirect_pak_bse_object.bo = bo;
+    mfc_context->mfc_indirect_pak_bse_object.offset = I965_CODEDBUFFER_SIZE;
+    mfc_context->mfc_indirect_pak_bse_object.end_offset = ALIGN(obj_buffer->size_element - 0x1000, 0x1000);
+    dri_bo_reference(mfc_context->mfc_indirect_pak_bse_object.bo);
+
+    /* set the internal flag to 0 to indicate the coded size is unknown */
+    dri_bo_map(bo, 1);
+    coded_buffer_segment = (VACodedBufferSegment *)bo->virtual;
+    flag = (unsigned char *)(coded_buffer_segment + 1);
+    *flag = 0;
+    dri_bo_unmap(bo);
+
+    return vaStatus;
+}
+
+static VAStatus
+gen75_mfc_mpeg2_encode_picture(VADriverContextP ctx, 
+                               struct encode_state *encode_state,
+                               struct intel_encoder_context *encoder_context)
+{
+    gen75_mfc_init(ctx, encode_state, encoder_context);
+    intel_mfc_mpeg2_prepare(ctx, encode_state, encoder_context);
+    /*Programing bcs pipeline*/
+    gen75_mfc_mpeg2_pipeline_programing(ctx, encode_state, encoder_context);
+    gen75_mfc_run(ctx, encode_state, encoder_context);
+
+    return VA_STATUS_SUCCESS;
+}
 
 static void
 gen75_mfc_context_destroy(void *context)
@@ -1844,6 +2398,11 @@ static VAStatus gen75_mfc_pipeline(VADriverContextP ctx,
         break;
 
         /* FIXME: add for other profile */
+    case VAProfileMPEG2Simple:
+    case VAProfileMPEG2Main:
+        vaStatus = gen75_mfc_mpeg2_encode_picture(ctx, encode_state, encoder_context);
+        break;
+
     default:
         vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         break;

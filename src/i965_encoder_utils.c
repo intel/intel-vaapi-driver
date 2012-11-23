@@ -28,6 +28,7 @@
 
 #include <va/va.h>
 #include <va/va_enc_h264.h>
+#include <va/va_enc_mpeg2.h>
 
 #include "i965_encoder_utils.h"
 
@@ -464,4 +465,19 @@ build_avc_sei_buffer_timing(unsigned int init_cpb_removal_length,
     *sei_buffer = (unsigned char *)nal_bs.buffer; 
    
     return nal_bs.bit_offset;
+}
+
+int 
+build_mpeg2_slice_header(VAEncSequenceParameterBufferMPEG2 *sps_param,
+                         VAEncPictureParameterBufferMPEG2 *pic_param,
+                         VAEncSliceParameterBufferMPEG2 *slice_param,
+                         unsigned char **slice_header_buffer)
+{
+    avc_bitstream bs;
+
+    avc_bitstream_start(&bs);
+    avc_bitstream_end(&bs);
+    *slice_header_buffer = (unsigned char *)bs.buffer;
+
+    return bs.bit_offset;
 }

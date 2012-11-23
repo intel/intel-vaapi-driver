@@ -310,6 +310,9 @@
 
 #define MFD_MPEG2_BSD_OBJECT                    MFX(2, 3, 1, 8)
 
+#define MFC_MPEG2_SLICEGROUP_STATE              MFX(2, 3, 2, 3)
+#define MFC_MPEG2_PAK_OBJECT                    MFX(2, 3, 2, 9)
+
 #define MFX_VC1_PIC_STATE                       MFX(2, 2, 0, 0)
 #define MFX_VC1_PRED_PIPE_STATE                 MFX(2, 2, 0, 1)
 #define MFX_VC1_DIRECTMODE_STATE                MFX(2, 2, 0, 2)
