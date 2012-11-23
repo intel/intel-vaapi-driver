@@ -63,6 +63,9 @@
 #define HAS_MPEG2_DECODING(ctx)  ((ctx)->codec_info->has_mpeg2_decoding && \
                                   (ctx)->intel.has_bsd)
 
+#define HAS_MPEG2_ENCODING(ctx)  ((ctx)->codec_info->has_mpeg2_encoding && \
+                                  (ctx)->intel.has_bsd)
+
 #define HAS_H264_DECODING(ctx)  ((ctx)->codec_info->has_h264_decoding && \
                                  (ctx)->intel.has_bsd)
 
@@ -315,7 +318,8 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     int i = 0;
 
-    if (HAS_MPEG2_DECODING(i965)) {
+    if (HAS_MPEG2_DECODING(i965) ||
+        HAS_MPEG2_ENCODING(i965)) {
         profile_list[i++] = VAProfileMPEG2Simple;
         profile_list[i++] = VAProfileMPEG2Main;
     }
@@ -362,6 +366,10 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
     case VAProfileMPEG2Main:
         if (HAS_MPEG2_DECODING(i965))
             entrypoint_list[n++] = VAEntrypointVLD;
+
+        if (HAS_MPEG2_ENCODING(i965))
+            entrypoint_list[n++] = VAEntrypointEncSlice;
+
         break;
 
     case VAProfileH264Baseline:
@@ -490,7 +498,8 @@ i965_CreateConfig(VADriverContextP ctx,
     switch (profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
-        if (HAS_MPEG2_DECODING(i965) && VAEntrypointVLD == entrypoint) {
+        if ((HAS_MPEG2_DECODING(i965) && VAEntrypointVLD == entrypoint) ||
+            (HAS_MPEG2_ENCODING(i965) && VAEntrypointEncSlice == entrypoint)) {
             vaStatus = VA_STATUS_SUCCESS;
         } else {
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
