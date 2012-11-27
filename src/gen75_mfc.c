@@ -2004,7 +2004,7 @@ intel_mfc_mpeg2_pipeline_header_programing(VADriverContextP ctx,
                                    5,   /* FIXME: check it */
                                    0,
                                    0,
-                                   !param->has_emulation_bytes,
+                                   0,   /* Needn't insert emulation bytes for MPEG-2 */
                                    slice_batch);
     }
 
@@ -2024,10 +2024,10 @@ intel_mfc_mpeg2_pipeline_header_programing(VADriverContextP ctx,
                                    header_data,
                                    ALIGN(length_in_bits, 32) >> 5,
                                    length_in_bits & 0x1f,
-                                   5, /* FIXME: check it */
+                                   5,   /* FIXME: check it */
                                    0,
                                    0,
-                                   !param->has_emulation_bytes,
+                                   0,   /* Needn't insert emulation bytes for MPEG-2 */
                                    slice_batch);
     }
 }
