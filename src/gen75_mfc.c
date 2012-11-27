@@ -2043,7 +2043,8 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
     VAEncSliceParameterBufferMPEG2 *slice_param = NULL;
-    unsigned int tail_data[] = {0x0, 0x0, 0x0, 0x0};
+    unsigned char tail_delimiter[] = {MPEG2_DELIMITER0, MPEG2_DELIMITER1, MPEG2_DELIMITER2, MPEG2_DELIMITER3, MPEG2_DELIMITER4, 0, 0, 0};
+    unsigned char section_delimiter[] = {0x0, 0x0, 0x0, 0x0};
     int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
     int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
     int i, j;
@@ -2077,13 +2078,13 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
     if (slice_index == 0) 
         intel_mfc_mpeg2_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
 
-    /* FIXME: remove this insertion, instead insert slice header */
+    /* Insert '00' to make sure the header is valid */
     mfc_context->insert_object(ctx,
                                encoder_context,
-                               tail_data,
+                               (unsigned int*)section_delimiter,
                                1,
-                               8,
-                               1,
+                               8,   /* 8bits in the last DWORD */
+                               1,   /* 1 byte */
                                1,
                                0,
                                0,
@@ -2126,10 +2127,10 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
     if (next_slice_group_param == NULL) { /* end of a picture */
         mfc_context->insert_object(ctx,
                                    encoder_context,
-                                   tail_data,
+                                   (unsigned int *)tail_delimiter,
                                    2,
-                                   8,
-                                   2,
+                                   8,   /* 8bits in the last DWORD */
+                                   5,   /* 5 bytes */
                                    1,
                                    1,
                                    0,
@@ -2137,10 +2138,10 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
     } else {        /* end of a lsice group */
         mfc_context->insert_object(ctx,
                                    encoder_context,
-                                   tail_data,
+                                   (unsigned int *)section_delimiter,
                                    1,
-                                   8,
-                                   1,
+                                   8,   /* 8bits in the last DWORD */
+                                   1,   /* 1 byte */
                                    1,
                                    1,
                                    0,
@@ -2252,8 +2253,7 @@ intel_mfc_mpeg2_prepare(VADriverContextP ctx,
     struct object_surface *obj_surface;	
     struct object_buffer *obj_buffer;
     VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
-    VACodedBufferSegment *coded_buffer_segment;
-    unsigned char *flag = NULL;
+    struct i965_coded_buffer_segment *coded_buffer_segment;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     dri_bo *bo;
     int i;
@@ -2315,9 +2315,9 @@ intel_mfc_mpeg2_prepare(VADriverContextP ctx,
 
     /* set the internal flag to 0 to indicate the coded size is unknown */
     dri_bo_map(bo, 1);
-    coded_buffer_segment = (VACodedBufferSegment *)bo->virtual;
-    flag = (unsigned char *)(coded_buffer_segment + 1);
-    *flag = 0;
+    coded_buffer_segment = (struct i965_coded_buffer_segment *)bo->virtual;
+    coded_buffer_segment->mapped = 0;
+    coded_buffer_segment->codec = CODED_MPEG2;
     dri_bo_unmap(bo);
 
     return vaStatus;

@@ -502,8 +502,7 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i, j, enable_avc_ildb = 0;
     VAEncSliceParameterBufferH264 *slice_param;
-    VACodedBufferSegment *coded_buffer_segment;
-    unsigned char *flag = NULL;
+    struct i965_coded_buffer_segment *coded_buffer_segment;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
@@ -630,9 +629,9 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
     dri_bo_reference(mfc_context->mfc_indirect_pak_bse_object.bo);
     
     dri_bo_map(bo, 1);
-    coded_buffer_segment = (VACodedBufferSegment *)bo->virtual;
-    flag = (unsigned char *)(coded_buffer_segment + 1);
-    *flag = 0;
+    coded_buffer_segment = (struct i965_coded_buffer_segment *)bo->virtual;
+    coded_buffer_segment->mapped = 0;
+    coded_buffer_segment->codec = CODED_H264;
     dri_bo_unmap(bo);
 
     return vaStatus;

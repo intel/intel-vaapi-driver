@@ -340,8 +340,30 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 int
 va_enc_packed_type_to_idx(int packed_type);
 
-/* reserve 1 byte for internal using */
-#define I965_CODEDBUFFER_HEADER_SIZE   ALIGN(sizeof(VACodedBufferSegment) + 1, 64)
+/* reserve 2 byte for internal using */
+#define CODED_H264      0
+#define CODED_MPEG2     1
+
+#define H264_DELIMITER0 0x00
+#define H264_DELIMITER1 0x00
+#define H264_DELIMITER2 0x00
+#define H264_DELIMITER3 0x00
+#define H264_DELIMITER4 0x00
+
+#define MPEG2_DELIMITER0        0x00
+#define MPEG2_DELIMITER1        0x00
+#define MPEG2_DELIMITER2        0x00
+#define MPEG2_DELIMITER3        0x00
+#define MPEG2_DELIMITER4        0xb0
+
+struct i965_coded_buffer_segment
+{
+    VACodedBufferSegment base;
+    unsigned char mapped;
+    unsigned char codec;
+};
+
+#define I965_CODEDBUFFER_HEADER_SIZE   ALIGN(sizeof(struct i965_coded_buffer_segment), 64)
 
 
 extern VAStatus i965_MapBuffer(VADriverContextP ctx,
