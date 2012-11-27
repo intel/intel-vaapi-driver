@@ -2309,7 +2309,7 @@ intel_mfc_mpeg2_prepare(VADriverContextP ctx,
     bo = obj_buffer->buffer_store->bo;
     assert(bo);
     mfc_context->mfc_indirect_pak_bse_object.bo = bo;
-    mfc_context->mfc_indirect_pak_bse_object.offset = I965_CODEDBUFFER_SIZE;
+    mfc_context->mfc_indirect_pak_bse_object.offset = I965_CODEDBUFFER_HEADER_SIZE;
     mfc_context->mfc_indirect_pak_bse_object.end_offset = ALIGN(obj_buffer->size_element - 0x1000, 0x1000);
     dri_bo_reference(mfc_context->mfc_indirect_pak_bse_object.bo);
 

@@ -341,7 +341,7 @@ int
 va_enc_packed_type_to_idx(int packed_type);
 
 /* reserve 1 byte for internal using */
-#define I965_CODEDBUFFER_SIZE   ALIGN(sizeof(VACodedBufferSegment) + 1, 64)
+#define I965_CODEDBUFFER_HEADER_SIZE   ALIGN(sizeof(VACodedBufferSegment) + 1, 64)
 
 
 extern VAStatus i965_MapBuffer(VADriverContextP ctx,

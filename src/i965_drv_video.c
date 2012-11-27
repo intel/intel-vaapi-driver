@@ -1331,7 +1331,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     }
 
     if (type == VAEncCodedBufferType) {
-        size += I965_CODEDBUFFER_SIZE;
+        size += I965_CODEDBUFFER_HEADER_SIZE;
         size += 0x1000; /* for upper bound check */
     }
 
@@ -1363,7 +1363,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
             unsigned char *flag = NULL;
             dri_bo_map(buffer_store->bo, 1);
             coded_buffer_segment = (VACodedBufferSegment *)buffer_store->bo->virtual;
-            coded_buffer_segment->size = size - I965_CODEDBUFFER_SIZE;
+            coded_buffer_segment->size = size - I965_CODEDBUFFER_HEADER_SIZE;
             coded_buffer_segment->bit_offset = 0;
             coded_buffer_segment->status = 0;
             coded_buffer_segment->buf = NULL;
@@ -1467,9 +1467,9 @@ i965_MapBuffer(VADriverContextP ctx,
             unsigned char *flag = (unsigned char *)(coded_buffer_segment + 1);
 
             if (*flag != 1) {
-                coded_buffer_segment->buf = buffer = (unsigned char *)(obj_buffer->buffer_store->bo->virtual) + I965_CODEDBUFFER_SIZE;
+                coded_buffer_segment->buf = buffer = (unsigned char *)(obj_buffer->buffer_store->bo->virtual) + I965_CODEDBUFFER_HEADER_SIZE;
             
-                for (i = 0; i < obj_buffer->size_element - I965_CODEDBUFFER_SIZE - 3 - 0x1000; i++) {
+                for (i = 0; i < obj_buffer->size_element - I965_CODEDBUFFER_HEADER_SIZE - 3 - 0x1000; i++) {
                     if (!buffer[i] &&
                         !buffer[i + 1] &&
                         !buffer[i + 2] &&
@@ -1478,7 +1478,7 @@ i965_MapBuffer(VADriverContextP ctx,
                         break;
                 }
 
-                if (i == obj_buffer->size_element - I965_CODEDBUFFER_SIZE - 3 - 0x1000) {
+                if (i == obj_buffer->size_element - I965_CODEDBUFFER_HEADER_SIZE - 3 - 0x1000) {
                     coded_buffer_segment->status |= VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
                 }
 
