@@ -124,7 +124,7 @@ i965_put_surface_dri(
     unsigned int pp_flag = 0;
     bool new_region = false;
     uint32_t name;
-    int ret;
+    int i, ret;
 
     /* Currently don't support DRI1 */
     if (!VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2))
@@ -187,8 +187,11 @@ i965_put_surface_dri(
 
     intel_render_put_surface(ctx, surface, src_rect, dst_rect, pp_flag);
 
-    if(obj_surface->subpic != VA_INVALID_ID) {
-        intel_render_put_subpicture(ctx, surface, src_rect, dst_rect);
+    for(i = 0; i < I965_MAX_SUBPIC_SUM; i++){
+        if(obj_surface->subpic[i] != VA_INVALID_ID) {
+           obj_surface->subpic_render_idx = i;
+           intel_render_put_subpicture(ctx, surface, src_rect, dst_rect);
+        }
     }
 
     dri_vtable->swap_buffer(ctx, dri_drawable);
