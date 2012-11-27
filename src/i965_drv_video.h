@@ -45,6 +45,7 @@
 #define I965_MAX_CONFIG_ATTRIBUTES              10
 #define I965_MAX_IMAGE_FORMATS                  10
 #define I965_MAX_SUBPIC_FORMATS                 6
+#define I965_MAX_SUBPIC_SUM                     4
 
 #define INTEL_STR_DRIVER_VENDOR                 "Intel"
 #define INTEL_STR_DRIVER_NAME                   "i965"
@@ -188,7 +189,9 @@ struct object_surface
 {
     struct object_base base;
     VASurfaceStatus status;
-    VASubpictureID subpic;
+    VASubpictureID subpic[I965_MAX_SUBPIC_SUM];
+    unsigned int subpic_render_idx;
+
     int width;
     int height;
     int size;

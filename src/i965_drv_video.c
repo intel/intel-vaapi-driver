@@ -621,7 +621,7 @@ i965_CreateSurfaces2(
     )
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    int i;
+    int i,j;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int expected_fourcc = 0;
 
@@ -653,9 +653,13 @@ i965_CreateSurfaces2(
 
         surfaces[i] = surfaceID;
         obj_surface->status = VASurfaceReady;
-        obj_surface->subpic = VA_INVALID_ID;
         obj_surface->orig_width = width;
         obj_surface->orig_height = height;
+
+        obj_surface->subpic_render_idx = 0;
+        for(j = 0; j < I965_MAX_SUBPIC_SUM; j++){
+           obj_surface->subpic[j] = VA_INVALID_ID;
+        }
 
         obj_surface->width = ALIGN(width, 16);
         obj_surface->height = ALIGN(height, 16);
@@ -945,7 +949,7 @@ i965_AssociateSubpicture(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_subpic *obj_subpic = SUBPIC(subpicture);
-    int i;
+    int i, j;
 
     obj_subpic->src_rect.x      = src_x;
     obj_subpic->src_rect.y      = src_y;
@@ -961,7 +965,18 @@ i965_AssociateSubpicture(VADriverContextP ctx,
         struct object_surface *obj_surface = SURFACE(target_surfaces[i]);
         if (!obj_surface)
             return VA_STATUS_ERROR_INVALID_SURFACE;
-        obj_surface->subpic = subpicture;
+
+        for(j = 0; j < I965_MAX_SUBPIC_SUM; j ++){
+            if(obj_surface->subpic[j] == VA_INVALID_ID){
+               obj_surface->subpic[j] = subpicture;
+               break;
+            }
+        }
+        
+        if(j == I965_MAX_SUBPIC_SUM){
+            return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+        }
+
     }
     return VA_STATUS_SUCCESS;
 }
@@ -974,14 +989,23 @@ i965_DeassociateSubpicture(VADriverContextP ctx,
                            int num_surfaces)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    int i;
+    int i, j;
 
     for (i = 0; i < num_surfaces; i++) {
         struct object_surface *obj_surface = SURFACE(target_surfaces[i]);
         if (!obj_surface)
             return VA_STATUS_ERROR_INVALID_SURFACE;
-        if (obj_surface->subpic == subpicture)
-            obj_surface->subpic = VA_INVALID_ID;
+
+        for(j = 0; j < I965_MAX_SUBPIC_SUM; j ++){
+            if(obj_surface->subpic[j] == subpicture){
+               obj_surface->subpic[j] = VA_INVALID_ID;
+               break;
+            }
+        }
+        
+        if(j == I965_MAX_SUBPIC_SUM){
+            return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+        }
     }
     return VA_STATUS_SUCCESS;
 }
