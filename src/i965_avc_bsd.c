@@ -465,6 +465,17 @@ i965_avc_bsd_buf_base_state(VADriverContextP ctx,
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
     i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+
+    /* initial uv component for YUV400 case */
+    if (pic_param->seq_fields.bits.chroma_format_idc == 0) {
+         unsigned int uv_offset = obj_surface->width * obj_surface->height; 
+         unsigned int uv_size   = obj_surface->width * obj_surface->height / 2; 
+
+         dri_bo_map(obj_surface->bo, 1);
+         memset(obj_surface->bo->virtual + uv_offset, 0x80, uv_size);
+         dri_bo_unmap(obj_surface->bo);
+    }
+
     i965_avc_bsd_init_avc_bsd_surface(ctx, obj_surface, pic_param, i965_h264_context);
     avc_bsd_surface = obj_surface->private_data;
 
