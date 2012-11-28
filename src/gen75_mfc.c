@@ -2139,7 +2139,7 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
                                                  slice_param->quantiser_scale_code,
                                                  0x3f,
                                                  0,
-                                                 0x3ff,
+                                                 0xff,
                                                  slice_batch);
             } else {
                 assert(0);
