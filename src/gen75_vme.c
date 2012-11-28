@@ -98,6 +98,42 @@ static struct i965_kernel gen75_vme_kernels[] = {
     },
 };
 
+static const uint32_t gen75_vme_mpeg2_intra_frame[][4] = {
+#include "shaders/vme/intra_frame_haswell.g75b"
+};
+
+static const uint32_t gen75_vme_mpeg2_inter_frame[][4] = {
+#include "shaders/vme/inter_frame_haswell.g75b"
+};
+
+static const uint32_t gen75_vme_mpeg2_batchbuffer[][4] = {
+#include "shaders/vme/batchbuffer.g75b"
+};
+
+static struct i965_kernel gen75_vme_mpeg2_kernels[] = {
+    {
+        "VME Intra Frame",
+        VME_INTRA_SHADER, /*index*/
+        gen75_vme_mpeg2_intra_frame, 			
+        sizeof(gen75_vme_mpeg2_intra_frame),		
+        NULL
+    },
+    {
+        "VME inter Frame",
+        VME_INTER_SHADER,
+        gen75_vme_mpeg2_inter_frame,
+        sizeof(gen75_vme_mpeg2_inter_frame),
+        NULL
+    },
+    {
+        "VME BATCHBUFFER",
+        VME_BATCHBUFFER,
+        gen75_vme_mpeg2_batchbuffer,
+        sizeof(gen75_vme_mpeg2_batchbuffer),
+        NULL
+    },
+};
+
 /* only used for VME source surface state */
 static void 
 gen75_vme_source_surface_state(VADriverContextP ctx,
@@ -301,11 +337,21 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
     int mv_num = 32;
 
     vme_state_message = (unsigned int *)vme_context->vme_state_message;
-    if (vme_context->h264_level >= 30) {
-	mv_num = 16;
-	if (vme_context->h264_level >= 31)
-            mv_num = 8;
-    } 
+
+    if (encoder_context->profile == VAProfileH264Baseline ||
+        encoder_context->profile == VAProfileH264Main ||
+        encoder_context->profile == VAProfileH264High) {
+        if (vme_context->h264_level >= 30) {
+            mv_num = 16;
+        
+            if (vme_context->h264_level >= 31)
+                mv_num = 8;
+        } 
+    } else if (encoder_context->profile == VAProfileMPEG2Simple ||
+               encoder_context->profile == VAProfileMPEG2Main) {
+        mv_num = 4;
+    }
+
     vme_state_message[31] = mv_num;
 
     dri_bo_map(vme_context->gpe_context.curbe.bo, 1);
@@ -318,7 +364,7 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
      */
     memcpy(constant_buffer, (char *)vme_context->vme_state_message, 128);
 	
-    dri_bo_unmap( vme_context->gpe_context.curbe.bo);
+    dri_bo_unmap(vme_context->gpe_context.curbe.bo);
 
     return VA_STATUS_SUCCESS;
 }
@@ -419,7 +465,18 @@ static VAStatus gen75_vme_vme_state_setup(VADriverContextP ctx,
 	vme_state_message[i] = 0;
     }
 
-    gen75_vme_state_setup_fixup(ctx, encode_state, encoder_context, vme_state_message);
+    switch (encoder_context->profile) {
+    case VAProfileH264Baseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        gen75_vme_state_setup_fixup(ctx, encode_state, encoder_context, vme_state_message);
+
+        break;
+
+    default:
+        /* no fixup */
+        break;
+    }
 
     return VA_STATUS_SUCCESS;
 }
@@ -615,6 +672,268 @@ gen75_vme_pipeline(VADriverContextP ctx,
 }
 
 static void
+gen75_vme_mpeg2_output_buffer_setup(VADriverContextP ctx,
+                                    struct encode_state *encode_state,
+                                    int index,
+                                    int is_intra,
+                                    struct intel_encoder_context *encoder_context)
+
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
+    int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+
+    vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs;
+    vme_context->vme_output.pitch = 16; /* in bytes, always 16 */
+
+    if (is_intra)
+        vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 2;
+    else
+        vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 24;
+    /*
+     * Inter MV . 32-byte Intra search + 16 IME info + 128 IME MV + 32 IME Ref
+     * + 16 FBR Info + 128 FBR MV + 32 FBR Ref.
+     * 16 * (2 + 2 * (1 + 8 + 2))= 16 * 24.
+     */
+
+    vme_context->vme_output.bo = dri_bo_alloc(i965->intel.bufmgr, 
+                                              "VME output buffer",
+                                              vme_context->vme_output.num_blocks * vme_context->vme_output.size_block,
+                                              0x1000);
+    assert(vme_context->vme_output.bo);
+    vme_context->vme_buffer_suface_setup(ctx,
+                                         &vme_context->gpe_context,
+                                         &vme_context->vme_output,
+                                         BINDING_TABLE_OFFSET(index),
+                                         SURFACE_STATE_OFFSET(index));
+}
+
+static void
+gen75_vme_mpeg2_output_vme_batchbuffer_setup(VADriverContextP ctx,
+                                             struct encode_state *encode_state,
+                                             int index,
+                                             struct intel_encoder_context *encoder_context)
+
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
+    int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+
+    vme_context->vme_batchbuffer.num_blocks = width_in_mbs * height_in_mbs + 1;
+    vme_context->vme_batchbuffer.size_block = 64; /* 4 OWORDs */
+    vme_context->vme_batchbuffer.pitch = 16;
+    vme_context->vme_batchbuffer.bo = dri_bo_alloc(i965->intel.bufmgr, 
+                                                   "VME batchbuffer",
+                                                   vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block,
+                                                   0x1000);
+    vme_context->vme_buffer_suface_setup(ctx,
+                                         &vme_context->gpe_context,
+                                         &vme_context->vme_batchbuffer,
+                                         BINDING_TABLE_OFFSET(index),
+                                         SURFACE_STATE_OFFSET(index));
+}
+
+static VAStatus
+gen75_vme_mpeg2_surface_setup(VADriverContextP ctx, 
+                              struct encode_state *encode_state,
+                              int is_intra,
+                              struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface;
+    VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+
+    /*Setup surfaces state*/
+    /* current picture for encoding */
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
+    assert(obj_surface);
+    gen75_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
+    gen75_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
+    gen75_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);
+
+    if (!is_intra) {
+        /* reference 0 */
+        obj_surface = SURFACE(pic_param->forward_reference_picture);
+        assert(obj_surface);
+        if ( obj_surface->bo != NULL)
+            gen75_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
+
+        /* reference 1 */
+        obj_surface = SURFACE(pic_param->backward_reference_picture);
+        assert(obj_surface);
+        if ( obj_surface->bo != NULL ) 
+            gen75_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
+    }
+
+    /* VME output */
+    gen75_vme_mpeg2_output_buffer_setup(ctx, encode_state, 3, is_intra, encoder_context);
+    gen75_vme_mpeg2_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static void
+gen75_vme_mpeg2_fill_vme_batchbuffer(VADriverContextP ctx, 
+                                     struct encode_state *encode_state,
+                                     int mb_width, int mb_height,
+                                     int kernel,
+                                     int transform_8x8_mode_flag,
+                                     struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    int mb_x = 0, mb_y = 0;
+    int i, s, j;
+    unsigned int *command_ptr;
+
+#define		INTRA_PRED_AVAIL_FLAG_AE	0x60
+#define		INTRA_PRED_AVAIL_FLAG_B		0x10
+#define		INTRA_PRED_AVAIL_FLAG_C       	0x8
+#define		INTRA_PRED_AVAIL_FLAG_D		0x4
+#define		INTRA_PRED_AVAIL_FLAG_BCD_MASK	0x1C
+
+    dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
+    command_ptr = vme_context->vme_batchbuffer.bo->virtual;
+
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+        VAEncSliceParameterBufferMPEG2 *slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[s]->buffer;
+
+        for (j = 0; j < encode_state->slice_params_ext[s]->num_elements; j++) {
+            int slice_mb_begin = slice_param->macroblock_address;
+            int slice_mb_number = slice_param->num_macroblocks;
+            unsigned int mb_intra_ub;
+            int slice_mb_x = slice_param->macroblock_address % mb_width;
+
+            for (i = 0; i < slice_mb_number;) {
+                int mb_count = i + slice_mb_begin;    
+
+                mb_x = mb_count % mb_width;
+                mb_y = mb_count / mb_width;
+                mb_intra_ub = 0;
+
+                if (mb_x != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+                }
+
+                if (mb_y != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+
+                    if (mb_x != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+
+                    if (mb_x != (mb_width -1))
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                }
+
+                if (i < mb_width) {
+                    if (i == 0)
+                        mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_AE);
+
+                    mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_BCD_MASK);
+
+                    if ((i == (mb_width - 1)) && slice_mb_x) {
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                    }
+                }
+		
+                if ((i == mb_width) && slice_mb_x) {
+                    mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
+                }
+
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = kernel;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+   
+                /*inline data */
+                *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
+                *command_ptr++ = ( (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+
+                i += 1;
+            }
+
+            slice_param++;
+        }
+    }
+
+    *command_ptr++ = 0;
+    *command_ptr++ = MI_BATCH_BUFFER_END;
+
+    dri_bo_unmap(vme_context->vme_batchbuffer.bo);
+}
+
+static void
+gen75_vme_mpeg2_pipeline_programing(VADriverContextP ctx, 
+                                    struct encode_state *encode_state,
+                                    int is_intra,
+                                    struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
+    int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+
+    gen75_vme_mpeg2_fill_vme_batchbuffer(ctx, 
+                                         encode_state,
+                                         width_in_mbs, height_in_mbs,
+                                         is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
+                                         0,
+                                         encoder_context);
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+    gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
+    OUT_RELOC(batch,
+              vme_context->vme_batchbuffer.bo,
+              I915_GEM_DOMAIN_COMMAND, 0, 
+              0);
+    ADVANCE_BATCH(batch);
+
+    intel_batchbuffer_end_atomic(batch);	
+}
+
+static VAStatus 
+gen75_vme_mpeg2_prepare(VADriverContextP ctx, 
+                        struct encode_state *encode_state,
+                        struct intel_encoder_context *encoder_context)
+{
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncSliceParameterBufferMPEG2 *slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
+	
+    /*Setup all the memory object*/
+    gen75_vme_mpeg2_surface_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+    gen75_vme_interface_setup(ctx, encode_state, encoder_context);
+    gen75_vme_vme_state_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+    gen75_vme_constant_setup(ctx, encode_state, encoder_context);
+
+    /*Programing media pipeline*/
+    gen75_vme_mpeg2_pipeline_programing(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+
+    return vaStatus;
+}
+
+static VAStatus
+gen75_vme_mpeg2_pipeline(VADriverContextP ctx,
+                         VAProfile profile,
+                         struct encode_state *encode_state,
+                         struct intel_encoder_context *encoder_context)
+{
+    gen75_vme_media_init(ctx, encoder_context);
+    gen75_vme_mpeg2_prepare(ctx, encode_state, encoder_context);
+    gen75_vme_run(ctx, encode_state, encoder_context);
+    gen75_vme_stop(ctx, encode_state, encoder_context);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static void
 gen75_vme_context_destroy(void *context)
 {
     struct gen6_vme_context *vme_context = context;
@@ -641,6 +960,30 @@ gen75_vme_context_destroy(void *context)
 Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = calloc(1, sizeof(struct gen6_vme_context));
+    struct i965_kernel *vme_kernel_list = NULL;
+
+    switch (encoder_context->profile) {
+    case VAProfileH264Baseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        vme_kernel_list = gen75_vme_kernels;
+        encoder_context->vme_pipeline = gen75_vme_pipeline;
+        
+        break;
+
+    case VAProfileMPEG2Simple:
+    case VAProfileMPEG2Main:
+        vme_kernel_list = gen75_vme_mpeg2_kernels;
+        encoder_context->vme_pipeline = gen75_vme_mpeg2_pipeline;
+
+        break;
+
+    default:
+        /* never get here */
+        assert(0);
+
+        break;
+    }
 
     vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
@@ -657,7 +1000,7 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
 
     i965_gpe_load_kernels(ctx,
                           &vme_context->gpe_context,
-                          gen75_vme_kernels,
+                          vme_kernel_list,
                           GEN6_VME_KERNEL_NUMBER);
     vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
     vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
@@ -666,8 +1009,8 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
 
     encoder_context->vme_context = vme_context;
     encoder_context->vme_context_destroy = gen75_vme_context_destroy;
-    encoder_context->vme_pipeline = gen75_vme_pipeline;
 
     vme_context->vme_state_message = malloc(VME_MSG_LENGTH * sizeof(int));
+
     return True;
 }
