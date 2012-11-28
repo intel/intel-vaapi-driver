@@ -39,6 +39,7 @@
 struct intel_encoder_context
 {
     struct hw_context base;
+    VAProfile profile;
     VASurfaceID input_yuv_surface;
     int is_tmp_id;
     unsigned int rate_control_mode;

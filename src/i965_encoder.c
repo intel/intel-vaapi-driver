@@ -163,6 +163,7 @@ gen6_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     encoder_context->base.run = intel_encoder_end_picture;
     encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
     encoder_context->rate_control_mode = VA_RC_NONE;
+    encoder_context->profile = obj_config->profile;
 
     for (i = 0; i < obj_config->num_attribs; i++) {
         if (obj_config->attrib_list[i].type == VAConfigAttribRateControl) {
@@ -197,6 +198,7 @@ gen7_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
     encoder_context->is_tmp_id = 0;
     encoder_context->rate_control_mode = VA_RC_NONE;
+    encoder_context->profile = obj_config->profile;
 
     for (i = 0; i < obj_config->num_attribs; i++) {
         if (obj_config->attrib_list[i].type == VAConfigAttribRateControl) {
@@ -231,6 +233,7 @@ gen75_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config
     encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
     encoder_context->is_tmp_id = 0;
     encoder_context->rate_control_mode = VA_RC_NONE;
+    encoder_context->profile = obj_config->profile;
 
     for (i = 0; i < obj_config->num_attribs; i++) {
         if (obj_config->attrib_list[i].type == VAConfigAttribRateControl) {
