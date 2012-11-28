@@ -1976,7 +1976,7 @@ gen75_mfc_mpeg2_pak_object_intra(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   max_size_in_word << 24 |
                   target_size_in_word << 16 |
-                  coded_block_pattern << 0 |      /* CBP */
+                  coded_block_pattern << 6 |      /* CBP */
                   0);
     OUT_BCS_BATCH(batch,
                   last_mb_in_slice << 31 |
