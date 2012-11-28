@@ -1998,6 +1998,69 @@ gen75_mfc_mpeg2_pak_object_intra(VADriverContextP ctx,
     return len_in_dwords;
 }
 
+static int
+gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
+                                 struct intel_encoder_context *encoder_context,
+                                 int x, int y,
+                                 int first_mb_in_slice,
+                                 int last_mb_in_slice,
+                                 int first_mb_in_slice_group,
+                                 int last_mb_in_slice_group,
+                                 int mb_type,
+                                 int qp_scale_code,
+                                 int coded_block_pattern,
+                                 unsigned char target_size_in_word,
+                                 unsigned char max_size_in_word,
+                                 struct intel_batchbuffer *batch)
+{
+    int len_in_dwords = 9;
+
+    if (batch == NULL)
+        batch = encoder_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, len_in_dwords);
+
+    OUT_BCS_BATCH(batch, MFC_MPEG2_PAK_OBJECT | (len_in_dwords - 2));
+    OUT_BCS_BATCH(batch,
+                  2 << 24 |     /* PackedMvNum */
+                  7 << 20 |     /* MvFormat */
+                  7 << 17 |     /* CbpDcY/CbpDcU/CbpDcV */
+                  0 << 15 |     /* TransformFlag: frame DCT */
+                  0 << 14 |     /* FieldMbFlag */
+                  0 << 13 |     /* IntraMbFlag */
+                  mb_type << 8 |   /* MbType: Intra */
+                  0 << 2 |      /* SkipMbFlag */
+                  0 << 0 |      /* InterMbMode */
+                  0);
+    OUT_BCS_BATCH(batch, y << 16 | x);
+    OUT_BCS_BATCH(batch,
+                  max_size_in_word << 24 |
+                  target_size_in_word << 16 |
+                  coded_block_pattern << 6 |      /* CBP */
+                  0);
+    OUT_BCS_BATCH(batch,
+                  last_mb_in_slice << 31 |
+                  first_mb_in_slice << 30 |
+                  0 << 27 |     /* EnableCoeffClamp */
+                  last_mb_in_slice_group << 26 |
+                  0 << 25 |     /* MbSkipConvDisable */
+                  first_mb_in_slice_group << 24 |
+                  0 << 16 |     /* MvFieldSelect */
+                  qp_scale_code << 0 |
+                  0);
+    if (x == 21)
+        OUT_BCS_BATCH(batch, 0);
+    else
+        OUT_BCS_BATCH(batch, 0x04);    /* MV[0][0] */
+    OUT_BCS_BATCH(batch, 0);    /* MV[1][0] */
+    OUT_BCS_BATCH(batch, 0);    /* MV[0][1] */
+    OUT_BCS_BATCH(batch, 0);    /* MV[1][1] */
+
+    ADVANCE_BCS_BATCH(batch);
+
+    return len_in_dwords;
+}
+
 #define INTRA_RDO_OFFSET        4
 #define	INTER_RDO_OFFSET        54
 #define	INTER_MSG_OFFSET        52
@@ -2142,7 +2205,19 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
                                                  0xff,
                                                  slice_batch);
             } else {
-                assert(0);
+                gen75_mfc_mpeg2_pak_object_inter(ctx,
+                                                 encoder_context,
+                                                 h_pos, v_pos,
+                                                 first_mb_in_slice,
+                                                 last_mb_in_slice,
+                                                 first_mb_in_slice_group,
+                                                 last_mb_in_slice_group,
+                                                 0x1,
+                                                 slice_param->quantiser_scale_code,
+                                                 0x3f,
+                                                 0,
+                                                 0xff,
+                                                 slice_batch);
             }
         }
 
