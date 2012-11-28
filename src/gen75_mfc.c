@@ -1836,33 +1836,59 @@ gen75_mfc_mpeg2_pic_state(VADriverContextP ctx,
 static void
 gen75_mfc_mpeg2_qm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    unsigned int qm[16] = {
-        0x10101010, 0x10101010, 0x10101010, 0x10101010,
-        0x10101010, 0x10101010, 0x10101010, 0x10101010,
-        0x10101010, 0x10101010, 0x10101010, 0x10101010,
-        0x10101010, 0x10101010, 0x10101010, 0x10101010
+    unsigned char intra_qm[64] = {
+         8, 16, 19, 22, 26, 27, 29, 34,
+        16, 16, 22, 24, 27, 29, 34, 37,
+        19, 22, 26, 27, 29, 34, 34, 38,
+        22, 22, 26, 27, 29, 34, 37, 40,
+        22, 26, 27, 29, 32, 35, 40, 48,
+        26, 27, 29, 32, 35, 40, 48, 58,
+        26, 27, 29, 34, 38, 46, 56, 69,
+        27, 29, 35, 38, 46, 56, 69, 83
     };
 
-    gen75_mfc_qm_state(ctx, MFX_QM_MPEG_INTRA_QUANTIZER_MATRIX, qm, 16, encoder_context);
-    gen75_mfc_qm_state(ctx, MFX_QM_MPEG_NON_INTRA_QUANTIZER_MATRIX, qm, 16,encoder_context);
+    unsigned char non_intra_qm[64] = {
+        16, 16, 16, 16, 16, 16, 16, 16,
+        16, 16, 16, 16, 16, 16, 16, 16,
+        16, 16, 16, 16, 16, 16, 16, 16,
+        16, 16, 16, 16, 16, 16, 16, 16,
+        16, 16, 16, 16, 16, 16, 16, 16,
+        16, 16, 16, 16, 16, 16, 16, 16,
+        16, 16, 16, 16, 16, 16, 16, 16,
+        16, 16, 16, 16, 16, 16, 16, 16
+    };
+
+    gen75_mfc_qm_state(ctx, MFX_QM_MPEG_INTRA_QUANTIZER_MATRIX, (unsigned int *)intra_qm, 16, encoder_context);
+    gen75_mfc_qm_state(ctx, MFX_QM_MPEG_NON_INTRA_QUANTIZER_MATRIX, (unsigned int *)non_intra_qm, 16,encoder_context);
 }
 
 static void
 gen75_mfc_mpeg2_fqm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    unsigned int qm[32] = {
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000
+    unsigned short intra_fqm[64] = {
+         65536/0x8, 65536/0x10, 65536/0x13, 65536/0x16, 65536/0x16, 65536/0x1a, 65536/0x1a, 65536/0x1b,
+         65536/0x10, 65536/0x10, 65536/0x16, 65536/0x16, 65536/0x1a, 65536/0x1b, 65536/0x1b, 65536/0x1d,
+         65536/0x13, 65536/0x16, 65536/0x1a, 65536/0x1a, 65536/0x1b, 65536/0x1d, 65536/0x1d, 65536/0x23,
+         65536/0x16, 65536/0x18, 65536/0x1b, 65536/0x1b, 65536/0x13, 65536/0x20, 65536/0x22, 65536/0x26,
+         65536/0x1a, 65536/0x1b, 65536/0x13, 65536/0x13, 65536/0x20, 65536/0x23, 65536/0x26, 65536/0x2e,
+         65536/0x1b, 65536/0x1d, 65536/0x22, 65536/0x22, 65536/0x23, 65536/0x28, 65536/0x2e, 65536/0x38,
+         65536/0x1d, 65536/0x22, 65536/0x22, 65536/0x25, 65536/0x28, 65536/0x30, 65536/0x38, 65536/0x45,
+         65536/0x22, 65536/0x25, 65536/0x26, 65536/0x28, 65536/0x30, 65536/0x3a, 65536/0x45, 65536/0x53,
     };
 
-    gen75_mfc_fqm_state(ctx, MFX_QM_MPEG_INTRA_QUANTIZER_MATRIX, qm, 32, encoder_context);
-    gen75_mfc_fqm_state(ctx, MFX_QM_MPEG_NON_INTRA_QUANTIZER_MATRIX, qm, 32, encoder_context);
+    unsigned short non_intra_fqm[64] = {
+        0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000,
+        0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000,
+        0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000,
+        0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000,
+        0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000,
+        0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000,
+        0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000,
+        0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000, 0x1000,
+    };
+
+    gen75_mfc_fqm_state(ctx, MFX_QM_MPEG_INTRA_QUANTIZER_MATRIX, (unsigned int *)intra_fqm, 32, encoder_context);
+    gen75_mfc_fqm_state(ctx, MFX_QM_MPEG_NON_INTRA_QUANTIZER_MATRIX, (unsigned int *)non_intra_fqm, 32, encoder_context);
 }
 
 static void
