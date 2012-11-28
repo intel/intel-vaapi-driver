@@ -101,9 +101,9 @@ static struct i965_kernel gen75_vme_kernels[] = {
 /* only used for VME source surface state */
 static void 
 gen75_vme_source_surface_state(VADriverContextP ctx,
-                              int index,
-                              struct object_surface *obj_surface,
-                              struct intel_encoder_context *encoder_context)
+                               int index,
+                               struct object_surface *obj_surface,
+                               struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
 
@@ -116,9 +116,9 @@ gen75_vme_source_surface_state(VADriverContextP ctx,
 
 static void
 gen75_vme_media_source_surface_state(VADriverContextP ctx,
-                                    int index,
-                                    struct object_surface *obj_surface,
-                                    struct intel_encoder_context *encoder_context)
+                                     int index,
+                                     struct object_surface *obj_surface,
+                                     struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
 
@@ -131,24 +131,24 @@ gen75_vme_media_source_surface_state(VADriverContextP ctx,
 
 static void
 gen75_vme_media_chroma_source_surface_state(VADriverContextP ctx,
-                                    int index,
-                                    struct object_surface *obj_surface,
-                                    struct intel_encoder_context *encoder_context)
+                                            int index,
+                                            struct object_surface *obj_surface,
+                                            struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
 
     vme_context->vme_media_chroma_surface_setup(ctx,
-                                            &vme_context->gpe_context,
-                                            obj_surface,
-                                            BINDING_TABLE_OFFSET(index),
-                                            SURFACE_STATE_OFFSET(index));
+                                                &vme_context->gpe_context,
+                                                obj_surface,
+                                                BINDING_TABLE_OFFSET(index),
+                                                SURFACE_STATE_OFFSET(index));
 }
 
 static void
 gen75_vme_output_buffer_setup(VADriverContextP ctx,
-                             struct encode_state *encode_state,
-                             int index,
-                             struct intel_encoder_context *encoder_context)
+                              struct encode_state *encode_state,
+                              int index,
+                              struct intel_encoder_context *encoder_context)
 
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -166,11 +166,11 @@ gen75_vme_output_buffer_setup(VADriverContextP ctx,
         vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 2;
     else
         vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 24;
-	/*
-	 * Inter MV . 32-byte Intra search + 16 IME info + 128 IME MV + 32 IME Ref
-	 * + 16 FBR Info + 128 FBR MV + 32 FBR Ref.
-	 * 16 * (2 + 2 * (1 + 8 + 2))= 16 * 24.
-	 */
+    /*
+     * Inter MV . 32-byte Intra search + 16 IME info + 128 IME MV + 32 IME Ref
+     * + 16 FBR Info + 128 FBR MV + 32 FBR Ref.
+     * 16 * (2 + 2 * (1 + 8 + 2))= 16 * 24.
+     */
 
     vme_context->vme_output.bo = dri_bo_alloc(i965->intel.bufmgr, 
                                               "VME output buffer",
@@ -186,9 +186,9 @@ gen75_vme_output_buffer_setup(VADriverContextP ctx,
 
 static void
 gen75_vme_output_vme_batchbuffer_setup(VADriverContextP ctx,
-                                      struct encode_state *encode_state,
-                                      int index,
-                                      struct intel_encoder_context *encoder_context)
+                                       struct encode_state *encode_state,
+                                       int index,
+                                       struct intel_encoder_context *encoder_context)
 
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -213,9 +213,9 @@ gen75_vme_output_vme_batchbuffer_setup(VADriverContextP ctx,
 
 static VAStatus
 gen75_vme_surface_setup(VADriverContextP ctx, 
-                       struct encode_state *encode_state,
-                       int is_intra,
-                       struct intel_encoder_context *encoder_context)
+                        struct encode_state *encode_state,
+                        int is_intra,
+                        struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
@@ -251,8 +251,8 @@ gen75_vme_surface_setup(VADriverContextP ctx,
 }
 
 static VAStatus gen75_vme_interface_setup(VADriverContextP ctx, 
-                                         struct encode_state *encode_state,
-                                         struct intel_encoder_context *encoder_context)
+                                          struct encode_state *encode_state,
+                                          struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     struct gen6_interface_descriptor_data *desc;   
@@ -292,8 +292,8 @@ static VAStatus gen75_vme_interface_setup(VADriverContextP ctx,
 }
 
 static VAStatus gen75_vme_constant_setup(VADriverContextP ctx, 
-                                        struct encode_state *encode_state,
-                                        struct intel_encoder_context *encoder_context)
+                                         struct encode_state *encode_state,
+                                         struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     unsigned char *constant_buffer;
@@ -304,7 +304,7 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
     if (vme_context->h264_level >= 30) {
 	mv_num = 16;
 	if (vme_context->h264_level >= 31)
-		mv_num = 8;
+            mv_num = 8;
     } 
     vme_state_message[31] = mv_num;
 
@@ -312,10 +312,10 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
     assert(vme_context->gpe_context.curbe.bo->virtual);
     constant_buffer = vme_context->gpe_context.curbe.bo->virtual;
 
-	/* VME MV/Mb cost table is passed by using const buffer */
-	/* Now it uses the fixed search path. So it is constructed directly
-	 * in the GPU shader.
-	 */
+    /* VME MV/Mb cost table is passed by using const buffer */
+    /* Now it uses the fixed search path. So it is constructed directly
+     * in the GPU shader.
+     */
     memcpy(constant_buffer, (char *)vme_context->vme_state_message, 128);
 	
     dri_bo_unmap( vme_context->gpe_context.curbe.bo);
@@ -379,9 +379,9 @@ static const unsigned int intra_mb_mode_cost_table[] = {
 };
 
 static void gen75_vme_state_setup_fixup(VADriverContextP ctx,
-                                       struct encode_state *encode_state,
-                                       struct intel_encoder_context *encoder_context,
-                                       unsigned int *vme_state_message)
+                                        struct encode_state *encode_state,
+                                        struct intel_encoder_context *encoder_context,
+                                        unsigned int *vme_state_message)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
@@ -397,9 +397,9 @@ static void gen75_vme_state_setup_fixup(VADriverContextP ctx,
 }
 
 static VAStatus gen75_vme_vme_state_setup(VADriverContextP ctx,
-                                         struct encode_state *encode_state,
-                                         int is_intra,
-                                         struct intel_encoder_context *encoder_context)
+                                          struct encode_state *encode_state,
+                                          int is_intra,
+                                          struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     unsigned int *vme_state_message;
@@ -426,11 +426,11 @@ static VAStatus gen75_vme_vme_state_setup(VADriverContextP ctx,
 
 static void
 gen75_vme_fill_vme_batchbuffer(VADriverContextP ctx, 
-                              struct encode_state *encode_state,
-                              int mb_width, int mb_height,
-                              int kernel,
-                              int transform_8x8_mode_flag,
-                              struct intel_encoder_context *encoder_context)
+                               struct encode_state *encode_state,
+                               int mb_width, int mb_height,
+                               int kernel,
+                               int transform_8x8_mode_flag,
+                               struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     int mb_x = 0, mb_y = 0;
@@ -463,16 +463,16 @@ gen75_vme_fill_vme_batchbuffer(VADriverContextP ctx,
 	    if (mb_y != 0) {
 		mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
 		if (mb_x != 0)
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
 		if (mb_x != (mb_width -1))
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
 	    }
 	    if (i < mb_width) {
 		if (i == 0)
-			mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_AE);
+                    mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_AE);
 		mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_BCD_MASK);
 		if ((i == (mb_width - 1)) && slice_mb_x) {
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
 		}
 	    }
 		
@@ -521,8 +521,8 @@ static void gen75_vme_media_init(VADriverContextP ctx, struct intel_encoder_cont
 }
 
 static void gen75_vme_pipeline_programing(VADriverContextP ctx, 
-                                         struct encode_state *encode_state,
-                                         struct intel_encoder_context *encoder_context)
+                                          struct encode_state *encode_state,
+                                          struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
@@ -534,11 +534,11 @@ static void gen75_vme_pipeline_programing(VADriverContextP ctx,
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
     gen75_vme_fill_vme_batchbuffer(ctx, 
-                                  encode_state,
-                                  width_in_mbs, height_in_mbs,
-                                  is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
-                                  pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
-                                  encoder_context);
+                                   encode_state,
+                                   width_in_mbs, height_in_mbs,
+                                   is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
+                                   pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
+                                   encoder_context);
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
     gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
@@ -554,8 +554,8 @@ static void gen75_vme_pipeline_programing(VADriverContextP ctx,
 }
 
 static VAStatus gen75_vme_prepare(VADriverContextP ctx, 
-                                 struct encode_state *encode_state,
-                                 struct intel_encoder_context *encoder_context)
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
 {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
@@ -564,7 +564,7 @@ static VAStatus gen75_vme_prepare(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
 
     if (!vme_context->h264_level ||
-		(vme_context->h264_level != pSequenceParameter->level_idc)) {
+        (vme_context->h264_level != pSequenceParameter->level_idc)) {
 	vme_context->h264_level = pSequenceParameter->level_idc;	
     }	
 
@@ -583,8 +583,8 @@ static VAStatus gen75_vme_prepare(VADriverContextP ctx,
 }
 
 static VAStatus gen75_vme_run(VADriverContextP ctx, 
-                             struct encode_state *encode_state,
-                             struct intel_encoder_context *encoder_context)
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
@@ -594,17 +594,17 @@ static VAStatus gen75_vme_run(VADriverContextP ctx,
 }
 
 static VAStatus gen75_vme_stop(VADriverContextP ctx, 
-                              struct encode_state *encode_state,
-                              struct intel_encoder_context *encoder_context)
+                               struct encode_state *encode_state,
+                               struct intel_encoder_context *encoder_context)
 {
     return VA_STATUS_SUCCESS;
 }
 
 static VAStatus
 gen75_vme_pipeline(VADriverContextP ctx,
-                  VAProfile profile,
-                  struct encode_state *encode_state,
-                  struct intel_encoder_context *encoder_context)
+                   VAProfile profile,
+                   struct encode_state *encode_state,
+                   struct intel_encoder_context *encoder_context)
 {
     gen75_vme_media_init(ctx, encoder_context);
     gen75_vme_prepare(ctx, encode_state, encoder_context);
@@ -655,19 +655,19 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
     vme_context->gpe_context.vfe_state.urb_entry_size = 59 - 1;
     vme_context->gpe_context.vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
 
-        i965_gpe_load_kernels(ctx,
-                              &vme_context->gpe_context,
-                              gen75_vme_kernels,
-                              GEN6_VME_KERNEL_NUMBER);
-        vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
-        vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
-        vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;
-        vme_context->vme_media_chroma_surface_setup = gen75_gpe_media_chroma_surface_setup;
+    i965_gpe_load_kernels(ctx,
+                          &vme_context->gpe_context,
+                          gen75_vme_kernels,
+                          GEN6_VME_KERNEL_NUMBER);
+    vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
+    vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
+    vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;
+    vme_context->vme_media_chroma_surface_setup = gen75_gpe_media_chroma_surface_setup;
 
     encoder_context->vme_context = vme_context;
     encoder_context->vme_context_destroy = gen75_vme_context_destroy;
     encoder_context->vme_pipeline = gen75_vme_pipeline;
 
-	vme_context->vme_state_message = malloc(VME_MSG_LENGTH * sizeof(int));
+    vme_context->vme_state_message = malloc(VME_MSG_LENGTH * sizeof(int));
     return True;
 }
