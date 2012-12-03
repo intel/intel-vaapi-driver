@@ -349,7 +349,7 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
         } 
     } else if (encoder_context->profile == VAProfileMPEG2Simple ||
                encoder_context->profile == VAProfileMPEG2Main) {
-        mv_num = 4;
+        mv_num = 2;
     }
 
     vme_state_message[31] = mv_num;
