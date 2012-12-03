@@ -1998,25 +1998,53 @@ gen75_mfc_mpeg2_pak_object_intra(VADriverContextP ctx,
     return len_in_dwords;
 }
 
+#define MV_OFFSET_IN_WORD       112
+
 static int
 gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
                                  struct intel_encoder_context *encoder_context,
+                                 unsigned int *msg,
+                                 int width_in_mbs, int height_in_mbs,
                                  int x, int y,
                                  int first_mb_in_slice,
                                  int last_mb_in_slice,
                                  int first_mb_in_slice_group,
                                  int last_mb_in_slice_group,
-                                 int mb_type,
                                  int qp_scale_code,
-                                 int coded_block_pattern,
                                  unsigned char target_size_in_word,
                                  unsigned char max_size_in_word,
                                  struct intel_batchbuffer *batch)
 {
     int len_in_dwords = 9;
-
+    short *mvptr, mvx0, mvy0, mvx1, mvy1;
+    
     if (batch == NULL)
         batch = encoder_context->base.batch;
+
+    mvptr = (short *)msg;
+    mvx0 = mvptr[MV_OFFSET_IN_WORD] / 2;  /* the output from VME is in the unit of 1/4 pixel */
+    
+    if (mvx0 + x * 16 * 2 < 0 ||
+        mvx0 + (x + 1) * 16 * 2 > width_in_mbs * 16 * 2)
+        mvx0 = 0;
+
+    mvy0 = mvptr[MV_OFFSET_IN_WORD + 1] / 2;
+
+    if (mvy0 + y * 16 * 2 < 0 ||
+        mvy0 + (y + 1) * 16 * 2 > height_in_mbs * 16 * 2)
+        mvy0 = 0;
+
+    mvx1 = mvptr[MV_OFFSET_IN_WORD + 2] / 2;
+
+    if (mvx1 + x * 16 * 2 < 0 ||
+        mvx1 + (x + 1) * 16 * 2 > width_in_mbs * 16 * 2)
+        mvx1 = 0;
+
+    mvy1 = mvptr[MV_OFFSET_IN_WORD + 3] / 2;
+
+    if (mvy1 + y * 16 * 2 < 0 ||
+        mvy1 + (y + 1) * 16 * 2 > height_in_mbs * 16 * 2)
+        mvy1 = 0;
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
@@ -2028,7 +2056,7 @@ gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
                   0 << 15 |     /* TransformFlag: frame DCT */
                   0 << 14 |     /* FieldMbFlag */
                   0 << 13 |     /* IntraMbFlag */
-                  mb_type << 8 |   /* MbType: Intra */
+                  1 << 8 |      /* MbType: Frame-based */
                   0 << 2 |      /* SkipMbFlag */
                   0 << 0 |      /* InterMbMode */
                   0);
@@ -2036,7 +2064,7 @@ gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   max_size_in_word << 24 |
                   target_size_in_word << 16 |
-                  coded_block_pattern << 6 |      /* CBP */
+                  0x3f << 6 |   /* CBP */
                   0);
     OUT_BCS_BATCH(batch,
                   last_mb_in_slice << 31 |
@@ -2048,11 +2076,9 @@ gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
                   0 << 16 |     /* MvFieldSelect */
                   qp_scale_code << 0 |
                   0);
-    if (x == 21)
-        OUT_BCS_BATCH(batch, 0);
-    else
-        OUT_BCS_BATCH(batch, 0x04);    /* MV[0][0] */
-    OUT_BCS_BATCH(batch, 0);    /* MV[1][0] */
+
+    OUT_BCS_BATCH(batch, (mvx0 & 0xFFFF) | mvy0 << 16);    /* MV[0][0] */
+    OUT_BCS_BATCH(batch, (mvx1 & 0xFFFF) | mvy1 << 16);    /* MV[1][0] */
     OUT_BCS_BATCH(batch, 0);    /* MV[0][1] */
     OUT_BCS_BATCH(batch, 0);    /* MV[1][1] */
 
@@ -2129,6 +2155,7 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
                                      VAEncSliceParameterBufferMPEG2 *next_slice_group_param,
                                      struct intel_batchbuffer *slice_batch)
 {
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
     VAEncSliceParameterBufferMPEG2 *slice_param = NULL;
@@ -2138,11 +2165,16 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
     int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
     int i, j;
     int h_start_pos, v_start_pos, h_next_start_pos, v_next_start_pos;
+    unsigned int *msg = NULL, offset = 0;
+    unsigned char *msg_ptr = NULL;
 
     slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[slice_index]->buffer;
     h_start_pos = slice_param->macroblock_address % width_in_mbs;
     v_start_pos = slice_param->macroblock_address / width_in_mbs;
     assert(h_start_pos + slice_param->num_macroblocks <= width_in_mbs);
+
+    dri_bo_map(vme_context->vme_output.bo , 0);
+    msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
 
     if (next_slice_group_param) {
         h_next_start_pos = next_slice_group_param->macroblock_address % width_in_mbs;
@@ -2190,6 +2222,8 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
             int last_mb_in_slice_group = (i == encode_state->slice_params_ext[slice_index]->num_elements - 1 &&
                                           j == slice_param->num_macroblocks - 1);
 
+            msg = (unsigned int *)(msg_ptr + (slice_param->macroblock_address + j) * vme_context->vme_output.size_block);
+
             if (slice_param->is_intra_slice) {
                 gen75_mfc_mpeg2_pak_object_intra(ctx,
                                                  encoder_context,
@@ -2207,14 +2241,14 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
             } else {
                 gen75_mfc_mpeg2_pak_object_inter(ctx,
                                                  encoder_context,
+                                                 msg,
+                                                 width_in_mbs, height_in_mbs,
                                                  h_pos, v_pos,
                                                  first_mb_in_slice,
                                                  last_mb_in_slice,
                                                  first_mb_in_slice_group,
                                                  last_mb_in_slice_group,
-                                                 0x1,
                                                  slice_param->quantiser_scale_code,
-                                                 0x3f,
                                                  0,
                                                  0xff,
                                                  slice_batch);
@@ -2223,6 +2257,8 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
 
         slice_param++;
     }
+
+    dri_bo_unmap(vme_context->vme_output.bo);
 
     /* tail data */
     if (next_slice_group_param == NULL) { /* end of a picture */
