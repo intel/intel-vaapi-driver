@@ -103,7 +103,7 @@ static const uint32_t gen75_vme_mpeg2_intra_frame[][4] = {
 };
 
 static const uint32_t gen75_vme_mpeg2_inter_frame[][4] = {
-#include "shaders/vme/inter_frame_haswell.g75b"
+#include "shaders/vme/mpeg2_inter_frame_haswell.g75b"
 };
 
 static const uint32_t gen75_vme_mpeg2_batchbuffer[][4] = {

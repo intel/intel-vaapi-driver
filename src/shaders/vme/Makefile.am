@@ -11,9 +11,9 @@ INTEL_G7A	= batchbuffer.g7a intra_frame.g7a inter_frame.g7a
 INTEL_GEN7_INC	= batchbuffer.inc vme.inc
 INTEL_GEN7_ASM	= $(INTEL_G7A:%.g7a=%.gen7.asm)
 
-INTEL_G75B	= batchbuffer.g75b intra_frame_haswell.g75b inter_frame_haswell.g75b
-INTEL_G75A	= batchbuffer.g75a intra_frame_haswell.g75a inter_frame_haswell.g75a
-INTEL_GEN75_INC	= batchbuffer.inc vme75.inc
+INTEL_G75B	= batchbuffer.g75b intra_frame_haswell.g75b inter_frame_haswell.g75b mpeg2_inter_frame_haswell.g75b
+INTEL_G75A	= batchbuffer.g75a intra_frame_haswell.g75a inter_frame_haswell.g75a mpeg2_inter_frame_haswell.g75a
+INTEL_GEN75_INC	= batchbuffer.inc vme75.inc vme75_mpeg2.inc
 INTEL_GEN75_ASM	= $(INTEL_G75A:%.g75a=%.gen75.asm)
 
 TARGETS  =
