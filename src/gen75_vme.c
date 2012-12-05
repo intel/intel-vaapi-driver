@@ -764,8 +764,7 @@ gen75_vme_mpeg2_surface_setup(VADriverContextP ctx,
 
         /* reference 1 */
         obj_surface = SURFACE(pic_param->backward_reference_picture);
-        assert(obj_surface);
-        if ( obj_surface->bo != NULL ) 
+        if (obj_surface && obj_surface->bo != NULL) 
             gen75_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
     }
 
