@@ -38,6 +38,7 @@
 #include "i965_drv_video.h"
 #include "i965_post_processing.h"
 #include "i965_render.h"
+#include "intel_media.h"
 
 #define HAS_PP(ctx) (IS_IRONLAKE((ctx)->intel.device_id) ||     \
                      IS_GEN6((ctx)->intel.device_id) ||         \
@@ -2689,38 +2690,41 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
 
     for (i = 0; i < 17; i++) {
+	float coff;
+	coff = i;
+	coff = coff / 16;
         /* for Y channel, currently ignore */
         sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c0 = 0x0;
         sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c1 = 0x0;
         sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c2 = 0x0;
-        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c3 = 0x0;
-        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c4 = 0x0;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c3 = intel_format_convert(1 - coff, 1, 6,0);
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c4 = intel_format_convert(coff, 1, 6, 0);
         sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c5 = 0x0;
         sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c6 = 0x0;
         sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c7 = 0x0;
         sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c0 = 0x0;
         sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c1 = 0x0;
         sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c2 = 0x0;
-        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c3 = 0x0;
-        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c4 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c3 = intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c4 = intel_format_convert(coff, 1, 6, 0);
         sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c5 = 0x0;
         sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c6 = 0x0;
         sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c7 = 0x0;
         /* for U/V channel, 0.25 */
         sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c0 = 0x0;
         sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c1 = 0x0;
-        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c2 = 0x10;
-        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c3 = 0x10;
-        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c4 = 0x10;
-        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c5 = 0x10;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c2 = 0x0;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c3 = intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c4 = intel_format_convert(coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c5 = 0;
         sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c6 = 0x0;
         sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c7 = 0x0;
         sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c0 = 0x0;
         sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c1 = 0x0;
-        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c2 = 0x10;
-        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c3 = 0x10;
-        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c4 = 0x10;
-        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c5 = 0x10;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c2 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c3 = intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c4 = intel_format_convert(coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c5 = 0x0;
         sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c6 = 0x0;
         sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c7 = 0x0;
     }
@@ -2891,23 +2895,25 @@ gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
 
     /* The sampler_state setting of RGBX surface will be different with
      * that for NV12/I420 surface. 
-     * Currently it is not touched.
      */
     for (i = 0; i < 17; i++) {
+	float coff;
+	coff = i;
+	coff = coff / 16;
         /* for Y channel, currently ignore */
         sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c0 = 0x0;
         sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c1 = 0x0;
         sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c2 = 0x0;
-        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c3 = 0x20;
-        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c4 = 0x20;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c3 = intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c4 = intel_format_convert(coff, 1, 6, 0);
         sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c5 = 0x0;
         sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c6 = 0x0;
         sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c7 = 0x0;
         sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c0 = 0x0;
         sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c1 = 0x0;
         sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c2 = 0x0;
-        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c3 = 0x20;
-        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c4 = 0x20;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c3 = intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c4 = intel_format_convert(coff, 1, 6, 0);
         sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c5 = 0x0;
         sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c6 = 0x0;
         sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c7 = 0x0;
@@ -2915,16 +2921,16 @@ gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
         sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c0 = 0x0;
         sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c1 = 0x0;
         sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c2 = 0x00;
-        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c3 = 0x20;
-        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c4 = 0x20;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c3 = intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c4 = intel_format_convert(coff, 1, 6, 0);
         sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c5 = 0x00;
         sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c6 = 0x0;
         sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c7 = 0x0;
         sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c0 = 0x0;
         sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c1 = 0x0;
         sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c2 = 0x00;
-        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c3 = 0x20;
-        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c4 = 0x20;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c3 = intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c4 = intel_format_convert(coff, 1, 6, 0);
         sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c5 = 0x00;
         sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c6 = 0x0;
         sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c7 = 0x0;

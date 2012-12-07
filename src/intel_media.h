@@ -43,4 +43,7 @@ struct gen_avc_surface
 
 extern void gen_free_avc_surface(void **data);
 
+
+extern int intel_format_convert(float src, int out_int_bits, int out_frac_bits,int out_sign_flag);
+
 #endif /* INTEL_MEDIA_H */

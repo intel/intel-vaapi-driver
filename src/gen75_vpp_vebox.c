@@ -36,6 +36,7 @@
 #include "i965_defines.h"
 #include "i965_structs.h"
 #include "gen75_vpp_vebox.h"
+#include "intel_media.h"
 
 #define PI  3.1415926
 
@@ -51,27 +52,6 @@ i965_DeriveImage(VADriverContextP ctx, VABufferID surface, VAImage *out_image);
 extern VAStatus
 i965_DestroyImage(VADriverContextP ctx, VAImageID image);
 
-int format_convert(float src, int out_int_bits, int out_frac_bits,int out_sign_flag)
-{
-     unsigned char negative_flag = (src < 0.0) ? 1 : 0;
-     float src_1 = (!negative_flag)? src: -src ;
-     unsigned int factor = 1 << out_frac_bits;
-     int output_value = 0;         
- 
-     unsigned int integer_part  = floor(src_1);
-     unsigned int fraction_part = ((int)((src_1 - integer_part) * factor)) & (factor - 1) ;
-
-     output_value = (integer_part << out_frac_bits) | fraction_part;
-
-     if(negative_flag)
-         output_value = (~output_value + 1) & ((1 <<(out_int_bits + out_frac_bits)) -1);
-
-     if(out_sign_flag == 1 && negative_flag)
-     {
-          output_value |= negative_flag <<(out_int_bits + out_frac_bits);
-     }
-     return output_value;
-}
 
 VAStatus vpp_surface_copy(VADriverContextP ctx, VASurfaceID dstSurfaceID, VASurfaceID srcSurfaceID)
 {
@@ -389,17 +369,17 @@ void hsw_veb_iecp_pro_amp_table(VADriverContextP ctx, struct intel_vebox_context
            src_saturation = amp_param->value; //(0.0, 10.0)
         }else if(attrib == VAProcColorBalanceBrightness) {
            src_brightness = amp_param->value; // (-100.0, 100.0)
-           brightness = format_convert(src_brightness, 7, 4, 1);
+           brightness = intel_format_convert(src_brightness, 7, 4, 1);
         }else if(attrib == VAProcColorBalanceContrast) {
            src_contrast = amp_param->value;  //  (0.0, 10.0)
-           contrast = format_convert(src_contrast, 4, 7, 0);
+           contrast = intel_format_convert(src_contrast, 4, 7, 0);
         }
 
         tmp_value = cos(src_hue/180*PI) * src_contrast * src_saturation;
-        cos_c_s = format_convert(tmp_value, 7, 8, 1);
+        cos_c_s = intel_format_convert(tmp_value, 7, 8, 1);
         
         tmp_value = sin(src_hue/180*PI) * src_contrast * src_saturation;
-        sin_c_s = format_convert(tmp_value, 7, 8, 1);
+        sin_c_s = intel_format_convert(tmp_value, 7, 8, 1);
      
         *p_table ++ = ( 0 << 28 |         //reserved
                         contrast << 17 |  //contrast value (U4.7 format)
@@ -482,38 +462,38 @@ void hsw_veb_iecp_csc_table(VADriverContextP ctx, struct intel_vebox_context *pr
         memset(p_table, 0, 8 * 4);
     }else{
         *p_table ++ = ( 0 << 29 | //reserved
-                        format_convert(tran_coef[1], 2, 10, 1) << 16 | //c1, s2.10 format
-                        format_convert(tran_coef[0], 2, 10, 1) << 3 |  //c0, s2.10 format
+                        intel_format_convert(tran_coef[1], 2, 10, 1) << 16 | //c1, s2.10 format
+                        intel_format_convert(tran_coef[0], 2, 10, 1) << 3 |  //c0, s2.10 format
                         0 << 2 | //reserved
                         0 << 1 | // yuv_channel swap
                         is_transform_enabled);                
 
         *p_table ++ = ( 0 << 26 | //reserved
-                        format_convert(tran_coef[3], 2, 10, 1) << 13 | 
-                        format_convert(tran_coef[2], 2, 10, 1));
+                        intel_format_convert(tran_coef[3], 2, 10, 1) << 13 | 
+                        intel_format_convert(tran_coef[2], 2, 10, 1));
     
         *p_table ++ = ( 0 << 26 | //reserved
-                        format_convert(tran_coef[5], 2, 10, 1) << 13 | 
-                        format_convert(tran_coef[4], 2, 10, 1));
+                        intel_format_convert(tran_coef[5], 2, 10, 1) << 13 | 
+                        intel_format_convert(tran_coef[4], 2, 10, 1));
 
         *p_table ++ = ( 0 << 26 | //reserved
-                        format_convert(tran_coef[7], 2, 10, 1) << 13 | 
-                        format_convert(tran_coef[6], 2, 10, 1));
+                        intel_format_convert(tran_coef[7], 2, 10, 1) << 13 | 
+                        intel_format_convert(tran_coef[6], 2, 10, 1));
 
         *p_table ++ = ( 0 << 13 | //reserved
-                        format_convert(tran_coef[8], 2, 10, 1));
+                        intel_format_convert(tran_coef[8], 2, 10, 1));
 
         *p_table ++ = ( 0 << 22 | //reserved
-                        format_convert(u_coef[0], 10, 0, 1) << 11 | 
-                        format_convert(v_coef[0], 10, 0, 1));
+                        intel_format_convert(u_coef[0], 10, 0, 1) << 11 | 
+                        intel_format_convert(v_coef[0], 10, 0, 1));
 
         *p_table ++ = ( 0 << 22 | //reserved
-                        format_convert(u_coef[1], 10, 0, 1) << 11 | 
-                        format_convert(v_coef[1], 10, 0, 1));
+                        intel_format_convert(u_coef[1], 10, 0, 1) << 11 | 
+                        intel_format_convert(v_coef[1], 10, 0, 1));
 
         *p_table ++ = ( 0 << 22 | //reserved
-                        format_convert(u_coef[2], 10, 0, 1) << 11 | 
-                        format_convert(v_coef[2], 10, 0, 1));
+                        intel_format_convert(u_coef[2], 10, 0, 1) << 11 | 
+                        intel_format_convert(v_coef[2], 10, 0, 1));
     }
 }
 
