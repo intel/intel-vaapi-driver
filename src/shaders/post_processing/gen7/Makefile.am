@@ -10,6 +10,7 @@ INTEL_PP_G7B = \
 	pl3_to_pa.g7b		\
 	pl3_to_pl2.g7b		\
 	pl3_to_pl3.g7b		\
+	pl2_to_rgbx.g7b		\
 	$(NULL)
 
 INTEL_PP_G4A = \
@@ -53,6 +54,8 @@ INTEL_PP_G4A = \
 	Save_AVS_PL3.g4a		\
 	Save_AVS_NV12.g4a		\
 	Save_AVS_RGB.g4a		\
+	Save_AVS_RGBX.g4a		\
+	YUV_to_RGB.g4a			\
 	Set_AVS_Buf_0123_BGRA.g4a	\
 	Set_AVS_Buf_0123_PL2.g4a	\
 	Set_AVS_Buf_0123_PL3.g4a	\

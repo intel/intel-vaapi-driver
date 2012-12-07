@@ -635,6 +635,7 @@ static const uint32_t pp_pa_load_save_pl3_gen7[][4] = {
 static const uint32_t pp_rgbx_load_save_nv12_gen7[][4] = {
 };
 static const uint32_t pp_nv12_load_save_rgbx_gen7[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_rgbx.g7b"
 };
 
 static VAStatus gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
@@ -833,7 +834,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
     
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
             
 };
@@ -1734,6 +1735,10 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                    fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 1 : 2;
     int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
     int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') || fourcc == VA_FOURCC('U', 'Y', 'V', 'Y'));
+    int rgbx_format = (fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
+                              fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
+                              fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
+                              fourcc == VA_FOURCC('B', 'G', 'R', 'X'));
 
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = SURFACE(surface->id);
@@ -1750,7 +1755,10 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                 width[0] = obj_surface->orig_width;     /* surface foramt is YCBCR, width is specified in units of pixels */
 
             pitch[0] = obj_surface->width * 2;
-        }
+        } else if (rgbx_format) {
+	    if (is_target)
+                width[0] = obj_surface->orig_width * 4; /* surface format is R8, so quad the width */
+	}
 
         width[1] = obj_surface->cb_cr_width;
         height[1] = obj_surface->cb_cr_height;
@@ -1769,7 +1777,10 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         pitch[0] = obj_image->image.pitches[0];
         offset[0] = obj_image->image.offsets[0];
 
-        if (packed_yuv) {
+	if (rgbx_format) {
+	    if (is_target)
+		width[0] = obj_image->image.width * 4; /* surface format is R8, so quad the width */
+	} else if (packed_yuv) {
             if (is_target)
                 width[0] = obj_image->image.width * 2;  /* surface format is R8, so double the width */
             else
@@ -1795,10 +1806,19 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         gen7_pp_set_surface_state(ctx, pp_context,
                                   bo, 0,
                                   width[0] / 4, height[0], pitch[0],
-                                  I965_SURFACEFORMAT_R8_SINT,
+                                  I965_SURFACEFORMAT_R8_UINT,
                                   base_index, 1);
-
-        if (!packed_yuv) {
+	if (rgbx_format) {
+    		struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+		/* the format is MSB: X-B-G-R */
+		pp_static_parameter->grf2.save_avs_rgb_swap = 0;
+		if ((fourcc == VA_FOURCC('B', 'G', 'R', 'A')) || 
+                              (fourcc == VA_FOURCC('B', 'G', 'R', 'X'))) {
+			/* It is stored as MSB: X-R-G-B */
+			pp_static_parameter->grf2.save_avs_rgb_swap = 1;
+		}
+	}
+        if (!packed_yuv && !rgbx_format) {
             if (interleaved_uv) {
                 gen7_pp_set_surface_state(ctx, pp_context,
                                           bo, offset[1],
