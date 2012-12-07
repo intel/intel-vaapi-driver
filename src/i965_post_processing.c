@@ -895,8 +895,10 @@ static const uint32_t pp_pa_load_save_pl3_gen75[][4] = {
 #include "shaders/post_processing/gen7/pa_to_pl3.g75b"
 };
 static const uint32_t pp_rgbx_load_save_nv12_gen75[][4] = {
+#include "shaders/post_processing/gen7/rgbx_to_nv12.g75b"
 };
 static const uint32_t pp_nv12_load_save_rgbx_gen75[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_rgbx.g75b"
 };
 
 static struct pp_module pp_modules_gen75[] = {
@@ -1064,7 +1066,7 @@ static struct pp_module pp_modules_gen75[] = {
             NULL,
         },
     
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_rgbx_avs_initialize,
     },
 
     {
@@ -1076,7 +1078,7 @@ static struct pp_module pp_modules_gen75[] = {
             NULL,
         },
     
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_plx_avs_initialize,
     },
             
 };
@@ -2665,6 +2667,7 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
                            void *filter_param)
 {
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct gen7_sampler_8x8 *sampler_8x8;
     struct i965_sampler_8x8_state *sampler_8x8_state;
@@ -2843,6 +2846,9 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
 
     pp_static_parameter->grf1.pointer_to_inline_parameter = 7;
     pp_static_parameter->grf2.avs_wa_enable = 1; /* must be set for GEN7 */
+    if (IS_HASWELL(i965->intel.device_id))
+    	pp_static_parameter->grf2.avs_wa_enable = 0; /* HSW don't use the WA */
+	
     pp_static_parameter->grf2.avs_wa_width = dw;
     pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * dw);
     pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * dw);
