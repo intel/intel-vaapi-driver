@@ -633,6 +633,7 @@ static const uint32_t pp_pa_load_save_pl3_gen7[][4] = {
 #include "shaders/post_processing/gen7/pa_to_pl3.g7b"
 };
 static const uint32_t pp_rgbx_load_save_nv12_gen7[][4] = {
+#include "shaders/post_processing/gen7/rgbx_to_nv12.g7b"
 };
 static const uint32_t pp_nv12_load_save_rgbx_gen7[][4] = {
 #include "shaders/post_processing/gen7/pl2_to_rgbx.g7b"
@@ -651,6 +652,13 @@ static VAStatus gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_p
                                              const VARectangle *dst_rect,
                                              void *filter_param);
 static VAStatus gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                                           const struct i965_surface *src_surface,
+                                           const VARectangle *src_rect,
+                                           struct i965_surface *dst_surface,
+                                           const VARectangle *dst_rect,
+                                           void *filter_param);
+
+static VAStatus gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                            const struct i965_surface *src_surface,
                                            const VARectangle *src_rect,
                                            struct i965_surface *dst_surface,
@@ -822,7 +830,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
     
-        pp_plx_load_save_plx_initialize,
+        gen7_pp_rgbx_avs_initialize,
     },
 
     {
@@ -1853,7 +1861,16 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         default:
             break;
         }
-
+	if (rgbx_format) {
+    	    struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+	    /* Only R8G8B8A8_UNORM is supported for BGRX or RGBX */
+	    format0 = SURFACE_FORMAT_R8G8B8A8_UNORM;
+	    pp_static_parameter->grf2.src_avs_rgb_swap = 0;
+	    if ((fourcc == VA_FOURCC('B', 'G', 'R', 'A')) || 
+                              (fourcc == VA_FOURCC('B', 'G', 'R', 'X'))) {
+		pp_static_parameter->grf2.src_avs_rgb_swap = 1;
+	    }
+	}
         gen7_pp_set_surface2_state(ctx, pp_context,
                                    bo, offset[0],
                                    width[0], height[0], pitch[0],
@@ -1861,7 +1878,7 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                                    format0, 0,
                                    base_index);
 
-        if (!packed_yuv) {
+        if (!packed_yuv && !rgbx_format) {
             if (interleaved_uv) {
                 gen7_pp_set_surface2_state(ctx, pp_context,
                                            bo, offset[1],
@@ -2831,6 +2848,210 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_static_parameter->grf5.sampler_load_vertical_frame_origin = -(float)pp_avs_context->dest_y / pp_avs_context->dest_h;
     pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = -(float)pp_avs_context->dest_x / dw;
 
+    gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
+
+    dst_surface->flags = src_surface->flags;
+
+    return VA_STATUS_SUCCESS;
+}
+
+
+static VAStatus
+gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                           const struct i965_surface *src_surface,
+                           const VARectangle *src_rect,
+                           struct i965_surface *dst_surface,
+                           const VARectangle *dst_rect,
+                           void *filter_param)
+{
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+    struct gen7_sampler_8x8 *sampler_8x8;
+    struct i965_sampler_8x8_state *sampler_8x8_state;
+    int index, i;
+    int width[3], height[3], pitch[3], offset[3];
+    int src_width, src_height;
+
+    /* source surface */
+    gen7_pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 0, 0,
+                                         width, height, pitch, offset);
+    src_width = width[0];
+    src_height = height[0];
+
+    /* destination surface */
+    gen7_pp_set_media_rw_message_surface(ctx, pp_context, dst_surface, 24, 1,
+                                         width, height, pitch, offset);
+
+    /* sampler 8x8 state */
+    dri_bo_map(pp_context->sampler_state_table.bo_8x8, True);
+    assert(pp_context->sampler_state_table.bo_8x8->virtual);
+    assert(sizeof(*sampler_8x8_state) == sizeof(int) * 138);
+    sampler_8x8_state = pp_context->sampler_state_table.bo_8x8->virtual;
+    memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
+
+    /* The sampler_state setting of RGBX surface will be different with
+     * that for NV12/I420 surface. 
+     * Currently it is not touched.
+     */
+    for (i = 0; i < 17; i++) {
+        /* for Y channel, currently ignore */
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c2 = 0x0;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c3 = 0x20;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c4 = 0x20;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c5 = 0x0;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c7 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c2 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c3 = 0x20;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c4 = 0x20;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c5 = 0x0;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c7 = 0x0;
+        /* for U/V channel, 0.25 */
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c2 = 0x00;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c3 = 0x20;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c4 = 0x20;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c5 = 0x00;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c7 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c2 = 0x00;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c3 = 0x20;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c4 = 0x20;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c5 = 0x00;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c7 = 0x0;
+    }
+
+    sampler_8x8_state->dw136.default_sharpness_level = 0;
+    sampler_8x8_state->dw137.adaptive_filter_for_all_channel = 0;
+    sampler_8x8_state->dw137.bypass_y_adaptive_filtering = 1;
+    sampler_8x8_state->dw137.bypass_x_adaptive_filtering = 1;
+    dri_bo_unmap(pp_context->sampler_state_table.bo_8x8);
+
+    /* sampler 8x8 */
+    dri_bo_map(pp_context->sampler_state_table.bo, True);
+    assert(pp_context->sampler_state_table.bo->virtual);
+    assert(sizeof(*sampler_8x8) == sizeof(int) * 4);
+    sampler_8x8 = pp_context->sampler_state_table.bo->virtual;
+
+    /* sample_8x8 Y index 4 */
+    index = 4;
+    memset(&sampler_8x8[index], 0, sizeof(*sampler_8x8));
+    sampler_8x8[index].dw0.global_noise_estimation = 255;
+    sampler_8x8[index].dw0.ief_bypass = 1;
+
+    sampler_8x8[index].dw1.sampler_8x8_state_pointer = pp_context->sampler_state_table.bo_8x8->offset >> 5;
+
+    sampler_8x8[index].dw2.weak_edge_threshold = 1;
+    sampler_8x8[index].dw2.strong_edge_threshold = 8;
+    sampler_8x8[index].dw2.r5x_coefficient = 9;
+    sampler_8x8[index].dw2.r5cx_coefficient = 8;
+    sampler_8x8[index].dw2.r5c_coefficient = 3;
+
+    sampler_8x8[index].dw3.r3x_coefficient = 27;
+    sampler_8x8[index].dw3.r3c_coefficient = 5;
+    sampler_8x8[index].dw3.gain_factor = 40;
+    sampler_8x8[index].dw3.non_edge_weight = 1;
+    sampler_8x8[index].dw3.regular_weight = 2;
+    sampler_8x8[index].dw3.strong_edge_weight = 7;
+    sampler_8x8[index].dw3.ief4_smooth_enable = 0;
+
+    dri_bo_emit_reloc(pp_context->sampler_state_table.bo,
+                      I915_GEM_DOMAIN_RENDER, 
+                      0,
+                      0,
+                      sizeof(*sampler_8x8) * index + offsetof(struct i965_sampler_8x8, dw1),
+                      pp_context->sampler_state_table.bo_8x8);
+
+    /* sample_8x8 UV index 8 */
+    index = 8;
+    memset(&sampler_8x8[index], 0, sizeof(*sampler_8x8));
+    sampler_8x8[index].dw0.disable_8x8_filter = 0;
+    sampler_8x8[index].dw0.global_noise_estimation = 255;
+    sampler_8x8[index].dw0.ief_bypass = 1;
+    sampler_8x8[index].dw1.sampler_8x8_state_pointer = pp_context->sampler_state_table.bo_8x8->offset >> 5;
+    sampler_8x8[index].dw2.weak_edge_threshold = 1;
+    sampler_8x8[index].dw2.strong_edge_threshold = 8;
+    sampler_8x8[index].dw2.r5x_coefficient = 9;
+    sampler_8x8[index].dw2.r5cx_coefficient = 8;
+    sampler_8x8[index].dw2.r5c_coefficient = 3;
+    sampler_8x8[index].dw3.r3x_coefficient = 27;
+    sampler_8x8[index].dw3.r3c_coefficient = 5;
+    sampler_8x8[index].dw3.gain_factor = 40;
+    sampler_8x8[index].dw3.non_edge_weight = 1;
+    sampler_8x8[index].dw3.regular_weight = 2;
+    sampler_8x8[index].dw3.strong_edge_weight = 7;
+    sampler_8x8[index].dw3.ief4_smooth_enable = 0;
+
+    dri_bo_emit_reloc(pp_context->sampler_state_table.bo,
+                      I915_GEM_DOMAIN_RENDER, 
+                      0,
+                      0,
+                      sizeof(*sampler_8x8) * index + offsetof(struct i965_sampler_8x8, dw1),
+                      pp_context->sampler_state_table.bo_8x8);
+
+    /* sampler_8x8 V, index 12 */
+    index = 12;
+    memset(&sampler_8x8[index], 0, sizeof(*sampler_8x8));
+    sampler_8x8[index].dw0.disable_8x8_filter = 0;
+    sampler_8x8[index].dw0.global_noise_estimation = 255;
+    sampler_8x8[index].dw0.ief_bypass = 1;
+    sampler_8x8[index].dw1.sampler_8x8_state_pointer = pp_context->sampler_state_table.bo_8x8->offset >> 5;
+    sampler_8x8[index].dw2.weak_edge_threshold = 1;
+    sampler_8x8[index].dw2.strong_edge_threshold = 8;
+    sampler_8x8[index].dw2.r5x_coefficient = 9;
+    sampler_8x8[index].dw2.r5cx_coefficient = 8;
+    sampler_8x8[index].dw2.r5c_coefficient = 3;
+    sampler_8x8[index].dw3.r3x_coefficient = 27;
+    sampler_8x8[index].dw3.r3c_coefficient = 5;
+    sampler_8x8[index].dw3.gain_factor = 40;
+    sampler_8x8[index].dw3.non_edge_weight = 1;
+    sampler_8x8[index].dw3.regular_weight = 2;
+    sampler_8x8[index].dw3.strong_edge_weight = 7;
+    sampler_8x8[index].dw3.ief4_smooth_enable = 0;
+
+    dri_bo_emit_reloc(pp_context->sampler_state_table.bo,
+                      I915_GEM_DOMAIN_RENDER, 
+                      0,
+                      0,
+                      sizeof(*sampler_8x8) * index + offsetof(struct i965_sampler_8x8, dw1),
+                      pp_context->sampler_state_table.bo_8x8);
+
+    dri_bo_unmap(pp_context->sampler_state_table.bo);
+
+    /* private function & data */
+    pp_context->pp_x_steps = gen7_pp_avs_x_steps;
+    pp_context->pp_y_steps = gen7_pp_avs_y_steps;
+    pp_context->pp_set_block_parameter = gen7_pp_avs_set_block_parameter;
+
+    pp_avs_context->dest_x = dst_rect->x;
+    pp_avs_context->dest_y = dst_rect->y;
+    pp_avs_context->dest_w = ALIGN(dst_rect->width, 16);
+    pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
+    pp_avs_context->src_w = src_rect->width;
+    pp_avs_context->src_h = src_rect->height;
+
+    int dw = (pp_avs_context->src_w - 1) / 16 + 1;
+    dw = MAX(dw, pp_avs_context->dest_w);
+
+    pp_static_parameter->grf1.pointer_to_inline_parameter = 7;
+    pp_static_parameter->grf2.avs_wa_enable = 0; /* It is unnecessary to use WA for RGBX surface */
+    pp_static_parameter->grf2.avs_wa_width = dw;
+    pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * dw);
+    pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * dw);
+
+    pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
+    pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) src_rect->height / src_height / pp_avs_context->dest_h;
+    pp_static_parameter->grf5.sampler_load_vertical_frame_origin = -(float)pp_avs_context->dest_y / pp_avs_context->dest_h;
+    pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = -(float)pp_avs_context->dest_x / dw;
     gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
 
     dst_surface->flags = src_surface->flags;
