@@ -2399,8 +2399,8 @@ intel_mfc_mpeg2_prepare(VADriverContextP ctx,
     obj_surface = SURFACE(pic_param->reconstructed_picture);
     assert(obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-    mfc_context->post_deblocking_output.bo = obj_surface->bo;
-    dri_bo_reference(mfc_context->post_deblocking_output.bo);
+    mfc_context->pre_deblocking_output.bo = obj_surface->bo;
+    dri_bo_reference(mfc_context->pre_deblocking_output.bo);
     mfc_context->surface_state.width = obj_surface->orig_width;
     mfc_context->surface_state.height = obj_surface->orig_height;
     mfc_context->surface_state.w_pitch = obj_surface->width;
