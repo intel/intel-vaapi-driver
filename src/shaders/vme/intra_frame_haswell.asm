@@ -105,7 +105,7 @@ mov  (8) vme_msg_6.0<1>:UW       CHROMA_COL.2<16,8,2>:UW {align1};
  */
 /* m0 */        
 mov  (8) vme_msg_0.0<1>:UD      vme_m0.0<8,8,1>:UD {align1};
-mov  (1) tmp_reg0.0<1>:UW	LUMA_INTRA_MODE:UW {align1};
+mov  (1) tmp_reg0.0<1>:UW	LUMA_CHROMA_MODE:UW {align1};
 /* Use the Luma mode */
 mov  (1) vme_msg_4.5<1>:UB	tmp_reg0.0<0,1,0>:UB {align1};
 
