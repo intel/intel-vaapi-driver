@@ -567,11 +567,13 @@ static VAStatus gen75_vme_prepare(VADriverContextP ctx,
 		(vme_context->h264_level != pSequenceParameter->level_idc)) {
 	vme_context->h264_level = pSequenceParameter->level_idc;	
     }	
-	
+
+    intel_vme_update_mbmv_cost(ctx, encode_state, encoder_context);
+    	
     /*Setup all the memory object*/
     gen75_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
     gen75_vme_interface_setup(ctx, encode_state, encoder_context);
-    gen75_vme_vme_state_setup(ctx, encode_state, is_intra, encoder_context);
+    //gen75_vme_vme_state_setup(ctx, encode_state, is_intra, encoder_context);
     gen75_vme_constant_setup(ctx, encode_state, encoder_context);
 
     /*Programing media pipeline*/

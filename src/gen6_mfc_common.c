@@ -637,3 +637,209 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
 
     return vaStatus;
 }
+/*
+ * The LUT uses the pair of 4-bit units: (shift, base) structure.
+ * 2^K * X = value . 
+ * So it is necessary to convert one cost into the nearest LUT format.
+ * The derivation is:
+ * 2^K *x = 2^n * (1 + deltaX)
+ *    k + log2(x) = n + log2(1 + deltaX)
+ *    log2(x) = n - k + log2(1 + deltaX)
+ *    As X is in the range of [1, 15]
+ *      4 > n - k + log2(1 + deltaX) >= 0 
+ *      =>    n + log2(1 + deltaX)  >= k > n - 4  + log2(1 + deltaX)
+ *    Then we can derive the corresponding K and get the nearest LUT format.
+ */
+int intel_format_lutvalue(int value, int max)
+{
+	int ret;
+	int logvalue, temp1, temp2;
+
+	if (value <= 0)
+		return 0;
+
+	logvalue = (int)(log2f((float)value));
+	if (logvalue < 4) {
+		ret = value;
+	} else {
+		int error, temp_value, base, j, temp_err;
+		error = value;
+		j = logvalue - 4 + 1;
+		ret = -1;
+		for(; j <= logvalue; j++) {
+			if (j == 0) {
+				base = value >> j;
+			} else {
+				base = (value + (1 << (j - 1)) - 1) >> j; 
+			}
+			if (base >= 16)
+				continue;
+
+			temp_value = base << j;
+			temp_err = abs(value - temp_value);
+			if (temp_err < error) {
+				error = temp_err;
+				ret = (j << 4) | base;
+				if (temp_err == 0)
+					break;
+			}
+		}	
+	}
+	temp1 = (ret & 0xf) << ((ret & 0xf0) >> 4);
+	temp2 = (max & 0xf) << ((max & 0xf0) >> 4);
+	if (temp1 > temp2)
+		ret = max;
+	return ret;
+	
+}
+
+#define		MODE_INTRA_NONPRED	0
+#define		MODE_INTRA_16X16	1
+#define		MODE_INTRA_8X8		2
+#define		MODE_INTRA_4X4		3
+#define		MODE_INTER_16X8		4
+#define		MODE_INTER_8X16		4
+#define		MODE_INTER_8X8		5
+#define		MODE_INTER_8X4		6
+#define		MODE_INTER_4X8		6
+#define		MODE_INTER_4X4		7
+#define		MODE_INTER_16X16	8
+#define		MODE_INTER_BWD		9
+#define		MODE_REFID_COST		10
+#define		MODE_CHROMA_INTRA	11
+
+#define		MODE_INTER_MV0		12
+#define		MODE_INTER_MV1		13
+#define		MODE_INTER_MV2		14
+
+#define		MODE_INTER_MV3		15
+#define		MODE_INTER_MV4		16
+#define		MODE_INTER_MV5		17
+#define		MODE_INTER_MV6		18
+#define		MODE_INTER_MV7		19
+
+#define		QP_MAX			52
+
+
+static float intel_lambda_qp(int qp)
+{
+	float value, lambdaf;
+	value = qp;
+	value = value / 6 - 2;
+	if (value < 0)
+		value = 0;
+	lambdaf = roundf(powf(2, value));
+	return lambdaf;	
+}
+
+
+void intel_vme_update_mbmv_cost(VADriverContextP ctx,
+                                       struct encode_state *encode_state,
+                                       struct intel_encoder_context *encoder_context)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    int qp, m_cost, j, mv_count;
+    uint8_t *vme_state_message = (uint8_t *)(vme_context->vme_state_message);
+    float   lambda, m_costf;
+
+    if (encoder_context->rate_control_mode == VA_RC_CQP)
+	qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+    else
+	qp = mfc_context->bit_rate_control_context[slice_param->slice_type].QpPrimeY;
+  
+    if (vme_state_message == NULL)
+	return;
+ 
+    assert(qp <= QP_MAX); 
+    lambda = intel_lambda_qp(qp);
+    if ((slice_param->slice_type == SLICE_TYPE_I) ||
+		(slice_param->slice_type == SLICE_TYPE_SI)) {
+	vme_state_message[MODE_INTRA_16X16] = 0;
+	m_cost = lambda * 4;
+	vme_state_message[MODE_INTRA_8X8] = intel_format_lutvalue(m_cost, 0x8f);
+	m_cost = lambda * 16; 
+	vme_state_message[MODE_INTRA_4X4] = intel_format_lutvalue(m_cost, 0x8f);
+	m_cost = lambda * 3;
+	vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
+    } else {
+    	m_cost = 0;
+	vme_state_message[MODE_INTER_MV0] = intel_format_lutvalue(m_cost, 0x6f);
+	for (j = 1; j < 3; j++) {
+		m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+		m_cost = (int)m_costf;
+		vme_state_message[MODE_INTER_MV0 + j] = intel_format_lutvalue(m_cost, 0x6f);
+   	}
+    	mv_count = 3;
+    	for (j = 4; j <= 64; j *= 2) {
+		m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+		m_cost = (int)m_costf;
+		vme_state_message[MODE_INTER_MV0 + mv_count] = intel_format_lutvalue(m_cost, 0x6f);
+		mv_count++;
+	}
+
+	if (qp <= 25) {
+		vme_state_message[MODE_INTRA_16X16] = 0x4a;
+		vme_state_message[MODE_INTRA_8X8] = 0x4a;
+		vme_state_message[MODE_INTRA_4X4] = 0x4a;
+		vme_state_message[MODE_INTRA_NONPRED] = 0x4a;
+		vme_state_message[MODE_INTER_16X16] = 0x4a;
+		vme_state_message[MODE_INTER_16X8] = 0x4a;
+		vme_state_message[MODE_INTER_8X8] = 0x4a;
+		vme_state_message[MODE_INTER_8X4] = 0x4a;
+		vme_state_message[MODE_INTER_4X4] = 0x4a;
+		vme_state_message[MODE_INTER_BWD] = 0x4a;
+		return;	
+	}
+	m_costf = lambda * 10;
+	vme_state_message[MODE_INTRA_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+	m_cost = lambda * 14;
+	vme_state_message[MODE_INTRA_8X8] = intel_format_lutvalue(m_cost, 0x8f);
+	m_cost = lambda * 24; 
+	vme_state_message[MODE_INTRA_4X4] = intel_format_lutvalue(m_cost, 0x8f);
+	m_costf = lambda * 3.5;
+	m_cost = m_costf;
+	vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
+    	if ((slice_param->slice_type == SLICE_TYPE_P) ||
+		(slice_param->slice_type == SLICE_TYPE_SP)) {
+		m_costf = lambda * 2.5;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+		m_costf = lambda * 4;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
+		m_costf = lambda * 1.5;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
+		m_costf = lambda * 3;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_8X4] = intel_format_lutvalue(m_cost, 0x6f);
+		m_costf = lambda * 5;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
+		/* BWD is not used in P-frame */
+		vme_state_message[MODE_INTER_BWD] = 0;
+	} else {
+		m_costf = lambda * 2.5;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+		m_costf = lambda * 5.5;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
+		m_costf = lambda * 3.5;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
+		m_costf = lambda * 5.0;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_8X4] = intel_format_lutvalue(m_cost, 0x6f);
+		m_costf = lambda * 6.5;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
+		m_costf = lambda * 2.5;
+		m_cost = m_costf;
+		vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
+	}
+    }
+}
