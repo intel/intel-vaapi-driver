@@ -1068,6 +1068,7 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
     OUT_BCS_BATCH(batch, offset);
 	inter_msg = msg[0] & (0x1F00FFFF);
 	inter_msg |= INTER_MV8;
+	inter_msg |= ((1 << 19) | (1 << 18) | (1 << 17));
 	if (((msg[0] & INTER_MODE_MASK) == INTER_8X8) &&
 	     		(msg[1] & SUBMB_SHAPE_MASK)) {
 		inter_msg |= INTER_MV32;
