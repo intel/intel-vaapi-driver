@@ -1617,9 +1617,26 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
             brfd = 0;
     }
 
-    overlap = pic_param->sequence_fields.bits.overlap;
-    if (profile != GEN7_VC1_ADVANCED_PROFILE && pic_param->pic_quantizer_fields.bits.pic_quantizer_scale < 9)
-        overlap = 0;
+    overlap = 0;
+    if (profile != GEN7_VC1_ADVANCED_PROFILE){
+       if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9){
+           overlap = 1; 
+        }
+    }else {
+        if (pic_param->picture_fields.bits.picture_type == GEN7_VC1_P_PICTURE &&
+             pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9){
+              overlap = 1; 
+        }
+        if (pic_param->picture_fields.bits.picture_type == GEN7_VC1_I_PICTURE ||
+            pic_param->picture_fields.bits.picture_type == GEN7_VC1_BI_PICTURE){
+             if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9){
+                overlap = 1; 
+             }else if(pic_param->conditional_overlap_flag == 2 ||
+                      pic_param->conditional_overlap_flag == 3){
+                overlap = 1;
+             }
+         }
+    } 
 
     assert(pic_param->conditional_overlap_flag < 3);
     assert(pic_param->mv_fields.bits.mv_table < 4); /* FIXME: interlace mode */
