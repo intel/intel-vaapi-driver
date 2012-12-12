@@ -1423,10 +1423,12 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
     int i;
     dri_bo *bo;
     int width_in_mbs;
+    int picture_type;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
     width_in_mbs = ALIGN(pic_param->coded_width, 16) / 16;
+    picture_type = pic_param->picture_fields.bits.picture_type;
 
     /* reference picture */
     obj_surface = SURFACE(pic_param->forward_reference_picture);
@@ -1525,6 +1527,10 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
                 src_index = (src_h * width_in_mbs + src_w) / 2;
                 src_shift = !((src_h * width_in_mbs + src_w) & 1) * 4;
                 src_value = ((src[src_index] >> src_shift) & 0xf);
+
+                if (picture_type == GEN6_VC1_SKIPPED_PICTURE){
+                    src_value |= 0x2;
+                }
 
                 dst_index = src_w / 2;
                 dst[dst_index] = ((dst[dst_index] >> 4) | (src_value << 4));
