@@ -2000,8 +2000,44 @@ gen75_mfc_mpeg2_pak_object_intra(VADriverContextP ctx,
 
 #define MV_OFFSET_IN_WORD       112
 
+static struct _mv_ranges
+{
+    int low;    /* in the unit of 1/2 pixel */
+    int high;   /* in the unit of 1/2 pixel */
+} mv_ranges[] = {
+    {0, 0},
+    {-16, 15},
+    {-32, 31},
+    {-64, 63},
+    {-128, 127},
+    {-256, 255},
+    {-512, 511},
+    {-1024, 1023},
+    {-2048, 2047},
+    {-4096, 4095}
+};
+
+static int
+mpeg2_motion_vector(int mv, int pos, int display_max, int f_code)
+{
+    if (mv + pos * 16 * 2 < 0 ||
+        mv + (pos + 1) * 16 * 2 > display_max * 2)
+        mv = 0;
+
+    if (f_code > 0 && f_code < 10) {
+        if (mv < mv_ranges[f_code].low)
+            mv = mv_ranges[f_code].low;
+
+        if (mv > mv_ranges[f_code].high)
+            mv = mv_ranges[f_code].high;
+    }
+
+    return mv;
+}
+
 static int
 gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
+                                 struct encode_state *encode_state,
                                  struct intel_encoder_context *encoder_context,
                                  unsigned int *msg,
                                  int width_in_mbs, int height_in_mbs,
@@ -2015,6 +2051,7 @@ gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
                                  unsigned char max_size_in_word,
                                  struct intel_batchbuffer *batch)
 {
+    VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
     int len_in_dwords = 9;
     short *mvptr, mvx0, mvy0, mvx1, mvy1;
     
@@ -2022,29 +2059,10 @@ gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
         batch = encoder_context->base.batch;
 
     mvptr = (short *)msg;
-    mvx0 = mvptr[MV_OFFSET_IN_WORD] / 2;  /* the output from VME is in the unit of 1/4 pixel */
-    
-    if (mvx0 + x * 16 * 2 < 0 ||
-        mvx0 + (x + 1) * 16 * 2 > width_in_mbs * 16 * 2)
-        mvx0 = 0;
-
-    mvy0 = mvptr[MV_OFFSET_IN_WORD + 1] / 2;
-
-    if (mvy0 + y * 16 * 2 < 0 ||
-        mvy0 + (y + 1) * 16 * 2 > height_in_mbs * 16 * 2)
-        mvy0 = 0;
-
-    mvx1 = mvptr[MV_OFFSET_IN_WORD + 2] / 2;
-
-    if (mvx1 + x * 16 * 2 < 0 ||
-        mvx1 + (x + 1) * 16 * 2 > width_in_mbs * 16 * 2)
-        mvx1 = 0;
-
-    mvy1 = mvptr[MV_OFFSET_IN_WORD + 3] / 2;
-
-    if (mvy1 + y * 16 * 2 < 0 ||
-        mvy1 + (y + 1) * 16 * 2 > height_in_mbs * 16 * 2)
-        mvy1 = 0;
+    mvx0 = mpeg2_motion_vector(mvptr[MV_OFFSET_IN_WORD + 0] / 2, x, width_in_mbs * 16, pic_param->f_code[0][0]);
+    mvy0 = mpeg2_motion_vector(mvptr[MV_OFFSET_IN_WORD + 1] / 2, y, height_in_mbs * 16, pic_param->f_code[0][0]);
+    mvx1 = mpeg2_motion_vector(mvptr[MV_OFFSET_IN_WORD + 2] / 2, x, width_in_mbs * 16, pic_param->f_code[1][0]);
+    mvy1 = mpeg2_motion_vector(mvptr[MV_OFFSET_IN_WORD + 3] / 2, y, height_in_mbs * 16, pic_param->f_code[1][0]);
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
@@ -2240,6 +2258,7 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
                                                  slice_batch);
             } else {
                 gen75_mfc_mpeg2_pak_object_inter(ctx,
+                                                 encode_state,
                                                  encoder_context,
                                                  msg,
                                                  width_in_mbs, height_in_mbs,
