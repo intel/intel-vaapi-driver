@@ -76,6 +76,8 @@ static struct i965_kernel gen75_mfc_kernels[] = {
 
 #define		INTER_MODE_MASK		0x03
 #define		INTER_8X8		0x03
+#define		INTER_16X8		0x01
+#define		INTER_8X16		0x02
 #define		SUBMB_SHAPE_MASK	0x00FF00
 
 #define		INTER_MV8		(4 << 20)
@@ -1053,6 +1055,41 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
 	unsigned int inter_msg = 0;
     if (batch == NULL)
         batch = encoder_context->base.batch;
+    {
+#define MSG_MV_OFFSET	4
+	unsigned int *mv_ptr;
+	mv_ptr = msg + MSG_MV_OFFSET;
+	/* MV of VME output is based on 16 sub-blocks. So it is necessary
+         * to convert them to be compatible with the format of AVC_PAK
+         * command.
+         */
+	if ((msg[0] & INTER_MODE_MASK) == INTER_8X16) {
+		/* MV[0] and MV[2] are replicated */
+		mv_ptr[4] = mv_ptr[0];
+		mv_ptr[5] = mv_ptr[1];
+		mv_ptr[2] = mv_ptr[8];
+		mv_ptr[3] = mv_ptr[9];
+		mv_ptr[6] = mv_ptr[8]; 
+		mv_ptr[7] = mv_ptr[9]; 
+	} else if ((msg[0] & INTER_MODE_MASK) == INTER_16X8) {
+		/* MV[0] and MV[1] are replicated */
+		mv_ptr[2] = mv_ptr[0];	
+		mv_ptr[3] = mv_ptr[1];
+		mv_ptr[4] = mv_ptr[16];	
+		mv_ptr[5] = mv_ptr[17];	
+		mv_ptr[6] = mv_ptr[24];
+		mv_ptr[7] = mv_ptr[25];
+	} else if (((msg[0] & INTER_MODE_MASK) == INTER_8X8) &&
+			!(msg[1] & SUBMB_SHAPE_MASK)) {
+		/* Don't touch MV[0] or MV[1] */
+		mv_ptr[2] = mv_ptr[8];
+		mv_ptr[3] = mv_ptr[9];
+		mv_ptr[4] = mv_ptr[16];
+		mv_ptr[5] = mv_ptr[17];
+		mv_ptr[6] = mv_ptr[24];
+		mv_ptr[7] = mv_ptr[25];
+	}
+    }
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
