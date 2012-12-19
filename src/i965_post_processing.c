@@ -2635,7 +2635,7 @@ gen7_pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context,
     pp_inline_parameter->grf7.destination_block_horizontal_origin = x * 16 + pp_avs_context->dest_x;
     pp_inline_parameter->grf7.destination_block_vertical_origin = y * 16 + pp_avs_context->dest_y;
     pp_inline_parameter->grf7.constant_0 = 0xffffffff;
-    pp_inline_parameter->grf7.sampler_load_main_video_x_scaling_step = 1.0 / pp_avs_context->src_w;
+    pp_inline_parameter->grf7.sampler_load_main_video_x_scaling_step = pp_avs_context->horiz_range / pp_avs_context->src_w;
 
     return 0;
 }
@@ -2840,6 +2840,7 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
     pp_avs_context->src_w = src_rect->width;
     pp_avs_context->src_h = src_rect->height;
+    pp_avs_context->horiz_range = (float)src_rect->width / src_width;
 
     int dw = (pp_avs_context->src_w - 1) / 16 + 1;
     dw = MAX(dw, pp_avs_context->dest_w);
@@ -2855,8 +2856,10 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
 
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
     pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) src_rect->height / src_height / pp_avs_context->dest_h;
-    pp_static_parameter->grf5.sampler_load_vertical_frame_origin = -(float)pp_avs_context->dest_y / pp_avs_context->dest_h;
-    pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = -(float)pp_avs_context->dest_x / dw;
+    pp_static_parameter->grf5.sampler_load_vertical_frame_origin = (float) src_rect->y / src_height -
+                                                                   (float) pp_avs_context->dest_y * pp_static_parameter->grf4.sampler_load_vertical_scaling_step;
+    pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = (float) src_rect->x / src_width -
+                                                                     (float) pp_avs_context->dest_x * pp_avs_context->horiz_range / dw;
 
     gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
 
@@ -3050,6 +3053,7 @@ gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
     pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
     pp_avs_context->src_w = src_rect->width;
     pp_avs_context->src_h = src_rect->height;
+    pp_avs_context->horiz_range = (float)src_rect->width / src_width;
 
     int dw = (pp_avs_context->src_w - 1) / 16 + 1;
     dw = MAX(dw, pp_avs_context->dest_w);
@@ -3062,8 +3066,10 @@ gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
 
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
     pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) src_rect->height / src_height / pp_avs_context->dest_h;
-    pp_static_parameter->grf5.sampler_load_vertical_frame_origin = -(float)pp_avs_context->dest_y / pp_avs_context->dest_h;
-    pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = -(float)pp_avs_context->dest_x / dw;
+    pp_static_parameter->grf5.sampler_load_vertical_frame_origin = (float) src_rect->y / src_height -
+                                                                   (float) pp_avs_context->dest_y * pp_static_parameter->grf4.sampler_load_vertical_scaling_step;
+    pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = (float) src_rect->x / src_width -
+                                                                     (float) pp_avs_context->dest_x * pp_avs_context->horiz_range / dw;
     gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
 
     dst_surface->flags = src_surface->flags;
