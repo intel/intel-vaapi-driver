@@ -86,6 +86,7 @@ struct pp_avs_context
     float src_normalized_y;
     int src_w;
     int src_h;
+    float horiz_range;
 };
 
 struct pp_dndi_context
