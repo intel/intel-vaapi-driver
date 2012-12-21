@@ -865,21 +865,15 @@ gen6_vme_mpeg2_prepare(VADriverContextP ctx,
                         struct intel_encoder_context *encoder_context)
 {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncSliceParameterBufferMPEG2 *slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
 
-    /*No need of vme for Intra slice */
-    if(slice_param->is_intra_slice){
-       return vaStatus;
-    }
-
-    /*Setup all the memory object*/
-    gen6_vme_mpeg2_surface_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+   /*Setup all the memory object*/
+    gen6_vme_mpeg2_surface_setup(ctx, encode_state, 0, encoder_context);
     gen6_vme_interface_setup(ctx, encode_state, encoder_context);
-    gen6_vme_vme_state_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+    gen6_vme_vme_state_setup(ctx, encode_state, 0, encoder_context);
     gen6_vme_constant_setup(ctx, encode_state, encoder_context);
 
     /*Programing media pipeline*/
-    gen6_vme_mpeg2_pipeline_programing(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+    gen6_vme_mpeg2_pipeline_programing(ctx, encode_state, 0, encoder_context);
 
     return vaStatus;
 }
@@ -890,6 +884,32 @@ gen6_vme_mpeg2_pipeline(VADriverContextP ctx,
                          struct encode_state *encode_state,
                          struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncSliceParameterBufferMPEG2 *slice_param = 
+        (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = 
+       (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+ 
+    /*No need of to exec VME for Intra slice */
+    if (slice_param->is_intra_slice) {
+         if(!vme_context->vme_output.bo) {
+             int w_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
+             int h_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+
+             vme_context->vme_output.num_blocks = w_in_mbs * h_in_mbs;
+             vme_context->vme_output.pitch = 16; /* in bytes, always 16 */
+             vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES;
+             vme_context->vme_output.bo = dri_bo_alloc(i965->intel.bufmgr,
+                                                       "MPEG2 VME output buffer",
+                                                       vme_context->vme_output.num_blocks
+                                                           * vme_context->vme_output.size_block,
+                                                       0x1000);
+         }
+
+         return VA_STATUS_SUCCESS;
+    }
+
     gen6_vme_media_init(ctx, encoder_context);
     gen6_vme_mpeg2_prepare(ctx, encode_state, encoder_context);
     gen6_vme_run(ctx, encode_state, encoder_context);
