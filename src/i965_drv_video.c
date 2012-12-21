@@ -225,6 +225,7 @@ static struct hw_codec_info gen6_hw_codec_info = {
     .max_height = 2048,
 
     .has_mpeg2_decoding = 1,
+    .has_mpeg2_encoding = 1,
     .has_h264_decoding = 1,
     .has_h264_encoding = 1,
     .has_vc1_decoding = 1,
@@ -244,6 +245,7 @@ static struct hw_codec_info gen7_hw_codec_info = {
     .max_height = 4096,
 
     .has_mpeg2_decoding = 1,
+    .has_mpeg2_encoding = 1,
     .has_h264_decoding = 1,
     .has_h264_encoding = 1,
     .has_vc1_decoding = 1,
