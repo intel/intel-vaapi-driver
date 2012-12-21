@@ -76,6 +76,8 @@ struct i965_render_state
     int pp_flag; /* 0: disable, 1: enable */
 
     struct i965_kernel render_kernels[3];
+    
+    int max_wm_threads;
 };
 
 Bool i965_render_init(VADriverContextP ctx);
