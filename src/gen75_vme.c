@@ -621,7 +621,7 @@ gen75_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 		*command_ptr++ = score_dep;
 		/*inline data */
 		*command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
-		*command_ptr++ = ( (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+		*command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
 
             i += 1;
         } 

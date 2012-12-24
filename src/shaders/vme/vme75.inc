@@ -265,3 +265,47 @@ define(`BIND_IDX_CBCR',			`6')
 define(`LUMA_CHROMA_MODE',      `0x0')
 define(`LUMA_INTRA_MODE',	`0x1')
 define(`LUMA_INTRA_DISABLE',	`0x2')
+
+define(`RETURN_REG',              `r127.0')
+define(`RET_ARG',              `r127.4')
+
+/* Now at most two registers are used for input parameter */
+define(`INPUT_ARG0',              `r125')
+define(`INPUT_ARG1',              `r126')
+
+/* Two temporal registers are used in the function */
+define(`TEMP_VAR0',              `r123')
+define(`TEMP_VAR1',              `r124')
+
+
+define(`OBR_MESSAGE_TYPE',              `0')
+define(`OBR_CACHE_TYPE',                `10')
+define(`OBR_BIND_IDX',                  `BIND_IDX_OUTPUT')
+
+define(`OBR_CONTROL_0',                 `0')    /* 1 OWord, low 128 bits */
+define(`OBR_CONTROL_1',                 `1')    /* 1 OWord, high 128 bits */
+define(`OBR_CONTROL_2',                 `2')    /* 2 OWords */
+define(`OBR_CONTROL_4',                 `3')    /* 4 OWords */
+define(`OBR_CONTROL_8',                 `4')    /* 8 OWords */
+define(`OBR_WRITE_COMMIT_CATEGORY',     `0')    /* category on SNB+ for Data port */
+define(`OBR_HEADER_PRESENT',            `1')
+
+define(`mb_hwdep',           `r5.6')
+define(`MB_AVAIL',              `1:d')
+define(`MB_PRED_FLAG',          `1:w')
+
+define(`mb_mvp_ref',		`r86')
+define(`mba_result',		`r87')
+define(`mbb_result',		`r88')
+define(`mbc_result',		`r89')
+define(`mb_ind',                `90')
+define(`mb_msg0',		`r90')
+define(`mb_wb',			`r91')
+define(`mb_intra_wb',		`r91')
+define(`mb_inter_wb',		`r92')
+define(`mb_mv0',		`r93')
+define(`mb_mv1',		`r94')
+define(`mb_mv2',		`r95')
+define(`mb_mv3',		`r96')
+define(`mb_ref',		`r97')
+
