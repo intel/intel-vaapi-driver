@@ -87,9 +87,10 @@ gen6_gpe_vfe_state(VADriverContextP ctx,
     OUT_BATCH(batch,
               gpe_context->vfe_state.urb_entry_size << 16 |     /* URB Entry Allocation Size */
               gpe_context->vfe_state.curbe_allocation_size);    /* CURBE Allocation Size */
-    OUT_BATCH(batch, 0);                                        /* Disable Scoreboard */
-    OUT_BATCH(batch, 0);                                        /* Disable Scoreboard */
-    OUT_BATCH(batch, 0);                                        /* Disable Scoreboard */
+    /* the vfe_desc5/6/7 will decide whether the scoreboard is used. */
+    OUT_BATCH(batch, gpe_context->vfe_desc5.dword);                                        
+    OUT_BATCH(batch, gpe_context->vfe_desc6.dword);                                       
+    OUT_BATCH(batch, gpe_context->vfe_desc7.dword);                                       
 	
     ADVANCE_BATCH(batch);
 
