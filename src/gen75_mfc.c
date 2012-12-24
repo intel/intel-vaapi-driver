@@ -1142,9 +1142,9 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
 }
 
 #define		INTRA_RDO_OFFSET	4
-#define		INTER_RDO_OFFSET	54
-#define		INTER_MSG_OFFSET	52
-#define		INTER_MV_OFFSET		224
+#define		INTER_RDO_OFFSET	10
+#define		INTER_MSG_OFFSET	8	
+#define		INTER_MV_OFFSET		48
 #define		RDO_MASK		0xFFFF
 
 static void 
