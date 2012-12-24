@@ -562,6 +562,21 @@ gen75_vme_fill_vme_batchbuffer(VADriverContextP ctx,
     dri_bo_unmap(vme_context->vme_batchbuffer.bo);
 }
 
+/* check whether the mb of (x_index, y_index) is out of bound */
+static inline int loop_in_bounds(int x_index, int y_index, int first_mb, int num_mb, int mb_width, int mb_height)
+{
+	int mb_index;
+	if (x_index < 0 || x_index >= mb_width)
+		return -1;
+	if (y_index < 0 || y_index >= mb_height)
+		return -1;
+	
+	mb_index = y_index * mb_width + x_index;
+	if (mb_index < first_mb || mb_index > (first_mb + num_mb))
+		return -1;
+	return 0;
+}
+
 
 static void
 gen75_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
@@ -574,7 +589,7 @@ gen75_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     int mb_x = 0, mb_y = 0;
     int mb_row;
-    int i, s;
+    int s;
     unsigned int *command_ptr;
     int temp;
 
@@ -586,45 +601,103 @@ gen75_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 
     for (s = 0; s < encode_state->num_slice_params_ext; s++) {
         VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
-        int slice_mb_begin = pSliceParameter->macroblock_address;
-        int slice_mb_number = pSliceParameter->num_macroblocks;
+        int first_mb = pSliceParameter->macroblock_address;
+        int num_mb = pSliceParameter->num_macroblocks;
         unsigned int mb_intra_ub, score_dep;
-	int slice_mb_x = pSliceParameter->macroblock_address % mb_width;
-	mb_row = slice_mb_begin / mb_width; 
-        for (i = 0; i < slice_mb_number;  ) {
-            int mb_count = i + slice_mb_begin;    
-            mb_x = mb_count % mb_width;
-            mb_y = mb_count / mb_width;
-	    mb_intra_ub = 0;
-	    score_dep = 0;
-	    if (mb_x != 0) {
-		mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
-		score_dep |= MB_SCOREBOARD_A;
-	    }
-	    if (mb_y != mb_row) {
-		mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
-		score_dep |= MB_SCOREBOARD_B;
-		if (mb_x != 0)
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
-		if (mb_x != (mb_width -1)) {
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-			score_dep |= MB_SCOREBOARD_C;
+	int x_outer, y_outer, x_inner, y_inner;
+
+	x_outer = first_mb % mb_width;
+	y_outer = first_mb / mb_width;
+	mb_row = y_outer;
+				 
+	for (; x_outer < (mb_width -2 ) && !loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+		x_inner = x_outer;
+		y_inner = y_outer;
+		for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+	    		mb_intra_ub = 0;
+			score_dep = 0;
+			if (x_inner != 0) {
+				mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+				score_dep |= MB_SCOREBOARD_A; 
+			}
+			if (y_inner != mb_row) {
+				mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+				score_dep |= MB_SCOREBOARD_B;
+				if (x_inner != 0)
+					mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+				if (x_inner != (mb_width -1)) {
+					mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+					score_dep |= MB_SCOREBOARD_C;
+				}
+			}
+							
+            		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+			*command_ptr++ = kernel;
+			*command_ptr++ = USE_SCOREBOARD;
+			/* Indirect data */
+			*command_ptr++ = 0;
+			/* the (X, Y) term of scoreboard */
+			*command_ptr++ = ((y_inner << 16) | x_inner);
+			*command_ptr++ = score_dep;
+
+			/*inline data */
+			*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+			*command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+			x_inner -= 2;
+			y_inner += 1;
 		}
-	    }
+		x_outer += 1;
+	}
 
-		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
-		*command_ptr++ = kernel;
-		*command_ptr++ = USE_SCOREBOARD;
-		*command_ptr++ = 0;
-		/* the (X, Y) term of scoreboard */
-		*command_ptr++ = ((mb_y << 16) | mb_x);
-		*command_ptr++ = score_dep;
-		/*inline data */
-		*command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
-		*command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+	x_outer = mb_width - 2;
+	y_outer = first_mb / mb_width;
+	temp = 0;
+	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) { 
+		y_inner = y_outer;
+		x_inner = x_outer;
+		for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+	    		mb_intra_ub = 0;
+			score_dep = 0;
+			if (x_inner != 0) {
+				mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+				score_dep |= MB_SCOREBOARD_A; 
+			}
+			if (y_inner != mb_row) {
+				mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+				score_dep |= MB_SCOREBOARD_B;
+				if (x_inner != 0)
+					mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+				if (x_inner != (mb_width -1)) {
+					mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+					score_dep |= MB_SCOREBOARD_C;
+				}
+			}
 
-            i += 1;
-        } 
+            		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+			*command_ptr++ = kernel;
+			*command_ptr++ = USE_SCOREBOARD;
+			/* Indirect data */
+			*command_ptr++ = 0;
+			/* the (X, Y) term of scoreboard */
+			*command_ptr++ = ((y_inner << 16) | x_inner);
+			*command_ptr++ = score_dep;
+
+			/*inline data */
+			*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+			*command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+
+			x_inner -= 2;
+			y_inner += 1;
+		}
+		temp++;
+		if (temp == 2) {
+			y_outer += 1;
+			temp = 0;
+			x_outer = mb_width - 2;
+		} else {
+			x_outer++;
+		}	
+	}
     }
 
     *command_ptr++ = 0;
