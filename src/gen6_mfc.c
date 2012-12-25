@@ -1890,8 +1890,6 @@ gen6_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
             int last_mb_in_slice_group = (i == encode_state->slice_params_ext[slice_index]->num_elements - 1 &&
                                           j == slice_param->num_macroblocks - 1);
 
-            msg = (unsigned int *)(msg_ptr + (slice_param->macroblock_address + j) * vme_context->vme_output.size_block);
-
             if (slice_param->is_intra_slice) {
                 gen6_mfc_mpeg2_pak_object_intra(ctx,
                                                  encoder_context,
@@ -1907,21 +1905,40 @@ gen6_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
                                                  0xff,
                                                  slice_batch);
             } else {
-                gen6_mfc_mpeg2_pak_object_inter(ctx,
-                                                 encode_state,
-                                                 encoder_context,
-                                                 msg,
-                                                 width_in_mbs, height_in_mbs,
-                                                 h_pos, v_pos,
-                                                 first_mb_in_slice,
-                                                 last_mb_in_slice,
-                                                 first_mb_in_slice_group,
-                                                 last_mb_in_slice_group,
-                                                 slice_param->quantiser_scale_code,
-                                                 0,
-                                                 0xff,
-                                                 slice_batch);
-            }
+                msg = (unsigned int *)(msg_ptr + (slice_param->macroblock_address + j) * vme_context->vme_output.size_block);
+
+                if(msg[32] & INTRA_MB_FLAG_MASK) {
+                     gen6_mfc_mpeg2_pak_object_intra(ctx,
+                                                     encoder_context,
+                                                     h_pos, v_pos,
+                                                     first_mb_in_slice,
+                                                     last_mb_in_slice,
+                                                     first_mb_in_slice_group,
+                                                     last_mb_in_slice_group,
+                                                     0x1a,
+                                                     slice_param->quantiser_scale_code,
+                                                     0x3f,
+                                                     0,
+                                                     0xff,
+                                                     slice_batch);
+                 } else {
+
+                    gen6_mfc_mpeg2_pak_object_inter(ctx,
+                                                    encode_state,
+                                                    encoder_context,
+                                                    msg,
+                                                    width_in_mbs, height_in_mbs,
+                                                    h_pos, v_pos,
+                                                    first_mb_in_slice,
+                                                    last_mb_in_slice,
+                                                    first_mb_in_slice_group,
+                                                    last_mb_in_slice_group,
+                                                    slice_param->quantiser_scale_code,
+                                                    0,
+                                                    0xff,
+                                                    slice_batch);
+              }
+           }
         }
 
         slice_param++;
