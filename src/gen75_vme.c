@@ -955,11 +955,6 @@ gen75_vme_mpeg2_fill_vme_batchbuffer(VADriverContextP ctx,
     int i, s, j;
     unsigned int *command_ptr;
 
-#define		INTRA_PRED_AVAIL_FLAG_AE	0x60
-#define		INTRA_PRED_AVAIL_FLAG_B		0x10
-#define		INTRA_PRED_AVAIL_FLAG_C       	0x8
-#define		INTRA_PRED_AVAIL_FLAG_D		0x4
-#define		INTRA_PRED_AVAIL_FLAG_BCD_MASK	0x1C
 
     dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
     command_ptr = vme_context->vme_batchbuffer.bo->virtual;

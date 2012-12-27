@@ -1141,11 +1141,11 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
     return len_in_dwords;
 }
 
-#define		INTRA_RDO_OFFSET	4
-#define		INTER_RDO_OFFSET	10
-#define		INTER_MSG_OFFSET	8	
-#define		INTER_MV_OFFSET		48
-#define		RDO_MASK		0xFFFF
+#define		AVC_INTRA_RDO_OFFSET	4
+#define		AVC_INTER_RDO_OFFSET	10
+#define		AVC_INTER_MSG_OFFSET	8	
+#define		AVC_INTER_MV_OFFSET		48
+#define		AVC_RDO_MASK		0xFFFF
 
 static void 
 gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
@@ -1223,13 +1223,13 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
             gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
         } else {
 	    int inter_rdo, intra_rdo;
-	    inter_rdo = msg[INTER_RDO_OFFSET] & RDO_MASK;
-	    intra_rdo = msg[INTRA_RDO_OFFSET] & RDO_MASK;
-	    offset = i * vme_context->vme_output.size_block + INTER_MV_OFFSET;
+	    inter_rdo = msg[AVC_INTER_RDO_OFFSET] & AVC_RDO_MASK;
+	    intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
+	    offset = i * vme_context->vme_output.size_block + AVC_INTER_MV_OFFSET;
 	    if (intra_rdo < inter_rdo) { 
                 gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
             } else {
-		msg += INTER_MSG_OFFSET;
+		msg += AVC_INTER_MSG_OFFSET;
                 gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
             }
         }
