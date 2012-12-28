@@ -1137,27 +1137,6 @@ gen75_mfd_avc_weightoffset_state(VADriverContextP ctx,
     }
 }
 
-static int
-gen75_mfd_avc_get_slice_bit_offset(uint8_t *buf, int mode_flag, int in_slice_data_bit_offset)
-{
-    int out_slice_data_bit_offset;
-    int slice_header_size = in_slice_data_bit_offset / 8;
-    int i, j;
-
-    for (i = 0, j = 0; i < slice_header_size; i++, j++) {
-        if (!buf[j] && !buf[j + 1] && buf[j + 2] == 3) {
-            i++, j += 2;
-        }
-    }
-
-    out_slice_data_bit_offset = 8 * j + in_slice_data_bit_offset % 8;
-
-    if (mode_flag == ENTROPY_CABAC)
-        out_slice_data_bit_offset = ALIGN(out_slice_data_bit_offset, 0x8);
-
-    return out_slice_data_bit_offset;
-}
-
 static void
 gen75_mfd_avc_bsd_object(VADriverContextP ctx,
                         VAPictureParameterBufferH264 *pic_param,
@@ -1167,15 +1146,9 @@ gen75_mfd_avc_bsd_object(VADriverContextP ctx,
                         struct gen7_mfd_context *gen7_mfd_context)
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-    int slice_data_bit_offset;
-    uint8_t *slice_data = NULL;
-
-    dri_bo_map(slice_data_bo, 0);
-    slice_data = (uint8_t *)(slice_data_bo->virtual + slice_param->slice_data_offset);
-    slice_data_bit_offset = gen75_mfd_avc_get_slice_bit_offset(slice_data,
-                                                              pic_param->pic_fields.bits.entropy_coding_mode_flag,
-                                                              slice_param->slice_data_bit_offset);
-    dri_bo_unmap(slice_data_bo);
+    int slice_data_bit_offset = avc_get_first_mb_bit_offset(slice_data_bo,
+                                                            slice_param,
+                                                            pic_param->pic_fields.bits.entropy_coding_mode_flag);
 
     /* the input bitsteam format on GEN7 differs from GEN6 */
     BEGIN_BCS_BATCH(batch, 6);
