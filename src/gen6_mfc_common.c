@@ -789,7 +789,7 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
 		vme_state_message[MODE_INTER_8X8] = 0x4a;
 		vme_state_message[MODE_INTER_8X4] = 0x4a;
 		vme_state_message[MODE_INTER_4X4] = 0x4a;
-		vme_state_message[MODE_INTER_BWD] = 0x4a;
+		vme_state_message[MODE_INTER_BWD] = 0x2a;
 		return;	
 	}
 	m_costf = lambda * 10;
@@ -836,7 +836,7 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
 		m_costf = lambda * 6.5;
 		m_cost = m_costf;
 		vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
-		m_costf = lambda * 2.5;
+		m_costf = lambda * 1.5;
 		m_cost = m_costf;
 		vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
 	}

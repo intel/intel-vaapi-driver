@@ -55,6 +55,7 @@
 
 #define VME_INTRA_SHADER        0
 #define VME_INTER_SHADER        1
+#define VME_BINTER_SHADER	3
 #define VME_BATCHBUFFER         2
 
 #define CURBE_ALLOCATION_SIZE   37              /* in 256-bit */
@@ -73,6 +74,10 @@ static const uint32_t gen75_vme_intra_frame[][4] = {
 
 static const uint32_t gen75_vme_inter_frame[][4] = {
 #include "shaders/vme/inter_frame_haswell.g75b"
+};
+
+static const uint32_t gen75_vme_inter_bframe[][4] = {
+#include "shaders/vme/inter_bframe_haswell.g75b"
 };
 
 static const uint32_t gen75_vme_batchbuffer[][4] = {
@@ -101,6 +106,13 @@ static struct i965_kernel gen75_vme_kernels[] = {
         sizeof(gen75_vme_batchbuffer),
         NULL
     },
+    {
+        "VME inter BFrame",
+        VME_BINTER_SHADER,
+        gen75_vme_inter_bframe,
+        sizeof(gen75_vme_inter_bframe),
+        NULL
+    }
 };
 
 static const uint32_t gen75_vme_mpeg2_intra_frame[][4] = {
@@ -305,7 +317,7 @@ static VAStatus gen75_vme_interface_setup(VADriverContextP ctx,
     assert(bo->virtual);
     desc = bo->virtual;
 
-    for (i = 0; i < GEN6_VME_KERNEL_NUMBER; i++) {
+    for (i = 0; i < vme_context->vme_kernel_sum; i++) {
         struct i965_kernel *kernel;
         kernel = &vme_context->gpe_context.kernels[i];
         assert(sizeof(*desc) == 32);
@@ -738,6 +750,7 @@ static void gen75_vme_pipeline_programing(VADriverContextP ctx,
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+    int kernel_shader;
     bool allow_hwscore = true;
     int s;
 
@@ -748,19 +761,29 @@ static void gen75_vme_pipeline_programing(VADriverContextP ctx,
 		break;
 	}
     }
-
+	if ((pSliceParameter->slice_type == SLICE_TYPE_I) ||
+		(pSliceParameter->slice_type == SLICE_TYPE_I)) {
+		kernel_shader = VME_INTRA_SHADER;
+	} else if ((pSliceParameter->slice_type == SLICE_TYPE_P) ||
+		(pSliceParameter->slice_type == SLICE_TYPE_SP)) {
+		kernel_shader = VME_INTER_SHADER;
+	} else {
+		kernel_shader = VME_BINTER_SHADER;
+		if (!allow_hwscore)
+			kernel_shader = VME_INTER_SHADER;
+	}
     if (allow_hwscore)
 	gen75_vme_walker_fill_vme_batchbuffer(ctx, 
                                   encode_state,
                                   width_in_mbs, height_in_mbs,
-                                  is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
+                                  kernel_shader,
                                   pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
                                   encoder_context);
     else
 	gen75_vme_fill_vme_batchbuffer(ctx, 
                                    encode_state,
                                    width_in_mbs, height_in_mbs,
-                                   is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
+                                   kernel_shader,
                                    pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
                                    encoder_context);
 
@@ -1122,6 +1145,7 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
 {
     struct gen6_vme_context *vme_context = calloc(1, sizeof(struct gen6_vme_context));
     struct i965_kernel *vme_kernel_list = NULL;
+	int i965_kernel_num;
 
     switch (encoder_context->profile) {
     case VAProfileH264Baseline:
@@ -1129,13 +1153,14 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
     case VAProfileH264High:
         vme_kernel_list = gen75_vme_kernels;
         encoder_context->vme_pipeline = gen75_vme_pipeline;
-        
+       	i965_kernel_num = sizeof(gen75_vme_kernels) / sizeof(struct i965_kernel); 
         break;
 
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
         vme_kernel_list = gen75_vme_mpeg2_kernels;
         encoder_context->vme_pipeline = gen75_vme_mpeg2_pipeline;
+       	i965_kernel_num = sizeof(gen75_vme_mpeg2_kernels) / sizeof(struct i965_kernel); 
 
         break;
 
@@ -1145,7 +1170,7 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
 
         break;
     }
-
+	vme_context->vme_kernel_sum = i965_kernel_num;
     vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
     vme_context->gpe_context.idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
@@ -1181,7 +1206,7 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
     i965_gpe_load_kernels(ctx,
                           &vme_context->gpe_context,
                           vme_kernel_list,
-                          GEN6_VME_KERNEL_NUMBER);
+                          i965_kernel_num);
     vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
     vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
     vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;

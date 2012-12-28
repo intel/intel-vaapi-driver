@@ -259,11 +259,13 @@ gen75_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
     BEGIN_BCS_BATCH(batch, 16);
 
     OUT_BCS_BATCH(batch, MFX_AVC_IMG_STATE | (16 - 2));
+	/*DW1. MB setting of frame */
     OUT_BCS_BATCH(batch,
                   ((width_in_mbs * height_in_mbs) & 0xFFFF));
     OUT_BCS_BATCH(batch, 
                   ((height_in_mbs - 1) << 16) | 
                   ((width_in_mbs - 1) << 0));
+	/* DW3 QP setting */
     OUT_BCS_BATCH(batch, 
                   (0 << 24) |	/* Second Chroma QP Offset */
                   (0 << 16) |	/* Chroma QP Offset */
@@ -289,17 +291,22 @@ gen75_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
                   (1 << 2)  |   /* Frame MB only flag */
                   (0 << 1)  |   /* MBAFF mode is in active */
                   (0 << 0));    /* Field picture flag */
+	/* DW5 Trellis quantization */
     OUT_BCS_BATCH(batch, 0);    /* Mainly about MB rate control and debug, just ignoring */
     OUT_BCS_BATCH(batch,        /* Inter and Intra Conformance Max size limit */
                   (0xBB8 << 16) |       /* InterMbMaxSz */
                   (0xEE8) );            /* IntraMbMaxSz */
     OUT_BCS_BATCH(batch, 0);            /* Reserved */
+	/* DW8. QP delta */
     OUT_BCS_BATCH(batch, 0);            /* Slice QP Delta for bitrate control */
-    OUT_BCS_BATCH(batch, 0);            /* Slice QP Delta for bitrate control */	
+    OUT_BCS_BATCH(batch, 0);            /* Slice QP Delta for bitrate control */
+	/* DW10. Bit setting for MB */	
     OUT_BCS_BATCH(batch, 0x8C000000);
     OUT_BCS_BATCH(batch, 0x00010000);
+	/* DW12. */
     OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0x02010100);
+	/* DW14. For short format */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
@@ -893,6 +900,7 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
     int bit_rate_control_target, maxQpN, maxQpP;
     unsigned char correct[6], grow, shrink;
     int i;
+    int bslice = 0;
     int weighted_pred_idc = 0;
     unsigned int luma_log2_weight_denom = slice_param->luma_log2_weight_denom;
     unsigned int chroma_log2_weight_denom = slice_param->chroma_log2_weight_denom;
@@ -910,6 +918,7 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
         weighted_pred_idc = pic_param->pic_fields.bits.weighted_pred_flag;
     } else if (slice_type == SLICE_TYPE_B) {
         weighted_pred_idc = pic_param->pic_fields.bits.weighted_bipred_idc;
+	bslice = 1;
 
         if (weighted_pred_idc == 2) {
             /* 8.4.3 - Derivation process for prediction weights (8-279) */
@@ -938,7 +947,7 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
         OUT_BCS_BATCH(batch, 0);			/*no reference frames and pred_weight_table*/
     } else {
         OUT_BCS_BATCH(batch,
-                      (1 << 16) |        	        /*1 reference frame*/
+                      (1 << 16) | (bslice << 24) |        	        /*1 reference frame*/
                       (chroma_log2_weight_denom << 8) |
                       (luma_log2_weight_denom << 0));
     }
