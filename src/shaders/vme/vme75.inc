@@ -309,6 +309,7 @@ define(`mb_mv1',		`r94')
 define(`mb_mv2',		`r95')
 define(`mb_mv3',		`r96')
 define(`mb_ref',		`r97')
+define(`mb_ref_win',		`r84')
 
 define(`DREF_REGION_SIZE',               `0x2020:UW')
 define(`PRED_L0',               `0x0':uw)

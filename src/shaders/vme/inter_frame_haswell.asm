@@ -77,6 +77,7 @@ mov  (8) msg_reg0.0<1>:UD       read1_header.0<8,8,1>:UD {align1};
 send (8) msg_ind CHROMA_COL<1>:UB null read(BIND_IDX_CBCR, 0, 0, 4) mlen 1 rlen 1 {align1};
 
 mov  (8) mb_mvp_ref.0<1>:ud	0:ud		{align1};
+mov  (8) mb_ref_win.0<1>:ud	0:ud		{align1};
 and.z.f0.0 (1)		null:uw	mb_hwdep<0,1,0>:uw		0x04:uw   {align1};
 (f0.0) jmpi (1) __mb_hwdep_end;
 /* read back the data for MB A */
@@ -364,6 +365,9 @@ jmpi	(1)	word_imedian;
 mov	(1)	mb_mvp_ref.2<1>:w		RET_ARG<0,1,0>:w	{align1};
 
 __mb_hwdep_end:
+asr	(2)	mb_ref_win.0<1>:w	mb_mvp_ref.0<2,2,1>:w	2:w	{align1};
+add	(2)	mb_ref_win.8<1>:w	mb_ref_win.0<2,2,1>:w	3:w	{align1};
+and	(2)	mb_ref_win.16<1>:uw	mb_ref_win.8<2,2,1>:uw	0xFFFC:uw {align1};
 /* m2, get the MV/Mb cost passed from constant buffer when
 spawning thread by MEDIA_OBJECT */       
 mov (8) vme_m2<1>:UD            r1.0<8,8,1>:UD {align1};
@@ -481,6 +485,13 @@ mov  (1) vme_m0.2<1>:W		-12:W			{align1};
 
 mov  (1) vme_m0.4<1>:UD		vme_m0.0<0,1,0>:UD	{align1};
 
+and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_AE:uw   {align1};
+(f0.0)	add 	(1)	vme_m0.0<1>:w	vme_m0.0<0,1,0>:w	12:w	{align1};
+and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
+(f0.0)	add 	(1)	vme_m0.2<1>:w	vme_m0.2<0,1,0>:w	8:w	{align1};
+ 
+add  (2) vme_m0.0<1>:w		vme_m0.0<2,2,1>:w	mb_ref_win.16<2,2,1>:w	{align1};
+add  (2) vme_m0.4<1>:w		vme_m0.4<2,2,1>:w	mb_ref_win.16<2,2,1>:w	{align1};
 mov  (8) vme_msg_0.0<1>:UD      vme_m0.0<8,8,1>:UD {align1};
 
 mov  (1) vme_m1.0<1>:UD         ADAPTIVE_SEARCH_ENABLE:ud {align1} ;
