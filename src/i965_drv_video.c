@@ -1872,6 +1872,18 @@ i965_CreateImage(VADriverContextP ctx,
         image->component_order[1]  = 'G';
         image->component_order[2]  = 'B';
         break;
+    case VA_FOURCC('I','A','8','8'):
+    case VA_FOURCC('A','I','8','8'):
+        image->num_planes = 1;
+        image->pitches[0] = width * 2;
+        image->offsets[0] = 0;
+        image->data_size  = image->offsets[0] + image->pitches[0] * height;
+        image->num_palette_entries = 256;
+        image->entry_bytes         = 3;
+        image->component_order[0]  = 'R';
+        image->component_order[1]  = 'G';
+        image->component_order[2]  = 'B';
+        break;
     case VA_FOURCC('A','R','G','B'):
     case VA_FOURCC('A','B','G','R'):
     case VA_FOURCC('B','G','R','A'):
