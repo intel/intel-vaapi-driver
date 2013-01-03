@@ -1934,7 +1934,7 @@ i965_CreateImage(VADriverContextP ctx,
     dri_bo_reference(obj_image->bo);
 
     if (image->num_palette_entries > 0 && image->entry_bytes > 0) {
-        obj_image->palette = malloc(image->num_palette_entries * sizeof(obj_image->palette));
+        obj_image->palette = malloc(image->num_palette_entries * sizeof(*obj_image->palette));
         if (!obj_image->palette)
             goto error;
     }
