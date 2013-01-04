@@ -358,21 +358,25 @@ void hsw_veb_iecp_pro_amp_table(VADriverContextP ctx, struct intel_vebox_context
         float  src_contrast = 1.0;
         float  src_brightness = 0.0;
         float  tmp_value = 0.0;
+        unsigned int i = 0;
 
-        VAProcFilterParameterBufferColorBalance * amp_param =
-        (VAProcFilterParameterBufferColorBalance *) proc_ctx->filter_iecp_amp;
-        VAProcColorBalanceType attrib = amp_param->attrib;
+        VAProcFilterParameterBufferColorBalance * amp_params =
+            (VAProcFilterParameterBufferColorBalance *) proc_ctx->filter_iecp_amp;
+ 
+        for (i = 0; i < proc_ctx->filter_iecp_amp_num_elements; i++){
+            VAProcColorBalanceType attrib = amp_params[i].attrib;
 
-        if(attrib == VAProcColorBalanceHue) {
-           src_hue = amp_param->value;         //(-180.0, 180.0)
-        }else if(attrib == VAProcColorBalanceSaturation) {
-           src_saturation = amp_param->value; //(0.0, 10.0)
-        }else if(attrib == VAProcColorBalanceBrightness) {
-           src_brightness = amp_param->value; // (-100.0, 100.0)
-           brightness = intel_format_convert(src_brightness, 7, 4, 1);
-        }else if(attrib == VAProcColorBalanceContrast) {
-           src_contrast = amp_param->value;  //  (0.0, 10.0)
-           contrast = intel_format_convert(src_contrast, 4, 7, 0);
+            if(attrib == VAProcColorBalanceHue) {
+               src_hue = amp_params[i].value;         //(-180.0, 180.0)
+            }else if(attrib == VAProcColorBalanceSaturation) {
+               src_saturation = amp_params[i].value; //(0.0, 10.0)
+            }else if(attrib == VAProcColorBalanceBrightness) {
+               src_brightness = amp_params[i].value; // (-100.0, 100.0)
+               brightness = intel_format_convert(src_brightness, 7, 4, 1);
+            }else if(attrib == VAProcColorBalanceContrast) {
+               src_contrast = amp_params[i].value;  //  (0.0, 10.0)
+               contrast = intel_format_convert(src_contrast, 4, 7, 0);
+            }
         }
 
         tmp_value = cos(src_hue/180*PI) * src_contrast * src_saturation;
@@ -1109,6 +1113,7 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
             } else if (filter->type == VAProcFilterColorBalance) {
                  proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
                  proc_ctx->filter_iecp_amp = filter;
+                 proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
             } else if (filter->type == VAProcFilterColorStandard){
                  proc_ctx->filters_mask |= VPP_IECP_CSC;
                  proc_ctx->filter_iecp_csc = filter;
