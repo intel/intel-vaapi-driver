@@ -1092,43 +1092,34 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
  
-    if(proc_ctx->is_first_frame) {
-	/* prepare the basic pipeline */	
-        VAProcPipelineParameterBuffer *pipe = proc_ctx->pipeline_param;
-        VABufferID *filter_ids = (VABufferID*)proc_ctx->pipeline_param->filters ;
-        VAProcFilterParameterBuffer* filter = NULL;
-        struct object_buffer *obj_buf = NULL;
-        unsigned int i;
+    VAProcPipelineParameterBuffer *pipe = proc_ctx->pipeline_param;
+    VABufferID *filter_ids = (VABufferID*)proc_ctx->pipeline_param->filters ;
+    VAProcFilterParameterBuffer* filter = NULL;
+    struct object_buffer *obj_buf = NULL;
+    unsigned int i;
 
-        for(i = 0; i < pipe->num_filters; i ++) {
-            obj_buf = BUFFER((*(filter_ids + i)));
-            filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+    for (i = 0; i < pipe->num_filters; i ++) {
+         obj_buf = BUFFER((*(filter_ids + i)));
+         filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
             
-            if(filter->type == VAProcFilterNoiseReduction) {
-                proc_ctx->filters_mask |= VPP_DNDI_DN;
-                proc_ctx->filter_dn = filter;
-            } else if (filter->type == VAProcFilterDeinterlacing) {
-                proc_ctx->filters_mask |= VPP_DNDI_DI;
-                proc_ctx->filter_di = filter;
-            } else if (filter->type == VAProcFilterColorBalance) {
-                 proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
-                 proc_ctx->filter_iecp_amp = filter;
-                 proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
-            } else if (filter->type == VAProcFilterColorStandard){
-                 proc_ctx->filters_mask |= VPP_IECP_CSC;
-                 proc_ctx->filter_iecp_csc = filter;
-          /*} else if (filter->type == VAProcFilterSkinToneDetectAndEnhance){
-                 proc_ctx->filters_mask |= VPP_IECP_STD_STE;
-                 proc_ctx->filter_iecp_std = filter;
-            } else if (filter->type == VAProcFilterTotalColorControl){
-                 proc_ctx->filters_mask |= VPP_IECP_TCC;
-                 proc_ctx->filter_iecp_tcc = filter;
-          */} else {
-                 //not supported filter type
-                 return VA_STATUS_ERROR_ATTR_NOT_SUPPORTED;
-            }
-        }
-   }
+         if (filter->type == VAProcFilterNoiseReduction) {
+             proc_ctx->filters_mask |= VPP_DNDI_DN;
+             proc_ctx->filter_dn = filter;
+         } else if (filter->type == VAProcFilterDeinterlacing) {
+             proc_ctx->filters_mask |= VPP_DNDI_DI;
+             proc_ctx->filter_di = filter;
+         } else if (filter->type == VAProcFilterColorBalance) {
+             proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
+             proc_ctx->filter_iecp_amp = filter;
+             proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
+         } else if (filter->type == VAProcFilterColorStandard){
+             proc_ctx->filters_mask |= VPP_IECP_CSC;
+             proc_ctx->filter_iecp_csc = filter;
+         } else {
+                 /*not supported filter type */
+             return VA_STATUS_ERROR_ATTR_NOT_SUPPORTED;
+         }
+    }
 
     hsw_veb_pre_format_convert(ctx, proc_ctx);
     hsw_veb_surface_reference(ctx, proc_ctx);
