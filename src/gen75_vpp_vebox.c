@@ -1101,7 +1101,7 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
     unsigned int i;
 
     for (i = 0; i < pipe->num_filters; i ++) {
-         obj_buf = BUFFER((*(filter_ids + i)));
+         obj_buf = BUFFER(pipe->filters[i]);
          filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
             
          if (filter->type == VAProcFilterNoiseReduction) {
@@ -1117,10 +1117,7 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
          } else if (filter->type == VAProcFilterColorStandard){
              proc_ctx->filters_mask |= VPP_IECP_CSC;
              proc_ctx->filter_iecp_csc = filter;
-         } else {
-                 /*not supported filter type */
-             return VA_STATUS_ERROR_ATTR_NOT_SUPPORTED;
-         }
+         } 
     }
 
     hsw_veb_pre_format_convert(ctx, proc_ctx);

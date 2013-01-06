@@ -456,14 +456,17 @@ VAStatus gen75_gpe_process_picture(VADriverContextP ctx,
     VAStatus va_status = VA_STATUS_SUCCESS;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAProcPipelineParameterBuffer* pipe = vpp_gpe_ctx->pipeline_param;
+    VAProcFilterParameterBuffer* filter = NULL;
     unsigned int i;
 
-    assert(pipe->num_filters == 1);
-    VABufferID *filter_ids = (VABufferID*)pipe->filters ;
-    struct object_buffer *obj_buf = BUFFER((*(filter_ids + 0)));
-    VAProcFilterParameterBuffer* filter =
-                  (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
-
+    for(i = 0; i < pipe->num_filters; i++){
+        struct object_buffer *obj_buf = BUFFER(pipe->filters[i]);
+        filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+        if(filter->type == VAProcFilterSharpening){
+           break;
+        }
+    }
+       
     assert(pipe->num_forward_references + pipe->num_backward_references <= 4);
     vpp_gpe_ctx->surface_input[0] = pipe->surface;
 

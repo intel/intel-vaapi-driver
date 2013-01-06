@@ -121,39 +121,56 @@ gen75_proc_picture(VADriverContextP ctx,
     proc_ctx->surface_render_output = proc_st->current_render_target;
 
     assert(proc_ctx->surface_render_output != VA_INVALID_SURFACE);
-    assert(pipeline_param->num_filters <= 1);
- 
-    struct object_surface * obj_surf = SURFACE(proc_ctx->surface_render_output);
-    if(!obj_surf->bo){
+
+    struct object_surface * obj_dst_surf = SURFACE(proc_ctx->surface_render_output);
+    if(!obj_dst_surf->bo){
        unsigned int is_tiled = 0;
        unsigned int fourcc = VA_FOURCC('N','V','1','2');
        int sampling = SUBSAMPLE_YUV420;
-       i965_check_alloc_surface_bo(ctx, obj_surf, is_tiled, fourcc, sampling);
+       i965_check_alloc_surface_bo(ctx, obj_dst_surf, is_tiled, fourcc, sampling);
     }  
 
-    if(pipeline_param->filters == NULL || pipeline_param->num_filters == 0){
-        /* implicity surface format coversion and scaling */
-        gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
-        return;
-    } 
+    assert(pipeline_param->num_filters <= 4);
 
     VABufferID *filter_id = (VABufferID*) pipeline_param->filters;
-    struct object_buffer * obj_buf = BUFFER((*filter_id) + 0);
-    VAProcFilterParameterBuffer* filter =
-       (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+ 
+    if(pipeline_param->num_filters == 0 || pipeline_param->filters == NULL ){
+        /* implicity surface format coversion and scaling */
+        gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
+    }else if(pipeline_param->num_filters == 1) {
+       struct object_buffer * obj_buf = BUFFER((*filter_id) + 0);
+       VAProcFilterParameterBuffer* filter =
+           (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
 
-    if(filter->type == VAProcFilterNoiseReduction   ||
-       filter->type == VAProcFilterDeinterlacing    ||
-       filter->type == VAProcFilterColorBalance){
-          gen75_vpp_vebox(ctx, proc_ctx);
-     }else if(filter->type == VAProcFilterSharpening /*     ||
-          filter->type == VAProcFilterRotation              ||
-          filter->type == VAProcFilterBlending              ||
-          filter->type == VAProcFilterSceneChangeDetection*/ ){
-         gen75_vpp_gpe(ctx, proc_ctx);
-     } else {
-         assert("Error: Not supported filter type! \n");
-    } 
+       if(filter->type == VAProcFilterNone){ 
+           gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
+       } else if(filter->type == VAProcFilterNoiseReduction   ||
+                 filter->type == VAProcFilterDeinterlacing    ||
+                 filter->type == VAProcFilterColorBalance){
+           gen75_vpp_vebox(ctx, proc_ctx);
+       }else if(filter->type == VAProcFilterSharpening){
+           struct object_surface *obj_src_surf = SURFACE(proc_ctx->pipeline_param->surface);
+           assert(obj_src_surf->fourcc == VA_FOURCC('N','V','1','2') && 
+                  obj_dst_surf->fourcc == VA_FOURCC('N','V','1','2'));   
+           gen75_vpp_gpe(ctx, proc_ctx);
+       } 
+    }else if (pipeline_param->num_filters >= 2) {
+         unsigned int i = 0;
+         for (i = 0; i < pipeline_param->num_filters; i++){
+            struct object_buffer * obj_buf = BUFFER(pipeline_param->filters[i]);
+            VAProcFilterParameterBuffer* filter =
+               (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+
+            if (filter->type != VAProcFilterNoiseReduction &&
+                filter->type != VAProcFilterDeinterlacing  &&
+                filter->type != VAProcFilterColorBalance   && 
+                filter->type != VAProcFilterNone ){ 
+                printf("Do not support multiply filters outside vebox pipeline \n");
+                assert(0);
+            }
+         }
+         gen75_vpp_vebox(ctx, proc_ctx);
+    }     
 }
 
 static void 
