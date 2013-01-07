@@ -42,7 +42,8 @@
 
 #define HAS_PP(ctx) (IS_IRONLAKE((ctx)->intel.device_id) ||     \
                      IS_GEN6((ctx)->intel.device_id) ||         \
-                     IS_GEN7((ctx)->intel.device_id))
+                     IS_GEN7((ctx)->intel.device_id) ||         \
+                     IS_GEN8((ctx)->intel.device_id))
 
 #define SURFACE_STATE_PADDED_SIZE_0_I965        ALIGN(sizeof(struct i965_surface_state), 32)
 #define SURFACE_STATE_PADDED_SIZE_1_I965        ALIGN(sizeof(struct i965_surface_state2), 32)
@@ -4306,7 +4307,8 @@ gen6_pp_initialize(
     assert(bo);
     pp_context->vfe_state.bo = bo;
     
-    if (IS_GEN7(i965->intel.device_id)) {
+    if (IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id)) {
         static_param_size = sizeof(struct gen7_pp_static_parameter);
         inline_param_size = sizeof(struct gen7_pp_inline_parameter);
     } else {
@@ -4361,7 +4363,8 @@ gen6_pp_interface_descriptor_table(VADriverContextP   ctx,
     desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
     desc->desc4.constant_urb_entry_read_offset = 0;
 
-    if (IS_GEN7(i965->intel.device_id))
+    if (IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id))
         desc->desc4.constant_urb_entry_read_length = 6; /* grf 1-6 */
     else
         desc->desc4.constant_urb_entry_read_length = 4; /* grf 1-4 */
@@ -4393,7 +4396,8 @@ gen6_pp_upload_constants(VADriverContextP ctx,
     assert(sizeof(struct pp_static_parameter) == 128);
     assert(sizeof(struct gen7_pp_static_parameter) == 192);
 
-    if (IS_GEN7(i965->intel.device_id))
+    if (IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id))
         param_size = sizeof(struct gen7_pp_static_parameter);
     else
         param_size = sizeof(struct pp_static_parameter);
@@ -4555,7 +4559,8 @@ gen6_pp_object_walker(VADriverContextP ctx,
     dri_bo *command_buffer;
     unsigned int *command_ptr;
 
-    if (IS_GEN7(i965->intel.device_id))
+    if (IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id))
         param_size = sizeof(struct gen7_pp_inline_parameter);
     else
         param_size = sizeof(struct pp_inline_parameter);
@@ -4680,7 +4685,8 @@ i965_post_processing_internal(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
     if (IS_GEN6(i965->intel.device_id) ||
-        IS_GEN7(i965->intel.device_id))
+        IS_GEN7(i965->intel.device_id) ||
+	IS_GEN8(i965->intel.device_id))
         va_status = gen6_post_processing(ctx, pp_context, src_surface, src_rect, dst_surface, dst_rect, pp_index, filter_param);
     else
         va_status = ironlake_post_processing(ctx, pp_context, src_surface, src_rect, dst_surface, dst_rect, pp_index, filter_param);
@@ -4743,7 +4749,8 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     br13 |= pitch;
 
     if (IS_GEN6(i965->intel.device_id) ||
-        IS_GEN7(i965->intel.device_id)) {
+        IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id)) {
         intel_batchbuffer_start_atomic_blt(batch, 48);
         BEGIN_BLT_BATCH(batch, 12);
     } else {
@@ -5391,7 +5398,9 @@ i965_post_processing_context_init(VADriverContextP ctx,
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen7));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen75));
 
-    if (IS_HASWELL(i965->intel.device_id))
+    if (IS_GEN8(i965->intel.device_id))
+        memcpy(pp_context->pp_modules, pp_modules_gen7, sizeof(pp_context->pp_modules));
+    else if (IS_HASWELL(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen75, sizeof(pp_context->pp_modules));
     else if (IS_GEN7(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen7, sizeof(pp_context->pp_modules));
@@ -5416,7 +5425,8 @@ i965_post_processing_context_init(VADriverContextP ctx,
     }
 
     /* static & inline parameters */
-    if (IS_GEN7(i965->intel.device_id)) {
+    if (IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id)) {
         pp_context->pp_static_parameter = calloc(sizeof(struct gen7_pp_static_parameter), 1);
         pp_context->pp_inline_parameter = calloc(sizeof(struct gen7_pp_inline_parameter), 1);
     } else {

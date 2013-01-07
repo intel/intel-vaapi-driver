@@ -827,7 +827,8 @@ i965_render_src_surface_state(
     assert(ss_bo->virtual);
     ss = (char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index);
 
-    if (IS_GEN7(i965->intel.device_id)) {
+    if (IS_GEN7(i965->intel.device_id) ||
+		IS_GEN8(i965->intel.device_id)) {
         gen7_render_set_surface_state(ss,
                                       region, offset,
                                       w, h,
@@ -942,7 +943,8 @@ i965_render_dest_surface_state(VADriverContextP ctx, int index)
     assert(ss_bo->virtual);
     ss = (char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index);
 
-    if (IS_GEN7(i965->intel.device_id)) {
+    if (IS_GEN7(i965->intel.device_id) ||
+		IS_GEN8(i965->intel.device_id)) {
         gen7_render_set_surface_state(ss,
                                       dest_region->bo, 0,
                                       dest_region->width, dest_region->height,
@@ -1536,7 +1538,8 @@ i965_clear_dest_region(VADriverContextP ctx)
     br13 |= pitch;
 
     if (IS_GEN6(i965->intel.device_id) ||
-        IS_GEN7(i965->intel.device_id)) {
+        IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id)) {
         intel_batchbuffer_start_atomic_blt(batch, 24);
         BEGIN_BLT_BATCH(batch, 6);
     } else {
@@ -3107,7 +3110,8 @@ intel_render_put_surface(
             src_rect = dst_rect;
     }
 
-    if (IS_GEN7(i965->intel.device_id))
+    if (IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id))
         gen7_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
     else if (IS_GEN6(i965->intel.device_id))
         gen6_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
@@ -3128,7 +3132,8 @@ intel_render_put_subpicture(
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (IS_GEN7(i965->intel.device_id))
+    if (IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id))
         gen7_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
     else if (IS_GEN6(i965->intel.device_id))
         gen6_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
@@ -3149,7 +3154,8 @@ i965_render_init(VADriverContextP ctx)
     assert(NUM_RENDER_KERNEL == (sizeof(render_kernels_gen6) / 
                                  sizeof(render_kernels_gen6[0])));
 
-    if (IS_GEN7(i965->intel.device_id))
+    if (IS_GEN7(i965->intel.device_id) ||
+		IS_GEN8(i965->intel.device_id))
         memcpy(render_state->render_kernels,
                (IS_HASWELL(i965->intel.device_id) ? render_kernels_gen7_haswell : render_kernels_gen7),
                sizeof(render_state->render_kernels));

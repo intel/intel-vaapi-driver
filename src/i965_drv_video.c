@@ -318,6 +318,26 @@ static struct hw_codec_info gen75_hw_codec_info = {
     },
 };
 
+/* TODO: Add the separate call back function for Gen8 */
+static struct hw_codec_info gen8_hw_codec_info = {
+    .dec_hw_context_init = gen75_dec_hw_context_init,
+    .enc_hw_context_init = gen75_enc_hw_context_init,
+    .proc_hw_context_init = gen75_proc_context_init,
+    .max_width = 4096,
+    .max_height = 4096,
+
+    .has_mpeg2_decoding = 1,
+    .has_mpeg2_encoding = 1,
+    .has_h264_decoding = 1,
+    .has_h264_encoding = 1,
+    .has_vc1_decoding = 1,
+    .has_jpeg_decoding = 1,
+    .has_vpp = 1,
+    .has_accelerated_getimage = 1,
+    .has_accelerated_putimage = 1,
+    .has_tiled_surface = 1,
+};
+
 #define I965_PACKED_HEADER_BASE         0
 #define I965_PACKED_MISC_HEADER_BASE    3
 
@@ -357,7 +377,6 @@ va_enc_packed_type_to_idx(int packed_type)
     assert(idx < 4);
     return idx;
 }
-
 
 VAStatus 
 i965_QueryConfigProfiles(VADriverContextP ctx,
@@ -1497,7 +1516,7 @@ i965_CreateContext(VADriverContextP ctx,
         render_state->interleaved_uv = 1;
         break;
     default:
-        render_state->interleaved_uv = !!(IS_GEN6(i965->intel.device_id) || IS_GEN7(i965->intel.device_id));
+        render_state->interleaved_uv = !!(IS_GEN6(i965->intel.device_id) || IS_GEN7(i965->intel.device_id) || IS_GEN8(i965->intel.device_id));
         break;
     }
 
@@ -4823,7 +4842,9 @@ i965_driver_data_init(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
 
-    if (IS_HASWELL(i965->intel.device_id))
+    if (IS_GEN8(i965->intel.device_id))
+        i965->codec_info = &gen8_hw_codec_info;
+    else if (IS_HASWELL(i965->intel.device_id))
 	i965->codec_info = &gen75_hw_codec_info;
     else if (IS_G4X(i965->intel.device_id))
         i965->codec_info = &g4x_hw_codec_info;
