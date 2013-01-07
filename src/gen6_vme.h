@@ -174,4 +174,5 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
                                   struct object_surface *obj_surface,
                                   struct intel_encoder_context *encoder_context));
 
+extern Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 #endif /* _GEN6_VME_H_ */

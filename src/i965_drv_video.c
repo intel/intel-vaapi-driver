@@ -320,8 +320,8 @@ static struct hw_codec_info gen75_hw_codec_info = {
 
 /* TODO: Add the separate call back function for Gen8 */
 static struct hw_codec_info gen8_hw_codec_info = {
-    .dec_hw_context_init = gen75_dec_hw_context_init,
-    .enc_hw_context_init = gen75_enc_hw_context_init,
+    .dec_hw_context_init = gen8_dec_hw_context_init,
+    .enc_hw_context_init = gen8_enc_hw_context_init,
     .proc_hw_context_init = gen75_proc_context_init,
     .max_width = 4096,
     .max_height = 4096,

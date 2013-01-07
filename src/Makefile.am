@@ -56,6 +56,9 @@ source_c = \
 	gen7_mfd.c		\
 	gen75_mfd.c		\
 	gen75_mfc.c		\
+	gen8_mfc.c		\
+	gen8_mfd.c		\
+	gen8_vme.c		\
 	gen75_picture_process.c	\
 	gen75_vme.c		\
 	gen75_vpp_gpe.c  	\

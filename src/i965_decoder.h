@@ -49,4 +49,6 @@ struct gen_buffer {
 struct hw_context *
 gen75_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config);
 
+extern struct hw_context *
+gen8_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config);
 #endif /* I965_DECODER_H */

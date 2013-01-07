@@ -62,6 +62,8 @@ struct intel_encoder_context
 extern struct hw_context *
 gen75_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config);
 
+extern struct hw_context *
+gen8_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config);
 #endif	/* _I965_ENCODER_H_ */
 
 

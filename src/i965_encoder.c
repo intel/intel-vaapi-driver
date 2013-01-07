@@ -401,3 +401,10 @@ gen75_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config
 {
     return intel_enc_hw_context_init(ctx, obj_config, gen75_vme_context_init, gen75_mfc_context_init);
 }
+
+struct hw_context *
+gen8_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
+{
+    return intel_enc_hw_context_init(ctx, obj_config, gen8_vme_context_init, gen8_mfc_context_init);
+}
+
