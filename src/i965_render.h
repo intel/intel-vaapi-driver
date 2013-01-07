@@ -107,4 +107,8 @@ struct gen7_surface_state;
 void
 gen7_render_set_surface_scs(struct gen7_surface_state *ss);
 
+struct gen8_surface_state;
+void
+gen8_render_set_surface_scs(struct gen8_surface_state *ss);
+
 #endif /* _I965_RENDER_H_ */

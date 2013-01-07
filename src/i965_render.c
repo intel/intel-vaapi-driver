@@ -762,6 +762,16 @@ gen7_render_set_surface_scs(struct gen7_surface_state *ss)
     ss->ss7.shader_chanel_select_a = HSW_SCS_ALPHA;
 }
 
+/* Set "Shader Channel Select" for GEN8+ */
+void
+gen8_render_set_surface_scs(struct gen8_surface_state *ss)
+{
+    ss->ss7.shader_chanel_select_r = HSW_SCS_RED;
+    ss->ss7.shader_chanel_select_g = HSW_SCS_GREEN;
+    ss->ss7.shader_chanel_select_b = HSW_SCS_BLUE;
+    ss->ss7.shader_chanel_select_a = HSW_SCS_ALPHA;
+}
+
 static void
 gen7_render_set_surface_state(
     struct gen7_surface_state *ss,

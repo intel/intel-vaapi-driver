@@ -968,6 +968,322 @@ struct i965_sampler_dndi
     } dw7;
 };
 
+struct gen8_interface_descriptor_data
+{
+    struct {
+        unsigned int pad0:6;
+        unsigned int kernel_start_pointer:26;
+    } desc0;
+    
+    struct {
+        unsigned int kernel_start_pointer_high:16;
+        unsigned int pad0:16;
+    } desc1;
+
+    struct {
+        unsigned int pad0:7;
+        unsigned int software_exception_enable:1;
+        unsigned int pad1:3;
+        unsigned int maskstack_exception_enable:1;
+        unsigned int pad2:1;
+        unsigned int illegal_opcode_exception_enable:1;
+        unsigned int pad3:2;
+        unsigned int floating_point_mode:1;
+        unsigned int thread_priority:1;
+        unsigned int single_program_flow:1;
+        unsigned int denorm_mode:1;
+        unsigned int pad4:12;
+    } desc2;
+
+    struct {
+        unsigned int pad0:2;
+        unsigned int sampler_count:3;
+        unsigned int sampler_state_pointer:27;
+    } desc3;
+
+    struct {
+        unsigned int binding_table_entry_count:5;
+        unsigned int binding_table_pointer:11;
+	unsigned int pad0: 16;
+    } desc4;
+
+    struct {
+        unsigned int constant_urb_entry_read_offset:16;
+        unsigned int constant_urb_entry_read_length:16;
+    } desc5;
+
+    struct {
+	unsigned int num_threads_in_tg:10;
+	unsigned int pad0:5;
+	unsigned int global_barrier_enable:1;
+	unsigned int shared_local_memory_size:5;
+	unsigned int barrier_enable:1;
+	unsigned int rounding_mode:2;
+	unsigned int pad1:8;
+    } desc6;
+
+    struct {
+        unsigned int cross_thread_constant_data_read_length:8;
+        unsigned int pad0:24;
+    } desc7;
+};
+ 
+struct gen8_surface_state
+{
+    struct {
+        unsigned int cube_pos_z:1;
+        unsigned int cube_neg_z:1;
+        unsigned int cube_pos_y:1;
+        unsigned int cube_neg_y:1;
+        unsigned int cube_pos_x:1;
+        unsigned int cube_neg_x:1;
+        unsigned int media_boundary_pixel_mode:2;
+        unsigned int render_cache_read_write:1;
+        unsigned int sampler_l2bypass_disable:1;
+        unsigned int vert_line_stride_ofs:1;
+        unsigned int vert_line_stride:1;
+        unsigned int tile_walk:1;
+	unsigned int tiled_surface:1;
+        unsigned int horizontal_alignment:2;
+	/* Field 16 */
+        unsigned int vertical_alignment:2;
+        unsigned int surface_format:9;     /**< BRW_SURFACEFORMAT_x */
+        unsigned int pad0:1;
+        unsigned int is_array:1;
+        unsigned int surface_type:3;       /**< BRW_SURFACE_1D/2D/3D/CUBE */
+    } ss0;
+
+    struct {
+        unsigned int surface_qpitch:15;
+	unsigned int pad0:4;
+	unsigned int base_mip_level:5;
+	unsigned int surface_mocs:7;
+	unsigned int pad1:1;
+    } ss1;
+
+    struct {
+        unsigned int width:14;
+        unsigned int pad0:2;
+        unsigned int height:14;
+        unsigned int pad1:2;
+    } ss2;
+
+    struct {
+        unsigned int pitch:18;
+        unsigned int pad:3;
+        unsigned int depth:11;
+    } ss3;
+
+    struct {
+        unsigned int multisample_position_palette_index:3;
+        unsigned int num_multisamples:3;
+        unsigned int multisampled_surface_storage_format:1;
+        unsigned int render_target_view_extent:11;
+        unsigned int min_array_elt:11;
+        unsigned int rotation:2;
+        unsigned int force_ncmp_reduce_type:1;
+    } ss4;
+
+    struct {
+        unsigned int mip_count:4;
+        unsigned int min_lod:4;
+        unsigned int pad0:4;
+        unsigned int pad1:2;
+	unsigned int coherence_type:1;
+	unsigned int pad2:3;
+	unsigned int pad3:2;
+	unsigned int ewa_disable_cube:1;
+	unsigned int y_offset:3;
+	unsigned int pad4:1;
+	unsigned int x_offset:7;
+    } ss5;
+
+    struct {
+	unsigned int y_offset_uv_plane:14;
+	unsigned int pad0:2;
+	unsigned int x_offset_uv_plane:14;
+	unsigned int pad1:1;
+	unsigned int separate_uv_plane:1;
+    } ss6;
+
+    struct {
+        unsigned int resource_min_lod:12;
+        unsigned int pad0:4;
+        unsigned int shader_chanel_select_a:3;
+        unsigned int shader_chanel_select_b:3;
+        unsigned int shader_chanel_select_g:3;
+        unsigned int shader_chanel_select_r:3;
+        unsigned int alpha_clear_color:1;
+        unsigned int blue_clear_color:1;
+        unsigned int green_clear_color:1;
+        unsigned int red_clear_color:1;
+    } ss7;
+    struct {
+	unsigned int base_addr;
+    } ss8;
+
+    struct {
+	unsigned int base_addr_high:16;
+	unsigned int pad0:16;
+    } ss9;
+
+    struct {
+	unsigned int pad0:12;
+	unsigned int aux_base_addr:20;
+    } ss10;
+ 
+    union {
+	struct {
+		unsigned int y_offset_v_plane:14;
+		unsigned int pad0:2;
+		unsigned int x_offset_v_plane:14;
+		unsigned int pad1:2;
+	} planar;
+	struct {
+		unsigned int aux_base_addr_high:16;
+		unsigned int pad2:16;
+	} aux_buffer;
+    } ss11; 
+
+    struct {
+	unsigned int hier_depth_clear;
+    } ss12;
+
+    struct {
+	unsigned int pad0;
+    } ss13;
+
+    struct {
+	unsigned int pad0;
+    } ss14;
+
+    struct {
+	unsigned int pad0;
+    } ss15;  
+};
+
+struct gen8_surface_state2
+{
+    struct {
+        unsigned int pad0;
+    } ss0;
+
+    struct {
+        unsigned int cbcr_pixel_offset_v_direction:2;
+        unsigned int picture_structure:2;
+        unsigned int width:14;
+        unsigned int height:14;
+    } ss1;
+
+    struct {
+        unsigned int tile_walk:1;
+        unsigned int tiled_surface:1;
+        unsigned int half_pitch_for_chroma:1;
+        unsigned int pitch:18;
+        unsigned int address_ctrl:1; /* clamp or mirror mode */
+        unsigned int pad0:4;
+        unsigned int interleave_chroma:1;
+        unsigned int surface_format:5;
+    } ss2;
+
+    struct {
+        unsigned int y_offset_for_cb:14;
+        unsigned int pad0:2;
+        unsigned int x_offset_for_cb:14;
+        unsigned int pad1:2;
+    } ss3;
+
+    struct {
+        unsigned int y_offset_for_cr:15;
+        unsigned int pad0:1;
+        unsigned int x_offset_for_cr:14;
+        unsigned int pad1:2;
+    } ss4;
+
+    struct {
+        unsigned int surface_object_mocs:7;
+	unsigned int pad0:11;
+	unsigned int pad1:2;
+	unsigned int pad2:10;
+	unsigned int vert_line_stride_offset:1;
+	unsigned int vert_line_stride:1;
+    } ss5;
+
+    struct {
+        unsigned int base_addr;
+    } ss6;
+
+    struct {
+        unsigned int base_addr_high:16;
+	unsigned int pad0:16;
+    } ss7;
+};
+
+struct gen8_sampler_state
+{
+   struct
+   {
+      unsigned int aniso_algorithm:1;
+      unsigned int lod_bias:13;
+      unsigned int min_filter:3;
+      unsigned int mag_filter:3;
+      unsigned int mip_filter:2;
+      unsigned int base_level:5;
+      unsigned int lod_preclamp:2;
+      unsigned int default_color_mode:1;
+      unsigned int pad0:1;
+      unsigned int disable:1;
+   } ss0;
+
+   struct
+   {
+      unsigned int cube_control_mode:1;
+      unsigned int shadow_function:3;
+      unsigned int chroma_key_mode:1;
+      unsigned int chroma_key_index:2;
+      unsigned int chroma_key_enable:1;
+      unsigned int max_lod:12;
+      unsigned int min_lod:12;
+   } ss1;
+
+   struct
+   {
+	unsigned int lod_clamp_mag_mode:1; /* MIPNONE or MIPFILTER */
+	unsigned int flex_filter_vert_align:1;
+	unsigned int flex_filter_hort_align:1;
+	unsigned int flex_filter_coff_size:1; /* coff8 or coff 16 */
+	unsigned int flex_filter_mode:1;
+	unsigned int pad0:1;
+	unsigned int indirect_state_pointer:18; /* point to the SAMPLE_INDIRECT_STATE */
+	union {
+		unsigned char nonsep_filter_footer_highmask;
+		struct {
+			unsigned char pad1:2;
+			unsigned char sep_filter_height:2;
+			unsigned char sep_filter_width:2;
+			unsigned char sep_filter_coff_size:2;
+		} sep_filter;		
+	} ss2_byte3;
+   } ss2;
+
+   struct
+   {
+      unsigned int r_wrap_mode:3;
+      unsigned int t_wrap_mode:3;
+      unsigned int s_wrap_mode:3;
+      unsigned int pad0:1;
+      unsigned int non_normalized_coord:1;
+      unsigned int trilinear_quality:2;
+      unsigned int address_round:6;
+      unsigned int max_aniso:3;
+	unsigned int pad1:2;
+	unsigned int nonsep_filter_foot_lowmask:8; 
+   } ss3;
+};
+/* TODO: Add the sampler_8x8 for Gen8+. 
+ * AVS/Convolve is 256DWs.
+ * MinMaxfilter/Erode/Dilate: 8DWs*/
+
 
 struct gen6_blend_state
 {
