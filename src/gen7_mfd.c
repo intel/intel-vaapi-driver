@@ -841,6 +841,7 @@ gen7_mfd_avc_bsd_object(VADriverContextP ctx,
                   (0 << 8));
     OUT_BCS_BATCH(batch,
                   ((slice_data_bit_offset >> 3) << 16) |
+                  (1 << 7)  |
                   (0 << 5)  |
                   (0 << 4)  |
                   ((next_slice_param == NULL) << 3) | /* LastSlice Flag */

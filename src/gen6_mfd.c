@@ -1919,6 +1919,7 @@ gen6_mfd_vc1_bsd_object(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   slice_param->slice_vertical_position << 24 |
                   next_slice_start_vert_pos << 16 |
+                  (1 << 7) |
                   (macroblock_offset & 0x7));
     ADVANCE_BCS_BATCH(batch);
 }
