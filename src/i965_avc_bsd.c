@@ -636,7 +636,7 @@ g4x_avc_bsd_object(VADriverContextP ctx,
                       (slice_hor_pos << 16) | 
                       (first_mb_in_slice << 0));
         OUT_BCS_BATCH(batch, 
-                      (0 << 7) | /* FIXME: ??? */
+                      (1 << 7) |
                       ((0x7 - (slice_data_bit_offset & 0x7)) << 0));
 
         if (encrypted) {
@@ -764,7 +764,7 @@ ironlake_avc_bsd_object(VADriverContextP ctx,
                       (slice_hor_pos << 16) | 
                       (first_mb_in_slice << 0));
         OUT_BCS_BATCH(batch, 
-                      (0 << 7) | /* FIXME: ??? */
+                      (1 << 7) |
                       ((0x7 - (slice_data_bit_offset & 0x7)) << 0));
         OUT_BCS_BATCH(batch, counter_value);
         
