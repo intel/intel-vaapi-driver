@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include "intel_driver.h"
 #include "intel_media.h"
@@ -67,7 +68,7 @@ int intel_format_convert(float src, int out_int_bits, int out_frac_bits,int out_
      unsigned int factor = 1 << out_frac_bits;
      int output_value = 0;         
  
-     unsigned int integer_part  = floor(src_1);
+     unsigned int integer_part  = floorf(src_1);
      unsigned int fraction_part = ((int)((src_1 - integer_part) * factor)) & (factor - 1) ;
 
      output_value = (integer_part << out_frac_bits) | fraction_part;
