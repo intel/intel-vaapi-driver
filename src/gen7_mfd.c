@@ -1676,11 +1676,11 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
             pic_param->picture_fields.bits.picture_type == GEN7_VC1_BI_PICTURE){
              if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9){
                 overlap = 1; 
-             }else if(pic_param->conditional_overlap_flag == 2 ||
-                      pic_param->conditional_overlap_flag == 3){
-                overlap = 1;
+             } else if (va_to_gen7_vc1_condover[pic_param->conditional_overlap_flag] == 2 ||
+                        va_to_gen7_vc1_condover[pic_param->conditional_overlap_flag] == 3) {
+                 overlap = 1;
              }
-         }
+        }
     } 
 
     assert(pic_param->conditional_overlap_flag < 3);
