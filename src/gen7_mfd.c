@@ -1663,8 +1663,9 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
 
     overlap = 0;
     if (profile != GEN7_VC1_ADVANCED_PROFILE){
-       if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9){
-           overlap = 1; 
+        if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9 &&
+            pic_param->picture_fields.bits.picture_type != GEN7_VC1_B_PICTURE) {
+            overlap = 1; 
         }
     }else {
         if (pic_param->picture_fields.bits.picture_type == GEN7_VC1_P_PICTURE &&
