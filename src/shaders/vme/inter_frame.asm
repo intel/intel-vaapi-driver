@@ -239,12 +239,22 @@ add             (1)     vme_m0.0<1>:W           vme_m0.0<0,1,0>:W               
 cmp.e.f0.0      (1)     null<1>:uw              w_in_mb_uw<0,1,0>:uw            orig_x_ub<0,1,0>:ub {align1};
 /* (0, y + 1) */        
 (f0.0)mov       (1)     orig_x_ub<1>:ub         0:uw {align1} ;
+(f0.0)add       (1)     orig_y_ub<1>:ub orig_y_ub<0,1,0>:ub             1:uw {align1} ;
 (f0.0)mov       (1)     vme_m0.8<1>:uw          0:uw {align1} ;
 (f0.0)add       (1)     vme_m0.10<1>:uw         vme_m0.10<0,1,0>:uw             16:uw {align1} ;
 #ifdef DEV_SNB        
 (f0.0)mov       (1)     vme_m0.0<1>:w           -16:W {align1};		        /* Reference = (x-16,y-12)-(x+32,y+24) */
 (f0.0)add       (1)     vme_m0.2<1>:w           vme_m0.2<0,1,0>:w               16:w {align1};
 #endif
+
+shl  (2) read0_header.0<1>:D    orig_xy_ub<2,2,1>:UB 4:UW {align1};    /* (x, y) * 16 */
+add  (1) read0_header.0<1>:D    read0_header.0<0,1,0>:D -8:W {align1};     /* X offset */
+add  (1) read0_header.4<1>:D    read0_header.4<0,1,0>:D -1:W {align1};     /* Y offset */ 
+
+shl  (2) read1_header.0<1>:D    orig_xy_ub<2,2,1>:UB 4:UW {align1};    /* (x, y) * 16 */
+add  (1) read1_header.0<1>:D    read1_header.0<0,1,0>:D -4:W {align1};     /* X offset */
+
+shl  (2) vme_m0.8<1>:UW         orig_xy_ub<2,2,1>:UB 4:UW {align1};    /* Source =  (x, y) * 16 */
 
 add             (1)     obw_m0.8<1>:UD          obw_m0.8<0,1,0>:UD              INTER_VME_OUTPUT_IN_OWS:UW {align1} ;
         
