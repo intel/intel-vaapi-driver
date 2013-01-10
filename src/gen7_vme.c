@@ -67,6 +67,7 @@ enum AVC_VME_KERNEL_TYPE{
     AVC_VME_INTRA_SHADER = 0,
     AVC_VME_INTER_SHADER,
     AVC_VME_BATCHBUFFER,
+    AVC_VME_BINTER_SHADER,
     AVC_VME_KERNEL_SUM
 };
 
@@ -92,6 +93,10 @@ static const uint32_t gen7_vme_batchbuffer[][4] = {
 #include "shaders/vme/batchbuffer.g7b"
 };
 
+static const uint32_t gen7_vme_binter_frame[][4] = {
+#include "shaders/vme/inter_bframe_ivb.g7b"
+};
+
 static struct i965_kernel gen7_vme_kernels[] = {
     {
         "AVC VME Intra Frame",
@@ -114,6 +119,13 @@ static struct i965_kernel gen7_vme_kernels[] = {
         sizeof(gen7_vme_batchbuffer),
         NULL
     },
+    {
+        "AVC VME binter Frame",
+        AVC_VME_BINTER_SHADER,
+        gen7_vme_binter_frame,
+        sizeof(gen7_vme_binter_frame),
+        NULL
+    }
 };
 
 static const uint32_t gen7_vme_mpeg2_inter_frame[][4] = {
@@ -428,6 +440,7 @@ static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
     unsigned int *vme_state_message;
 	unsigned int *mb_cost_table;
     int i;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
 
 	mb_cost_table = (unsigned int *)vme_context->vme_state_message;
     //building VME state message
@@ -435,20 +448,38 @@ static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
     assert(vme_context->vme_state.bo->virtual);
     vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
 
-    vme_state_message[0] = 0x01010101;
-    vme_state_message[1] = 0x10010101;
-    vme_state_message[2] = 0x0F0F0F0F;
-    vme_state_message[3] = 0x100F0F0F;
-    vme_state_message[4] = 0x01010101;
-    vme_state_message[5] = 0x10010101;
-    vme_state_message[6] = 0x0F0F0F0F;
-    vme_state_message[7] = 0x100F0F0F;
-    vme_state_message[8] = 0x01010101;
-    vme_state_message[9] = 0x10010101;
-    vme_state_message[10] = 0x0F0F0F0F;
-    vme_state_message[11] = 0x000F0F0F;
-    vme_state_message[12] = 0x00;
-    vme_state_message[13] = 0x00;
+    if ((slice_param->slice_type == SLICE_TYPE_P) ||
+        (slice_param->slice_type == SLICE_TYPE_SP)) {
+	    vme_state_message[0] = 0x01010101;
+	    vme_state_message[1] = 0x10010101;
+	    vme_state_message[2] = 0x0F0F0F0F;
+	    vme_state_message[3] = 0x100F0F0F;
+	    vme_state_message[4] = 0x01010101;
+	    vme_state_message[5] = 0x10010101;
+	    vme_state_message[6] = 0x0F0F0F0F;
+	    vme_state_message[7] = 0x100F0F0F;
+	    vme_state_message[8] = 0x01010101;
+	    vme_state_message[9] = 0x10010101;
+	    vme_state_message[10] = 0x0F0F0F0F;
+	    vme_state_message[11] = 0x000F0F0F;
+	    vme_state_message[12] = 0x00;
+	    vme_state_message[13] = 0x00;
+	} else {
+	    vme_state_message[0] = 0x10010101;
+	    vme_state_message[1] = 0x100F0F0F;
+	    vme_state_message[2] = 0x10010101;
+	    vme_state_message[3] = 0x000F0F0F;
+	    vme_state_message[4] = 0;
+	    vme_state_message[5] = 0;
+	    vme_state_message[6] = 0;
+	    vme_state_message[7] = 0;
+	    vme_state_message[8] = 0;
+	    vme_state_message[9] = 0;
+	    vme_state_message[10] = 0;
+	    vme_state_message[11] = 0;
+	    vme_state_message[12] = 0;
+	    vme_state_message[13] = 0;
+	}
 
     vme_state_message[14] = (mb_cost_table[2] & 0xFFFF);
     vme_state_message[15] = 0;
@@ -780,11 +811,11 @@ static void gen7_vme_pipeline_programing(VADriverContextP ctx,
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
     int s;
     bool allow_hwscore = true;
+    int kernel_shader;
 
     for (s = 0; s < encode_state->num_slice_params_ext; s++) {
         pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
@@ -794,11 +825,23 @@ static void gen7_vme_pipeline_programing(VADriverContextP ctx,
 	}
     }
 
+	if ((pSliceParameter->slice_type == SLICE_TYPE_I) ||
+		(pSliceParameter->slice_type == SLICE_TYPE_I)) {
+		kernel_shader = AVC_VME_INTRA_SHADER;
+	} else if ((pSliceParameter->slice_type == SLICE_TYPE_P) ||
+		(pSliceParameter->slice_type == SLICE_TYPE_SP)) {
+		kernel_shader = AVC_VME_INTER_SHADER;
+	} else {
+		kernel_shader = AVC_VME_BINTER_SHADER;
+		if (!allow_hwscore)
+			kernel_shader = AVC_VME_INTER_SHADER;
+      }
+
     if (allow_hwscore)
 	gen7_vme_walker_fill_vme_batchbuffer(ctx, 
                                   encode_state,
                                   width_in_mbs, height_in_mbs,
-                                  is_intra ? AVC_VME_INTRA_SHADER : AVC_VME_INTER_SHADER, 
+                                  kernel_shader,
                                   pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
                                   encoder_context);
 	
@@ -806,7 +849,7 @@ static void gen7_vme_pipeline_programing(VADriverContextP ctx,
 	gen7_vme_fill_vme_batchbuffer(ctx, 
                                   encode_state,
                                   width_in_mbs, height_in_mbs,
-                                  is_intra ? AVC_VME_INTRA_SHADER : AVC_VME_INTER_SHADER, 
+                                  kernel_shader, 
                                   pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
                                   encoder_context);
 

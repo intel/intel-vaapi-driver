@@ -360,6 +360,7 @@ gen6_mfc_avc_slice_state(VADriverContextP ctx,
     int weighted_pred_idc = 0;
     unsigned int luma_log2_weight_denom = slice_param->luma_log2_weight_denom;
     unsigned int chroma_log2_weight_denom = slice_param->chroma_log2_weight_denom;
+    int bslice = 0;
 
     if (batch == NULL)
         batch = encoder_context->base.batch;
@@ -374,6 +375,7 @@ gen6_mfc_avc_slice_state(VADriverContextP ctx,
         weighted_pred_idc = pic_param->pic_fields.bits.weighted_pred_flag;
     } else if (slice_type == SLICE_TYPE_B) {
         weighted_pred_idc = pic_param->pic_fields.bits.weighted_bipred_idc;
+	bslice = 1;
 
         if (weighted_pred_idc == 2) {
             /* 8.4.3 - Derivation process for prediction weights (8-279) */
@@ -402,7 +404,7 @@ gen6_mfc_avc_slice_state(VADriverContextP ctx,
         OUT_BCS_BATCH(batch, 0);			/*no reference frames and pred_weight_table*/
     } else {
         OUT_BCS_BATCH(batch,
-                      (1 << 16) |        	        /*1 reference frame*/
+                      (1 << 16) | (bslice << 24) |     /*1 reference frame*/
                       (chroma_log2_weight_denom << 8) |
                       (luma_log2_weight_denom << 0));
     }

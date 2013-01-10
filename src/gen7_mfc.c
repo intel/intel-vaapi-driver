@@ -181,11 +181,13 @@ gen7_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
     BEGIN_BCS_BATCH(batch, 16);
 
     OUT_BCS_BATCH(batch, MFX_AVC_IMG_STATE | (16 - 2));
+	/*DW1 frame size */
     OUT_BCS_BATCH(batch,
                   ((width_in_mbs * height_in_mbs) & 0xFFFF));
     OUT_BCS_BATCH(batch, 
                   ((height_in_mbs - 1) << 16) | 
                   ((width_in_mbs - 1) << 0));
+	/*DW3 Qp setting */
     OUT_BCS_BATCH(batch, 
                   (0 << 24) |	/* Second Chroma QP Offset */
                   (0 << 16) |	/* Chroma QP Offset */
@@ -211,17 +213,21 @@ gen7_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
                   (1 << 2)  |   /* Frame MB only flag */
                   (0 << 1)  |   /* MBAFF mode is in active */
                   (0 << 0));    /* Field picture flag */
+	/*DW5 trequllis quantization */
     OUT_BCS_BATCH(batch, 0);    /* Mainly about MB rate control and debug, just ignoring */
     OUT_BCS_BATCH(batch,        /* Inter and Intra Conformance Max size limit */
                   (0xBB8 << 16) |       /* InterMbMaxSz */
                   (0xEE8) );            /* IntraMbMaxSz */
+	/* DW7 */
     OUT_BCS_BATCH(batch, 0);            /* Reserved */
     OUT_BCS_BATCH(batch, 0);            /* Slice QP Delta for bitrate control */
-    OUT_BCS_BATCH(batch, 0);            /* Slice QP Delta for bitrate control */	
+    OUT_BCS_BATCH(batch, 0);            /* Slice QP Delta for bitrate control */
+	/* DW10 frame bit setting */	
     OUT_BCS_BATCH(batch, 0x8C000000);
     OUT_BCS_BATCH(batch, 0x00010000);
     OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
+	/* DW13 Ref setting */
+    OUT_BCS_BATCH(batch, 0x02010100);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
