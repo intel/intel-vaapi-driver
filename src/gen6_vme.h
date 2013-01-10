@@ -95,4 +95,29 @@ extern void intel_vme_update_mbmv_cost(VADriverContextP ctx,
 
 Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
+#define		MODE_INTRA_NONPRED	0
+#define		MODE_INTRA_16X16	1
+#define		MODE_INTRA_8X8		2
+#define		MODE_INTRA_4X4		3
+#define		MODE_INTER_16X8		4
+#define		MODE_INTER_8X16		4
+#define		MODE_INTER_8X8		5
+#define		MODE_INTER_8X4		6
+#define		MODE_INTER_4X8		6
+#define		MODE_INTER_4X4		7
+#define		MODE_INTER_16X16	8
+#define		MODE_INTER_BWD		9
+#define		MODE_REFID_COST		10
+#define		MODE_CHROMA_INTRA	11
+
+#define		MODE_INTER_MV0		12
+#define		MODE_INTER_MV1		13
+#define		MODE_INTER_MV2		14
+
+#define		MODE_INTER_MV3		15
+#define		MODE_INTER_MV4		16
+#define		MODE_INTER_MV5		17
+#define		MODE_INTER_MV6		18
+#define		MODE_INTER_MV7		19
+
 #endif /* _GEN6_VME_H_ */

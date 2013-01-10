@@ -43,6 +43,7 @@
 #undef SURFACE_STATE_PADDED_SIZE
 #endif
 
+#define VME_MSG_LENGTH		32
 #define SURFACE_STATE_PADDED_SIZE_0_GEN7        ALIGN(sizeof(struct gen7_surface_state), 32)
 #define SURFACE_STATE_PADDED_SIZE_1_GEN7        ALIGN(sizeof(struct gen7_surface_state2), 32)
 #define SURFACE_STATE_PADDED_SIZE_GEN7          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN7, SURFACE_STATE_PADDED_SIZE_1_GEN7)
@@ -413,6 +414,52 @@ static void gen7_vme_state_setup_fixup(VADriverContextP ctx,
         vme_state_message[16] = intra_mb_mode_cost_table[mfc_context->bit_rate_control_context[slice_param->slice_type].QpPrimeY];
 }
 
+static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
+                                         struct encode_state *encode_state,
+                                         int is_intra,
+                                         struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    unsigned int *vme_state_message;
+	unsigned int *mb_cost_table;
+    int i;
+
+	mb_cost_table = (unsigned int *)vme_context->vme_state_message;
+    //building VME state message
+    dri_bo_map(vme_context->vme_state.bo, 1);
+    assert(vme_context->vme_state.bo->virtual);
+    vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
+
+    vme_state_message[0] = 0x01010101;
+    vme_state_message[1] = 0x10010101;
+    vme_state_message[2] = 0x0F0F0F0F;
+    vme_state_message[3] = 0x100F0F0F;
+    vme_state_message[4] = 0x01010101;
+    vme_state_message[5] = 0x10010101;
+    vme_state_message[6] = 0x0F0F0F0F;
+    vme_state_message[7] = 0x100F0F0F;
+    vme_state_message[8] = 0x01010101;
+    vme_state_message[9] = 0x10010101;
+    vme_state_message[10] = 0x0F0F0F0F;
+    vme_state_message[11] = 0x000F0F0F;
+    vme_state_message[12] = 0x00;
+    vme_state_message[13] = 0x00;
+
+    vme_state_message[14] = (mb_cost_table[2] & 0xFFFF);
+    vme_state_message[15] = 0;
+    vme_state_message[16] = mb_cost_table[0];
+    vme_state_message[17] = mb_cost_table[1];
+    vme_state_message[18] = mb_cost_table[3];
+    vme_state_message[19] = mb_cost_table[4];
+
+    for(i = 20; i < 32; i++) {
+        vme_state_message[i] = 0;
+    }
+
+    dri_bo_unmap( vme_context->vme_state.bo);
+    return VA_STATUS_SUCCESS;
+}
+
 static VAStatus gen7_vme_vme_state_setup(VADriverContextP ctx,
                                          struct encode_state *encode_state,
                                          int is_intra,
@@ -622,12 +669,14 @@ static VAStatus gen7_vme_prepare(VADriverContextP ctx,
     if (!vme_context->h264_level ||
 		(vme_context->h264_level != pSequenceParameter->level_idc)) {
 	vme_context->h264_level = pSequenceParameter->level_idc;	
-    }	
+    }
+	
+    intel_vme_update_mbmv_cost(ctx, encode_state, encoder_context);
     /*Setup all the memory object*/
     gen7_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
     gen7_vme_interface_setup(ctx, encode_state, encoder_context);
     gen7_vme_constant_setup(ctx, encode_state, encoder_context);
-    gen7_vme_vme_state_setup(ctx, encode_state, is_intra, encoder_context);
+    gen7_vme_avc_state_setup(ctx, encode_state, is_intra, encoder_context);
 
     /*Programing media pipeline*/
     gen7_vme_pipeline_programing(ctx, encode_state, encoder_context);
@@ -934,6 +983,11 @@ gen7_vme_context_destroy(void *context)
     dri_bo_unreference(vme_context->vme_batchbuffer.bo);
     vme_context->vme_batchbuffer.bo = NULL;
 
+    if (vme_context->vme_state_message) {
+	free(vme_context->vme_state_message);
+	vme_context->vme_state_message = NULL;
+    }
+
     free(vme_context);
 }
 
@@ -994,6 +1048,7 @@ Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
     encoder_context->vme_context = vme_context;
     encoder_context->vme_context_destroy = gen7_vme_context_destroy;
+    vme_context->vme_state_message = malloc(VME_MSG_LENGTH * sizeof(int));
 
     return True;
 }
