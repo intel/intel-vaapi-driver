@@ -28,6 +28,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
@@ -75,6 +76,10 @@ enum MPEG2_VME_KERNEL_TYPE{
     MPEG2_VME_KERNEL_SUM
 };
  
+#define		MB_SCOREBOARD_A		(1 << 0)
+#define		MB_SCOREBOARD_B		(1 << 1)
+#define		MB_SCOREBOARD_C		(1 << 2)
+
 static const uint32_t gen7_vme_intra_frame[][4] = {
 #include "shaders/vme/intra_frame_ivb.g7b"
 };
@@ -599,6 +604,149 @@ gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx,
     dri_bo_unmap(vme_context->vme_batchbuffer.bo);
 }
 
+/* check whether the mb of (x_index, y_index) is out of bound */
+static inline int loop_in_bounds(int x_index, int y_index, int first_mb, int num_mb, int mb_width, int mb_height)
+{
+	int mb_index;
+	if (x_index < 0 || x_index >= mb_width)
+		return -1;
+	if (y_index < 0 || y_index >= mb_height)
+		return -1;
+	
+	mb_index = y_index * mb_width + x_index;
+	if (mb_index < first_mb || mb_index > (first_mb + num_mb))
+		return -1;
+	return 0;
+}
+
+static void
+gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
+                              struct encode_state *encode_state,
+                              int mb_width, int mb_height,
+                              int kernel,
+                              int transform_8x8_mode_flag,
+                              struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    int mb_x = 0, mb_y = 0;
+    int mb_row;
+    int s;
+    unsigned int *command_ptr;
+    int temp;
+
+
+#define		USE_SCOREBOARD		(1 << 21)
+ 
+    dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
+    command_ptr = vme_context->vme_batchbuffer.bo->virtual;
+
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+        VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
+        int first_mb = pSliceParameter->macroblock_address;
+        int num_mb = pSliceParameter->num_macroblocks;
+        unsigned int mb_intra_ub, score_dep;
+	int x_outer, y_outer, x_inner, y_inner;
+
+	x_outer = first_mb % mb_width;
+	y_outer = first_mb / mb_width;
+	mb_row = y_outer;
+				 
+	for (; x_outer < (mb_width -2 ) && !loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+		x_inner = x_outer;
+		y_inner = y_outer;
+		for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+	    		mb_intra_ub = 0;
+			score_dep = 0;
+			if (x_inner != 0) {
+				mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+				score_dep |= MB_SCOREBOARD_A; 
+			}
+			if (y_inner != mb_row) {
+				mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+				score_dep |= MB_SCOREBOARD_B;
+				if (x_inner != 0)
+					mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+				if (x_inner != (mb_width -1)) {
+					mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+					score_dep |= MB_SCOREBOARD_C;
+				}
+			}
+							
+            		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+			*command_ptr++ = kernel;
+			*command_ptr++ = USE_SCOREBOARD;
+			/* Indirect data */
+			*command_ptr++ = 0;
+			/* the (X, Y) term of scoreboard */
+			*command_ptr++ = ((y_inner << 16) | x_inner);
+			*command_ptr++ = score_dep;
+
+			/*inline data */
+			*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+			*command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+			x_inner -= 2;
+			y_inner += 1;
+		}
+		x_outer += 1;
+	}
+
+	x_outer = mb_width - 2;
+	y_outer = first_mb / mb_width;
+	temp = 0;
+	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) { 
+		y_inner = y_outer;
+		x_inner = x_outer;
+		for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+	    		mb_intra_ub = 0;
+			score_dep = 0;
+			if (x_inner != 0) {
+				mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+				score_dep |= MB_SCOREBOARD_A; 
+			}
+			if (y_inner != mb_row) {
+				mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+				score_dep |= MB_SCOREBOARD_B;
+				if (x_inner != 0)
+					mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+				if (x_inner != (mb_width -1)) {
+					mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+					score_dep |= MB_SCOREBOARD_C;
+				}
+			}
+
+            		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+			*command_ptr++ = kernel;
+			*command_ptr++ = USE_SCOREBOARD;
+			/* Indirect data */
+			*command_ptr++ = 0;
+			/* the (X, Y) term of scoreboard */
+			*command_ptr++ = ((y_inner << 16) | x_inner);
+			*command_ptr++ = score_dep;
+
+			/*inline data */
+			*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+			*command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+
+			x_inner -= 2;
+			y_inner += 1;
+		}
+		temp++;
+		if (temp == 2) {
+			y_outer += 1;
+			temp = 0;
+			x_outer = mb_width - 2;
+		} else {
+			x_outer++;
+		}	
+	}
+    }
+
+    *command_ptr++ = 0;
+    *command_ptr++ = MI_BATCH_BUFFER_END;
+
+    dri_bo_unmap(vme_context->vme_batchbuffer.bo);
+}
+
 static void gen7_vme_media_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -635,8 +783,27 @@ static void gen7_vme_pipeline_programing(VADriverContextP ctx,
     int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+    int s;
+    bool allow_hwscore = true;
 
-    gen7_vme_fill_vme_batchbuffer(ctx, 
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+        pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
+        if ((pSliceParameter->macroblock_address % width_in_mbs)) {
+		allow_hwscore = false;
+		break;
+	}
+    }
+
+    if (allow_hwscore)
+	gen7_vme_walker_fill_vme_batchbuffer(ctx, 
+                                  encode_state,
+                                  width_in_mbs, height_in_mbs,
+                                  is_intra ? AVC_VME_INTRA_SHADER : AVC_VME_INTER_SHADER, 
+                                  pPicParameter->pic_fields.bits.transform_8x8_mode_flag,
+                                  encoder_context);
+	
+    else
+	gen7_vme_fill_vme_batchbuffer(ctx, 
                                   encode_state,
                                   width_in_mbs, height_in_mbs,
                                   is_intra ? AVC_VME_INTRA_SHADER : AVC_VME_INTER_SHADER, 
@@ -1008,6 +1175,25 @@ Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     vme_context->gpe_context.vfe_state.gpgpu_mode = 0;
     vme_context->gpe_context.vfe_state.urb_entry_size = 59 - 1;
     vme_context->gpe_context.vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
+
+	vme_context->gpe_context.vfe_desc5.scoreboard0.enable = 1;
+	vme_context->gpe_context.vfe_desc5.scoreboard0.type = SCOREBOARD_STALLING;
+	vme_context->gpe_context.vfe_desc5.scoreboard0.mask = (MB_SCOREBOARD_A |
+								MB_SCOREBOARD_B |
+								MB_SCOREBOARD_C);
+
+	/* In VME prediction the current mb depends on the neighbour 
+	 * A/B/C macroblock. So the left/up/up-right dependency should
+	 * be considered.
+	 */
+	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x0 = -1;
+	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y0 = 0;
+	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x1 = 0;
+	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y1 = -1;
+	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x2 = 1;
+	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y2 = -1;
+	
+	vme_context->gpe_context.vfe_desc7.dword = 0;
 
     if(encoder_context->profile == VAProfileH264Baseline ||
        encoder_context->profile == VAProfileH264Main     ||
