@@ -51,6 +51,7 @@ source_c = \
 	gen6_mfc_common.c	\
 	gen6_mfd.c		\
 	gen6_vme.c		\
+	gen7_vme.c		\
 	gen7_mfc.c		\
 	gen7_mfd.c		\
 	gen75_mfd.c		\

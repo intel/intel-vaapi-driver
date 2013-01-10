@@ -92,4 +92,7 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
 extern void intel_vme_update_mbmv_cost(VADriverContextP ctx,
                                        struct encode_state *encode_state,
                                        struct intel_encoder_context *encoder_context);
+
+Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+
 #endif /* _GEN6_VME_H_ */

@@ -207,7 +207,7 @@ gen7_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
         }
     }
 
-    gen6_vme_context_init(ctx, encoder_context);
+    gen7_vme_context_init(ctx, encoder_context);
     assert(encoder_context->vme_context);
     assert(encoder_context->vme_context_destroy);
     assert(encoder_context->vme_pipeline);
