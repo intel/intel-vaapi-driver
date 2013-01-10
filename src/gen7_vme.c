@@ -75,11 +75,11 @@ enum MPEG2_VME_KERNEL_TYPE{
 };
  
 static const uint32_t gen7_vme_intra_frame[][4] = {
-#include "shaders/vme/intra_frame.g7b"
+#include "shaders/vme/intra_frame_ivb.g7b"
 };
 
 static const uint32_t gen7_vme_inter_frame[][4] = {
-#include "shaders/vme/inter_frame.g7b"
+#include "shaders/vme/inter_frame_ivb.g7b"
 };
 
 static const uint32_t gen7_vme_batchbuffer[][4] = {
@@ -460,6 +460,12 @@ static VAStatus gen7_vme_vme_state_setup(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+#define		INTRA_PRED_AVAIL_FLAG_AE	0x60
+#define		INTRA_PRED_AVAIL_FLAG_B		0x10
+#define		INTRA_PRED_AVAIL_FLAG_C       	0x8
+#define		INTRA_PRED_AVAIL_FLAG_D		0x4
+#define		INTRA_PRED_AVAIL_FLAG_BCD_MASK	0x1C
+
 static void
 gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx, 
                               struct encode_state *encode_state,
@@ -469,44 +475,75 @@ gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx,
                               struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    int number_mb_cmds;
     int mb_x = 0, mb_y = 0;
-    int i, s;
+    int i, s, j;
     unsigned int *command_ptr;
+
 
     dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
     command_ptr = vme_context->vme_batchbuffer.bo->virtual;
 
     for (s = 0; s < encode_state->num_slice_params_ext; s++) {
-        VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
-        int slice_mb_begin = pSliceParameter->macroblock_address;
-        int slice_mb_number = pSliceParameter->num_macroblocks;
-        
-        for (i = 0; i < slice_mb_number;  ) {
-            int mb_count = i + slice_mb_begin;    
-            mb_x = mb_count % mb_width;
-            mb_y = mb_count / mb_width;
-            if( i == 0 ) {
-                number_mb_cmds = mb_width;          // we must mark the slice edge. 
-            } else if ( (i + 128 ) <= slice_mb_number) {
-                number_mb_cmds = 128;
-            } else {
-                number_mb_cmds = slice_mb_number - i;
+        VAEncSliceParameterBufferMPEG2 *slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[s]->buffer;
+
+        for (j = 0; j < encode_state->slice_params_ext[s]->num_elements; j++) {
+            int slice_mb_begin = slice_param->macroblock_address;
+            int slice_mb_number = slice_param->num_macroblocks;
+            unsigned int mb_intra_ub;
+            int slice_mb_x = slice_param->macroblock_address % mb_width;
+
+            for (i = 0; i < slice_mb_number;) {
+                int mb_count = i + slice_mb_begin;    
+
+                mb_x = mb_count % mb_width;
+                mb_y = mb_count / mb_width;
+                mb_intra_ub = 0;
+
+                if (mb_x != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+                }
+
+                if (mb_y != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+
+                    if (mb_x != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+
+                    if (mb_x != (mb_width -1))
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                }
+
+                if (i < mb_width) {
+                    if (i == 0)
+                        mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_AE);
+
+                    mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_BCD_MASK);
+
+                    if ((i == (mb_width - 1)) && slice_mb_x) {
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                    }
+                }
+		
+                if ((i == mb_width) && slice_mb_x) {
+                    mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
+                }
+
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = kernel;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+   
+                /*inline data */
+                *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
+                *command_ptr++ = ( (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+
+                i += 1;
             }
 
-            *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
-            *command_ptr++ = kernel;
-            *command_ptr++ = 0;
-            *command_ptr++ = 0;
-            *command_ptr++ = 0;
-            *command_ptr++ = 0;
-   
-            /*inline data */
-            *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
-            *command_ptr++ = (number_mb_cmds << 16 | transform_8x8_mode_flag | ((i==0) << 1));
-
-            i += number_mb_cmds;
-        } 
+            slice_param++;
+        }
     }
 
     *command_ptr++ = 0;
