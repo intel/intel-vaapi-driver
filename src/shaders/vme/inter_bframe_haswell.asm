@@ -8,7 +8,7 @@
  */
 // Modual name: Inter_bframe_haswell.asm
 //
-// Make intra predition estimation for Inter frame for B-frame
+// Make inter predition estimation for Inter frame for B-frame
 //
 
 //
@@ -21,7 +21,7 @@
 /*
  * __START
  */
-__INTRA_START:
+__INTER_START:
 mov  (16) tmp_reg0.0<1>:UD      0x0:UD {align1};
 mov  (16) tmp_reg2.0<1>:UD      0x0:UD {align1};
 mov  (16) tmp_reg4.0<1>:UD      0x0:UD {align1} ;
@@ -168,7 +168,7 @@ mbb_start:
 mov  (8) mb_msg0.0<1>:ud	0:ud		{align1};
 and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
 /* MB B doesn't exist. Zero MV. mba_flag is zero */
-/* If MB B doesn't exist, neight of MB C nor D exists */
+/* If MB B doesn't exist, neither MB C nor D exists */
 (f0.0)  mov  (2)    	mbb_result.20<1>:w	-1:w		{align1};
 (f0.0)  mov  (2)    	mbc_result.20<1>:w	-1:w		{align1};
 (f0.0)  jmpi (1)	mb_mvp_start;
@@ -389,7 +389,7 @@ mov  (2)  mbc_result.20<1>:w		0:w	{align1};
 	
 mb_mvp_start:
 /*TODO: Add the skip prediction */
-/* Check whether both MB and C are invailable */
+/* Check whether both MB B and C are inavailable */
 add	(1)	tmp_reg0.0<1>:d		mbb_result.0<0,1,0>:d	mbc_result.0<0,1,0>:d	{align1};
 cmp.z.f0.0 (1)	null:d			tmp_reg0.0<0,1,0>:d	0:d	{align1};
 (-f0.0)	jmpi (1)	mb_median_start;
@@ -442,7 +442,7 @@ cmp.z.f0.0	(1)	null:d	mba_result.22<1>:w	0:w	{align1};
 cmp.z.f0.0	(1)	null:d	mbb_result.22<1>:w	0:w	{align1};
 (f0.0)	add	(1)	tmp_reg0.0<1>:w		tmp_reg0.0<1>:w	1:w	{align1};
 (f0.0)	mov	(1)	tmp_reg0.4<1>:ud	mbb_result.8<0,1,0>:ud	{align1};
-cmp.z.f0.0	(1)	null:d	mbc_result.20<1>:w	0:w	{align1};
+cmp.z.f0.0	(1)	null:d	mbc_result.22<1>:w	0:w	{align1};
 (f0.0)	add	(1)	tmp_reg0.0<1>:w		tmp_reg0.0<1>:w	1:w	{align1};
 (f0.0)	mov	(1)	tmp_reg0.4<1>:ud	mbc_result.8<0,1,0>:ud	{align1};
 cmp.e.f0.0	(1)	null:d	tmp_reg0.0<1>:w	 1:w	{align1};

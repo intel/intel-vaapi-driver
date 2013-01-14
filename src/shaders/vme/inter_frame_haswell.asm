@@ -6,9 +6,9 @@
  * http://www.opensource.org/licenses/eclipse-1.0.php.
  *
  */
-// Modual name: IntraFrame.asm
+// Modual name: Inter_frame_haswell.asm
 //
-// Make intra predition estimation for Intra frame
+// Make inter predition estimation for Inter-frame on Haswell
 //
 
 //
@@ -21,7 +21,7 @@
 /*
  * __START
  */
-__INTRA_START:
+__INTER_START:
 mov  (16) tmp_reg0.0<1>:UD      0x0:UD {align1};
 mov  (16) tmp_reg2.0<1>:UD      0x0:UD {align1};
 mov  (16) tmp_reg4.0<1>:UD      0x0:UD {align1} ;
@@ -150,7 +150,7 @@ mbb_start:
 mov  (8) mb_msg0.0<1>:ud	0:ud		{align1};
 and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
 /* MB B doesn't exist. Zero MV. mba_flag is zero */
-/* If MB B doesn't exist, neight of MB C nor D exists */
+/* If MB B doesn't exist, neither MB C nor D exists */
 (f0.0)  mov  (2)    	mbb_result.20<1>:w	-1:w		{align1};
 (f0.0)  mov  (2)    	mbc_result.20<1>:w	-1:w		{align1};
 (f0.0)  jmpi (1)	mb_mvp_start;
@@ -318,11 +318,11 @@ send (16)
 
 /* Forward MV */
 mov	   (2)		mbc_result.4<1>:ud		mb_mv3.24<2,2,1>:ud	{align1};
-mov	   (1)		mbc_result.18<1>:w		MB_PRED_FLAG		{align1};
+mov	   (1)		mbc_result.16<1>:w		MB_PRED_FLAG		{align1};
 	
 mb_mvp_start:
 /*TODO: Add the skip prediction */
-/* Check whether both MB and C are invailable */
+/* Check whether both MB B and C are inavailable */
 add	(1)	tmp_reg0.0<1>:d		mbb_result.0<0,1,0>:d	mbc_result.0<0,1,0>:d	{align1};
 cmp.z.f0.0 (1)	null:d			tmp_reg0.0<0,1,0>:d	0:d	{align1};
 (-f0.0)	jmpi (1)	mb_median_start;
