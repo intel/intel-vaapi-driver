@@ -761,17 +761,17 @@ static void gen75_vme_pipeline_programing(VADriverContextP ctx,
 		break;
 	}
     }
-	if ((pSliceParameter->slice_type == SLICE_TYPE_I) ||
-		(pSliceParameter->slice_type == SLICE_TYPE_I)) {
-		kernel_shader = VME_INTRA_SHADER;
-	} else if ((pSliceParameter->slice_type == SLICE_TYPE_P) ||
-		(pSliceParameter->slice_type == SLICE_TYPE_SP)) {
-		kernel_shader = VME_INTER_SHADER;
-	} else {
-		kernel_shader = VME_BINTER_SHADER;
-		if (!allow_hwscore)
-			kernel_shader = VME_INTER_SHADER;
-	}
+    if ((pSliceParameter->slice_type == SLICE_TYPE_I) ||
+  	(pSliceParameter->slice_type == SLICE_TYPE_I)) {
+ 	kernel_shader = VME_INTRA_SHADER;
+   } else if ((pSliceParameter->slice_type == SLICE_TYPE_P) ||
+ 	(pSliceParameter->slice_type == SLICE_TYPE_SP)) {
+	kernel_shader = VME_INTER_SHADER;
+   } else {
+ 	kernel_shader = VME_BINTER_SHADER;
+	if (!allow_hwscore)
+	     kernel_shader = VME_INTER_SHADER;
+   }
     if (allow_hwscore)
 	gen75_vme_walker_fill_vme_batchbuffer(ctx, 
                                   encode_state,
@@ -1170,7 +1170,7 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
 
         break;
     }
-	vme_context->vme_kernel_sum = i965_kernel_num;
+    vme_context->vme_kernel_sum = i965_kernel_num;
     vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
     vme_context->gpe_context.idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
@@ -1184,24 +1184,24 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
     vme_context->gpe_context.vfe_state.urb_entry_size = 59 - 1;
     vme_context->gpe_context.vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
 
-	vme_context->gpe_context.vfe_desc5.scoreboard0.enable = 1;
-	vme_context->gpe_context.vfe_desc5.scoreboard0.type = SCOREBOARD_STALLING;
-	vme_context->gpe_context.vfe_desc5.scoreboard0.mask = (MB_SCOREBOARD_A |
+    vme_context->gpe_context.vfe_desc5.scoreboard0.enable = 1;
+    vme_context->gpe_context.vfe_desc5.scoreboard0.type = SCOREBOARD_STALLING;
+    vme_context->gpe_context.vfe_desc5.scoreboard0.mask = (MB_SCOREBOARD_A |
 								MB_SCOREBOARD_B |
 								MB_SCOREBOARD_C);
 
-	/* In VME prediction the current mb depends on the neighbour 
-	 * A/B/C macroblock. So the left/up/up-right dependency should
-	 * be considered.
-	 */
-	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x0 = -1;
-	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y0 = 0;
-	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x1 = 0;
-	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y1 = -1;
-	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x2 = 1;
-	vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y2 = -1;
+    /* In VME prediction the current mb depends on the neighbour 
+     * A/B/C macroblock. So the left/up/up-right dependency should
+     * be considered.
+     */
+    vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x0 = -1;
+    vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y0 = 0;
+    vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x1 = 0;
+    vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y1 = -1;
+    vme_context->gpe_context.vfe_desc6.scoreboard1.delta_x2 = 1;
+    vme_context->gpe_context.vfe_desc6.scoreboard1.delta_y2 = -1;
 	
-	vme_context->gpe_context.vfe_desc7.dword = 0;
+    vme_context->gpe_context.vfe_desc7.dword = 0;
 
     i965_gpe_load_kernels(ctx,
                           &vme_context->gpe_context,
