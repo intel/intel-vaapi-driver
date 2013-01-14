@@ -120,4 +120,21 @@ Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 #define		MODE_INTER_MV6		18
 #define		MODE_INTER_MV7		19
 
+#define		INTRA_PRED_AVAIL_FLAG_AE	0x60
+#define		INTRA_PRED_AVAIL_FLAG_B		0x10
+#define		INTRA_PRED_AVAIL_FLAG_C       	0x8
+#define		INTRA_PRED_AVAIL_FLAG_D		0x4
+#define		INTRA_PRED_AVAIL_FLAG_BCD_MASK	0x1C
+
+extern void
+gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
+                              struct encode_state *encode_state,
+                              int mb_width, int mb_height,
+                              int kernel,
+                              int transform_8x8_mode_flag,
+                              struct intel_encoder_context *encoder_context);
+
+extern void 
+gen7_vme_scoreboard_init(VADriverContextP ctx, struct gen6_vme_context *vme_context);
+
 #endif /* _GEN6_VME_H_ */
