@@ -861,6 +861,7 @@ gen6_mfd_avc_bsd_object(VADriverContextP ctx,
                   (0 << 8));
     OUT_BCS_BATCH(batch,
                   ((slice_data_bit_offset >> 3) << 16) |
+                  (1 << 7)  |
                   (1 << 6)  |
                   ((0x7 - (slice_data_bit_offset & 0x7)) << 0));
     OUT_BCS_BATCH(batch, 0);
@@ -1920,7 +1921,6 @@ gen6_mfd_vc1_bsd_object(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   slice_param->slice_vertical_position << 24 |
                   next_slice_start_vert_pos << 16 |
-                  (1 << 7) |
                   (macroblock_offset & 0x7));
     ADVANCE_BCS_BATCH(batch);
 }
