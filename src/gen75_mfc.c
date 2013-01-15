@@ -2007,7 +2007,7 @@ gen75_mfc_mpeg2_pak_object_intra(VADriverContextP ctx,
     return len_in_dwords;
 }
 
-#define MV_OFFSET_IN_WORD       112
+#define MPEG2_INTER_MV_OFFSET   12 
 
 static struct _mv_ranges
 {
@@ -2068,10 +2068,10 @@ gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
         batch = encoder_context->base.batch;
 
     mvptr = (short *)msg;
-    mvx0 = mpeg2_motion_vector(mvptr[MV_OFFSET_IN_WORD + 0] / 2, x, width_in_mbs * 16, pic_param->f_code[0][0]);
-    mvy0 = mpeg2_motion_vector(mvptr[MV_OFFSET_IN_WORD + 1] / 2, y, height_in_mbs * 16, pic_param->f_code[0][0]);
-    mvx1 = mpeg2_motion_vector(mvptr[MV_OFFSET_IN_WORD + 2] / 2, x, width_in_mbs * 16, pic_param->f_code[1][0]);
-    mvy1 = mpeg2_motion_vector(mvptr[MV_OFFSET_IN_WORD + 3] / 2, y, height_in_mbs * 16, pic_param->f_code[1][0]);
+    mvx0 = mpeg2_motion_vector(mvptr[MPEG2_INTER_MV_OFFSET + 0] / 2, x, width_in_mbs * 16, pic_param->f_code[0][0]);
+    mvy0 = mpeg2_motion_vector(mvptr[MPEG2_INTER_MV_OFFSET + 1] / 2, y, height_in_mbs * 16, pic_param->f_code[0][0]);
+    mvx1 = mpeg2_motion_vector(mvptr[MPEG2_INTER_MV_OFFSET + 2] / 2, x, width_in_mbs * 16, pic_param->f_code[1][0]);
+    mvy1 = mpeg2_motion_vector(mvptr[MPEG2_INTER_MV_OFFSET + 3] / 2, y, height_in_mbs * 16, pic_param->f_code[1][0]);
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
@@ -2113,12 +2113,6 @@ gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
 
     return len_in_dwords;
 }
-
-#define INTRA_RDO_OFFSET        4
-#define	INTER_RDO_OFFSET        54
-#define	INTER_MSG_OFFSET        52
-#define	INTER_MV_OFFSET         224
-#define	RDO_MASK                0xFFFF
 
 static void
 intel_mfc_mpeg2_pipeline_header_programing(VADriverContextP ctx,
