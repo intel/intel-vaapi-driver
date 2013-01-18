@@ -889,6 +889,7 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 	int num_mb = pSliceParameter->num_macroblocks;
 	unsigned int mb_intra_ub, score_dep;
 	int x_outer, y_outer, x_inner, y_inner;
+	int xtemp_outer = 0;
 
 	x_outer = first_mb % mb_width;
 	y_outer = first_mb / mb_width;
@@ -932,7 +933,10 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 	    x_outer += 1;
 	}
 
-	x_outer = mb_width - 2;
+	xtemp_outer = mb_width - 2;
+	if (xtemp_outer < 0)
+		xtemp_outer = 0;
+	x_outer = xtemp_outer;
 	y_outer = first_mb / mb_width;
 	temp = 0;
 	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) { 
@@ -972,14 +976,11 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 		x_inner -= 2;
 		y_inner += 1;
 	    }
-	    temp++;
-	    if (temp == 2) {
+	    x_outer++;
+	    if (x_outer >= mb_width) {
 		y_outer += 1;
-		temp = 0;
-		x_outer = mb_width - 2;
-	    } else {
-		x_outer++;
-	    }	
+		x_outer = xtemp_outer;
+	    }		
 	}
     }
 

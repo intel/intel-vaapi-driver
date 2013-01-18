@@ -266,6 +266,9 @@ mov	   (1)		mbc_result.16<1>:w		MB_PRED_FLAG		{align1};
 
 jmpi   (1)    mb_mvp_start;
 mbd_start:
+mov  (8) mb_msg0.0<1>:ud	0:ud		{align1};
+and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_D:uw   {align1};
+(f0.0)  jmpi (1)	mb_mvp_start;
 mov  (1) mbc_result.0<1>:d	MB_AVAIL		{align1};	
 mov  (2) tmp_reg0.0<1>:UW	orig_xy_ub<2,2,1>:UB	{align1};
 add  (2) tmp_reg0.0<1>:w	tmp_reg0.0<2,2,1>:w	-1:w	{align1};
