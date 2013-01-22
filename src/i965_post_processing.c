@@ -53,7 +53,13 @@
 #define SURFACE_STATE_PADDED_SIZE_1_GEN7        ALIGN(sizeof(struct gen7_surface_state2), 32)
 #define SURFACE_STATE_PADDED_SIZE_GEN7          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN7, SURFACE_STATE_PADDED_SIZE_1_GEN7)
 
-#define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_I965, SURFACE_STATE_PADDED_SIZE_GEN7)
+#define SURFACE_STATE_PADDED_SIZE_0_GEN8        ALIGN(sizeof(struct gen8_surface_state), 32)
+#define SURFACE_STATE_PADDED_SIZE_1_GEN8        ALIGN(sizeof(struct gen8_surface_state2), 32)
+#define SURFACE_STATE_PADDED_SIZE_GEN8          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN8, SURFACE_STATE_PADDED_SIZE_1_GEN8)
+
+#define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN8,\
+			MAX(SURFACE_STATE_PADDED_SIZE_I965, SURFACE_STATE_PADDED_SIZE_GEN7))
+
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET                    SURFACE_STATE_OFFSET(MAX_PP_SURFACES)
 
@@ -715,6 +721,13 @@ static VAStatus gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_po
                                            const VARectangle *dst_rect,
                                            void *filter_param);
 
+static VAStatus gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                                           const struct i965_surface *src_surface,
+                                           const VARectangle *src_rect,
+                                           struct i965_surface *dst_surface,
+                                           const VARectangle *dst_rect,
+                                           void *filter_param);
+
 static struct pp_module pp_modules_gen7[] = {
     {
         {
@@ -1160,6 +1173,201 @@ static struct pp_module pp_modules_gen75[] = {
             
 };
 
+/* TODO: Modify the shader and then compile it again.
+ * Currently it is derived from Haswell*/
+static const uint32_t pp_null_gen8[][4] = {
+};
+
+static const uint32_t pp_nv12_load_save_nv12_gen8[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pl2.g75b"
+};
+
+static const uint32_t pp_nv12_load_save_pl3_gen8[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pl3.g75b"
+};
+
+static const uint32_t pp_pl3_load_save_nv12_gen8[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pl2.g75b"
+};
+
+static const uint32_t pp_pl3_load_save_pl3_gen8[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pl3.g75b"
+};
+
+static const uint32_t pp_nv12_scaling_gen8[][4] = {
+#include "shaders/post_processing/gen7/avs.g75b"
+};
+
+static const uint32_t pp_nv12_avs_gen8[][4] = {
+#include "shaders/post_processing/gen7/avs.g75b"
+};
+
+static const uint32_t pp_nv12_dndi_gen8[][4] = {
+// #include "shaders/post_processing/gen7/dndi.g75b"
+};
+
+static const uint32_t pp_nv12_dn_gen8[][4] = {
+// #include "shaders/post_processing/gen7/nv12_dn_nv12.g75b"
+};
+static const uint32_t pp_nv12_load_save_pa_gen8[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_pa.g75b"
+};
+
+static const uint32_t pp_pl3_load_save_pa_gen8[][4] = {
+#include "shaders/post_processing/gen7/pl3_to_pa.g75b"
+};
+
+static const uint32_t pp_pa_load_save_nv12_gen8[][4] = {
+#include "shaders/post_processing/gen7/pa_to_pl2.g75b"
+};
+
+static struct pp_module pp_modules_gen8[] = {
+    {
+        {
+            "NULL module (for testing)",
+            PP_NULL,
+            pp_null_gen8,
+            sizeof(pp_null_gen8),
+            NULL,
+        },
+
+        pp_null_initialize,
+    },
+
+    {
+        {
+            "NV12_NV12",
+            PP_NV12_LOAD_SAVE_N12,
+            pp_nv12_load_save_nv12_gen8,
+            sizeof(pp_nv12_load_save_nv12_gen8),
+            NULL,
+        },
+
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12_PL3",
+            PP_NV12_LOAD_SAVE_PL3,
+            pp_nv12_load_save_pl3_gen8,
+            sizeof(pp_nv12_load_save_pl3_gen8),
+            NULL,
+        },
+        
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PL3_NV12",
+            PP_PL3_LOAD_SAVE_N12,
+            pp_pl3_load_save_nv12_gen75,
+            sizeof(pp_pl3_load_save_nv12_gen8),
+            NULL,
+        },
+
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PL3_PL3",
+            PP_PL3_LOAD_SAVE_N12,
+            pp_pl3_load_save_pl3_gen75,
+            sizeof(pp_pl3_load_save_pl3_gen8),
+            NULL,
+        },
+
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12 Scaling module",
+            PP_NV12_SCALING,
+            pp_nv12_scaling_gen8,
+            sizeof(pp_nv12_scaling_gen8),
+            NULL,
+        },
+
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12 AVS module",
+            PP_NV12_AVS,
+            pp_nv12_avs_gen8,
+            sizeof(pp_nv12_avs_gen8),
+            NULL,
+        },
+
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12 DNDI module",
+            PP_NV12_DNDI,
+            pp_nv12_dndi_gen8,
+            sizeof(pp_nv12_dndi_gen8),
+            NULL,
+        },
+
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12 DN module",
+            PP_NV12_DN,
+            pp_nv12_dn_gen8,
+            sizeof(pp_nv12_dn_gen8),
+            NULL,
+        },
+
+        gen8_pp_plx_avs_initialize,
+    },
+    {
+        {
+            "NV12_PA module",
+            PP_NV12_LOAD_SAVE_PA,
+            pp_nv12_load_save_pa_gen8,
+            sizeof(pp_nv12_load_save_pa_gen8),
+            NULL,
+        },
+    
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PL3_PA module",
+            PP_PL3_LOAD_SAVE_PA,
+            pp_pl3_load_save_pa_gen8,
+            sizeof(pp_pl3_load_save_pa_gen8),
+            NULL,
+        },
+    
+        gen8_pp_plx_avs_initialize,
+    },
+
+    {
+        {
+            "PA_NV12 module",
+            PP_PA_LOAD_SAVE_NV12,
+            pp_pa_load_save_nv12_gen8,
+            sizeof(pp_pa_load_save_nv12_gen8),
+            NULL,
+        },
+    
+        gen8_pp_plx_avs_initialize,
+    },
+          
+};
+
+          
 static int
 pp_get_surface_fourcc(VADriverContextP ctx, const struct i965_surface *surface)
 {
@@ -1250,7 +1458,45 @@ gen7_pp_set_surface_tiling(struct gen7_surface_state *ss, unsigned int tiling)
 }
 
 static void
+gen8_pp_set_surface_tiling(struct gen8_surface_state *ss, unsigned int tiling)
+{
+    switch (tiling) {
+    case I915_TILING_NONE:
+        ss->ss0.tiled_surface = 0;
+        ss->ss0.tile_walk = 0;
+        break;
+    case I915_TILING_X:
+        ss->ss0.tiled_surface = 1;
+        ss->ss0.tile_walk = I965_TILEWALK_XMAJOR;
+        break;
+    case I915_TILING_Y:
+        ss->ss0.tiled_surface = 1;
+        ss->ss0.tile_walk = I965_TILEWALK_YMAJOR;
+        break;
+    }
+}
+
+static void
 gen7_pp_set_surface2_tiling(struct gen7_surface_state2 *ss, unsigned int tiling)
+{
+    switch (tiling) {
+    case I915_TILING_NONE:
+        ss->ss2.tiled_surface = 0;
+        ss->ss2.tile_walk = 0;
+        break;
+    case I915_TILING_X:
+        ss->ss2.tiled_surface = 1;
+        ss->ss2.tile_walk = I965_TILEWALK_XMAJOR;
+        break;
+    case I915_TILING_Y:
+        ss->ss2.tiled_surface = 1;
+        ss->ss2.tile_walk = I965_TILEWALK_YMAJOR;
+        break;
+    }
+}
+
+static void
+gen8_pp_set_surface2_tiling(struct gen8_surface_state2 *ss, unsigned int tiling)
 {
     switch (tiling) {
     case I915_TILING_NONE:
@@ -1707,6 +1953,83 @@ gen7_pp_set_surface2_state(VADriverContextP ctx, struct i965_post_processing_con
     dri_bo_unmap(ss2_bo);
 }
 
+static void
+gen8_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                          dri_bo *surf_bo, unsigned long surf_bo_offset,
+                          int width, int height, int pitch, int format, 
+                          int index, int is_target)
+{
+    struct gen8_surface_state *ss;
+    dri_bo *ss_bo;
+    unsigned int tiling;
+    unsigned int swizzle;
+
+    dri_bo_get_tiling(surf_bo, &tiling, &swizzle);
+    ss_bo = pp_context->surface_state_binding_table.bo;
+    assert(ss_bo);
+
+    dri_bo_map(ss_bo, True);
+    assert(ss_bo->virtual);
+    ss = (struct gen8_surface_state *)((char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index));
+    memset(ss, 0, sizeof(*ss));
+    ss->ss0.surface_type = I965_SURFACE_2D;
+    ss->ss0.surface_format = format;
+    ss->ss8.base_addr = surf_bo->offset + surf_bo_offset;
+    ss->ss2.width = width - 1;
+    ss->ss2.height = height - 1;
+    ss->ss3.pitch = pitch - 1;
+    gen8_pp_set_surface_tiling(ss, tiling);
+    gen8_render_set_surface_scs(ss);
+    dri_bo_emit_reloc(ss_bo,
+                      I915_GEM_DOMAIN_RENDER, is_target ? I915_GEM_DOMAIN_RENDER : 0,
+                      surf_bo_offset,
+                      SURFACE_STATE_OFFSET(index) + offsetof(struct gen8_surface_state, ss8),
+                      surf_bo);
+    ((unsigned int *)((char *)ss_bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
+    dri_bo_unmap(ss_bo);
+}
+
+
+static void
+gen8_pp_set_surface2_state(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                           dri_bo *surf_bo, unsigned long surf_bo_offset,
+                           int width, int height, int wpitch,
+                           int xoffset, int yoffset,
+                           int format, int interleave_chroma,
+                           int index)
+{
+    struct gen8_surface_state2 *ss2;
+    dri_bo *ss2_bo;
+    unsigned int tiling;
+    unsigned int swizzle;
+
+    dri_bo_get_tiling(surf_bo, &tiling, &swizzle);
+    ss2_bo = pp_context->surface_state_binding_table.bo;
+    assert(ss2_bo);
+
+    dri_bo_map(ss2_bo, True);
+    assert(ss2_bo->virtual);
+    ss2 = (struct gen8_surface_state2 *)((char *)ss2_bo->virtual + SURFACE_STATE_OFFSET(index));
+    memset(ss2, 0, sizeof(*ss2));
+    ss2->ss6.base_addr = surf_bo->offset + surf_bo_offset;
+    ss2->ss1.cbcr_pixel_offset_v_direction = 0;
+    ss2->ss1.width = width - 1;
+    ss2->ss1.height = height - 1;
+    ss2->ss2.pitch = wpitch - 1;
+    ss2->ss2.interleave_chroma = interleave_chroma;
+    ss2->ss2.surface_format = format;
+    ss2->ss3.x_offset_for_cb = xoffset;
+    ss2->ss3.y_offset_for_cb = yoffset;
+    gen8_pp_set_surface2_tiling(ss2, tiling);
+    dri_bo_emit_reloc(ss2_bo,
+                      I915_GEM_DOMAIN_RENDER, 0,
+                      surf_bo_offset,
+                      SURFACE_STATE_OFFSET(index) + offsetof(struct gen8_surface_state2, ss6),
+                      surf_bo);
+    ((unsigned int *)((char *)ss2_bo->virtual + BINDING_TABLE_OFFSET))[index] = SURFACE_STATE_OFFSET(index);
+    dri_bo_unmap(ss2_bo);
+}
+
 static void 
 pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                 const struct i965_surface *surface, 
@@ -1983,6 +2306,183 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                                            SURFACE_FORMAT_R8_UNORM, 0,
                                            base_index + 1);
                 gen7_pp_set_surface2_state(ctx, pp_context,
+                                           bo, offset[2],
+                                           width[2], height[2], pitch[2],
+                                           0, 0,
+                                           SURFACE_FORMAT_R8_UNORM, 0,
+                                           base_index + 2);
+            }
+        }
+    }
+}
+
+static void 
+gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                                     const struct i965_surface *surface, 
+                                     int base_index, int is_target,
+                                     int *width, int *height, int *pitch, int *offset)
+{
+    struct object_surface *obj_surface;
+    struct object_image *obj_image;
+    dri_bo *bo;
+    int fourcc = pp_get_surface_fourcc(ctx, surface);
+    const int U = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
+                   fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 2 : 1;
+    const int V = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
+                   fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 1 : 2;
+    int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
+    int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') || fourcc == VA_FOURCC('U', 'Y', 'V', 'Y'));
+    int rgbx_format = (fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
+                              fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
+                              fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
+                              fourcc == VA_FOURCC('B', 'G', 'R', 'X'));
+
+    if (surface->type == I965_SURFACE_TYPE_SURFACE) {
+        obj_surface = (struct object_surface *)surface->base;
+        bo = obj_surface->bo;
+        width[0] = obj_surface->orig_width;
+        height[0] = obj_surface->orig_height;
+        pitch[0] = obj_surface->width;
+        offset[0] = 0;
+
+        if (packed_yuv) {
+            if (is_target)
+                width[0] = obj_surface->orig_width * 2; /* surface format is R8, so double the width */
+            else
+                width[0] = obj_surface->orig_width;     /* surface foramt is YCBCR, width is specified in units of pixels */
+
+            pitch[0] = obj_surface->width * 2;
+        } else if (rgbx_format) {
+	    if (is_target)
+                width[0] = obj_surface->orig_width * 4; /* surface format is R8, so quad the width */
+	}
+
+        width[1] = obj_surface->cb_cr_width;
+        height[1] = obj_surface->cb_cr_height;
+        pitch[1] = obj_surface->cb_cr_pitch;
+        offset[1] = obj_surface->y_cb_offset * obj_surface->width;
+
+        width[2] = obj_surface->cb_cr_width;
+        height[2] = obj_surface->cb_cr_height;
+        pitch[2] = obj_surface->cb_cr_pitch;
+        offset[2] = obj_surface->y_cr_offset * obj_surface->width;
+    } else {
+        obj_image = (struct object_image *)surface->base;
+        bo = obj_image->bo;
+        width[0] = obj_image->image.width;
+        height[0] = obj_image->image.height;
+        pitch[0] = obj_image->image.pitches[0];
+        offset[0] = obj_image->image.offsets[0];
+
+	if (rgbx_format) {
+	    if (is_target)
+		width[0] = obj_image->image.width * 4; /* surface format is R8, so quad the width */
+	} else if (packed_yuv) {
+            if (is_target)
+                width[0] = obj_image->image.width * 2;  /* surface format is R8, so double the width */
+            else
+                width[0] = obj_image->image.width;      /* surface foramt is YCBCR, width is specified in units of pixels */
+        } else if (interleaved_uv) {
+            width[1] = obj_image->image.width / 2;
+            height[1] = obj_image->image.height / 2;
+            pitch[1] = obj_image->image.pitches[1];
+            offset[1] = obj_image->image.offsets[1];
+        } else {
+            width[1] = obj_image->image.width / 2;
+            height[1] = obj_image->image.height / 2;
+            pitch[1] = obj_image->image.pitches[U];
+            offset[1] = obj_image->image.offsets[U];
+            width[2] = obj_image->image.width / 2;
+            height[2] = obj_image->image.height / 2;
+            pitch[2] = obj_image->image.pitches[V];
+            offset[2] = obj_image->image.offsets[V];
+        }
+    }
+
+    if (is_target) {
+        gen8_pp_set_surface_state(ctx, pp_context,
+                                  bo, 0,
+                                  width[0] / 4, height[0], pitch[0],
+                                  I965_SURFACEFORMAT_R8_UINT,
+                                  base_index, 1);
+	if (rgbx_format) {
+    		struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+		/* the format is MSB: X-B-G-R */
+		pp_static_parameter->grf2.save_avs_rgb_swap = 0;
+		if ((fourcc == VA_FOURCC('B', 'G', 'R', 'A')) || 
+                              (fourcc == VA_FOURCC('B', 'G', 'R', 'X'))) {
+			/* It is stored as MSB: X-R-G-B */
+			pp_static_parameter->grf2.save_avs_rgb_swap = 1;
+		}
+	}
+        if (!packed_yuv && !rgbx_format) {
+            if (interleaved_uv) {
+                gen8_pp_set_surface_state(ctx, pp_context,
+                                          bo, offset[1],
+                                          width[1] / 2, height[1], pitch[1],
+                                          I965_SURFACEFORMAT_R8G8_SINT,
+                                          base_index + 1, 1);
+            } else {
+                gen8_pp_set_surface_state(ctx, pp_context,
+                                          bo, offset[1],
+                                          width[1] / 4, height[1], pitch[1],
+                                          I965_SURFACEFORMAT_R8_SINT,
+                                          base_index + 1, 1);
+                gen8_pp_set_surface_state(ctx, pp_context,
+                                          bo, offset[2],
+                                          width[2] / 4, height[2], pitch[2],
+                                          I965_SURFACEFORMAT_R8_SINT,
+                                          base_index + 2, 1);
+            }
+        }
+    } else {
+        int format0 = SURFACE_FORMAT_Y8_UNORM;
+
+        switch (fourcc) {
+        case VA_FOURCC('Y', 'U', 'Y', '2'):
+            format0 = SURFACE_FORMAT_YCRCB_NORMAL;
+            break;
+
+        case VA_FOURCC('U', 'Y', 'V', 'Y'):
+            format0 = SURFACE_FORMAT_YCRCB_SWAPY;
+            break;
+
+        default:
+            break;
+        }
+	if (rgbx_format) {
+    	    struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+	    /* Only R8G8B8A8_UNORM is supported for BGRX or RGBX */
+	    format0 = SURFACE_FORMAT_R8G8B8A8_UNORM;
+	    pp_static_parameter->grf2.src_avs_rgb_swap = 0;
+	    if ((fourcc == VA_FOURCC('B', 'G', 'R', 'A')) || 
+                              (fourcc == VA_FOURCC('B', 'G', 'R', 'X'))) {
+		pp_static_parameter->grf2.src_avs_rgb_swap = 1;
+	    }
+	}
+        gen8_pp_set_surface2_state(ctx, pp_context,
+                                   bo, offset[0],
+                                   width[0], height[0], pitch[0],
+                                   0, 0,
+                                   format0, 0,
+                                   base_index);
+
+        if (!packed_yuv && !rgbx_format) {
+            if (interleaved_uv) {
+                gen8_pp_set_surface2_state(ctx, pp_context,
+                                           bo, offset[1],
+                                           width[1], height[1], pitch[1],
+                                           0, 0,
+                                           SURFACE_FORMAT_R8B8_UNORM, 0,
+                                           base_index + 1);
+            } else {
+                gen8_pp_set_surface2_state(ctx, pp_context,
+                                           bo, offset[1],
+                                           width[1], height[1], pitch[1],
+                                           0, 0,
+                                           SURFACE_FORMAT_R8_UNORM, 0,
+                                           base_index + 1);
+                gen8_pp_set_surface2_state(ctx, pp_context,
                                            bo, offset[2],
                                            width[2], height[2], pitch[2],
                                            0, 0,
@@ -2945,9 +3445,9 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
     pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) src_rect->height / src_height / dst_rect->height;
     pp_static_parameter->grf5.sampler_load_vertical_frame_origin = (float) src_rect->y / src_height -
-                                                                   (float) pp_avs_context->dest_y * pp_static_parameter->grf4.sampler_load_vertical_scaling_step;
+        (float) pp_avs_context->dest_y * pp_static_parameter->grf4.sampler_load_vertical_scaling_step;
     pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = (float) src_rect->x / src_width -
-                                                                     (float) pp_avs_context->dest_x * pp_avs_context->horiz_range / dw;
+        (float) pp_avs_context->dest_x * pp_avs_context->horiz_range / dw;
 
     gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
 
@@ -2956,6 +3456,117 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     return VA_STATUS_SUCCESS;
 }
 
+static VAStatus
+gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                           const struct i965_surface *src_surface,
+                           const VARectangle *src_rect,
+                           struct i965_surface *dst_surface,
+                           const VARectangle *dst_rect,
+                           void *filter_param)
+{
+/* TODO: Add the sampler_8x8 state */
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+    struct i965_sampler_8x8_state *sampler_8x8_state;
+    int i;
+    int width[3], height[3], pitch[3], offset[3];
+    int src_width, src_height;
+
+    /* source surface */
+    gen8_pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 0, 0,
+                                         width, height, pitch, offset);
+    src_height = height[0];
+
+    /* destination surface */
+    gen8_pp_set_media_rw_message_surface(ctx, pp_context, dst_surface, 24, 1,
+                                         width, height, pitch, offset);
+
+    /* sampler 8x8 state */
+    dri_bo_map(pp_context->sampler_state_table.bo_8x8, True);
+    assert(pp_context->sampler_state_table.bo_8x8->virtual);
+    assert(sizeof(*sampler_8x8_state) == sizeof(int) * 138);
+    sampler_8x8_state = pp_context->sampler_state_table.bo_8x8->virtual;
+    memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
+
+    for (i = 0; i < 17; i++) {
+        /* for Y channel, currently ignore */
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c2 = 0x0;
+        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c3 = 0x0;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c4 = 0x0;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c5 = 0x0;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c7 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c2 = 0x0;
+        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c3 = 0x0;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c4 = 0x0;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c5 = 0x0;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c7 = 0x0;
+        /* for U/V channel, 0.25 */
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c2 = 0x10;
+        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c3 = 0x10;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c4 = 0x10;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c5 = 0x10;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c7 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c0 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c1 = 0x0;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c2 = 0x10;
+        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c3 = 0x10;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c4 = 0x10;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c5 = 0x10;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c6 = 0x0;
+        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c7 = 0x0;
+    }
+
+    sampler_8x8_state->dw136.default_sharpness_level = 0;
+    sampler_8x8_state->dw137.adaptive_filter_for_all_channel = 1;
+    sampler_8x8_state->dw137.bypass_y_adaptive_filtering = 1;
+    sampler_8x8_state->dw137.bypass_x_adaptive_filtering = 1;
+    dri_bo_unmap(pp_context->sampler_state_table.bo_8x8);
+
+
+    /* private function & data */
+    pp_context->pp_x_steps = gen7_pp_avs_x_steps;
+    pp_context->pp_y_steps = gen7_pp_avs_y_steps;
+    pp_context->private_context = &pp_context->pp_avs_context;
+    pp_context->pp_set_block_parameter = gen7_pp_avs_set_block_parameter;
+
+    pp_avs_context->dest_x = dst_rect->x;
+    pp_avs_context->dest_y = dst_rect->y;
+    pp_avs_context->dest_w = ALIGN(dst_rect->width, 16);
+    pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
+    pp_avs_context->src_w = src_rect->width;
+    pp_avs_context->src_h = src_rect->height;
+
+    int dw = (pp_avs_context->src_w - 1) / 16 + 1;
+    dw = MAX(dw, dst_rect->width);
+
+    pp_static_parameter->grf1.pointer_to_inline_parameter = 7;
+    pp_static_parameter->grf2.avs_wa_enable = 0; /* It is not required on GEN8+ */
+    pp_static_parameter->grf2.avs_wa_width = dw;
+    pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * dw);
+    pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * dw);
+
+    pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
+    pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) src_rect->height / src_height / dst_rect->height;
+    pp_static_parameter->grf5.sampler_load_vertical_frame_origin = (float) src_rect->y / src_height -
+        (float) pp_avs_context->dest_y * pp_static_parameter->grf4.sampler_load_vertical_scaling_step;
+    pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = (float) src_rect->x / src_width -
+        (float) pp_avs_context->dest_x * pp_avs_context->horiz_range / dw;
+
+    gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
+
+    dst_surface->flags = src_surface->flags;
+
+    return VA_STATUS_SUCCESS;
+}
 
 static VAStatus
 gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
@@ -4307,8 +4918,7 @@ gen6_pp_initialize(
     assert(bo);
     pp_context->vfe_state.bo = bo;
     
-    if (IS_GEN7(i965->intel.device_id) ||
-        IS_GEN8(i965->intel.device_id)) {
+    if (IS_GEN7(i965->intel.device_id)) {
         static_param_size = sizeof(struct gen7_pp_static_parameter);
         inline_param_size = sizeof(struct gen7_pp_inline_parameter);
     } else {
@@ -4333,6 +4943,92 @@ gen6_pp_initialize(
     else
         va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
 
+    calculate_boundary_block_mask(pp_context, dst_rect);
+
+    return va_status;
+}
+
+
+static VAStatus
+gen8_pp_initialize(
+    VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
+    const struct i965_surface *src_surface,
+    const VARectangle *src_rect,
+    struct i965_surface *dst_surface,
+    const VARectangle *dst_rect,
+    int                pp_index,
+    void * filter_param
+)
+{
+    VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct pp_module *pp_module;
+    dri_bo *bo;
+    int static_param_size, inline_param_size;
+
+    dri_bo_unreference(pp_context->surface_state_binding_table.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "surface state & binding table",
+                      (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_PP_SURFACES,
+                      4096);
+    assert(bo);
+    pp_context->surface_state_binding_table.bo = bo;
+
+    dri_bo_unreference(pp_context->curbe.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "constant buffer",
+                      4096, 
+                      4096);
+    assert(bo);
+    pp_context->curbe.bo = bo;
+
+    dri_bo_unreference(pp_context->idrt.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr, 
+                      "interface discriptor", 
+                      sizeof(struct gen8_interface_descriptor_data), 
+                      4096);
+    assert(bo);
+    pp_context->idrt.bo = bo;
+    pp_context->idrt.num_interface_descriptors = 0;
+
+    dri_bo_unreference(pp_context->sampler_state_table.bo_8x8);
+    bo = dri_bo_alloc(i965->intel.bufmgr, 
+                      "sampler 8x8 state ",
+                      4096,
+                      4096);
+    assert(bo);
+    pp_context->sampler_state_table.bo_8x8 = bo;
+
+
+    dri_bo_unreference(pp_context->vfe_state.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr, 
+                      "vfe state", 
+                      sizeof(struct i965_vfe_state), 
+                      4096);
+    assert(bo);
+    pp_context->vfe_state.bo = bo;
+    
+    static_param_size = sizeof(struct gen7_pp_static_parameter);
+    inline_param_size = sizeof(struct gen7_pp_inline_parameter);
+
+    memset(pp_context->pp_static_parameter, 0, static_param_size);
+    memset(pp_context->pp_inline_parameter, 0, inline_param_size);
+
+    assert(pp_index >= PP_NULL && pp_index < NUM_PP_MODULES);
+    pp_context->current_pp = pp_index;
+    pp_module = &pp_context->pp_modules[pp_index];
+    
+    if (pp_module->initialize)
+        va_status = pp_module->initialize(ctx, pp_context,
+                                          src_surface,
+                                          src_rect,
+                                          dst_surface,
+                                          dst_rect,
+                                          filter_param);
+    else
+        va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
+ 
     calculate_boundary_block_mask(pp_context, dst_rect);
 
     return va_status;
@@ -4363,8 +5059,7 @@ gen6_pp_interface_descriptor_table(VADriverContextP   ctx,
     desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
     desc->desc4.constant_urb_entry_read_offset = 0;
 
-    if (IS_GEN7(i965->intel.device_id) ||
-        IS_GEN8(i965->intel.device_id))
+    if (IS_GEN7(i965->intel.device_id))
         desc->desc4.constant_urb_entry_read_length = 6; /* grf 1-6 */
     else
         desc->desc4.constant_urb_entry_read_length = 4; /* grf 1-4 */
@@ -4379,6 +5074,48 @@ gen6_pp_interface_descriptor_table(VADriverContextP   ctx,
                       I915_GEM_DOMAIN_INSTRUCTION, 0,
                       desc->desc2.sampler_count << 2,
                       offsetof(struct gen6_interface_descriptor_data, desc2),
+                      pp_context->sampler_state_table.bo);
+
+    dri_bo_unmap(bo);
+    pp_context->idrt.num_interface_descriptors++;
+}
+
+static void
+gen8_pp_interface_descriptor_table(VADriverContextP   ctx,
+                                   struct i965_post_processing_context *pp_context)
+{
+    struct gen8_interface_descriptor_data *desc;
+    dri_bo *bo;
+    int pp_index = pp_context->current_pp;
+
+    bo = pp_context->idrt.bo;
+    dri_bo_map(bo, True);
+    assert(bo->virtual);
+    desc = bo->virtual;
+    memset(desc, 0, sizeof(*desc));
+    desc->desc0.kernel_start_pointer = 
+	pp_context->pp_modules[pp_index].kernel.bo->offset >> 6; /* reloc */
+    desc->desc2.single_program_flow = 1;
+    desc->desc2.floating_point_mode = FLOATING_POINT_IEEE_754;
+    desc->desc3.sampler_count = 1;      /* 1 - 4 samplers used */
+    desc->desc3.sampler_state_pointer = 
+	pp_context->sampler_state_table.bo->offset >> 5;
+    desc->desc4.binding_table_entry_count = 0;
+    desc->desc4.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
+    desc->desc5.constant_urb_entry_read_offset = 0;
+    
+    desc->desc5.constant_urb_entry_read_length = 6; /* grf 1-6 */
+
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_INSTRUCTION, 0,
+                      0,
+                      offsetof(struct gen8_interface_descriptor_data, desc0),
+                      pp_context->pp_modules[pp_index].kernel.bo);
+
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_INSTRUCTION, 0,
+                      desc->desc3.sampler_count << 2,
+                      offsetof(struct gen8_interface_descriptor_data, desc3),
                       pp_context->sampler_state_table.bo);
 
     dri_bo_unmap(bo);
@@ -4418,6 +5155,14 @@ gen6_pp_states_setup(VADriverContextP ctx,
 }
 
 static void
+gen8_pp_states_setup(VADriverContextP ctx,
+                     struct i965_post_processing_context *pp_context)
+{
+    gen8_pp_interface_descriptor_table(ctx, pp_context);
+    gen6_pp_upload_constants(ctx, pp_context);
+}
+
+static void
 gen6_pp_pipeline_select(VADriverContextP ctx,
                         struct i965_post_processing_context *pp_context)
 {
@@ -4449,6 +5194,40 @@ gen6_pp_state_base_address(VADriverContextP ctx,
 }
 
 static void
+gen8_pp_state_base_address(VADriverContextP ctx,
+                           struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    BEGIN_BATCH(batch, 16);
+    OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (16 - 2));
+	/* DW1 Generate state address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+	OUT_BATCH(batch, 0);
+	OUT_BATCH(batch, 0);
+	/* DW4. Surface state address */
+    OUT_RELOC(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
+	OUT_BATCH(batch, 0);
+	/* DW6. Dynamic state address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+	OUT_BATCH(batch, 0);
+
+	/* DW8. Indirect object address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+	OUT_BATCH(batch, 0);
+
+	/* DW10. Instruction base address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+	OUT_BATCH(batch, 0);
+
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
+    ADVANCE_BATCH(batch);
+}
+
+static void
 gen6_pp_vfe_state(VADriverContextP ctx,
                   struct i965_post_processing_context *pp_context)
 {
@@ -4456,6 +5235,29 @@ gen6_pp_vfe_state(VADriverContextP ctx,
 
     BEGIN_BATCH(batch, 8);
     OUT_BATCH(batch, CMD_MEDIA_VFE_STATE | (8 - 2));
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch,
+              (pp_context->urb.num_vfe_entries - 1) << 16 |
+              pp_context->urb.num_vfe_entries << 8);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch,
+              (pp_context->urb.size_vfe_entry * 2) << 16 |  /* URB Entry Allocation Size, in 256 bits unit */
+              (pp_context->urb.size_cs_entry * pp_context->urb.num_cs_entries * 2)); /* CURBE Allocation Size, in 256 bits unit */
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen8_pp_vfe_state(VADriverContextP ctx,
+                  struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    BEGIN_BATCH(batch, 9);
+    OUT_BATCH(batch, CMD_MEDIA_VFE_STATE | (9 - 2));
+    OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
               (pp_context->urb.num_vfe_entries - 1) << 16 |
@@ -4501,6 +5303,24 @@ gen6_interface_descriptor_load(VADriverContextP ctx,
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
               pp_context->idrt.num_interface_descriptors * sizeof(struct gen6_interface_descriptor_data));
+    OUT_RELOC(batch, 
+              pp_context->idrt.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0,
+              0);
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen8_interface_descriptor_load(VADriverContextP ctx,
+                               struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    BEGIN_BATCH(batch, 4);
+    OUT_BATCH(batch, CMD_MEDIA_INTERFACE_DESCRIPTOR_LOAD | (4 - 2));
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch,
+              pp_context->idrt.num_interface_descriptors * sizeof(struct gen8_interface_descriptor_data));
     OUT_RELOC(batch, 
               pp_context->idrt.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0,
@@ -4636,6 +5456,24 @@ gen6_pp_pipeline_setup(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
 }
 
+static void
+gen8_pp_pipeline_setup(VADriverContextP ctx,
+                       struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+    intel_batchbuffer_emit_mi_flush(batch);
+    gen6_pp_pipeline_select(ctx, pp_context);
+    gen8_pp_state_base_address(ctx, pp_context);
+    gen8_pp_vfe_state(ctx, pp_context);
+    gen6_pp_curbe_load(ctx, pp_context);
+    gen8_interface_descriptor_load(ctx, pp_context);
+    gen8_pp_vfe_state(ctx, pp_context);
+    gen6_pp_object_walker(ctx, pp_context);
+    intel_batchbuffer_end_atomic(batch);
+}
+
 static VAStatus
 gen6_post_processing(
     VADriverContextP ctx,
@@ -4670,6 +5508,36 @@ gen6_post_processing(
 }
 
 static VAStatus
+gen8_post_processing(
+    VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
+    const struct i965_surface *src_surface,
+    const VARectangle *src_rect,
+    struct i965_surface *dst_surface,
+    const VARectangle *dst_rect,
+    int                pp_index,
+    void * filter_param
+)
+{
+    VAStatus va_status;
+    
+    va_status = gen8_pp_initialize(ctx, pp_context,
+                                   src_surface,
+                                   src_rect,
+                                   dst_surface,
+                                   dst_rect,
+                                   pp_index,
+                                   filter_param);
+
+    if (va_status == VA_STATUS_SUCCESS) {
+        gen8_pp_states_setup(ctx, pp_context);
+        gen8_pp_pipeline_setup(ctx, pp_context);
+    }
+
+    return va_status;
+}
+
+static VAStatus
 i965_post_processing_internal(
     VADriverContextP   ctx,
     struct i965_post_processing_context *pp_context,
@@ -4684,9 +5552,10 @@ i965_post_processing_internal(
     VAStatus va_status;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (IS_GEN6(i965->intel.device_id) ||
-        IS_GEN7(i965->intel.device_id) ||
-	IS_GEN8(i965->intel.device_id))
+    if (IS_GEN8(i965->intel.device_id))
+        va_status = gen8_post_processing(ctx, pp_context, src_surface, src_rect, dst_surface, dst_rect, pp_index, filter_param);
+    else if (IS_GEN6(i965->intel.device_id) ||
+        IS_GEN7(i965->intel.device_id))
         va_status = gen6_post_processing(ctx, pp_context, src_surface, src_rect, dst_surface, dst_rect, pp_index, filter_param);
     else
         va_status = ironlake_post_processing(ctx, pp_context, src_surface, src_rect, dst_surface, dst_rect, pp_index, filter_param);
@@ -5397,9 +6266,10 @@ i965_post_processing_context_init(VADriverContextP ctx,
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen7));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen75));
+    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
 
     if (IS_GEN8(i965->intel.device_id))
-        memcpy(pp_context->pp_modules, pp_modules_gen7, sizeof(pp_context->pp_modules));
+        memcpy(pp_context->pp_modules, pp_modules_gen8, sizeof(pp_context->pp_modules));
     else if (IS_HASWELL(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen75, sizeof(pp_context->pp_modules));
     else if (IS_GEN7(i965->intel.device_id))
