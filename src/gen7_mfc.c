@@ -41,6 +41,10 @@
 #include "gen6_mfc.h"
 #include "gen6_vme.h"
 
+#define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7)
+#define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
+#define BINDING_TABLE_OFFSET(index)             (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * index)
+
 extern void
 gen6_mfc_pipe_buf_addr_state(VADriverContextP ctx, 
                              struct intel_encoder_context *encoder_context);

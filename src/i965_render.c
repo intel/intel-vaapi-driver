@@ -147,9 +147,7 @@ static const uint32_t ps_kernel_static_gen7_haswell[][4] = {
 #include "shaders/render/exa_wm_write.g7b"
 };
 
-#define SURFACE_STATE_PADDED_SIZE_I965  ALIGN(sizeof(struct i965_surface_state), 32)
-#define SURFACE_STATE_PADDED_SIZE_GEN7  ALIGN(sizeof(struct gen7_surface_state), 32)
-#define SURFACE_STATE_PADDED_SIZE       MAX(SURFACE_STATE_PADDED_SIZE_I965, SURFACE_STATE_PADDED_SIZE_GEN7)
+#define SURFACE_STATE_PADDED_SIZE       MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7)
 #define SURFACE_STATE_OFFSET(index)     (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET            SURFACE_STATE_OFFSET(MAX_RENDER_SURFACES)
 

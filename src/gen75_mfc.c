@@ -51,6 +51,10 @@
 
 #define	MFC_SOFTWARE_HASWELL	0
 
+#define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7)
+#define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
+#define BINDING_TABLE_OFFSET(index)             (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * index)
+
 #define B0_STEP_REV		2
 #define IS_STEPPING_BPLUS(i965)	((i965->intel.revision) >= B0_STEP_REV)
 

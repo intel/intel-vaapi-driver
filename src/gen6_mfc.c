@@ -42,6 +42,10 @@
 #include "gen6_vme.h"
 #include "intel_media.h"
 
+#define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7)
+#define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
+#define BINDING_TABLE_OFFSET(index)             (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * index)
+
 static const uint32_t gen6_mfc_batchbuffer_avc_intra[][4] = {
 #include "shaders/utils/mfc_batchbuffer_avc_intra.g6b"
 };

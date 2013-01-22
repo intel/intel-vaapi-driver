@@ -1757,4 +1757,16 @@ struct gen7_sampler_dndi
     } dw7;
 };
 
+#define SURFACE_STATE_PADDED_SIZE_0_GEN7        ALIGN(sizeof(struct gen7_surface_state), 32)
+#define SURFACE_STATE_PADDED_SIZE_1_GEN7        ALIGN(sizeof(struct gen7_surface_state2), 32)
+#define SURFACE_STATE_PADDED_SIZE_GEN7          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN7, SURFACE_STATE_PADDED_SIZE_1_GEN7)
+
+#define SURFACE_STATE_PADDED_SIZE_0_GEN6        ALIGN(sizeof(struct i965_surface_state), 32)
+#define SURFACE_STATE_PADDED_SIZE_1_GEN6        ALIGN(sizeof(struct i965_surface_state2), 32)
+#define SURFACE_STATE_PADDED_SIZE_GEN6          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN6, SURFACE_STATE_PADDED_SIZE_1_GEN6)
+
+#define SURFACE_STATE_PADDED_SIZE_0_GEN8        ALIGN(sizeof(struct gen8_surface_state), 32)
+#define SURFACE_STATE_PADDED_SIZE_1_GEN8        ALIGN(sizeof(struct gen8_surface_state2), 32)
+#define SURFACE_STATE_PADDED_SIZE_GEN8          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN8, SURFACE_STATE_PADDED_SIZE_1_GEN8)
+
 #endif /* _I965_STRUCTS_H_ */

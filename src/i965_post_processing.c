@@ -45,20 +45,9 @@
                      IS_GEN7((ctx)->intel.device_id) ||         \
                      IS_GEN8((ctx)->intel.device_id))
 
-#define SURFACE_STATE_PADDED_SIZE_0_I965        ALIGN(sizeof(struct i965_surface_state), 32)
-#define SURFACE_STATE_PADDED_SIZE_1_I965        ALIGN(sizeof(struct i965_surface_state2), 32)
-#define SURFACE_STATE_PADDED_SIZE_I965          MAX(SURFACE_STATE_PADDED_SIZE_0_I965, SURFACE_STATE_PADDED_SIZE_1_I965)
-
-#define SURFACE_STATE_PADDED_SIZE_0_GEN7        ALIGN(sizeof(struct gen7_surface_state), 32)
-#define SURFACE_STATE_PADDED_SIZE_1_GEN7        ALIGN(sizeof(struct gen7_surface_state2), 32)
-#define SURFACE_STATE_PADDED_SIZE_GEN7          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN7, SURFACE_STATE_PADDED_SIZE_1_GEN7)
-
-#define SURFACE_STATE_PADDED_SIZE_0_GEN8        ALIGN(sizeof(struct gen8_surface_state), 32)
-#define SURFACE_STATE_PADDED_SIZE_1_GEN8        ALIGN(sizeof(struct gen8_surface_state2), 32)
-#define SURFACE_STATE_PADDED_SIZE_GEN8          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN8, SURFACE_STATE_PADDED_SIZE_1_GEN8)
 
 #define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN8,\
-			MAX(SURFACE_STATE_PADDED_SIZE_I965, SURFACE_STATE_PADDED_SIZE_GEN7))
+			MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7))
 
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET                    SURFACE_STATE_OFFSET(MAX_PP_SURFACES)

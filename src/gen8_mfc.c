@@ -43,6 +43,10 @@
 #include "gen6_vme.h"
 #include "intel_media.h"
 
+#define SURFACE_STATE_PADDED_SIZE               SURFACE_STATE_PADDED_SIZE_GEN8
+#define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
+#define BINDING_TABLE_OFFSET(index)             (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * index)
+
 #define MFC_SOFTWARE_HASWELL	1
 
 #define B0_STEP_REV		2
