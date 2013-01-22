@@ -296,6 +296,44 @@ gen7_gpe_set_surface2_tiling(struct gen7_surface_state2 *ss, unsigned int tiling
 }
 
 static void
+gen8_gpe_set_surface_tiling(struct gen8_surface_state *ss, unsigned int tiling)
+{
+    switch (tiling) {
+    case I915_TILING_NONE:
+        ss->ss0.tiled_surface = 0;
+        ss->ss0.tile_walk = 0;
+        break;
+    case I915_TILING_X:
+        ss->ss0.tiled_surface = 1;
+        ss->ss0.tile_walk = I965_TILEWALK_XMAJOR;
+        break;
+    case I915_TILING_Y:
+        ss->ss0.tiled_surface = 1;
+        ss->ss0.tile_walk = I965_TILEWALK_YMAJOR;
+        break;
+    }
+}
+
+static void
+gen8_gpe_set_surface2_tiling(struct gen8_surface_state2 *ss, unsigned int tiling)
+{
+    switch (tiling) {
+    case I915_TILING_NONE:
+        ss->ss2.tiled_surface = 0;
+        ss->ss2.tile_walk = 0;
+        break;
+    case I915_TILING_X:
+        ss->ss2.tiled_surface = 1;
+        ss->ss2.tile_walk = I965_TILEWALK_XMAJOR;
+        break;
+    case I915_TILING_Y:
+        ss->ss2.tiled_surface = 1;
+        ss->ss2.tile_walk = I965_TILEWALK_YMAJOR;
+        break;
+    }
+}
+
+static void
 i965_gpe_set_surface2_state(VADriverContextP ctx,
                             struct object_surface *obj_surface,
                             struct i965_surface_state2 *ss)
@@ -677,3 +715,310 @@ gen7_gpe_buffer_suface_setup(VADriverContextP ctx,
     *((unsigned int *)((char *)bo->virtual + binding_table_offset)) = surface_state_offset;
     dri_bo_unmap(bo);
 }
+
+static void
+gen8_gpe_set_surface2_state(VADriverContextP ctx,
+                            struct object_surface *obj_surface,
+                            struct gen8_surface_state2 *ss)
+{
+    int w, h, w_pitch;
+    unsigned int tiling, swizzle;
+
+    assert(obj_surface->bo);
+    assert(obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'));
+
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+    w = obj_surface->orig_width;
+    h = obj_surface->orig_height;
+    w_pitch = obj_surface->width;
+
+    memset(ss, 0, sizeof(*ss));
+    /* ss0 */
+    ss->ss6.base_addr = obj_surface->bo->offset;
+    /* ss1 */
+    ss->ss1.cbcr_pixel_offset_v_direction = 2;
+    ss->ss1.width = w - 1;
+    ss->ss1.height = h - 1;
+    /* ss2 */
+    ss->ss2.surface_format = MFX_SURFACE_PLANAR_420_8;
+    ss->ss2.interleave_chroma = 1;
+    ss->ss2.pitch = w_pitch - 1;
+    ss->ss2.half_pitch_for_chroma = 0;
+    gen8_gpe_set_surface2_tiling(ss, tiling);
+    /* ss3: UV offset for interleave mode */
+    ss->ss3.x_offset_for_cb = obj_surface->x_cb_offset;
+    ss->ss3.y_offset_for_cb = obj_surface->y_cb_offset;
+}
+
+void
+gen8_gpe_surface2_setup(VADriverContextP ctx,
+                        struct i965_gpe_context *gpe_context,
+                        struct object_surface *obj_surface,
+                        unsigned long binding_table_offset,
+                        unsigned long surface_state_offset)
+{
+    struct gen8_surface_state2 *ss;
+    dri_bo *bo;
+
+    bo = gpe_context->surface_state_binding_table.bo;
+    dri_bo_map(bo, 1);
+    assert(bo->virtual);
+
+    ss = (struct gen8_surface_state2 *)((char *)bo->virtual + surface_state_offset);
+    gen8_gpe_set_surface2_state(ctx, obj_surface, ss);
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_RENDER, 0,
+                      0,
+                      surface_state_offset + offsetof(struct gen8_surface_state2, ss6),
+                      obj_surface->bo);
+
+    *((unsigned int *)((char *)bo->virtual + binding_table_offset)) = surface_state_offset;
+    dri_bo_unmap(bo);
+}
+
+static void
+gen8_gpe_set_media_rw_surface_state(VADriverContextP ctx,
+                                    struct object_surface *obj_surface,
+                                    struct gen8_surface_state *ss)
+{
+    int w, h, w_pitch;
+    unsigned int tiling, swizzle;
+
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+    w = obj_surface->orig_width;
+    h = obj_surface->orig_height;
+    w_pitch = obj_surface->width;
+
+    memset(ss, 0, sizeof(*ss));
+    /* ss0 */
+    ss->ss0.surface_type = I965_SURFACE_2D;
+    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
+    /* ss1 */
+    ss->ss8.base_addr = obj_surface->bo->offset;
+    /* ss2 */
+    ss->ss2.width = w / 4 - 1;  /* in DWORDs for media read & write message */
+    ss->ss2.height = h - 1;
+    /* ss3 */
+    ss->ss3.pitch = w_pitch - 1;
+    gen8_gpe_set_surface_tiling(ss, tiling);
+}
+
+static void
+gen8_gpe_set_media_chroma_surface_state(VADriverContextP ctx,
+                                    struct object_surface *obj_surface,
+                                    struct gen8_surface_state *ss)
+{
+    int w, h, w_pitch;
+    unsigned int tiling, swizzle;
+    int cbcr_offset;
+
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+    w = obj_surface->orig_width;
+    h = obj_surface->orig_height;
+    w_pitch = obj_surface->width;
+
+    cbcr_offset = obj_surface->height * obj_surface->width;
+    memset(ss, 0, sizeof(*ss));
+    /* ss0 */
+    ss->ss0.surface_type = I965_SURFACE_2D;
+    ss->ss0.surface_format = I965_SURFACEFORMAT_R8_UNORM;
+    /* ss1 */
+    ss->ss8.base_addr = obj_surface->bo->offset + cbcr_offset;
+    /* ss2 */
+    ss->ss2.width = w / 4 - 1;  /* in DWORDs for media read & write message */
+    ss->ss2.height = (obj_surface->height / 2) -1;
+    /* ss3 */
+    ss->ss3.pitch = w_pitch - 1;
+    gen8_gpe_set_surface_tiling(ss, tiling);
+}
+
+void
+gen8_gpe_media_rw_surface_setup(VADriverContextP ctx,
+                                struct i965_gpe_context *gpe_context,
+                                struct object_surface *obj_surface,
+                                unsigned long binding_table_offset,
+                                unsigned long surface_state_offset)
+{
+    struct gen8_surface_state *ss;
+    dri_bo *bo;
+
+    bo = gpe_context->surface_state_binding_table.bo;
+    dri_bo_map(bo, True);
+    assert(bo->virtual);
+
+    ss = (struct gen8_surface_state *)((char *)bo->virtual + surface_state_offset);
+    gen8_gpe_set_media_rw_surface_state(ctx, obj_surface, ss);
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_RENDER, 0,
+                      0,
+                      surface_state_offset + offsetof(struct gen8_surface_state, ss8),
+                      obj_surface->bo);
+
+    *((unsigned int *)((char *)bo->virtual + binding_table_offset)) = surface_state_offset;
+    dri_bo_unmap(bo);
+}
+
+void
+gen8_gpe_media_chroma_surface_setup(VADriverContextP ctx,
+                                struct i965_gpe_context *gpe_context,
+                                struct object_surface *obj_surface,
+                                unsigned long binding_table_offset,
+                                unsigned long surface_state_offset)
+{
+    struct gen8_surface_state *ss;
+    dri_bo *bo;
+    int cbcr_offset;
+
+	assert(obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'));
+    bo = gpe_context->surface_state_binding_table.bo;
+    dri_bo_map(bo, True);
+    assert(bo->virtual);
+
+    cbcr_offset = obj_surface->height * obj_surface->width;
+    ss = (struct gen8_surface_state *)((char *)bo->virtual + surface_state_offset);
+    gen8_gpe_set_media_chroma_surface_state(ctx, obj_surface, ss);
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_RENDER, 0,
+                      cbcr_offset,
+                      surface_state_offset + offsetof(struct gen8_surface_state, ss8),
+                      obj_surface->bo);
+
+    *((unsigned int *)((char *)bo->virtual + binding_table_offset)) = surface_state_offset;
+    dri_bo_unmap(bo);
+}
+
+
+static void
+gen8_gpe_set_buffer_surface_state(VADriverContextP ctx,
+                                  struct i965_buffer_surface *buffer_surface,
+                                  struct gen8_surface_state *ss)
+{
+    int num_entries;
+
+    assert(buffer_surface->bo);
+    num_entries = buffer_surface->num_blocks * buffer_surface->size_block / buffer_surface->pitch;
+
+    memset(ss, 0, sizeof(*ss));
+    /* ss0 */
+    ss->ss0.surface_type = I965_SURFACE_BUFFER;
+    /* ss1 */
+    ss->ss8.base_addr = buffer_surface->bo->offset;
+    /* ss2 */
+    ss->ss2.width = ((num_entries - 1) & 0x7f);
+    ss->ss2.height = (((num_entries - 1) >> 7) & 0x3fff);
+    /* ss3 */
+    ss->ss3.depth = (((num_entries - 1) >> 21) & 0x3f);
+    ss->ss3.pitch = buffer_surface->pitch - 1;
+}
+
+void
+gen8_gpe_buffer_suface_setup(VADriverContextP ctx,
+                             struct i965_gpe_context *gpe_context,
+                             struct i965_buffer_surface *buffer_surface,
+                             unsigned long binding_table_offset,
+                             unsigned long surface_state_offset)
+{
+    struct gen8_surface_state *ss;
+    dri_bo *bo;
+
+    bo = gpe_context->surface_state_binding_table.bo;
+    dri_bo_map(bo, 1);
+    assert(bo->virtual);
+
+    ss = (struct gen8_surface_state *)((char *)bo->virtual + surface_state_offset);
+    gen8_gpe_set_buffer_surface_state(ctx, buffer_surface, ss);
+    dri_bo_emit_reloc(bo,
+                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                      0,
+                      surface_state_offset + offsetof(struct gen8_surface_state, ss8),
+                      buffer_surface->bo);
+
+    *((unsigned int *)((char *)bo->virtual + binding_table_offset)) = surface_state_offset;
+    dri_bo_unmap(bo);
+}
+
+static void
+gen8_gpe_state_base_address(VADriverContextP ctx,
+                            struct i965_gpe_context *gpe_context,
+                            struct intel_batchbuffer *batch)
+{
+    BEGIN_BATCH(batch, 16);
+
+    OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | 14);
+
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//General State Base Address
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+	/*DW4 Surface state base address */
+    OUT_RELOC(batch, gpe_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
+    OUT_BATCH(batch, 0);
+	/*DW6. Dynamic state base address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Dynamic State Base Address
+    OUT_BATCH(batch, 0);
+
+	/*DW8. Indirect Object base address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Indirect Object Base Address
+    OUT_BATCH(batch, 0);
+	/*DW10. Instruct base address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Instruction Base Address
+    OUT_BATCH(batch, 0);
+
+	/* DW12. Size limitation */
+    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//General State Access Upper Bound	
+    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Dynamic State Access Upper Bound
+    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Indirect Object Access Upper Bound
+    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Instruction Access Upper Bound
+
+    /*
+      OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//LLC Coherent Base Address
+      OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY );		//LLC Coherent Upper Bound
+    */
+
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen8_gpe_vfe_state(VADriverContextP ctx,
+                   struct i965_gpe_context *gpe_context,
+                   struct intel_batchbuffer *batch)
+{
+
+    BEGIN_BATCH(batch, 9);
+
+    OUT_BATCH(batch, CMD_MEDIA_VFE_STATE | (9 - 2));
+    /* Scratch Space Base Pointer and Space */
+    OUT_BATCH(batch, 0);    
+    OUT_BATCH(batch, 0);
+
+    OUT_BATCH(batch,
+              gpe_context->vfe_state.max_num_threads << 16 |    /* Maximum Number of Threads */
+              gpe_context->vfe_state.num_urb_entries << 8 |     /* Number of URB Entries */
+              gpe_context->vfe_state.gpgpu_mode << 2);          /* MEDIA Mode */
+    OUT_BATCH(batch, 0);                                        /* Debug: Object ID */
+    OUT_BATCH(batch,
+              gpe_context->vfe_state.urb_entry_size << 16 |     /* URB Entry Allocation Size */
+              gpe_context->vfe_state.curbe_allocation_size);    /* CURBE Allocation Size */
+
+    /* the vfe_desc5/6/7 will decide whether the scoreboard is used. */
+    OUT_BATCH(batch, gpe_context->vfe_desc5.dword);                                        
+    OUT_BATCH(batch, gpe_context->vfe_desc6.dword);                                       
+    OUT_BATCH(batch, gpe_context->vfe_desc7.dword);                                       
+	
+    ADVANCE_BATCH(batch);
+
+}
+
+void
+gen8_gpe_pipeline_setup(VADriverContextP ctx,
+                        struct i965_gpe_context *gpe_context,
+                        struct intel_batchbuffer *batch)
+{
+    intel_batchbuffer_emit_mi_flush(batch);
+
+    i965_gpe_select(ctx, gpe_context, batch);
+    gen8_gpe_state_base_address(ctx, gpe_context, batch);
+    gen8_gpe_vfe_state(ctx, gpe_context, batch);
+    gen6_gpe_curbe_load(ctx, gpe_context, batch);
+    gen6_gpe_idrt(ctx, gpe_context, batch);
+}
+

@@ -161,4 +161,29 @@ void gen75_gpe_media_chroma_surface_setup(VADriverContextP ctx,
                                      struct object_surface *obj_surface,
                                      unsigned long binding_table_offset,
                                      unsigned long surface_state_offset);
+
+extern void gen8_gpe_surface2_setup(VADriverContextP ctx,
+                             struct i965_gpe_context *gpe_context,
+                             struct object_surface *obj_surface,
+                             unsigned long binding_table_offset,
+                             unsigned long surface_state_offset);
+extern void gen8_gpe_media_rw_surface_setup(VADriverContextP ctx,
+                                     struct i965_gpe_context *gpe_context,
+                                     struct object_surface *obj_surface,
+                                     unsigned long binding_table_offset,
+                                     unsigned long surface_state_offset);
+extern void gen8_gpe_buffer_suface_setup(VADriverContextP ctx,
+                                  struct i965_gpe_context *gpe_context,
+                                  struct i965_buffer_surface *buffer_surface,
+                                  unsigned long binding_table_offset,
+                                  unsigned long surface_state_offset);
+extern void gen8_gpe_media_chroma_surface_setup(VADriverContextP ctx,
+                                     struct i965_gpe_context *gpe_context,
+                                     struct object_surface *obj_surface,
+                                     unsigned long binding_table_offset,
+                                     unsigned long surface_state_offset);
+
+void gen8_gpe_pipeline_setup(VADriverContextP ctx,
+                             struct i965_gpe_context *gpe_context,
+                             struct intel_batchbuffer *batch);
 #endif /* _I965_GPE_UTILS_H_ */

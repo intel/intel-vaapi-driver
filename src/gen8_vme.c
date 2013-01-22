@@ -45,7 +45,7 @@
 #undef SURFACE_STATE_PADDED_SIZE
 #endif
 
-#define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7)
+#define SURFACE_STATE_PADDED_SIZE               SURFACE_STATE_PADDED_SIZE_GEN8
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET(index)             (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * index)
 
@@ -297,7 +297,7 @@ static VAStatus gen8_vme_interface_setup(VADriverContextP ctx,
                                           struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    struct gen6_interface_descriptor_data *desc;   
+    struct gen8_interface_descriptor_data *desc;   
     int i;
     dri_bo *bo;
 
@@ -313,18 +313,19 @@ static VAStatus gen8_vme_interface_setup(VADriverContextP ctx,
         /*Setup the descritor table*/
         memset(desc, 0, sizeof(*desc));
         desc->desc0.kernel_start_pointer = (kernel->bo->offset >> 6);
-        desc->desc2.sampler_count = 0; /* FIXME: */
-        desc->desc2.sampler_state_pointer = 0;
-        desc->desc3.binding_table_entry_count = 1; /* FIXME: */
-        desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET(0) >> 5);
-        desc->desc4.constant_urb_entry_read_offset = 0;
-        desc->desc4.constant_urb_entry_read_length = CURBE_URB_ENTRY_LENGTH;
+        desc->desc3.sampler_count = 0; /* FIXME: */
+        desc->desc3.sampler_state_pointer = 0;
+        desc->desc4.binding_table_entry_count = 1; /* FIXME: */
+        desc->desc4.binding_table_pointer = (BINDING_TABLE_OFFSET(0) >> 5);
+        desc->desc5.constant_urb_entry_read_offset = 0;
+        desc->desc5.constant_urb_entry_read_length = CURBE_URB_ENTRY_LENGTH;
+  		
  		
         /*kernel start*/
         dri_bo_emit_reloc(bo,	
                           I915_GEM_DOMAIN_INSTRUCTION, 0,
                           0,
-                          i * sizeof(*desc) + offsetof(struct gen6_interface_descriptor_data, desc0),
+                          i * sizeof(*desc) + offsetof(struct gen8_interface_descriptor_data, desc0),
                           kernel->bo);
         desc++;
     }
@@ -620,7 +621,7 @@ static void gen8_vme_pipeline_programing(VADriverContextP ctx,
                                    encoder_context);
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
-    gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
+    gen8_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
     OUT_RELOC(batch,
@@ -901,7 +902,7 @@ gen8_vme_mpeg2_pipeline_programing(VADriverContextP ctx,
                                          encoder_context);
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
-    gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
+    gen8_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
     OUT_RELOC(batch,
@@ -1001,7 +1002,7 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
     vme_context->gpe_context.idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
-    vme_context->gpe_context.idrt.entry_size = sizeof(struct gen6_interface_descriptor_data);
+    vme_context->gpe_context.idrt.entry_size = sizeof(struct gen8_interface_descriptor_data);
 
     vme_context->gpe_context.curbe.length = CURBE_TOTAL_DATA_LENGTH;
 
@@ -1017,10 +1018,10 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
                           &vme_context->gpe_context,
                           vme_kernel_list,
                           i965_kernel_num);
-    vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
-    vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
-    vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;
-    vme_context->vme_media_chroma_surface_setup = gen75_gpe_media_chroma_surface_setup;
+    vme_context->vme_surface2_setup = gen8_gpe_surface2_setup;
+    vme_context->vme_media_rw_surface_setup = gen8_gpe_media_rw_surface_setup;
+    vme_context->vme_buffer_suface_setup = gen8_gpe_buffer_suface_setup;
+    vme_context->vme_media_chroma_surface_setup = gen8_gpe_media_chroma_surface_setup;
 
     encoder_context->vme_context = vme_context;
     encoder_context->vme_context_destroy = gen8_vme_context_destroy;
