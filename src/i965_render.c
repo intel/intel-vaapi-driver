@@ -147,7 +147,30 @@ static const uint32_t ps_kernel_static_gen7_haswell[][4] = {
 #include "shaders/render/exa_wm_write.g7b"
 };
 
-#define SURFACE_STATE_PADDED_SIZE       MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7)
+/*TODO: Modify the shader for GEN8.
+ * Now it only uses the shader for gen7/haswell
+ */
+/* Programs for Gen8 */
+static const uint32_t sf_kernel_static_gen8[][4] = 
+{
+};
+static const uint32_t ps_kernel_static_gen8[][4] = {
+#include "shaders/render/exa_wm_src_affine.g7b"
+#include "shaders/render/exa_wm_src_sample_planar.g7b"
+#include "shaders/render/exa_wm_yuv_rgb.g7b"
+#include "shaders/render/exa_wm_write.g7b"
+};
+
+static const uint32_t ps_subpic_kernel_static_gen8[][4] = {
+#include "shaders/render/exa_wm_src_affine.g7b"
+#include "shaders/render/exa_wm_src_sample_argb.g7b"
+#include "shaders/render/exa_wm_write.g7b"
+};
+
+
+#define SURFACE_STATE_PADDED_SIZE       MAX(SURFACE_STATE_PADDED_SIZE_GEN8, \
+				MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7))
+
 #define SURFACE_STATE_OFFSET(index)     (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET            SURFACE_STATE_OFFSET(MAX_RENDER_SURFACES)
 
@@ -290,6 +313,31 @@ static struct i965_kernel render_kernels_gen7_haswell[] = {
         PS_SUBPIC_KERNEL,
         ps_subpic_kernel_static_gen7,
         sizeof(ps_subpic_kernel_static_gen7),
+        NULL
+    }
+};
+
+static struct i965_kernel render_kernels_gen8[] = {
+    {
+        "SF",
+        SF_KERNEL,
+        sf_kernel_static_gen8,
+        sizeof(sf_kernel_static_gen8),
+        NULL
+    },
+    {
+        "PS",
+        PS_KERNEL,
+        ps_kernel_static_gen8,
+        sizeof(ps_kernel_static_gen8),
+        NULL
+    },
+
+    {
+        "PS_SUBPIC",
+        PS_SUBPIC_KERNEL,
+        ps_subpic_kernel_static_gen8,
+        sizeof(ps_subpic_kernel_static_gen8),
         NULL
     }
 };
@@ -750,6 +798,25 @@ gen7_render_set_surface_tiling(struct gen7_surface_state *ss, uint32_t tiling)
    }
 }
 
+static void
+gen8_render_set_surface_tiling(struct gen8_surface_state *ss, uint32_t tiling)
+{
+   switch (tiling) {
+   case I915_TILING_NONE:
+      ss->ss0.tiled_surface = 0;
+      ss->ss0.tile_walk = 0;
+      break;
+   case I915_TILING_X:
+      ss->ss0.tiled_surface = 1;
+      ss->ss0.tile_walk = I965_TILEWALK_XMAJOR;
+      break;
+   case I915_TILING_Y:
+      ss->ss0.tiled_surface = 1;
+      ss->ss0.tile_walk = I965_TILEWALK_YMAJOR;
+      break;
+   }
+}
+
 /* Set "Shader Channel Select" */
 void
 gen7_render_set_surface_scs(struct gen7_surface_state *ss)
@@ -811,6 +878,48 @@ gen7_render_set_surface_state(
     gen7_render_set_surface_tiling(ss, tiling);
 }
 
+
+static void
+gen8_render_set_surface_state(
+    struct gen8_surface_state *ss,
+    dri_bo                    *bo,
+    unsigned long              offset,
+    int                        width,
+    int                        height,
+    int                        pitch,
+    int                        format,
+    unsigned int               flags
+)
+{
+    unsigned int tiling;
+    unsigned int swizzle;
+
+    memset(ss, 0, sizeof(*ss));
+
+    switch (flags & (I965_PP_FLAG_TOP_FIELD|I965_PP_FLAG_BOTTOM_FIELD)) {
+    case I965_PP_FLAG_BOTTOM_FIELD:
+        ss->ss0.vert_line_stride_ofs = 1;
+        /* fall-through */
+    case I965_PP_FLAG_TOP_FIELD:
+        ss->ss0.vert_line_stride = 1;
+        height /= 2;
+        break;
+    }
+
+    ss->ss0.surface_type = I965_SURFACE_2D;
+    ss->ss0.surface_format = format;
+
+    ss->ss8.base_addr = bo->offset + offset;
+
+    ss->ss2.width = width - 1;
+    ss->ss2.height = height - 1;
+
+    ss->ss3.pitch = pitch - 1;
+
+    dri_bo_get_tiling(bo, &tiling, &swizzle);
+    gen8_render_set_surface_tiling(ss, tiling);
+}
+
 static void
 i965_render_src_surface_state(
     VADriverContextP ctx, 
@@ -835,8 +944,18 @@ i965_render_src_surface_state(
     assert(ss_bo->virtual);
     ss = (char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index);
 
-    if (IS_GEN7(i965->intel.device_id) ||
-		IS_GEN8(i965->intel.device_id)) {
+    if (IS_GEN8(i965->intel.device_id)) {
+        gen8_render_set_surface_state(ss,
+                                      region, offset,
+                                      w, h,
+                                      pitch, format, flags);
+	gen8_render_set_surface_scs(ss);
+        dri_bo_emit_reloc(ss_bo,
+                          I915_GEM_DOMAIN_SAMPLER, 0,
+                          offset,
+                          SURFACE_STATE_OFFSET(index) + offsetof(struct gen8_surface_state, ss8),
+                          region);
+    } else  if (IS_GEN7(i965->intel.device_id)) {
         gen7_render_set_surface_state(ss,
                                       region, offset,
                                       w, h,
@@ -951,8 +1070,18 @@ i965_render_dest_surface_state(VADriverContextP ctx, int index)
     assert(ss_bo->virtual);
     ss = (char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index);
 
-    if (IS_GEN7(i965->intel.device_id) ||
-		IS_GEN8(i965->intel.device_id)) {
+    if (IS_GEN8(i965->intel.device_id)) {
+        gen8_render_set_surface_state(ss,
+                                      dest_region->bo, 0,
+                                      dest_region->width, dest_region->height,
+                                      dest_region->pitch, format, 0);
+	gen8_render_set_surface_scs(ss);
+        dri_bo_emit_reloc(ss_bo,
+                          I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                          0,
+                          SURFACE_STATE_OFFSET(index) + offsetof(struct gen8_surface_state, ss8),
+                          dest_region->bo);
+    } else if (IS_GEN7(i965->intel.device_id)) {
         gen7_render_set_surface_state(ss,
                                       dest_region->bo, 0,
                                       dest_region->width, dest_region->height,
@@ -2376,6 +2505,80 @@ gen7_render_initialize(VADriverContextP ctx)
     render_state->cc.depth_stencil = bo;
 }
 
+/*
+ * for GEN8
+ */
+static void 
+gen8_render_initialize(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    dri_bo *bo;
+
+    /* VERTEX BUFFER */
+    dri_bo_unreference(render_state->vb.vertex_buffer);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "vertex buffer",
+                      4096,
+                      4096);
+    assert(bo);
+    render_state->vb.vertex_buffer = bo;
+
+    /* WM */
+    dri_bo_unreference(render_state->wm.surface_state_binding_table_bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "surface state & binding table",
+                      (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_RENDER_SURFACES,
+                      4096);
+    assert(bo);
+    render_state->wm.surface_state_binding_table_bo = bo;
+
+    dri_bo_unreference(render_state->wm.sampler);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "sampler state",
+                      MAX_SAMPLERS * sizeof(struct gen8_sampler_state),
+                      4096);
+    assert(bo);
+    render_state->wm.sampler = bo;
+    render_state->wm.sampler_count = 0;
+
+    /* COLOR CALCULATOR */
+    dri_bo_unreference(render_state->cc.state);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "color calc state",
+                      sizeof(struct gen6_color_calc_state),
+                      4096);
+    assert(bo);
+    render_state->cc.state = bo;
+
+    /* CC VIEWPORT */
+    dri_bo_unreference(render_state->cc.viewport);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "cc viewport",
+                      sizeof(struct i965_cc_viewport),
+                      4096);
+    assert(bo);
+    render_state->cc.viewport = bo;
+
+    /* BLEND STATE */
+    dri_bo_unreference(render_state->cc.blend);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "blend state",
+                      sizeof(struct gen6_blend_state),
+                      4096);
+    assert(bo);
+    render_state->cc.blend = bo;
+
+    /* DEPTH & STENCIL STATE */
+    dri_bo_unreference(render_state->cc.depth_stencil);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "depth & stencil state",
+                      sizeof(struct gen6_depth_stencil_state),
+                      4096);
+    assert(bo);
+    render_state->cc.depth_stencil = bo;
+}
+
 static void
 gen7_render_color_calc_state(VADriverContextP ctx)
 {
@@ -2452,6 +2655,34 @@ gen7_render_sampler(VADriverContextP ctx)
     dri_bo_unmap(render_state->wm.sampler);
 }
 
+static void 
+gen8_render_sampler(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    struct gen8_sampler_state *sampler_state;
+    int i;
+    
+    assert(render_state->wm.sampler_count > 0);
+    assert(render_state->wm.sampler_count <= MAX_SAMPLERS);
+
+    dri_bo_map(render_state->wm.sampler, 1);
+    assert(render_state->wm.sampler->virtual);
+    sampler_state = render_state->wm.sampler->virtual;
+    for (i = 0; i < render_state->wm.sampler_count; i++) {
+        memset(sampler_state, 0, sizeof(*sampler_state));
+        sampler_state->ss0.min_filter = I965_MAPFILTER_LINEAR;
+        sampler_state->ss0.mag_filter = I965_MAPFILTER_LINEAR;
+        sampler_state->ss3.r_wrap_mode = I965_TEXCOORDMODE_CLAMP;
+        sampler_state->ss3.s_wrap_mode = I965_TEXCOORDMODE_CLAMP;
+        sampler_state->ss3.t_wrap_mode = I965_TEXCOORDMODE_CLAMP;
+        sampler_state++;
+    }
+
+    dri_bo_unmap(render_state->wm.sampler);
+}
+
+
 static void
 gen7_render_setup_states(
     VADriverContextP   ctx,
@@ -2464,6 +2695,26 @@ gen7_render_setup_states(
     i965_render_dest_surface_state(ctx, 0);
     i965_render_src_surfaces_state(ctx, obj_surface, flags);
     gen7_render_sampler(ctx);
+    i965_render_cc_viewport(ctx);
+    gen7_render_color_calc_state(ctx);
+    gen7_render_blend_state(ctx);
+    gen7_render_depth_stencil_state(ctx);
+    i965_render_upload_constants(ctx, obj_surface, flags);
+    i965_render_upload_vertex(ctx, obj_surface, src_rect, dst_rect);
+}
+
+static void
+gen8_render_setup_states(
+    VADriverContextP   ctx,
+    struct object_surface *obj_surface,
+    const VARectangle *src_rect,
+    const VARectangle *dst_rect,
+    unsigned int       flags
+)
+{
+    i965_render_dest_surface_state(ctx, 0);
+    i965_render_src_surfaces_state(ctx, obj_surface, flags);
+    gen8_render_sampler(ctx);
     i965_render_cc_viewport(ctx);
     gen7_render_color_calc_state(ctx);
     gen7_render_blend_state(ctx);
@@ -2519,6 +2770,42 @@ gen7_emit_state_base_address(VADriverContextP ctx)
     OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Dynamic state upper bound */
     OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Indirect object upper bound */
     OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Instruction access upper bound */
+}
+
+static void
+gen8_emit_state_base_address(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = i965->batch;
+    struct i965_render_state *render_state = &i965->render_state;
+
+    BEGIN_BATCH(batch, 16);
+    OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (16 - 2));
+    OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* General state base address */
+	OUT_BATCH(batch, 0);
+	OUT_BATCH(batch, 0);
+	/*DW4 */
+    OUT_RELOC(batch, render_state->wm.surface_state_binding_table_bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
+	OUT_BATCH(batch, 0);
+
+	/*DW6*/
+    OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Dynamic state base address */
+	OUT_BATCH(batch, 0);
+
+	/*DW8*/
+    OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Indirect object base address */
+	OUT_BATCH(batch, 0);
+
+	/*DW10 */
+    OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Instruction base address */
+	OUT_BATCH(batch, 0);
+
+	/*DW12 */	
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* General state upper bound */
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* Dynamic state upper bound */
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* Indirect object upper bound */
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* Instruction access upper bound */
+    ADVANCE_BATCH(batch);
 }
 
 static void
@@ -3000,6 +3287,33 @@ gen7_render_emit_states(VADriverContextP ctx, int kernel)
 }
 
 static void
+gen8_render_emit_states(VADriverContextP ctx, int kernel)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = i965->batch;
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+    intel_batchbuffer_emit_mi_flush(batch);
+    gen7_emit_invarient_states(ctx);
+    gen8_emit_state_base_address(ctx);
+    gen7_emit_viewport_state_pointers(ctx);
+    gen7_emit_urb(ctx);
+    gen7_emit_cc_state_pointers(ctx);
+    gen7_emit_sampler_state_pointers(ctx);
+    gen7_emit_bypass_state(ctx);
+    gen7_emit_vs_state(ctx);
+    gen7_emit_clip_state(ctx);
+    gen7_emit_sf_state(ctx);
+    gen7_emit_wm_state(ctx, kernel);
+    gen7_emit_binding_table(ctx);
+    gen7_emit_depth_buffer_state(ctx);
+    gen7_emit_drawing_rectangle(ctx);
+    gen7_emit_vertex_element_state(ctx);
+    gen7_emit_vertices(ctx);
+    intel_batchbuffer_end_atomic(batch);
+}
+
+static void
 gen7_render_put_surface(
     VADriverContextP   ctx,
     struct object_surface *obj_surface,    
@@ -3015,6 +3329,25 @@ gen7_render_put_surface(
     gen7_render_setup_states(ctx, obj_surface, src_rect, dst_rect, flags);
     i965_clear_dest_region(ctx);
     gen7_render_emit_states(ctx, PS_KERNEL);
+    intel_batchbuffer_flush(batch);
+}
+
+static void
+gen8_render_put_surface(
+    VADriverContextP   ctx,
+    struct object_surface *obj_surface,    
+    const VARectangle *src_rect,
+    const VARectangle *dst_rect,
+    unsigned int       flags
+)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = i965->batch;
+
+    gen8_render_initialize(ctx);
+    gen8_render_setup_states(ctx, obj_surface, src_rect, dst_rect, flags);
+    i965_clear_dest_region(ctx);
+    gen8_render_emit_states(ctx, PS_KERNEL);
     intel_batchbuffer_flush(batch);
 }
 
@@ -3060,6 +3393,25 @@ gen7_subpicture_render_setup_states(
 }
 
 static void
+gen8_subpicture_render_setup_states(
+    VADriverContextP   ctx,
+    struct object_surface *obj_surface,
+    const VARectangle *src_rect,
+    const VARectangle *dst_rect
+)
+{
+    i965_render_dest_surface_state(ctx, 0);
+    i965_subpic_render_src_surfaces_state(ctx, obj_surface);
+    gen8_render_sampler(ctx);
+    i965_render_cc_viewport(ctx);
+    gen7_render_color_calc_state(ctx);
+    gen7_subpicture_render_blend_state(ctx);
+    gen7_render_depth_stencil_state(ctx);
+    i965_subpic_render_upload_constants(ctx, obj_surface);
+    i965_subpic_render_upload_vertex(ctx, obj_surface, dst_rect);
+}
+
+static void
 gen7_render_put_subpicture(
     VADriverContextP   ctx,
     struct object_surface *obj_surface,
@@ -3080,6 +3432,26 @@ gen7_render_put_subpicture(
     intel_batchbuffer_flush(batch);
 }
 
+static void
+gen8_render_put_subpicture(
+    VADriverContextP   ctx,
+    struct object_surface *obj_surface,
+    const VARectangle *src_rect,
+    const VARectangle *dst_rect
+)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = i965->batch;
+    unsigned int index = obj_surface->subpic_render_idx;
+    struct object_subpic *obj_subpic = obj_surface->obj_subpic[index];
+
+    assert(obj_subpic);
+    gen8_render_initialize(ctx);
+    gen8_subpicture_render_setup_states(ctx, obj_surface, src_rect, dst_rect);
+    gen8_render_emit_states(ctx, PS_SUBPIC_KERNEL);
+    i965_render_upload_image_palette(ctx, obj_subpic->obj_image, 0xff);
+    intel_batchbuffer_flush(batch);
+}
 
 /*
  * global functions
@@ -3118,8 +3490,9 @@ intel_render_put_surface(
             src_rect = dst_rect;
     }
 
-    if (IS_GEN7(i965->intel.device_id) ||
-        IS_GEN8(i965->intel.device_id))
+    if (IS_GEN8(i965->intel.device_id))
+        gen8_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
+    else if (IS_GEN7(i965->intel.device_id))
         gen7_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
     else if (IS_GEN6(i965->intel.device_id))
         gen6_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
@@ -3140,8 +3513,9 @@ intel_render_put_subpicture(
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (IS_GEN7(i965->intel.device_id) ||
-        IS_GEN8(i965->intel.device_id))
+    if (IS_GEN8(i965->intel.device_id))
+        gen8_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
+    else if (IS_GEN7(i965->intel.device_id))
         gen7_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
     else if (IS_GEN6(i965->intel.device_id))
         gen6_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
@@ -3162,8 +3536,10 @@ i965_render_init(VADriverContextP ctx)
     assert(NUM_RENDER_KERNEL == (sizeof(render_kernels_gen6) / 
                                  sizeof(render_kernels_gen6[0])));
 
-    if (IS_GEN7(i965->intel.device_id) ||
-		IS_GEN8(i965->intel.device_id))
+    if (IS_GEN8(i965->intel.device_id)) {
+        memcpy(render_state->render_kernels, render_kernels_gen8,
+			sizeof(render_state->render_kernels));
+    } else  if (IS_GEN7(i965->intel.device_id)) 
         memcpy(render_state->render_kernels,
                (IS_HASWELL(i965->intel.device_id) ? render_kernels_gen7_haswell : render_kernels_gen7),
                sizeof(render_state->render_kernels));
