@@ -2166,6 +2166,7 @@ gen8_mfd_jpeg_bsd_object(VADriverContextP ctx,
 }
 
 /* Workaround for JPEG decoding on Ivybridge */
+#ifdef JPEG_WA
 
 VAStatus 
 i965_DestroySurfaces(VADriverContextP ctx,
@@ -2615,6 +2616,8 @@ gen8_mfd_jpeg_wa(VADriverContextP ctx,
     gen8_jpeg_wa_avc_bsd_object(ctx, gen7_mfd_context);
 }
 
+#endif
+
 void
 gen8_mfd_jpeg_decode_picture(VADriverContextP ctx,
                              struct decode_state *decode_state,
@@ -2632,7 +2635,9 @@ gen8_mfd_jpeg_decode_picture(VADriverContextP ctx,
     /* Currently only support Baseline DCT */
     gen8_mfd_jpeg_decode_init(ctx, decode_state, gen7_mfd_context);
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
+#ifdef JPEG_WA
     gen8_mfd_jpeg_wa(ctx, gen7_mfd_context);
+#endif
     intel_batchbuffer_emit_mi_flush(batch);
     gen8_mfd_pipe_mode_select(ctx, decode_state, MFX_FORMAT_JPEG, gen7_mfd_context);
     gen8_mfd_surface_state(ctx, decode_state, MFX_FORMAT_JPEG, gen7_mfd_context);
