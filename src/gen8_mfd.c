@@ -1352,7 +1352,7 @@ gen8_mfd_vc1_decode_init(VADriverContextP ctx,
     dri_bo_unreference(gen7_mfd_context->deblocking_filter_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "deblocking filter row store",
-                      width_in_mbs * 6 * 64,
+                      width_in_mbs * 7 * 64,
                       0x1000);
     assert(bo);
     gen7_mfd_context->deblocking_filter_row_store_scratch_buffer.bo = bo;
