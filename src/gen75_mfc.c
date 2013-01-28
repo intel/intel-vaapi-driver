@@ -2067,11 +2067,11 @@ gen75_mfc_mpeg2_pak_object_inter(VADriverContextP ctx,
     if (batch == NULL)
         batch = encoder_context->base.batch;
 
-    mvptr = (short *)msg;
-    mvx0 = mpeg2_motion_vector(mvptr[MPEG2_INTER_MV_OFFSET + 0] / 2, x, width_in_mbs * 16, pic_param->f_code[0][0]);
-    mvy0 = mpeg2_motion_vector(mvptr[MPEG2_INTER_MV_OFFSET + 1] / 2, y, height_in_mbs * 16, pic_param->f_code[0][0]);
-    mvx1 = mpeg2_motion_vector(mvptr[MPEG2_INTER_MV_OFFSET + 2] / 2, x, width_in_mbs * 16, pic_param->f_code[1][0]);
-    mvy1 = mpeg2_motion_vector(mvptr[MPEG2_INTER_MV_OFFSET + 3] / 2, y, height_in_mbs * 16, pic_param->f_code[1][0]);
+    mvptr = (short *)(msg + MPEG2_INTER_MV_OFFSET);
+    mvx0 = mpeg2_motion_vector(mvptr[0] / 2, x, width_in_mbs * 16, pic_param->f_code[0][0]);
+    mvy0 = mpeg2_motion_vector(mvptr[1] / 2, y, height_in_mbs * 16, pic_param->f_code[0][0]);
+    mvx1 = mpeg2_motion_vector(mvptr[2] / 2, x, width_in_mbs * 16, pic_param->f_code[1][0]);
+    mvy1 = mpeg2_motion_vector(mvptr[3] / 2, y, height_in_mbs * 16, pic_param->f_code[1][0]);
 
     BEGIN_BCS_BATCH(batch, len_in_dwords);
 
