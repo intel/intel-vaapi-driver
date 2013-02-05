@@ -3812,7 +3812,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     gen7_pp_set_surface_state(ctx, pp_context,
                               pp_context->stmm.bo, 0,
                               orig_w, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
-                              5, 1);
+                              33, 1);
 
     /* destination surface */
     obj_surface = SURFACE(dst_surface->id);
