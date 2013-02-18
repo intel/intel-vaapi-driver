@@ -991,7 +991,7 @@ Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
         vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;
     } else {
-        if (vme_context->video_coding_type == VIDEO_CODING_MPEG2) {
+        if (vme_context->video_coding_type == VIDEO_CODING_AVC) {
             i965_gpe_load_kernels(ctx,
                                   &vme_context->gpe_context,
                                   gen6_vme_kernels,
