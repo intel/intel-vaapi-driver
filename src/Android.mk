@@ -27,11 +27,19 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES :=              \
+        gen6_mfc_common.c       \
         gen6_mfc.c              \
         gen6_mfd.c              \
         gen6_vme.c              \
         gen7_mfd.c              \
         gen7_mfc.c              \
+        gen7_vme.c              \
+        gen75_mfc.c             \
+        gen75_mfd.c             \
+        gen75_vme.c             \
+        gen75_picture_process.c \
+        gen75_vpp_vebox.c       \
+        gen75_vpp_gpe.c         \
         i965_avc_bsd.c          \
         i965_avc_hw_scoreboard.c\
         i965_avc_ildb.c         \
@@ -45,6 +53,7 @@ LOCAL_SRC_FILES :=              \
         i965_media_mpeg2.c      \
         i965_post_processing.c  \
         i965_render.c           \
+        intel_media_common.c    \
         intel_batchbuffer.c     \
         intel_batchbuffer_dump.c\
         intel_driver.c          \
