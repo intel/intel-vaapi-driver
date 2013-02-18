@@ -62,6 +62,10 @@
 
 #define BRC_PI_0_5 1.5707963267948966192313216916398
 
+#ifndef HAVE_LOG2F
+#define log2f(x) (logf(x)/(float)M_LN2)
+#endif
+
 static void
 intel_mfc_bit_rate_control_context_init(struct encode_state *encode_state, 
                                        struct gen6_mfc_context *mfc_context)
