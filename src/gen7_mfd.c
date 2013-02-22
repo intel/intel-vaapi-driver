@@ -191,7 +191,7 @@ gen7_mfd_init_avc_surface(VADriverContextP ctx,
     if (gen7_avc_surface->dmv_top == NULL) {
         gen7_avc_surface->dmv_top = dri_bo_alloc(i965->intel.bufmgr,
                                                  "direct mv w/r buffer",
-                                                 width_in_mbs * height_in_mbs * 64,
+                                                 width_in_mbs * (height_in_mbs + 1) * 64,
                                                  0x1000);
         assert(gen7_avc_surface->dmv_top);
     }
@@ -200,7 +200,7 @@ gen7_mfd_init_avc_surface(VADriverContextP ctx,
         gen7_avc_surface->dmv_bottom == NULL) {
         gen7_avc_surface->dmv_bottom = dri_bo_alloc(i965->intel.bufmgr,
                                                     "direct mv w/r buffer",
-                                                    width_in_mbs * height_in_mbs * 64,                                                    
+                                                    width_in_mbs * (height_in_mbs + 1) * 64,
                                                     0x1000);
         assert(gen7_avc_surface->dmv_bottom);
     }
