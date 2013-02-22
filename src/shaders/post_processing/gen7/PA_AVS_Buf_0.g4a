@@ -518,7 +518,7 @@
 
     mov  (1)    f0.0:uw                0:uw                   // clear flag
     //if (((int)(u_left*width + 5.0/256) > (int)(u_left*width))
-    cmp.g.f2.0  (1)     null<1>:d        r14.2:d    r14.0:d
+    cmp.g.f1.0  (1)     null<1>:d        r14.2:d    r14.0:d
     // modified_u_coord = u_coord – 5.0/(256*width); //floating point
     (f1.0) add (1)     r17.2:f       r17.2<0;1,0>:f   -r2.3:f
     //else if(((int)(u_left*width + 255.0/256) == (int)(u_left*width)) 
