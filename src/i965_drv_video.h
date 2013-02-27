@@ -41,7 +41,7 @@
 #include "object_heap.h"
 #include "intel_driver.h"
 
-#define I965_MAX_PROFILES                       11
+#define I965_MAX_PROFILES                       20
 #define I965_MAX_ENTRYPOINTS                    5
 #define I965_MAX_CONFIG_ATTRIBUTES              10
 #define I965_MAX_IMAGE_FORMATS                  10
@@ -296,6 +296,8 @@ struct hw_codec_info
     unsigned int has_tiled_surface:1;
     unsigned int has_di_motion_adptive:1;
     unsigned int has_di_motion_compensated:1;
+    unsigned int has_vp8_decoding:1;
+    unsigned int has_vp8_encoding:1;
 
     unsigned int num_filters;
     struct i965_filter filters[VAProcFilterCount];
