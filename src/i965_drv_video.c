@@ -1677,6 +1677,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAProcPipelineParameterBufferType:
     case VAProcFilterParameterBufferType:
     case VAHuffmanTableBufferType:
+    case VAProbabilityBufferType:
         /* Ok */
         break;
 
@@ -1713,7 +1714,8 @@ i965_create_buffer_internal(VADriverContextP ctx,
             dri_bo_subdata(buffer_store->bo, 0, size * num_elements, data);
     } else if (type == VASliceDataBufferType || 
                type == VAImageBufferType || 
-               type == VAEncCodedBufferType) {
+               type == VAEncCodedBufferType ||
+               type == VAProbabilityBufferType) {
         buffer_store->bo = dri_bo_alloc(i965->intel.bufmgr, 
                                         "Buffer", 
                                         size * num_elements, 64);
@@ -2081,6 +2083,7 @@ DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(picture_parameter, pic_param)
 DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(iq_matrix, iq_matrix)
 DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(bit_plane, bit_plane)
 DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(huffman_table, huffman_table)
+DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(probability_data, probability_data)
 
 #define DEF_RENDER_DECODE_MULTI_BUFFER_FUNC(name, member) DEF_RENDER_MULTI_BUFFER_FUNC(decode, name, member)
 DEF_RENDER_DECODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
@@ -2131,6 +2134,10 @@ i965_decoder_render_picture(VADriverContextP ctx,
 
         case VAHuffmanTableBufferType:
             vaStatus = I965_RENDER_DECODE_BUFFER(huffman_table);
+            break;
+
+        case VAProbabilityBufferType:
+            vaStatus = I965_RENDER_DECODE_BUFFER(probability_data);
             break;
 
         default:
