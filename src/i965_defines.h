@@ -327,6 +327,11 @@
 
 #define MFD_JPEG_BSD_OBJECT                     MFX(2, 7, 1, 8)
 
+#define MFX_VP8_PIC_STATE                       MFX(2, 4, 0, 0)
+
+#define MFD_VP8_BSD_OBJECT                      MFX(2, 4, 1, 8)
+
+
 #define VEB(pipeline, op, sub_opa, sub_opb)     \
      (3 << 29 |                                 \
      (pipeline) << 27 |                         \
@@ -704,6 +709,8 @@
 #define MFX_FORMAT_VC1          1
 #define MFX_FORMAT_AVC          2
 #define MFX_FORMAT_JPEG         3
+#define MFX_FORMAT_SVC          4
+#define MFX_FORMAT_VP8          5
 
 #define MFX_SHORT_MODE          0
 #define MFX_LONG_MODE           1
