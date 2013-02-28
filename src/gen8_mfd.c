@@ -32,6 +32,7 @@
 #include <string.h>
 #include <assert.h>
 #include <va/va_dec_jpeg.h>
+#include <va/va_dec_vp8.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
@@ -108,7 +109,8 @@ gen8_mfd_pipe_mode_select(VADriverContextP ctx,
     assert(standard_select == MFX_FORMAT_MPEG2 ||
            standard_select == MFX_FORMAT_AVC ||
            standard_select == MFX_FORMAT_VC1 ||
-           standard_select == MFX_FORMAT_JPEG);
+           standard_select == MFX_FORMAT_JPEG ||
+           standard_select == MFX_FORMAT_VP8);
 
     BEGIN_BCS_BATCH(batch, 5);
     OUT_BCS_BATCH(batch, MFX_PIPE_MODE_SELECT | (5 - 2));
@@ -2709,6 +2711,218 @@ gen8_mfd_jpeg_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_flush(batch);
 }
 
+static void
+gen8_mfd_vp8_decode_init(VADriverContextP ctx,
+                          struct decode_state *decode_state,
+                          struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct object_surface *obj_surface;
+
+    /* Current decoded picture */
+    obj_surface = decode_state->render_object;
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+}
+
+static void
+gen8_mfd_vp8_pic_state(VADriverContextP ctx,
+                       struct decode_state *decode_state,
+                       struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+    VAPictureParameterBufferVP8 *pic_param = (VAPictureParameterBufferVP8 *)decode_state->pic_param->buffer;
+    VAIQMatrixBufferVP8 *iq_matrix = (VAIQMatrixBufferVP8 *)decode_state->iq_matrix->buffer;
+    VASliceParameterBufferVP8 *slice_param = (VASliceParameterBufferVP8 *)decode_state->slice_params[0]->buffer; /* one slice per frame */
+    dri_bo *probs_bo = decode_state->probability_data->bo;
+    int i, j;
+
+    BEGIN_BCS_BATCH(batch, 38);
+    OUT_BCS_BATCH(batch, MFX_VP8_PIC_STATE | (38 - 2));
+    OUT_BCS_BATCH(batch,
+                  (ALIGN(pic_param->frame_height, 16) / 16 - 1) << 16 |
+                  (ALIGN(pic_param->frame_width, 16) / 16 - 1) << 0);
+    OUT_BCS_BATCH(batch,
+                  slice_param->num_of_partitions << 24 |
+                  pic_param->pic_fields.bits.sharpness_level << 16 |
+                  pic_param->pic_fields.bits.sign_bias_alternate << 13 |
+                  pic_param->pic_fields.bits.sign_bias_golden << 12 |
+                  pic_param->pic_fields.bits.loop_filter_adj_enable << 11 |
+                  pic_param->pic_fields.bits.mb_no_coeff_skip << 10 |
+                  pic_param->pic_fields.bits.update_mb_segmentation_map << 9 |
+                  pic_param->pic_fields.bits.segmentation_enabled << 8 |
+                  0 << 7 | /* segmentation id streamin disabled */
+                  0 << 6 | /* segmentation id streamout disabled */
+                  pic_param->pic_fields.bits.key_frame << 5 |
+                  pic_param->pic_fields.bits.filter_type << 4 |
+                  (pic_param->pic_fields.bits.version == 3) << 1 | /* full pixel mode for version 3 */
+                  !!pic_param->pic_fields.bits.version << 0); /* version 0: 6 tap */
+
+    OUT_BCS_BATCH(batch,
+                  pic_param->loop_filter_level[3] << 24 |
+                  pic_param->loop_filter_level[2] << 16 |
+                  pic_param->loop_filter_level[1] <<  8 |
+                  pic_param->loop_filter_level[0] <<  0);
+
+    /* Quantizer Value for 4 segmetns, DW4-DW15 */
+    for (i = 0; i < 4; i++) {
+        OUT_BCS_BATCH(batch,
+                      iq_matrix->quantization_index[i][0] << 16 | /* Y1AC */
+                      iq_matrix->quantization_index[i][1] <<  0); /* Y1DC */
+        OUT_BCS_BATCH(batch,
+                      iq_matrix->quantization_index[i][5] << 16 | /* UVAC */
+                      iq_matrix->quantization_index[i][4] <<  0); /* UVDC */
+        OUT_BCS_BATCH(batch,
+                      iq_matrix->quantization_index[i][3] << 16 | /* Y2AC */
+                      iq_matrix->quantization_index[i][2] <<  0); /* Y2DC */
+    }
+
+    /* CoeffProbability table for non-key frame, DW16-DW18 */
+    if (probs_bo) {
+        OUT_BCS_RELOC(batch, probs_bo,
+                      0, I915_GEM_DOMAIN_INSTRUCTION,
+                      0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    } else {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
+
+    OUT_BCS_BATCH(batch,
+                  pic_param->mb_segment_tree_probs[2] << 16 |
+                  pic_param->mb_segment_tree_probs[1] <<  8 |
+                  pic_param->mb_segment_tree_probs[0] <<  0);
+
+    OUT_BCS_BATCH(batch,
+                  pic_param->prob_skip_false << 24 |
+                  pic_param->prob_intra      << 16 |
+                  pic_param->prob_last       <<  8 |
+                  pic_param->prob_gf         <<  0);
+
+    OUT_BCS_BATCH(batch,
+                  pic_param->y_mode_probs[3] << 24 |
+                  pic_param->y_mode_probs[2] << 16 |
+                  pic_param->y_mode_probs[1] <<  8 |
+                  pic_param->y_mode_probs[0] <<  0);
+
+    OUT_BCS_BATCH(batch,
+                  pic_param->uv_mode_probs[2] << 16 |
+                  pic_param->uv_mode_probs[1] <<  8 |
+                  pic_param->uv_mode_probs[0] <<  0);
+    
+    /* MV update value, DW23-DW32 */
+    for (i = 0; i < 2; i++) {
+        for (j = 0; j < 20; j += 4) {
+            OUT_BCS_BATCH(batch,
+                          (j + 3 == 19 ? 0 : pic_param->mv_probs[i][j + 3]) << 24 |
+                          pic_param->mv_probs[i][j + 2] << 16 |
+                          pic_param->mv_probs[i][j + 1] <<  8 |
+                          pic_param->mv_probs[i][j + 0] <<  0);
+        }
+    }
+
+    OUT_BCS_BATCH(batch,
+                  pic_param->loop_filter_deltas_ref_frame[3] << 24 |
+                  pic_param->loop_filter_deltas_ref_frame[2] << 16 |
+                  pic_param->loop_filter_deltas_ref_frame[1] <<  8 |
+                  pic_param->loop_filter_deltas_ref_frame[0] <<  0);
+
+    OUT_BCS_BATCH(batch,
+                  pic_param->loop_filter_deltas_mode[3] << 24 |
+                  pic_param->loop_filter_deltas_mode[2] << 16 |
+                  pic_param->loop_filter_deltas_mode[1] <<  8 |
+                  pic_param->loop_filter_deltas_mode[0] <<  0);
+
+    /* segmentation id stream base address, DW35-DW37 */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen8_mfd_vp8_bsd_object(VADriverContextP ctx,
+                        VAPictureParameterBufferVP8 *pic_param,
+                        VASliceParameterBufferVP8 *slice_param,
+                        dri_bo *slice_data_bo,
+                        struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 22);
+    OUT_BCS_BATCH(batch, MFD_VP8_BSD_OBJECT | (22 - 2));
+    OUT_BCS_BATCH(batch,
+                  0 << 16 | /* Partition 0 CPBAC Entropy Count */
+                  0 <<  8 | /* Partition 0 Count Entropy Range */
+                  slice_param->num_of_partitions << 4 |
+                  (slice_param->macroblock_offset & 0x7));
+    OUT_BCS_BATCH(batch,
+                  0 << 24 | /* Partition 0 Count Entropy Value */
+                  0);
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 0 Data length, DW3 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 0 Data offset, DW4 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 1 Data length, DW5 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 1 Data offset, DW6 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 2 Data length, DW7 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 2 Data offset, DW8 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 3 Data length, DW9 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 3 Data offset, DW10 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 4 Data length, DW11 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 4 Data offset, DW12 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 5 Data length, DW13 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 5 Data offset, DW14 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 6 Data length, DW15 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 6 Data offset, DW16 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 7 Data length, DW17 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 7 Data offset, DW18 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 8 Data length, DW19 */
+    OUT_BCS_BATCH(batch,
+                  0);       /* Partition 8 Data offset, DW20 */
+    OUT_BCS_BATCH(batch,
+                  1 << 31 | /* concealment method */
+                  0);
+    ADVANCE_BCS_BATCH(batch);
+}
+
+void
+gen8_mfd_vp8_decode_picture(VADriverContextP ctx,
+                            struct decode_state *decode_state,
+                            struct gen7_mfd_context *gen7_mfd_context)
+{
+    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+    VAPictureParameterBufferVP8 *pic_param;
+
+    assert(decode_state->pic_param && decode_state->pic_param->buffer);
+    pic_param = (VAPictureParameterBufferVP8 *)decode_state->pic_param->buffer;
+
+    gen8_mfd_vp8_decode_init(ctx, decode_state, gen7_mfd_context);
+    intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
+    intel_batchbuffer_emit_mi_flush(batch);
+    gen8_mfd_pipe_mode_select(ctx, decode_state, MFX_FORMAT_VP8, gen7_mfd_context);
+    gen8_mfd_surface_state(ctx, decode_state, MFX_FORMAT_VP8, gen7_mfd_context);
+    gen8_mfd_pipe_buf_addr_state(ctx, decode_state, MFX_FORMAT_VP8, gen7_mfd_context);
+    gen8_mfd_vp8_pic_state(ctx, decode_state, gen7_mfd_context);
+    intel_batchbuffer_end_atomic(batch);
+    intel_batchbuffer_flush(batch);
+}
+
 static VAStatus
 gen8_mfd_decode_picture(VADriverContextP ctx, 
                         VAProfile profile, 
@@ -2749,6 +2963,10 @@ gen8_mfd_decode_picture(VADriverContextP ctx,
 
     case VAProfileJPEGBaseline:
         gen8_mfd_jpeg_decode_picture(ctx, decode_state, gen7_mfd_context);
+        break;
+
+    case VAProfileVP8Version0_3:
+        gen8_mfd_vp8_decode_picture(ctx, decode_state, gen7_mfd_context);
         break;
 
     default:
