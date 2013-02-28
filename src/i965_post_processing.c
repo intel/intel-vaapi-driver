@@ -6255,7 +6255,7 @@ i965_post_processing_context_init(VADriverContextP ctx,
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen7));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen75));
-    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
+    // assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
 
     if (IS_GEN8(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen8, sizeof(pp_context->pp_modules));
