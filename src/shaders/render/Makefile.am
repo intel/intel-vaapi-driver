@@ -85,6 +85,20 @@ INTEL_G7B_HASWELL = \
 	exa_wm_yuv_color_balance.g7b.haswell	\
 	$(NULL)
 
+INTEL_G8A =				\
+	exa_wm_src_affine.g8a 		\
+	exa_wm_src_sample_planar.g8a 	\
+	exa_wm_write.g8a 		\
+	exa_wm_yuv_rgb.g8a
+
+INTEL_G8S = $(INTEL_G8A:%.g8a=%.g8s)
+
+INTEL_G8B =				\
+	exa_wm_src_affine.g8b 		\
+	exa_wm_src_sample_planar.g8b 	\
+	exa_wm_yuv_rgb.g8b		\
+	exa_wm_write.g8b 
+
 TARGETS  =
 if HAVE_GEN4ASM
 TARGETS += $(INTEL_G4B)
@@ -92,11 +106,12 @@ TARGETS += $(INTEL_G4B_GEN5)
 TARGETS += $(INTEL_G6B)
 TARGETS += $(INTEL_G7B)
 TARGETS += $(INTEL_G7B_HASWELL)
+TARGETS += $(INTEL_G8B)
 endif
 
 all-local: $(TARGETS)
 
-SUFFIXES = .g4a .g4s .g4b .g4b.gen5 .g6a .g6s .g6b .g7a .g7s .g7b .g7b.haswell
+SUFFIXES = .g4a .g4s .g4b .g4b.gen5 .g6a .g6s .g6b .g7a .g7s .g7b .g7b.haswell .g8a .g8b .g8s
 
 if HAVE_GEN4ASM
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
@@ -120,12 +135,21 @@ $(INTEL_G7S): $(INTEL_G7A) $(INTEL_G7I)
 	$(AM_V_GEN)$(GEN4ASM) -g 7 -o $@ $<
 .g7s.g7b.haswell:
 	$(AM_V_GEN)$(GEN4ASM) -g 7.5 -o $@ $<
+
+
+$(INTEL_G8S): $(INTEL_G8A) $(INTEL_G8I)
+.g8a.g8s:
+	$(AM_V_GEN)m4 $< > $@
+.g8s.g8b:
+	$(AM_V_GEN)$(GEN4ASM) -g 8 -o $@ $<
+
 endif
 
 CLEANFILES = \
 	$(INTEL_G4S)		\
 	$(INTEL_G6S)		\
 	$(INTEL_G7S)		\
+	$(INTEL_G8S)		\
 	$(NULL)
 
 EXTRA_DIST = \
@@ -138,6 +162,8 @@ EXTRA_DIST = \
 	$(INTEL_G7A)		\
 	$(INTEL_G7B)		\
 	$(INTEL_G7B_HASWELL)	\
+	$(INTEL_G8A))		\
+	$(INTEL_G8B)		\
 	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
