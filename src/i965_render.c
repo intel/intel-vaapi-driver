@@ -3789,11 +3789,25 @@ gen8_emit_wm_state(VADriverContextP ctx, int kernel)
               (GEN8_PSX_PIXEL_SHADER_VALID | GEN8_PSX_ATTRIBUTE_ENABLE));
     ADVANCE_BATCH(batch);
 
-    BEGIN_BATCH(batch, 2);
-    OUT_BATCH(batch, GEN8_3DSTATE_PSBLEND | (2 - 2));
-    OUT_BATCH(batch,
-              	GEN8_PS_BLEND_HAS_WRITEABLE_RT);
-    ADVANCE_BATCH(batch);
+    
+    if (kernel == PS_KERNEL) {
+	BEGIN_BATCH(batch, 2);
+	OUT_BATCH(batch, GEN8_3DSTATE_PSBLEND | (2 - 2));
+	OUT_BATCH(batch,
+		GEN8_PS_BLEND_HAS_WRITEABLE_RT);
+    	ADVANCE_BATCH(batch);
+    } else if (kernel == PS_SUBPIC_KERNEL) {
+	BEGIN_BATCH(batch, 2);
+	OUT_BATCH(batch, GEN8_3DSTATE_PSBLEND | (2 - 2));
+	OUT_BATCH(batch,
+              	(GEN8_PS_BLEND_HAS_WRITEABLE_RT |
+		 GEN8_PS_BLEND_COLOR_BUFFER_BLEND_ENABLE |
+		 (I965_BLENDFACTOR_SRC_ALPHA << GEN8_PS_BLEND_SRC_ALPHA_BLEND_FACTOR_SHIFT) |
+		 (I965_BLENDFACTOR_INV_SRC_ALPHA << GEN8_PS_BLEND_DST_ALPHA_BLEND_FACTOR_SHIFT) |
+		 (I965_BLENDFACTOR_SRC_ALPHA << GEN8_PS_BLEND_SRC_BLEND_FACTOR_SHIFT) |
+		 (I965_BLENDFACTOR_INV_SRC_ALPHA << GEN8_PS_BLEND_DST_BLEND_FACTOR_SHIFT)));
+	ADVANCE_BATCH(batch);
+    }
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN6_3DSTATE_WM | (2 - 2));
@@ -4003,6 +4017,32 @@ gen7_subpicture_render_blend_state(VADriverContextP ctx)
 }
 
 static void
+gen8_subpicture_render_blend_state(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    struct gen8_global_blend_state *global_blend_state;
+    struct gen8_blend_state_rt *blend_state;
+
+    dri_bo_map(render_state->cc.blend, 1);
+    assert(render_state->cc.blend->virtual);
+    global_blend_state = render_state->cc.blend->virtual;
+    memset(global_blend_state, 0, sizeof(*global_blend_state));
+    /* Global blend state + blend_state for Render Target */
+    blend_state = (struct gen8_blend_state_rt *)(global_blend_state + 1);
+    blend_state->blend0.dest_blend_factor = I965_BLENDFACTOR_INV_SRC_ALPHA;
+    blend_state->blend0.src_blend_factor = I965_BLENDFACTOR_SRC_ALPHA;
+    blend_state->blend0.alpha_blend_func = I965_BLENDFUNCTION_ADD;
+    blend_state->blend0.ia_dest_blend_factor = I965_BLENDFACTOR_INV_SRC_ALPHA;
+    blend_state->blend0.ia_src_blend_factor = I965_BLENDFACTOR_SRC_ALPHA;
+    blend_state->blend0.colorbuf_blend = 1;
+    blend_state->blend1.post_blend_clamp_enable = 1;
+    blend_state->blend1.pre_blend_clamp_enable = 1;
+    blend_state->blend1.clamp_range = 0; /* clamp range [0, 1] */
+    dri_bo_unmap(render_state->cc.blend);
+}
+
+static void
 gen7_subpicture_render_setup_states(
     VADriverContextP   ctx,
     struct object_surface *obj_surface,
@@ -4034,8 +4074,7 @@ gen8_subpicture_render_setup_states(
     gen8_render_sampler(ctx);
     i965_render_cc_viewport(ctx);
     gen7_render_color_calc_state(ctx);
-    gen7_subpicture_render_blend_state(ctx);
-    gen7_render_depth_stencil_state(ctx);
+    gen8_subpicture_render_blend_state(ctx);
     i965_subpic_render_upload_constants(ctx, obj_surface);
     i965_subpic_render_upload_vertex(ctx, obj_surface, dst_rect);
 }
