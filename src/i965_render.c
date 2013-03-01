@@ -162,9 +162,9 @@ static const uint32_t ps_kernel_static_gen8[][4] = {
 };
 
 static const uint32_t ps_subpic_kernel_static_gen8[][4] = {
-#include "shaders/render/exa_wm_src_affine.g7b"
-#include "shaders/render/exa_wm_src_sample_argb.g7b"
-#include "shaders/render/exa_wm_write.g7b"
+#include "shaders/render/exa_wm_src_affine.g8b"
+#include "shaders/render/exa_wm_src_sample_argb.g8b"
+#include "shaders/render/exa_wm_write.g8b"
 };
 
 
