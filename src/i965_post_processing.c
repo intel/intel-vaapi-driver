@@ -1201,14 +1201,22 @@ static const uint32_t pp_nv12_dn_gen8[][4] = {
 static const uint32_t pp_nv12_load_save_pa_gen8[][4] = {
 #include "shaders/post_processing/gen7/pl2_to_pa.g75b"
 };
-
 static const uint32_t pp_pl3_load_save_pa_gen8[][4] = {
 #include "shaders/post_processing/gen7/pl3_to_pa.g75b"
 };
-
 static const uint32_t pp_pa_load_save_nv12_gen8[][4] = {
 #include "shaders/post_processing/gen7/pa_to_pl2.g75b"
 };
+static const uint32_t pp_pa_load_save_pl3_gen8[][4] = {
+#include "shaders/post_processing/gen7/pa_to_pl3.g75b"
+};
+static const uint32_t pp_rgbx_load_save_nv12_gen8[][4] = {
+#include "shaders/post_processing/gen7/rgbx_to_nv12.g75b"
+};
+static const uint32_t pp_nv12_load_save_rgbx_gen8[][4] = {
+#include "shaders/post_processing/gen7/pl2_to_rgbx.g75b"
+};
+
 
 static struct pp_module pp_modules_gen8[] = {
     {
@@ -1251,7 +1259,7 @@ static struct pp_module pp_modules_gen8[] = {
         {
             "PL3_NV12",
             PP_PL3_LOAD_SAVE_N12,
-            pp_pl3_load_save_nv12_gen75,
+            pp_pl3_load_save_nv12_gen8,
             sizeof(pp_pl3_load_save_nv12_gen8),
             NULL,
         },
@@ -1263,7 +1271,7 @@ static struct pp_module pp_modules_gen8[] = {
         {
             "PL3_PL3",
             PP_PL3_LOAD_SAVE_N12,
-            pp_pl3_load_save_pl3_gen75,
+            pp_pl3_load_save_pl3_gen8,
             sizeof(pp_pl3_load_save_pl3_gen8),
             NULL,
         },
@@ -1304,7 +1312,7 @@ static struct pp_module pp_modules_gen8[] = {
             NULL,
         },
 
-        gen8_pp_plx_avs_initialize,
+        gen7_pp_nv12_dndi_initialize,
     },
 
     {
@@ -1316,7 +1324,7 @@ static struct pp_module pp_modules_gen8[] = {
             NULL,
         },
 
-        gen8_pp_plx_avs_initialize,
+        gen7_pp_nv12_dn_initialize,
     },
     {
         {
@@ -1353,7 +1361,43 @@ static struct pp_module pp_modules_gen8[] = {
     
         gen8_pp_plx_avs_initialize,
     },
-          
+
+    {
+        {
+            "PA_PL3 module",
+            PP_PA_LOAD_SAVE_PL3,
+            pp_pa_load_save_pl3_gen8,
+            sizeof(pp_pa_load_save_pl3_gen8),
+            NULL,
+        },
+    
+        gen8_pp_plx_avs_initialize,
+    },
+    
+    {
+        {
+            "RGBX_NV12 module",
+            PP_RGBX_LOAD_SAVE_NV12,
+            pp_rgbx_load_save_nv12_gen8,
+            sizeof(pp_rgbx_load_save_nv12_gen8),
+            NULL,
+        },
+    
+        gen7_pp_rgbx_avs_initialize,
+    },
+
+    {
+        {
+            "NV12_RGBX module",
+            PP_NV12_LOAD_SAVE_RGBX,
+            pp_nv12_load_save_rgbx_gen8,
+            sizeof(pp_nv12_load_save_rgbx_gen8),
+            NULL,
+        },
+    
+        gen8_pp_plx_avs_initialize,
+    },
+            
 };
 
           
@@ -6255,7 +6299,7 @@ i965_post_processing_context_init(VADriverContextP ctx,
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen7));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen75));
-    // assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
+    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
 
     if (IS_GEN8(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen8, sizeof(pp_context->pp_modules));
