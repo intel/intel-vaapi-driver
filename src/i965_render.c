@@ -916,6 +916,10 @@ gen8_render_set_surface_state(
 
     ss->ss3.pitch = pitch - 1;
 
+    /* Always set 1(align 4 mode) per B-spec */
+    ss->ss0.vertical_alignment = 1;
+    ss->ss0.horizontal_alignment = 1;
+
     dri_bo_get_tiling(bo, &tiling, &swizzle);
     gen8_render_set_surface_tiling(ss, tiling);
 }
