@@ -1583,12 +1583,13 @@ gen8_mfc_avc_pipeline_programing(VADriverContextP ctx,
     // picture level programing
     gen8_mfc_avc_pipeline_picture_programing(ctx, encode_state, encoder_context);
 
-    BEGIN_BCS_BATCH(batch, 2);
-    OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8));
+    BEGIN_BCS_BATCH(batch, 3);
+    OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
     OUT_BCS_RELOC(batch,
                   slice_batch_bo,
                   I915_GEM_DOMAIN_COMMAND, 0, 
                   0);
+    OUT_BCS_BATCH(batch, 0);
     ADVANCE_BCS_BATCH(batch);
 
     // end programing
