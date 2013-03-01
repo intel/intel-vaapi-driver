@@ -106,6 +106,11 @@
 # define GEN6_3DSTATE_SF_LINE_PROVOKE_SHIFT		27
 # define GEN6_3DSTATE_SF_TRIFAN_PROVOKE_SHIFT		25
 
+#define GEN8_3DSTATE_RASTER			CMD(3, 0, 0x50)
+# define GEN8_3DSTATE_RASTER_CULL_BOTH			(0 << 16)
+# define GEN8_3DSTATE_RASTER_CULL_NONE			(1 << 16)
+# define GEN8_3DSTATE_RASTER_CULL_FRONT			(2 << 16)
+# define GEN8_3DSTATE_RASTER_CULL_BACK			(3 << 16)
 
 #define GEN6_3DSTATE_WM				CMD(3, 0, 0x14)
 /* DW2 */
@@ -188,9 +193,13 @@
 # define GEN6_3DSTATE_MULTISAMPLE_NUMSAMPLES_4                  (2 << 1)
 # define GEN6_3DSTATE_MULTISAMPLE_NUMSAMPLES_8                  (3 << 1)
 
+#define GEN8_3DSTATE_MULTISAMPLE		CMD(3, 0, 0x0d)
+#define GEN8_3DSTATE_SAMPLE_PATTERN		CMD(3, 1, 0x1C)
+
 /* GEN7 */
 #define GEN7_3DSTATE_CLEAR_PARAMS               CMD(3, 0, 0x04)
 #define GEN7_3DSTATE_DEPTH_BUFFER               CMD(3, 0, 0x05)
+#define GEN7_3DSTATE_HIER_DEPTH_BUFFER		CMD(3, 0, 0x07)
 
 #define GEN7_3DSTATE_URB_VS                     CMD(3, 0, 0x30)
 #define GEN7_3DSTATE_URB_HS                     CMD(3, 0, 0x31)
@@ -205,6 +214,8 @@
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS     CMD(3, 1, 0x16)
 /* DW1 */
 # define GEN7_PUSH_CONSTANT_BUFFER_OFFSET_SHIFT 16
+# define GEN8_PUSH_CONSTANT_BUFFER_OFFSET_SHIFT	16
+# define GEN8_PUSH_CONSTANT_BUFFER_SIZE_SHIFT	0
 
 #define GEN7_3DSTATE_CONSTANT_HS                CMD(3, 0, 0x19)
 #define GEN7_3DSTATE_CONSTANT_DS                CMD(3, 0, 0x1a)
@@ -222,6 +233,11 @@
 # define GEN7_SBE_POINT_SPRITE_LOWERLEFT        (1 << 20)
 # define GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT   11
 # define GEN7_SBE_URB_ENTRY_READ_OFFSET_SHIFT   4
+# define GEN8_SBE_FORCE_URB_ENTRY_READ_LENGTH  (1 << 29)
+# define GEN8_SBE_FORCE_URB_ENTRY_READ_OFFSET  (1 << 28)
+
+# define GEN8_SBE_URB_ENTRY_READ_OFFSET_SHIFT   5
+#define GEN8_3DSTATE_SBE_SWIZ                    CMD(3, 0, 0x51)
 
 #define GEN7_3DSTATE_PS                                 CMD(3, 0, 0x20)
 /* DW1: kernel pointer */
@@ -253,6 +269,37 @@
 # define GEN7_PS_DISPATCH_START_GRF_SHIFT_2             0
 /* DW6: kernel 1 pointer */
 /* DW7: kernel 2 pointer */
+
+# define GEN8_PS_MAX_THREADS_SHIFT                      23
+
+#define GEN8_3DSTATE_PSEXTRA				CMD(3, 0, 0x4f)
+/* DW1 */
+# define GEN8_PSX_PIXEL_SHADER_VALID                    (1 << 31)
+# define GEN8_PSX_PSCDEPTH_OFF                          (0 << 26)
+# define GEN8_PSX_PSCDEPTH_ON                           (1 << 26)
+# define GEN8_PSX_PSCDEPTH_ON_GE                        (2 << 26)
+# define GEN8_PSX_PSCDEPTH_ON_LE                        (3 << 26)
+# define GEN8_PSX_ATTRIBUTE_ENABLE			(1 << 8)
+
+#define GEN8_3DSTATE_PSBLEND				CMD(3, 0, 0x4d)
+/* DW1 */
+# define GEN8_PS_BLEND_ALPHA_TO_COVERAGE_ENABLE         (1 << 31)
+# define GEN8_PS_BLEND_HAS_WRITEABLE_RT                 (1 << 30)
+# define GEN8_PS_BLEND_COLOR_BUFFER_BLEND_ENABLE        (1 << 29)
+# define GEN8_PS_BLEND_SRC_ALPHA_BLEND_FACTOR_MASK      INTEL_MASK(28, 24)
+# define GEN8_PS_BLEND_SRC_ALPHA_BLEND_FACTOR_SHIFT     24
+# define GEN8_PS_BLEND_DST_ALPHA_BLEND_FACTOR_MASK      INTEL_MASK(23, 19)
+# define GEN8_PS_BLEND_DST_ALPHA_BLEND_FACTOR_SHIFT     19
+# define GEN8_PS_BLEND_SRC_BLEND_FACTOR_MASK            INTEL_MASK(18, 14)
+# define GEN8_PS_BLEND_SRC_BLEND_FACTOR_SHIFT           14
+# define GEN8_PS_BLEND_DST_BLEND_FACTOR_MASK            INTEL_MASK(13, 9)
+# define GEN8_PS_BLEND_DST_BLEND_FACTOR_SHIFT           9
+# define GEN8_PS_BLEND_ALPHA_TEST_ENABLE                (1 << 8)
+# define GEN8_PS_BLEND_INDEPENDENT_ALPHA_BLEND_ENABLE   (1 << 7)
+
+
+#define GEN7_3DSTATE_STENCIL_BUFFER			CMD(3, 0, 0x06)
+#define GEN8_3DSTATE_WM_DEPTH_STENCIL			CMD(3, 0, 0x4e)
 
 #define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CL      CMD(3, 0, 0x21)
 #define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC         CMD(3, 0, 0x23)
@@ -614,6 +661,8 @@
 #define VE1_VFCOMPONENT_2_SHIFT		20
 #define VE1_VFCOMPONENT_3_SHIFT		16
 #define VE1_DESTINATION_ELEMENT_OFFSET_SHIFT	0
+#define GEN8_VE0_VERTEX_BUFFER_INDEX_SHIFT      26 /* for GEN8 */
+#define GEN8_VE0_VALID                  (1 << 25)  /* for GEN8 */
 
 #define VB0_BUFFER_INDEX_SHIFT          27
 #define GEN6_VB0_BUFFER_INDEX_SHIFT     26
@@ -623,6 +672,8 @@
 #define GEN6_VB0_INSTANCEDATA           (1 << 20)
 #define GEN7_VB0_ADDRESS_MODIFYENABLE   (1 << 14)
 #define VB0_BUFFER_PITCH_SHIFT          0
+#define GEN8_VB0_BUFFER_INDEX_SHIFT     26
+#define GEN8_VB0_MOCS_SHIFT		16
 
 #define _3DPRIMITIVE_VERTEX_SEQUENTIAL  (0 << 15)
 #define _3DPRIMITIVE_VERTEX_RANDOM      (1 << 15)
@@ -652,6 +703,8 @@
 #define _3DPRIM_LINESTRIP_BF      0x13
 #define _3DPRIM_LINESTRIP_CONT_BF 0x14
 #define _3DPRIM_TRIFAN_NOSTIPPLE  0x15
+
+#define GEN8_3DSTATE_VF_TOPOLOGY	CMD(3, 0, 0x4b)
 
 #define I965_TILEWALK_XMAJOR                 0
 #define I965_TILEWALK_YMAJOR                 1

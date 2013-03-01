@@ -3742,6 +3742,8 @@ gen8_emit_sf_state(VADriverContextP ctx)
     BEGIN_BATCH(batch, 4);
     OUT_BATCH(batch, GEN7_3DSTATE_SBE | (4 - 2));
     OUT_BATCH(batch,
+	      (GEN8_SBE_FORCE_URB_ENTRY_READ_LENGTH) |
+	      (GEN8_SBE_FORCE_URB_ENTRY_READ_OFFSET) |
               (1 << GEN7_SBE_NUM_OUTPUTS_SHIFT) |
               (1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT) |
               (0 << GEN8_SBE_URB_ENTRY_READ_OFFSET_SHIFT));
