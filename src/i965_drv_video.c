@@ -2067,29 +2067,6 @@ get_display_attribute(VADriverContextP ctx, VADisplayAttribType type)
     return NULL;
 }
 
-static bool
-i965_display_attributes_init(VADriverContextP ctx)
-{
-    struct i965_driver_data * const i965 = i965_driver_data(ctx);
-
-    i965->num_display_attributes = ARRAY_ELEMS(i965_display_attributes);
-    i965->display_attributes = malloc(
-        i965->num_display_attributes * sizeof(i965->display_attributes[0]));
-    if (!i965->display_attributes)
-        return false;
-
-    memcpy(
-        i965->display_attributes,
-        i965_display_attributes,
-        sizeof(i965_display_attributes)
-    );
-
-    i965->rotation_attrib = get_display_attribute(ctx, VADisplayAttribRotation);
-    if (!i965->rotation_attrib)
-        return false;
-    return true;
-}
-
 static void
 i965_display_attributes_terminate(VADriverContextP ctx)
 {
@@ -2100,6 +2077,34 @@ i965_display_attributes_terminate(VADriverContextP ctx)
         i965->display_attributes = NULL;
         i965->num_display_attributes = 0;
     }
+}
+
+static bool
+i965_display_attributes_init(VADriverContextP ctx)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+
+    i965->num_display_attributes = ARRAY_ELEMS(i965_display_attributes);
+    i965->display_attributes = malloc(
+        i965->num_display_attributes * sizeof(i965->display_attributes[0]));
+    if (!i965->display_attributes)
+        goto error;
+
+    memcpy(
+        i965->display_attributes,
+        i965_display_attributes,
+        sizeof(i965_display_attributes)
+    );
+
+    i965->rotation_attrib = get_display_attribute(ctx, VADisplayAttribRotation);
+    if (!i965->rotation_attrib) {
+        goto error;
+    }
+    return true;
+
+error:
+    i965_display_attributes_terminate(ctx);
+    return false;
 }
 
 /* 
