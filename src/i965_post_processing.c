@@ -5055,7 +5055,7 @@ i965_post_processing_context_finalize(struct i965_post_processing_context *pp_co
     pp_context->pp_inline_parameter = NULL;
 }
 
-Bool
+void
 i965_post_processing_terminate(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -5067,8 +5067,6 @@ i965_post_processing_terminate(VADriverContextP ctx)
     }
 
     i965->pp_context = NULL;
-
-    return True;
 }
 
 static void
@@ -5136,7 +5134,7 @@ i965_post_processing_context_init(VADriverContextP ctx,
     pp_context->batch = batch;
 }
 
-Bool
+bool
 i965_post_processing_init(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -5150,7 +5148,7 @@ i965_post_processing_init(VADriverContextP ctx)
         }
     }
 
-    return True;
+    return true;
 }
 
 static const int procfilter_to_pp_flag[VAProcFilterCount] = {

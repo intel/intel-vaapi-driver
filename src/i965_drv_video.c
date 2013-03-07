@@ -2201,54 +2201,6 @@ i965_DbgCopySurfaceToBuffer(VADriverContextP ctx,
     return VA_STATUS_ERROR_UNIMPLEMENTED;
 }
 
-static VAStatus 
-i965_Init(VADriverContextP ctx)
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx); 
-
-    if (intel_driver_init(ctx) == False)
-        return VA_STATUS_ERROR_UNKNOWN;
-
-    if (IS_HASWELL(i965->intel.device_id))
-	i965->codec_info = &gen75_hw_codec_info;
-    else if (IS_G4X(i965->intel.device_id))
-        i965->codec_info = &g4x_hw_codec_info;
-    else if (IS_IRONLAKE(i965->intel.device_id))
-        i965->codec_info = &ironlake_hw_codec_info;
-    else if (IS_GEN6(i965->intel.device_id))
-        i965->codec_info = &gen6_hw_codec_info;
-    else if (IS_GEN7(i965->intel.device_id))
-        i965->codec_info = &gen7_hw_codec_info;
-    else
-        return VA_STATUS_ERROR_UNKNOWN;
-
-    i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, 0);
-
-    if (!i965_display_attributes_init(ctx))
-        return VA_STATUS_ERROR_UNKNOWN;
-
-    if (i965_post_processing_init(ctx) == False)
-        return VA_STATUS_ERROR_UNKNOWN;
-
-    if (i965_render_init(ctx) == False)
-        return VA_STATUS_ERROR_UNKNOWN;
-
-#ifdef HAVE_VA_WAYLAND
-    if (IS_VA_WAYLAND(ctx) && !i965_output_wayland_init(ctx))
-        return VA_STATUS_ERROR_UNKNOWN;
-#endif
-
-#ifdef HAVE_VA_X11
-    if (IS_VA_X11(ctx) && !i965_output_dri_init(ctx))
-        return VA_STATUS_ERROR_UNKNOWN;
-#endif
-
-    _i965InitMutex(&i965->render_mutex);
-    _i965InitMutex(&i965->pp_mutex);
-
-    return VA_STATUS_SUCCESS;
-}
-
 static void
 i965_destroy_heap(struct object_heap *heap, 
                   void (*func)(struct object_heap *heap, struct object_base *object))
@@ -3587,51 +3539,6 @@ i965_PutSurface(VADriverContextP ctx,
     return VA_STATUS_ERROR_UNIMPLEMENTED;
 }
 
-VAStatus 
-i965_Terminate(VADriverContextP ctx)
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-
-    if (i965->batch)
-        intel_batchbuffer_free(i965->batch);
-
-    _i965DestroyMutex(&i965->pp_mutex);
-    _i965DestroyMutex(&i965->render_mutex);
-
-#ifdef HAVE_VA_X11
-    if (IS_VA_X11(ctx))
-        i965_output_dri_terminate(ctx);
-#endif
-
-#ifdef HAVE_VA_WAYLAND
-    if (IS_VA_WAYLAND(ctx))
-        i965_output_wayland_terminate(ctx);
-#endif
-
-    if (i965_render_terminate(ctx) == False)
-        return VA_STATUS_ERROR_UNKNOWN;
-
-    if (i965_post_processing_terminate(ctx) == False)
-        return VA_STATUS_ERROR_UNKNOWN;
-
-    i965_display_attributes_terminate(ctx);
-
-    i965_destroy_heap(&i965->buffer_heap, i965_destroy_buffer);
-    i965_destroy_heap(&i965->image_heap, i965_destroy_image);
-    i965_destroy_heap(&i965->subpic_heap, i965_destroy_subpic);
-    i965_destroy_heap(&i965->surface_heap, i965_destroy_surface);
-    i965_destroy_heap(&i965->context_heap, i965_destroy_context);
-    i965_destroy_heap(&i965->config_heap, i965_destroy_config);
-
-    if (intel_driver_terminate(ctx) == False)
-        return VA_STATUS_ERROR_UNKNOWN;
-
-    free(ctx->pDriverData);
-    ctx->pDriverData = NULL;
-
-    return VA_STATUS_SUCCESS;
-}
-
 static VAStatus
 i965_BufferInfo(
     VADriverContextP ctx,       /* in */
@@ -4113,6 +4020,202 @@ VAStatus i965_QueryVideoProcPipelineCaps(
     return VA_STATUS_SUCCESS;
 }
 
+static bool
+i965_driver_data_init(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx); 
+
+    if (IS_HASWELL(i965->intel.device_id))
+	i965->codec_info = &gen75_hw_codec_info;
+    else if (IS_G4X(i965->intel.device_id))
+        i965->codec_info = &g4x_hw_codec_info;
+    else if (IS_IRONLAKE(i965->intel.device_id))
+        i965->codec_info = &ironlake_hw_codec_info;
+    else if (IS_GEN6(i965->intel.device_id))
+        i965->codec_info = &gen6_hw_codec_info;
+    else if (IS_GEN7(i965->intel.device_id))
+        i965->codec_info = &gen7_hw_codec_info;
+    else
+        return false;
+
+    if (object_heap_init(&i965->config_heap,
+                         sizeof(struct object_config),
+                         CONFIG_ID_OFFSET))
+        goto err_config_heap;
+    if (object_heap_init(&i965->context_heap,
+                         sizeof(struct object_context),
+                         CONTEXT_ID_OFFSET))
+        goto err_context_heap;
+    
+    if (object_heap_init(&i965->surface_heap,
+                         sizeof(struct object_surface),
+                         SURFACE_ID_OFFSET))
+        goto err_surface_heap;
+    if (object_heap_init(&i965->buffer_heap,
+                         sizeof(struct object_buffer),
+                         BUFFER_ID_OFFSET))
+        goto err_buffer_heap;
+    if (object_heap_init(&i965->image_heap,
+                         sizeof(struct object_image),
+                         IMAGE_ID_OFFSET))
+        goto err_image_heap;
+    if (object_heap_init(&i965->subpic_heap,
+                         sizeof(struct object_subpic),
+                         SUBPIC_ID_OFFSET))
+        goto err_subpic_heap;
+
+    i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, 0);
+    _i965InitMutex(&i965->render_mutex);
+    _i965InitMutex(&i965->pp_mutex);
+
+    return true;
+
+err_subpic_heap:    
+    object_heap_destroy(&i965->image_heap);
+err_image_heap:
+    object_heap_destroy(&i965->buffer_heap);
+err_buffer_heap:
+    object_heap_destroy(&i965->surface_heap);
+err_surface_heap:
+    object_heap_destroy(&i965->context_heap);
+err_context_heap:
+    object_heap_destroy(&i965->config_heap);
+err_config_heap:
+
+    return false;
+}
+
+static void
+i965_driver_data_terminate(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx); 
+
+    _i965DestroyMutex(&i965->pp_mutex);
+    _i965DestroyMutex(&i965->render_mutex);
+
+    if (i965->batch)
+        intel_batchbuffer_free(i965->batch);
+
+    i965_destroy_heap(&i965->subpic_heap, i965_destroy_subpic);
+    i965_destroy_heap(&i965->image_heap, i965_destroy_image);
+    i965_destroy_heap(&i965->buffer_heap, i965_destroy_buffer);
+    i965_destroy_heap(&i965->surface_heap, i965_destroy_surface);
+    i965_destroy_heap(&i965->context_heap, i965_destroy_context);
+    i965_destroy_heap(&i965->config_heap, i965_destroy_config);
+}
+
+struct {
+    bool (*init)(VADriverContextP ctx);
+    void (*terminate)(VADriverContextP ctx);
+    int display_type;
+} i965_sub_ops[] =  {
+    {   
+        intel_driver_init,
+        intel_driver_terminate,
+        0,
+    },
+
+    {
+        i965_driver_data_init,
+        i965_driver_data_terminate,
+        0,
+    },
+
+    {
+        i965_display_attributes_init,
+        i965_display_attributes_terminate,
+        0,
+    },
+
+    {
+        i965_post_processing_init,
+        i965_post_processing_terminate,
+        0,
+    },
+
+    {
+        i965_render_init,
+        i965_render_terminate,
+        0,
+    },
+
+#ifdef HAVE_VA_WAYLAND
+    {
+        i965_output_wayland_init,
+        i965_output_wayland_terminate,
+        VA_DISPLAY_WAYLAND,
+    },
+#endif
+
+#ifdef HAVE_VA_X11
+    {
+        i965_output_dri_init,
+        i965_output_dri_terminate,
+        VA_DISPLAY_X11,
+    },
+#endif
+};
+
+static VAStatus 
+i965_Init(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx); 
+    int i;
+
+    for (i = 0; i < ARRAY_ELEMS(i965_sub_ops); i++) {
+        if ((i965_sub_ops[i].display_type == 0 ||
+             i965_sub_ops[i].display_type == (ctx->display_type & VA_DISPLAY_MAJOR_MASK)) &&
+            !i965_sub_ops[i].init(ctx))
+            break;
+    }
+
+    if (i == ARRAY_ELEMS(i965_sub_ops)) {
+        sprintf(i965->va_vendor, "%s %s driver - %d.%d.%d",
+                INTEL_STR_DRIVER_VENDOR,
+                INTEL_STR_DRIVER_NAME,
+                INTEL_DRIVER_MAJOR_VERSION,
+                INTEL_DRIVER_MINOR_VERSION,
+                INTEL_DRIVER_MICRO_VERSION);
+
+        if (INTEL_DRIVER_PRE_VERSION > 0) {
+            const int len = strlen(i965->va_vendor);
+            sprintf(&i965->va_vendor[len], ".pre%d", INTEL_DRIVER_PRE_VERSION);
+        }
+
+        i965->current_context_id = VA_INVALID_ID;
+
+        return VA_STATUS_SUCCESS;
+    } else {
+        i--;
+
+        for (; i >= 0; i--) {
+            if (i965_sub_ops[i].display_type == 0 ||
+                i965_sub_ops[i].display_type == (ctx->display_type & VA_DISPLAY_MAJOR_MASK)) {
+                i965_sub_ops[i].terminate(ctx);
+            }
+        }
+
+        return VA_STATUS_ERROR_UNKNOWN;
+    }
+}
+
+VAStatus 
+i965_Terminate(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int i;
+
+    if (i965) {
+        for (i = ARRAY_ELEMS(i965_sub_ops); i > 0; i--)
+            if (i965_sub_ops[i - 1].display_type == 0 ||
+                i965_sub_ops[i - 1].display_type == (ctx->display_type & VA_DISPLAY_MAJOR_MASK)) {
+                i965_sub_ops[i - 1].terminate(ctx);
+            }
+    }
+
+    return VA_STATUS_SUCCESS;
+}
+
 VAStatus DLL_EXPORT
 VA_DRIVER_INIT_FUNC(VADriverContextP ctx);
 
@@ -4123,7 +4226,7 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     struct VADriverVTableVPP * const vtable_vpp = ctx->vtable_vpp;
 
     struct i965_driver_data *i965;
-    int result;
+    VAStatus ret = VA_STATUS_ERROR_UNKNOWN;
 
     ctx->version_major = VA_MAJOR_VERSION;
     ctx->version_minor = VA_MINOR_VERSION;
@@ -4186,54 +4289,22 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     vtable_vpp->vaQueryVideoProcPipelineCaps = i965_QueryVideoProcPipelineCaps;
 
     i965 = (struct i965_driver_data *)calloc(1, sizeof(*i965));
-    assert(i965);
-    ctx->pDriverData = (void *)i965;
 
-    result = object_heap_init(&i965->config_heap, 
-                              sizeof(struct object_config), 
-                              CONFIG_ID_OFFSET);
-    assert(result == 0);
+    if (i965 == NULL) {
+        ctx->pDriverData = NULL;
 
-    result = object_heap_init(&i965->context_heap, 
-                              sizeof(struct object_context), 
-                              CONTEXT_ID_OFFSET);
-    assert(result == 0);
-
-    result = object_heap_init(&i965->surface_heap, 
-                              sizeof(struct object_surface), 
-                              SURFACE_ID_OFFSET);
-    assert(result == 0);
-
-    result = object_heap_init(&i965->buffer_heap, 
-                              sizeof(struct object_buffer), 
-                              BUFFER_ID_OFFSET);
-    assert(result == 0);
-
-    result = object_heap_init(&i965->image_heap, 
-                              sizeof(struct object_image), 
-                              IMAGE_ID_OFFSET);
-    assert(result == 0);
-
-    result = object_heap_init(&i965->subpic_heap, 
-                              sizeof(struct object_subpic), 
-                              SUBPIC_ID_OFFSET);
-    assert(result == 0);
-
-    sprintf(i965->va_vendor, "%s %s driver - %d.%d.%d",
-            INTEL_STR_DRIVER_VENDOR,
-            INTEL_STR_DRIVER_NAME,
-            INTEL_DRIVER_MAJOR_VERSION,
-            INTEL_DRIVER_MINOR_VERSION,
-            INTEL_DRIVER_MICRO_VERSION);
-
-    if (INTEL_DRIVER_PRE_VERSION > 0) {
-        const int len = strlen(i965->va_vendor);
-        sprintf(&i965->va_vendor[len], ".pre%d", INTEL_DRIVER_PRE_VERSION);
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
     }
 
-    i965->current_context_id = VA_INVALID_ID;
+    ctx->pDriverData = (void *)i965;
+    ret = i965_Init(ctx);
 
-    ctx->str_vendor = i965->va_vendor;
-    
-    return i965_Init(ctx);
+    if (ret == VA_STATUS_SUCCESS) {
+        ctx->str_vendor = i965->va_vendor;
+    } else {
+        free(i965);
+        ctx->pDriverData = NULL;
+    }
+
+    return ret;
 }

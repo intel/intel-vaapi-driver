@@ -80,8 +80,8 @@ struct i965_render_state
     int max_wm_threads;
 };
 
-Bool i965_render_init(VADriverContextP ctx);
-Bool i965_render_terminate(VADriverContextP ctx);
+bool i965_render_init(VADriverContextP ctx);
+void i965_render_terminate(VADriverContextP ctx);
 
 void
 intel_render_put_surface(

@@ -3084,7 +3084,7 @@ intel_render_put_subpicture(
         i965_render_put_subpicture(ctx, surface, src_rect, dst_rect);
 }
 
-Bool 
+bool 
 i965_render_init(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -3146,10 +3146,10 @@ i965_render_init(VADriverContextP ctx)
         assert(0);
     }
 
-    return True;
+    return true;
 }
 
-Bool 
+void 
 i965_render_terminate(VADriverContextP ctx)
 {
     int i;
@@ -3191,7 +3191,5 @@ i965_render_terminate(VADriverContextP ctx)
         free(render_state->draw_region);
         render_state->draw_region = NULL;
     }
-
-    return True;
 }
 

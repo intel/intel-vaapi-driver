@@ -524,9 +524,9 @@ i965_image_processing(VADriverContextP ctx,
                       struct i965_surface *dst_surface,
                       const VARectangle *dst_rect);
 
-Bool
+void
 i965_post_processing_terminate(VADriverContextP ctx);
-Bool
+bool
 i965_post_processing_init(VADriverContextP ctx);
 
 #endif /* __I965_POST_PROCESSING_H__ */

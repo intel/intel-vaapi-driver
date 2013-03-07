@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdbool.h>
 
 #include <drm.h>
 #include <i915_drm.h>
@@ -121,8 +122,8 @@ struct intel_driver_data
     unsigned int has_blt    : 1; /* Flag: has BLT unit? */
 };
 
-Bool intel_driver_init(VADriverContextP ctx);
-Bool intel_driver_terminate(VADriverContextP ctx);
+bool intel_driver_init(VADriverContextP ctx);
+void intel_driver_terminate(VADriverContextP ctx);
 
 static INLINE struct intel_driver_data *
 intel_driver_data(VADriverContextP ctx)

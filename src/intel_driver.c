@@ -59,7 +59,7 @@ static void intel_driver_get_revid(struct intel_driver_data *intel, int *value)
 	return;
 }
 
-Bool 
+bool 
 intel_driver_init(VADriverContextP ctx)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
@@ -76,7 +76,7 @@ intel_driver_init(VADriverContextP ctx)
                           drm_state->auth_type == VA_DRM_AUTH_CUSTOM);
 
     if (!intel->dri2Enabled) {
-        return False;
+        return false;
     }
 
     intel->locked = 0;
@@ -92,16 +92,14 @@ intel_driver_init(VADriverContextP ctx)
    
     intel_driver_get_revid(intel, &intel->revision);
     intel_memman_init(intel);
-    return True;
+    return true;
 }
 
-Bool 
+void 
 intel_driver_terminate(VADriverContextP ctx)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
 
     intel_memman_terminate(intel);
     pthread_mutex_destroy(&intel->ctxmutex);
-
-    return True;
 }
