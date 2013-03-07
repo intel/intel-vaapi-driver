@@ -66,6 +66,24 @@
 #define log2f(x) (logf(x)/(float)M_LN2)
 #endif
 
+int intel_avc_enc_slice_type_fixup(int slice_type)
+{
+    if (slice_type == SLICE_TYPE_SP ||
+        slice_type == SLICE_TYPE_P)
+        slice_type = SLICE_TYPE_P;
+    else if (slice_type == SLICE_TYPE_SI ||
+             slice_type == SLICE_TYPE_I)
+        slice_type = SLICE_TYPE_I;
+    else {
+        if (slice_type != SLICE_TYPE_B)
+            WARN_ONCE("Invalid slice type for H.264 encoding!\n");
+
+        slice_type = SLICE_TYPE_B;
+    }
+
+    return slice_type;
+}
+
 static void
 intel_mfc_bit_rate_control_context_init(struct encode_state *encode_state, 
                                        struct gen6_mfc_context *mfc_context)
@@ -200,7 +218,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
 {
     gen6_brc_status sts = BRC_NO_HRD_VIOLATION;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; 
-    int slicetype = pSliceParameter->slice_type;
+    int slicetype = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
     int qpi = mfc_context->bit_rate_control_context[SLICE_TYPE_I].QpPrimeY;
     int qpp = mfc_context->bit_rate_control_context[SLICE_TYPE_P].QpPrimeY;
     int qpb = mfc_context->bit_rate_control_context[SLICE_TYPE_B].QpPrimeY;
@@ -215,11 +233,6 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
      */
     double x, y;
     double frame_size_alpha;
-
-    if (slicetype == SLICE_TYPE_SP)
-        slicetype = SLICE_TYPE_P;
-    else if (slicetype == SLICE_TYPE_SI)
-        slicetype = SLICE_TYPE_I;
 
     qp = mfc_context->bit_rate_control_context[slicetype].QpPrimeY;
 
@@ -724,18 +737,20 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
     uint8_t *vme_state_message = (uint8_t *)(vme_context->vme_state_message);
     float   lambda, m_costf;
 
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+    
     if (encoder_context->rate_control_mode == VA_RC_CQP)
 	qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
     else
-	qp = mfc_context->bit_rate_control_context[slice_param->slice_type].QpPrimeY;
+	qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
   
     if (vme_state_message == NULL)
 	return;
  
     assert(qp <= QP_MAX); 
     lambda = intel_lambda_qp(qp);
-    if ((slice_param->slice_type == SLICE_TYPE_I) ||
-		(slice_param->slice_type == SLICE_TYPE_SI)) {
+    if (slice_type == SLICE_TYPE_I) {
 	vme_state_message[MODE_INTRA_16X16] = 0;
 	m_cost = lambda * 4;
 	vme_state_message[MODE_INTRA_8X8] = intel_format_lutvalue(m_cost, 0x8f);
@@ -781,8 +796,7 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
 	m_costf = lambda * 3.5;
 	m_cost = m_costf;
 	vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
-    	if ((slice_param->slice_type == SLICE_TYPE_P) ||
-		(slice_param->slice_type == SLICE_TYPE_SP)) {
+    	if (slice_type == SLICE_TYPE_P) {
 		m_costf = lambda * 2.5;
 		m_cost = m_costf;
 		vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);

@@ -895,9 +895,9 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
     int beginy = beginmb / width_in_mbs;
     int nextx =  endmb % width_in_mbs;
     int nexty = endmb / width_in_mbs;
-    int slice_type = slice_param->slice_type;
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
     int last_slice = (endmb == (width_in_mbs * height_in_mbs));
-    int bit_rate_control_target, maxQpN, maxQpP;
+    int maxQpN, maxQpP;
     unsigned char correct[6], grow, shrink;
     int i;
     int bslice = 0;
@@ -907,12 +907,6 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
 
     if (batch == NULL)
         batch = encoder_context->base.batch;
-
-    bit_rate_control_target = slice_type;
-    if (slice_type == SLICE_TYPE_SP)
-        bit_rate_control_target = SLICE_TYPE_P;
-    else if (slice_type == SLICE_TYPE_SI)
-        bit_rate_control_target = SLICE_TYPE_I;
 
     if (slice_type == SLICE_TYPE_P) {
         weighted_pred_idc = pic_param->pic_fields.bits.weighted_pred_flag;
@@ -927,16 +921,16 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
         }
     }
 
-    maxQpN = mfc_context->bit_rate_control_context[bit_rate_control_target].MaxQpNegModifier;
-    maxQpP = mfc_context->bit_rate_control_context[bit_rate_control_target].MaxQpPosModifier;
+    maxQpN = mfc_context->bit_rate_control_context[slice_type].MaxQpNegModifier;
+    maxQpP = mfc_context->bit_rate_control_context[slice_type].MaxQpPosModifier;
 
     for (i = 0; i < 6; i++)
-        correct[i] = mfc_context->bit_rate_control_context[bit_rate_control_target].Correct[i];
+        correct[i] = mfc_context->bit_rate_control_context[slice_type].Correct[i];
 
-    grow = mfc_context->bit_rate_control_context[bit_rate_control_target].GrowInit + 
-        (mfc_context->bit_rate_control_context[bit_rate_control_target].GrowResistance << 4);
-    shrink = mfc_context->bit_rate_control_context[bit_rate_control_target].ShrinkInit + 
-        (mfc_context->bit_rate_control_context[bit_rate_control_target].ShrinkResistance << 4);
+    grow = mfc_context->bit_rate_control_context[slice_type].GrowInit + 
+        (mfc_context->bit_rate_control_context[slice_type].GrowResistance << 4);
+    shrink = mfc_context->bit_rate_control_context[slice_type].ShrinkInit + 
+        (mfc_context->bit_rate_control_context[slice_type].ShrinkResistance << 4);
 
     BEGIN_BCS_BATCH(batch, 11);;
 
@@ -1170,7 +1164,6 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[slice_index]->buffer; 
     unsigned int *msg = NULL, offset = 0;
     unsigned char *msg_ptr = NULL;
-    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
     int last_slice = (pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks) == (width_in_mbs * height_in_mbs);
@@ -1180,8 +1173,8 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     unsigned char *slice_header = NULL;
     int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0, 0x0 };
-    int slice_type = pSliceParameter->slice_type;
-
+    int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
+    int is_intra = slice_type == SLICE_TYPE_I;
 
     if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
@@ -1239,7 +1232,7 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                 gen75_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
             } else {
 		msg += AVC_INTER_MSG_OFFSET;
-                gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
+                gen75_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, slice_type, slice_batch);
             }
         }
     }
@@ -1564,7 +1557,7 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
     long head_offset;
     int old_used = intel_batchbuffer_used_size(slice_batch), used;
     unsigned short head_size, tail_size;
-    int slice_type = pSliceParameter->slice_type;
+    int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
 
     if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
