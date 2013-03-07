@@ -89,10 +89,21 @@ int object_heap_init( object_heap_p heap, int object_size, int id_offset)
     heap->heap_size = 0;
     heap->heap_increment = 16;
     heap->next_free = LAST_FREE;
-    _i965InitMutex(&heap->mutex);
     heap->num_buckets = 0;
     heap->bucket = NULL;
-    return object_heap_expand(heap);
+
+    if (object_heap_expand(heap) == 0) {
+        ASSERT(heap->heap_size);
+        _i965InitMutex(&heap->mutex);
+        return 0;
+    } else {
+        ASSERT(!heap->heap_size);
+        ASSERT(!heap->bucket || !heap->bucket[0]);
+
+        free(heap->bucket);
+
+        return -1;
+    }
 }
 
 /*
@@ -224,23 +235,26 @@ void object_heap_destroy( object_heap_p heap )
     int i;
     int bucket_index, obj_index;
 
-    _i965DestroyMutex(&heap->mutex);
+    if (heap->heap_size) {
+        _i965DestroyMutex(&heap->mutex);
 
-    /* Check if heap is empty */
-    for (i = 0; i < heap->heap_size; i++)
-    {
-        /* Check if object is not still allocated */
-        bucket_index = i / heap->heap_increment;
-        obj_index = i % heap->heap_increment;
-        obj = (object_base_p) (heap->bucket[bucket_index] + obj_index * heap->object_size);
-        ASSERT( obj->next_free != ALLOCATED );
+        /* Check if heap is empty */
+        for (i = 0; i < heap->heap_size; i++)
+        {
+            /* Check if object is not still allocated */
+            bucket_index = i / heap->heap_increment;
+            obj_index = i % heap->heap_increment;
+            obj = (object_base_p) (heap->bucket[bucket_index] + obj_index * heap->object_size);
+            ASSERT( obj->next_free != ALLOCATED );
+        }
+
+        for (i = 0; i < heap->heap_size / heap->heap_increment; i++) {
+            free(heap->bucket[i]);
+        }
+
+        free(heap->bucket);
     }
 
-    for (i = 0; i < heap->heap_size / heap->heap_increment; i++) {
-        free(heap->bucket[i]);
-    }
-
-    free(heap->bucket);
     heap->bucket = NULL;
     heap->heap_size = 0;
     heap->next_free = LAST_FREE;
