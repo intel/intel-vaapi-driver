@@ -52,13 +52,28 @@ i965_DeriveImage(VADriverContextP ctx, VABufferID surface, VAImage *out_image);
 extern VAStatus
 i965_DestroyImage(VADriverContextP ctx, VAImageID image);
 
+extern VAStatus
+i965_DestroySurfaces(VADriverContextP ctx,
+                     VASurfaceID *surface_list,
+                     int num_surfaces);
+
+extern VAStatus
+i965_CreateSurfaces(VADriverContextP ctx,
+                    int width,
+                    int height,
+                    int format,
+                    int num_surfaces,
+                    VASurfaceID *surfaces);
+VAStatus
+vpp_surface_convert(VADriverContextP ctx,
+                    VASurfaceID dstSurfaceID,
+                    VASurfaceID srcSurfaceID);
 
 VAStatus vpp_surface_copy(VADriverContextP ctx, VASurfaceID dstSurfaceID, VASurfaceID srcSurfaceID)
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
     VAImage srcImage, dstImage;
     void *pBufferSrc, *pBufferDst;
-    unsigned char *ySrc, *yDst;
 
     va_status = vpp_surface_convert(ctx, dstSurfaceID, srcSurfaceID);
     if(va_status == VA_STATUS_SUCCESS){
@@ -83,9 +98,6 @@ VAStatus vpp_surface_copy(VADriverContextP ctx, VASurfaceID dstSurfaceID, VASurf
     va_status = i965_MapBuffer(ctx, dstImage.buf, &pBufferDst);
     assert(va_status == VA_STATUS_SUCCESS);
 
-    ySrc = (unsigned char*)(pBufferSrc + srcImage.offsets[0]);
-    yDst = (unsigned char*)(pBufferDst + dstImage.offsets[0]);
-  
     memcpy(pBufferDst, pBufferSrc, dstImage.data_size);
 
     i965_UnmapBuffer(ctx, srcImage.buf);
@@ -682,7 +694,6 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     unsigned char frame_ctrl_bits = 0;
     unsigned int startingX = 0;
     unsigned int endingX = proc_ctx->width_input;
-    VEBFrameStore tempFrame;
 
     /* s1:update the previous and current input */
 /*    tempFrame = proc_ctx->frame_store[FRAME_IN_PREVIOUS];
@@ -798,7 +809,7 @@ void hsw_veb_resource_prepare(VADriverContextP ctx,
                                    proc_ctx ->height_input,
                                    VA_RT_FORMAT_YUV420,
                                    FRAME_STORE_SUM,
-                                   &surfaces);
+                                   surfaces);
     assert(va_status == VA_STATUS_SUCCESS);
 
     for(i = 0; i < FRAME_STORE_SUM; i ++) {
@@ -940,7 +951,6 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
     struct object_surface* obj_surf_output = SURFACE(proc_ctx->surface_output);
     struct object_surface* obj_surf_input_vebox;
     struct object_surface* obj_surf_output_vebox;
-    struct object_surface* obj_surf_output_scaled;
 
     proc_ctx->width_input   = obj_surf_input->orig_width;
     proc_ctx->height_input  = obj_surf_input->orig_height;
@@ -1095,7 +1105,6 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
  
     VAProcPipelineParameterBuffer *pipe = proc_ctx->pipeline_param;
-    VABufferID *filter_ids = (VABufferID*)proc_ctx->pipeline_param->filters ;
     VAProcFilterParameterBuffer* filter = NULL;
     struct object_buffer *obj_buf = NULL;
     unsigned int i;
@@ -1151,24 +1160,19 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
 void gen75_vebox_context_destroy(VADriverContextP ctx, 
                           struct intel_vebox_context *proc_ctx)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface * obj_surf = NULL;
     int i;
 
     if(proc_ctx->surface_input_vebox != -1){
-       obj_surf = SURFACE(proc_ctx->surface_input_vebox);
        i965_DestroySurfaces(ctx, &proc_ctx->surface_input_vebox, 1);
        proc_ctx->surface_input_vebox = -1;
      }
 
     if(proc_ctx->surface_output_vebox != -1){
-       obj_surf = SURFACE(proc_ctx->surface_output_vebox);
        i965_DestroySurfaces(ctx, &proc_ctx->surface_output_vebox, 1);
        proc_ctx->surface_output_vebox = -1;
      }
 
     if(proc_ctx->surface_output_scaled != -1){
-       obj_surf = SURFACE(proc_ctx->surface_output_scaled);
        i965_DestroySurfaces(ctx, &proc_ctx->surface_output_scaled, 1);
        proc_ctx->surface_output_scaled = -1;
      }

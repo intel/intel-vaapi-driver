@@ -44,6 +44,10 @@ i965_proc_picture(VADriverContextP ctx,
                   union codec_state *codec_state,
                   struct hw_context *hw_context);
 
+extern struct hw_context *
+i965_proc_context_init(VADriverContextP ctx,
+                       struct object_config *obj_config);
+
 static VAStatus 
 gen75_vpp_fmt_cvt(VADriverContextP ctx, 
                   VAProfile profile, 
@@ -60,7 +64,7 @@ gen75_vpp_fmt_cvt(VADriverContextP ctx,
     }
 
     i965_proc_picture(ctx, profile, codec_state, 
-                      (struct hw_context *) proc_ctx->vpp_fmt_cvt_ctx);
+                      proc_ctx->vpp_fmt_cvt_ctx);
 
     return va_status;
 }
@@ -181,7 +185,7 @@ gen75_proc_context_destroy(void *hw_context)
     VADriverContextP ctx = (VADriverContextP)(proc_ctx->driver_context);
 
     if(proc_ctx->vpp_fmt_cvt_ctx){
-        proc_ctx->vpp_fmt_cvt_ctx->base.destroy(proc_ctx->vpp_fmt_cvt_ctx);
+        proc_ctx->vpp_fmt_cvt_ctx->destroy(proc_ctx->vpp_fmt_cvt_ctx);
         proc_ctx->vpp_fmt_cvt_ctx = NULL;
     }
 

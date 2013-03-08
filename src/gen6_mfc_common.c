@@ -889,12 +889,9 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                               struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    int mb_x = 0, mb_y = 0;
     int mb_row;
     int s;
     unsigned int *command_ptr;
-    int temp;
-
 
 #define		USE_SCOREBOARD		(1 << 21)
  
@@ -956,7 +953,6 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 		xtemp_outer = 0;
 	x_outer = xtemp_outer;
 	y_outer = first_mb / mb_width;
-	temp = 0;
 	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) { 
 	    y_inner = y_outer;
 	    x_inner = x_outer;

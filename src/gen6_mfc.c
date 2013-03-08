@@ -1375,48 +1375,6 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
-static void
-gen6_mfc_qm_state(VADriverContextP ctx,
-                  int qm_type,
-                  unsigned int *qm,
-                  int qm_length,
-                  struct intel_encoder_context *encoder_context)
-{
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-    unsigned int qm_buffer[16];
-
-    assert(qm_length <= 16);
-    assert(sizeof(*qm) == 4);
-    memcpy(qm_buffer, qm, qm_length * 4);
-
-    BEGIN_BCS_BATCH(batch, 18);
-    OUT_BCS_BATCH(batch, MFX_QM_STATE | (18 - 2));
-    OUT_BCS_BATCH(batch, qm_type << 0);
-    intel_batchbuffer_data(batch, qm_buffer, 16 * 4);
-    ADVANCE_BCS_BATCH(batch);
-}
-
-static void
-gen6_mfc_fqm_state(VADriverContextP ctx,
-                   int fqm_type,
-                   unsigned int *fqm,
-                   int fqm_length,
-                   struct intel_encoder_context *encoder_context)
-{
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-    unsigned int fqm_buffer[32];
-
-    assert(fqm_length <= 32);
-    assert(sizeof(*fqm) == 4);
-    memcpy(fqm_buffer, fqm, fqm_length * 4);
-
-    BEGIN_BCS_BATCH(batch, 34);
-    OUT_BCS_BATCH(batch, MFX_FQM_STATE | (34 - 2));
-    OUT_BCS_BATCH(batch, fqm_type << 0);
-    intel_batchbuffer_data(batch, fqm_buffer, 32 * 4);
-    ADVANCE_BCS_BATCH(batch);
-}
-
 VAStatus
 gen6_mfc_pipeline(VADriverContextP ctx,
                   VAProfile profile,

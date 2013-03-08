@@ -767,7 +767,7 @@ gen7_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
     int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
     int i, j;
     int h_start_pos, v_start_pos, h_next_start_pos, v_next_start_pos;
-    unsigned int *msg = NULL, offset = 0;
+    unsigned int *msg = NULL;
     unsigned char *msg_ptr = NULL;
 
     slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[slice_index]->buffer;

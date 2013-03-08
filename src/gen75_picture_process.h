@@ -39,7 +39,7 @@ struct intel_video_process_context
     void* driver_context;
   
     struct intel_vebox_context *vpp_vebox_ctx;
-    struct i965_proc_context   *vpp_fmt_cvt_ctx;
+    struct hw_context          *vpp_fmt_cvt_ctx;
     struct vpp_gpe_context     *vpp_gpe_ctx;
 
     VAProcPipelineParameterBuffer* pipeline_param;

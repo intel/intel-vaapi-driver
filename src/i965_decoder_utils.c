@@ -26,8 +26,8 @@
 #include <string.h>
 #include <alloca.h>
 #include "intel_batchbuffer.h"
-#include "i965_decoder_utils.h"
 #include "i965_drv_video.h"
+#include "i965_decoder_utils.h"
 #include "i965_defines.h"
 
 /* Set reference surface if backing store exists */

@@ -1768,9 +1768,9 @@ i965_decoder_render_picture(VADriverContextP ctx,
 #define I965_RENDER_ENCODE_BUFFER(name) I965_RENDER_BUFFER(encode, name)
 
 #define DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(name, member) DEF_RENDER_SINGLE_BUFFER_FUNC(encode, name, member)
-DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(sequence_parameter, seq_param)    
-DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_parameter, pic_param)
-DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_control, pic_control)
+// DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(sequence_parameter, seq_param)    
+// DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_parameter, pic_param)
+// DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_control, pic_control)
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(qmatrix, q_matrix)
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(iqmatrix, iq_matrix)
 /* extended buffer */
@@ -1778,7 +1778,7 @@ DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(sequence_parameter_ext, seq_param_ext)
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_parameter_ext, pic_param_ext)
 
 #define DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(name, member) DEF_RENDER_MULTI_BUFFER_FUNC(encode, name, member)
-DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
+// DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
 DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter_ext, slice_params_ext)
 
 static VAStatus
@@ -1887,8 +1887,8 @@ i965_encoder_render_picture(VADriverContextP ctx,
             assert(encode->last_packed_header_type == VAEncPackedHeaderSequence ||
                    encode->last_packed_header_type == VAEncPackedHeaderPicture ||
                    encode->last_packed_header_type == VAEncPackedHeaderSlice ||
-                   ((encode->last_packed_header_type & VAEncPackedHeaderMiscMask == VAEncPackedHeaderMiscMask) &&
-                    (encode->last_packed_header_type & (~VAEncPackedHeaderMiscMask) != 0)));
+                   (((encode->last_packed_header_type & VAEncPackedHeaderMiscMask) == VAEncPackedHeaderMiscMask) &&
+                    ((encode->last_packed_header_type & (~VAEncPackedHeaderMiscMask)) != 0)));
             vaStatus = i965_encoder_render_packed_header_data_buffer(ctx, 
                                                                      obj_context,
                                                                      obj_buffer,
@@ -2594,7 +2594,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     struct object_image *obj_image;
     struct object_surface *obj_surface; 
     VAImageID image_id;
-    unsigned int w_pitch, h_pitch;
+    unsigned int w_pitch;
     VAStatus va_status = VA_STATUS_ERROR_OPERATION_FAILED;
 
     out_image->image_id = VA_INVALID_ID;
@@ -2614,7 +2614,6 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     assert(obj_surface->fourcc);
 
     w_pitch = obj_surface->width;
-    h_pitch = obj_surface->height;
 
     image_id = NEW_IMAGE_ID();
 

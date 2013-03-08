@@ -167,7 +167,7 @@ gpe_interface_setup(VADriverContextP ctx,
         memset(desc, 0, sizeof(*desc));
         desc->desc0.kernel_start_pointer = (kernel->bo->offset >> 6);
         desc->desc2.sampler_count = 0; /* FIXME: */
-        desc->desc2.sampler_state_pointer = NULL;
+        desc->desc2.sampler_state_pointer = 0;
         desc->desc3.binding_table_entry_count = 6; /* FIXME: */
         desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET(0) >> 5);
         desc->desc4.constant_urb_entry_read_offset = 0;
@@ -515,7 +515,7 @@ gen75_gpe_context_destroy(VADriverContextP ctx,
 
     if(vpp_gpe_ctx->surface_tmp){
        i965_DestroySurfaces(ctx, &vpp_gpe_ctx->surface_tmp, 1);
-       vpp_gpe_ctx->surface_tmp = NULL;
+       vpp_gpe_ctx->surface_tmp = 0;
     }   
 
     free(vpp_gpe_ctx->batch);
@@ -523,7 +523,7 @@ gen75_gpe_context_destroy(VADriverContextP ctx,
     free(vpp_gpe_ctx);
 }
 
-struct hw_context * 
+struct vpp_gpe_context *
 gen75_gpe_context_init(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -552,6 +552,6 @@ gen75_gpe_context_init(VADriverContextP ctx)
 
     vpp_gpe_ctx->is_first_frame = 1; 
 
-    return (struct hw_context *)vpp_gpe_ctx;
+    return vpp_gpe_ctx;
 }
 

@@ -121,7 +121,7 @@ struct vpp_gpe_context{
                                          unsigned long surface_state_offset);
 };
 
-struct hw_context* 
+struct vpp_gpe_context *
 gen75_gpe_context_init(VADriverContextP ctx); 
 
 void 

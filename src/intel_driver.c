@@ -53,9 +53,17 @@ static void intel_driver_get_revid(struct intel_driver_data *intel, int *value)
 	char config_data[16];
 	
 	fp = fopen("/sys/devices/pci0000:00/0000:00:02.0/config", "r");
-	fread(config_data, 1, 16, fp);
-	fclose(fp);
-	*value = config_data[PCI_REVID];
+
+        if (fp) {
+            if (fread(config_data, 1, 16, fp))
+                *value = config_data[PCI_REVID];
+            else
+                *value = 2; /* assume it is at least  B-steping */
+            fclose(fp);
+        } else {
+            *value = 2; /* assume it is at least  B-steping */
+        }
+
 	return;
 }
 

@@ -550,13 +550,12 @@ gen75_gpe_set_media_chroma_surface_state(VADriverContextP ctx,
                                     struct object_surface *obj_surface,
                                     struct gen7_surface_state *ss)
 {
-    int w, h, w_pitch;
+    int w, w_pitch;
     unsigned int tiling, swizzle;
     int cbcr_offset;
 
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
     w = obj_surface->orig_width;
-    h = obj_surface->orig_height;
     w_pitch = obj_surface->width;
 
     cbcr_offset = obj_surface->height * obj_surface->width;

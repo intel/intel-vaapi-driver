@@ -567,9 +567,7 @@ gen75_vme_fill_vme_batchbuffer(VADriverContextP ctx,
 
 static void gen75_vme_media_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    dri_bo *bo;
 
     i965_gpe_context_init(ctx, &vme_context->gpe_context);
 
@@ -594,7 +592,6 @@ static void gen75_vme_pipeline_programing(VADriverContextP ctx,
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
     int kernel_shader;

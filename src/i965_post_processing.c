@@ -2014,7 +2014,6 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     int width[3], height[3], pitch[3], offset[3];
-    const int Y = 0;
 
     /* source surface */
     pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 1, 0,

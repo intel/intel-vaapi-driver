@@ -776,7 +776,6 @@ gen75_mfd_avc_picid_state(VADriverContextP ctx,
                       struct decode_state *decode_state,
                       struct gen7_mfd_context *gen7_mfd_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 10);
@@ -1411,7 +1410,6 @@ gen75_mfd_mpeg2_pic_state(VADriverContextP ctx,
                          struct decode_state *decode_state,
                          struct gen7_mfd_context *gen7_mfd_context)
 {
-    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     VAPictureParameterBufferMPEG2 *pic_param;
     unsigned int slice_concealment_disable_bit = 0;
@@ -1521,7 +1519,6 @@ gen75_mfd_mpeg2_bsd_object(VADriverContextP ctx,
                           VASliceParameterBufferMPEG2 *next_slice_param,
                           struct gen7_mfd_context *gen7_mfd_context)
 {
-    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     unsigned int width_in_mbs = ALIGN(pic_param->horizontal_size, 16) / 16;
     int mb_count, vpos0, hpos0, vpos1, hpos1, is_field_pic_wa, is_field_pic = 0;
