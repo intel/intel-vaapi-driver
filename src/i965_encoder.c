@@ -134,6 +134,101 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
 }
 
 static VAStatus
+intel_encoder_check_avc_parameter(VADriverContextP ctx,
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface;	
+    struct object_buffer *obj_buffer;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+
+    assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
+
+    if (pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID)
+        goto error;
+
+    obj_surface = SURFACE(pic_param->CurrPic.picture_id);
+    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
+    
+    if (!obj_surface)
+        goto error;
+    
+    obj_buffer = BUFFER(pic_param->coded_buf);
+    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
+
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+        goto error;
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
+intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
+                                    struct encode_state *encode_state,
+                                    struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+    struct object_surface *obj_surface;	
+    struct object_buffer *obj_buffer;
+
+    obj_surface = SURFACE(pic_param->reconstructed_picture);
+    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
+    
+    if (!obj_surface)
+        goto error;
+    
+    obj_buffer = BUFFER(pic_param->coded_buf);
+    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
+
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+        goto error;
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
+intel_encoder_sanity_check_input(VADriverContextP ctx,
+                                 VAProfile profile,
+                                 struct encode_state *encode_state,
+                                 struct intel_encoder_context *encoder_context)
+{
+    VAStatus vaStatus;
+
+    switch (profile) {
+    case VAProfileH264Baseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        vaStatus = intel_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
+        break;
+
+    case VAProfileMPEG2Simple:
+    case VAProfileMPEG2Main:
+        vaStatus = intel_encoder_check_mpeg2_parameter(ctx, encode_state, encoder_context);
+        break;
+
+    default:
+        vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        break;
+    }
+
+    if (vaStatus != VA_STATUS_SUCCESS)
+        goto out;
+
+    vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+
+out:    
+    return vaStatus;
+}
+ 
+static VAStatus
 intel_encoder_end_picture(VADriverContextP ctx, 
                           VAProfile profile, 
                           union codec_state *codec_state,
@@ -143,7 +238,7 @@ intel_encoder_end_picture(VADriverContextP ctx,
     struct encode_state *encode_state = &codec_state->encode;
     VAStatus vaStatus;
 
-    vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+    vaStatus = intel_encoder_sanity_check_input(ctx, profile, encode_state, encoder_context);
 
     if (vaStatus != VA_STATUS_SUCCESS)
         return vaStatus;
