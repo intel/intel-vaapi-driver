@@ -121,7 +121,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     encoder_context->is_tmp_id = 1;
 }
 
-static void 
+static VAStatus
 intel_encoder_end_picture(VADriverContextP ctx, 
                           VAProfile profile, 
                           union codec_state *codec_state,
@@ -139,6 +139,7 @@ intel_encoder_end_picture(VADriverContextP ctx,
 
     if (vaStatus == VA_STATUS_SUCCESS)
         encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
+    return VA_STATUS_SUCCESS;
 }
 
 static void

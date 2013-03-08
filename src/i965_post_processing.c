@@ -5167,7 +5167,7 @@ static const int proc_frame_to_pp_frame[3] = {
     I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST
 };
 
-void 
+VAStatus 
 i965_proc_picture(VADriverContextP ctx, 
                   VAProfile profile, 
                   union codec_state *codec_state,
@@ -5364,6 +5364,8 @@ i965_proc_picture(VADriverContextP ctx,
                              num_tmp_surfaces);
 
     intel_batchbuffer_flush(hw_context->batch);
+
+    return VA_STATUS_SUCCESS;
 }
 
 static void

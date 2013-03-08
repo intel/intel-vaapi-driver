@@ -2749,7 +2749,7 @@ gen7_mfd_jpeg_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_flush(batch);
 }
 
-static void 
+static VAStatus
 gen7_mfd_decode_picture(VADriverContextP ctx, 
                         VAProfile profile, 
                         union codec_state *codec_state,
@@ -2789,6 +2789,8 @@ gen7_mfd_decode_picture(VADriverContextP ctx,
         assert(0);
         break;
     }
+
+    return VA_STATUS_SUCCESS;
 }
 
 static void

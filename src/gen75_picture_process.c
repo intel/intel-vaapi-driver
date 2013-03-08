@@ -108,7 +108,7 @@ gen75_vpp_gpe(VADriverContextP ctx,
      return va_status;     
 }
 
-void 
+VAStatus 
 gen75_proc_picture(VADriverContextP ctx,
                    VAProfile profile,
                    union codec_state *codec_state,
@@ -175,6 +175,8 @@ gen75_proc_picture(VADriverContextP ctx,
          }
          gen75_vpp_vebox(ctx, proc_ctx);
     }     
+
+    return VA_STATUS_SUCCESS;
 }
 
 static void 

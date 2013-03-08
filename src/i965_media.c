@@ -268,7 +268,7 @@ i965_media_decode_init(VADriverContextP ctx,
     }
 }
 
-static void 
+static VAStatus
 i965_media_decode_picture(VADriverContextP ctx, 
                           VAProfile profile, 
                           union codec_state *codec_state,
@@ -282,6 +282,8 @@ i965_media_decode_picture(VADriverContextP ctx,
     media_context->media_states_setup(ctx, decode_state, media_context);
     i965_media_pipeline_setup(ctx, decode_state, media_context);
     intel_batchbuffer_flush(hw_context->batch);
+
+    return VA_STATUS_SUCCESS;
 }
 
 static void

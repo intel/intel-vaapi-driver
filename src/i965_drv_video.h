@@ -154,10 +154,10 @@ union codec_state
 
 struct hw_context
 {
-    void (*run)(VADriverContextP ctx, 
-                VAProfile profile, 
-                union codec_state *codec_state,
-                struct hw_context *hw_context);
+    VAStatus (*run)(VADriverContextP ctx, 
+                    VAProfile profile, 
+                    union codec_state *codec_state,
+                    struct hw_context *hw_context);
     void (*destroy)(void *);
     struct intel_batchbuffer *batch;
 };

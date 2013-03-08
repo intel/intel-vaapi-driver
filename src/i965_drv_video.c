@@ -2007,9 +2007,7 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
     }
 
     assert(obj_context->hw_context->run);
-    obj_context->hw_context->run(ctx, obj_config->profile, &obj_context->codec_state, obj_context->hw_context);
-
-    return VA_STATUS_SUCCESS;
+    return obj_context->hw_context->run(ctx, obj_config->profile, &obj_context->codec_state, obj_context->hw_context);
 }
 
 VAStatus 
