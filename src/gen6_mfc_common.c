@@ -552,8 +552,7 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
     /*Setup all the input&output object*/
 
     /* Setup current frame and current direct mv buffer*/
-    obj_surface = SURFACE(pPicParameter->CurrPic.picture_id);
-    assert(obj_surface);
+    obj_surface = encode_state->reconstructed_object;
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
     if ( obj_surface->private_data == NULL) {
@@ -635,9 +634,8 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
     mfc_context->uncompressed_picture_source.bo = encode_state->input_yuv_object->bo;
     dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
 
-    obj_buffer = BUFFER (pPicParameter->coded_buf); /* FIXME: fix this later */
+    obj_buffer = encode_state->coded_buf_object;
     bo = obj_buffer->buffer_store->bo;
-    assert(bo);
     mfc_context->mfc_indirect_pak_bse_object.bo = bo;
     mfc_context->mfc_indirect_pak_bse_object.offset = I965_CODEDBUFFER_HEADER_SIZE;
     mfc_context->mfc_indirect_pak_bse_object.end_offset = ALIGN(obj_buffer->size_element - 0x1000, 0x1000);

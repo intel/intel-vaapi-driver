@@ -153,13 +153,16 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     
     if (!obj_surface)
         goto error;
-    
+
+    encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
     assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
 
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
         goto error;
 
+    encode_state->coded_buf_object = obj_buffer;
+    
     return VA_STATUS_SUCCESS;
 
 error:
@@ -182,11 +185,14 @@ intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
     if (!obj_surface)
         goto error;
     
+    encode_state->reconstructed_object = obj_surface;    
     obj_buffer = BUFFER(pic_param->coded_buf);
     assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
 
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
         goto error;
+
+    encode_state->coded_buf_object = obj_buffer;
 
     return VA_STATUS_SUCCESS;
 

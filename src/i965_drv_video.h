@@ -133,6 +133,8 @@ struct encode_state
 
     VASurfaceID current_render_target;
     struct object_surface *input_yuv_object;
+    struct object_surface *reconstructed_object;
+    struct object_buffer *coded_buf_object;
 };
 
 struct proc_state
