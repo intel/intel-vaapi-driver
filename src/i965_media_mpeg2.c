@@ -601,8 +601,8 @@ i965_media_mpeg2_surfaces_setup(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     param = (VAPictureParameterBufferMPEG2 *)decode_state->pic_param->buffer;
 
-    obj_surface = SURFACE(decode_state->current_render_target);
-    assert(obj_surface);
+    obj_surface = decode_state->render_object;
+
     i965_media_mpeg2_surface_setup(ctx, 0, obj_surface, True,
                                    param->picture_coding_extension.bits.picture_structure,
                                    SURFACE_TARGET,

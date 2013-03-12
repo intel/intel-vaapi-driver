@@ -75,4 +75,9 @@ gen6_send_avc_ref_idx_state(
     const GenFrameStore               frame_store[MAX_GEN_REFERENCE_FRAMES]
 );
 
+VAStatus
+intel_decoder_sanity_check_input(VADriverContextP ctx,
+                                 VAProfile profile,
+                                 struct decode_state *decode_state);
+
 #endif /* I965_DECODER_UTILS_H */

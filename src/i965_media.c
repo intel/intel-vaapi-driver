@@ -40,6 +40,7 @@
 #include "i965_media.h"
 #include "i965_media_mpeg2.h"
 #include "i965_media_h264.h"
+#include "i965_decoder_utils.h"
 
 static void
 i965_media_pipeline_select(VADriverContextP ctx, struct i965_media_context *media_context)
@@ -276,6 +277,12 @@ i965_media_decode_picture(VADriverContextP ctx,
 {
     struct i965_media_context *media_context = (struct i965_media_context *)hw_context;
     struct decode_state *decode_state = &codec_state->decode;
+    VAStatus vaStatus;
+
+    vaStatus = intel_decoder_sanity_check_input(ctx, profile, decode_state);
+
+    if (vaStatus != VA_STATUS_SUCCESS)
+        goto out;
 
     i965_media_decode_init(ctx, profile, decode_state, media_context);
     assert(media_context->media_states_setup);
@@ -283,7 +290,10 @@ i965_media_decode_picture(VADriverContextP ctx,
     i965_media_pipeline_setup(ctx, decode_state, media_context);
     intel_batchbuffer_flush(hw_context->batch);
 
-    return VA_STATUS_SUCCESS;
+    vaStatus = VA_STATUS_SUCCESS;
+
+out:
+    return vaStatus;
 }
 
 static void

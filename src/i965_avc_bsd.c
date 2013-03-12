@@ -118,8 +118,6 @@ i965_avc_bsd_img_state(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
 
-    assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
-
     if (pic_param->CurrPic.flags & VA_PICTURE_H264_TOP_FIELD)
         img_struct = 1;
     else if (pic_param->CurrPic.flags & VA_PICTURE_H264_BOTTOM_FIELD)
@@ -376,6 +374,7 @@ i965_avc_bsd_slice_state(VADriverContextP ctx,
 
 static void
 i965_avc_bsd_buf_base_state(VADriverContextP ctx,
+                            struct decode_state *decode_state,
                             VAPictureParameterBufferH264 *pic_param, 
                             VASliceParameterBufferH264 *slice_param,
                             struct i965_h264_context *i965_h264_context)
@@ -459,9 +458,7 @@ i965_avc_bsd_buf_base_state(VADriverContextP ctx,
     }
 
     va_pic = &pic_param->CurrPic;
-    assert(!(va_pic->flags & VA_PICTURE_H264_INVALID));
-    obj_surface = SURFACE(va_pic->picture_id);
-    assert(obj_surface);
+    obj_surface = decode_state->render_object;
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
     i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
@@ -998,7 +995,7 @@ i965_avc_bsd_pipeline(VADriverContextP ctx, struct decode_state *decode_state, v
                 i965_h264_context->picture.i_flag = 0;
 
             i965_avc_bsd_slice_state(ctx, pic_param, slice_param, i965_h264_context);
-            i965_avc_bsd_buf_base_state(ctx, pic_param, slice_param, i965_h264_context);
+            i965_avc_bsd_buf_base_state(ctx, decode_state, pic_param, slice_param, i965_h264_context);
             i965_avc_bsd_object(ctx, decode_state, pic_param, slice_param, j, i965_h264_context);
             slice_param++;
         }

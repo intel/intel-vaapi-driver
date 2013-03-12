@@ -130,7 +130,6 @@ i965_avc_ildb_surface_state(VADriverContextP ctx,
                             struct decode_state *decode_state,
                             struct i965_h264_context *i965_h264_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_avc_ildb_context *avc_ildb_context = &i965_h264_context->avc_ildb_context;
     struct i965_surface_state *ss;
     struct object_surface *obj_surface;
@@ -142,9 +141,7 @@ i965_avc_ildb_surface_state(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
     va_pic = &pic_param->CurrPic;
-    assert(!(va_pic->flags & VA_PICTURE_H264_INVALID));
-    obj_surface = SURFACE(va_pic->picture_id);
-    assert(obj_surface);
+    obj_surface = decode_state->render_object;
 
     avc_ildb_context->surface[SURFACE_EDGE_CONTROL_DATA].s_bo = i965_h264_context->avc_ildb_data.bo;
     dri_bo_reference(avc_ildb_context->surface[SURFACE_EDGE_CONTROL_DATA].s_bo);

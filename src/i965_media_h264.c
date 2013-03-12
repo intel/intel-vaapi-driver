@@ -355,9 +355,7 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
 
     /* Target Picture */
     va_pic = &pic_param->CurrPic;
-    assert(!(va_pic->flags & VA_PICTURE_H264_INVALID));
-    obj_surface = SURFACE(va_pic->picture_id);
-    assert(obj_surface);
+    obj_surface = decode_state->render_object;
     w = obj_surface->width;
     h = obj_surface->height;
     field_picture = !!(va_pic->flags & (VA_PICTURE_H264_TOP_FIELD | VA_PICTURE_H264_BOTTOM_FIELD));

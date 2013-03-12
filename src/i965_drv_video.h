@@ -106,6 +106,8 @@ struct decode_state
     int max_slice_datas;
     int num_slice_params;
     int num_slice_datas;
+
+    struct object_surface *render_object;
 };
 
 struct encode_state

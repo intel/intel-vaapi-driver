@@ -326,3 +326,77 @@ gen6_send_avc_ref_idx_state(
         frame_store
     );
 }
+
+static VAStatus
+intel_decoder_check_avc_parameter(VADriverContextP ctx,
+                                  struct decode_state *decode_state)
+{
+    VAPictureParameterBufferH264 *pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
+
+    assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
+    assert(pic_param->CurrPic.picture_id != VA_INVALID_SURFACE);
+
+    if (pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID ||
+        pic_param->CurrPic.picture_id == VA_INVALID_SURFACE)
+        goto error;
+
+    assert(pic_param->CurrPic.picture_id == decode_state->current_render_target);
+
+    if (pic_param->CurrPic.picture_id != decode_state->current_render_target)
+        goto error;
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+VAStatus
+intel_decoder_sanity_check_input(VADriverContextP ctx,
+                                 VAProfile profile,
+                                 struct decode_state *decode_state)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface;
+    VAStatus vaStatus = VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (decode_state->current_render_target == VA_INVALID_SURFACE)
+        goto out;
+        
+    obj_surface = SURFACE(decode_state->current_render_target);
+
+    if (!obj_surface)
+        goto out;
+
+    decode_state->render_object = obj_surface;
+
+    switch (profile) {
+    case VAProfileMPEG2Simple:
+    case VAProfileMPEG2Main:
+        vaStatus = VA_STATUS_SUCCESS;
+        break;
+        
+    case VAProfileH264Baseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        vaStatus = intel_decoder_check_avc_parameter(ctx, decode_state);
+        break;
+
+    case VAProfileVC1Simple:
+    case VAProfileVC1Main:
+    case VAProfileVC1Advanced:
+        vaStatus = VA_STATUS_SUCCESS;
+        break;
+
+    case VAProfileJPEGBaseline:
+        vaStatus = VA_STATUS_SUCCESS;
+        break;
+
+    default:
+        vaStatus = VA_STATUS_ERROR_INVALID_PARAMETER;
+        break;
+    }
+
+out:
+    return vaStatus;
+}
