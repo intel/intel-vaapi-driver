@@ -1005,11 +1005,9 @@ gen7_mfc_mpeg2_prepare(VADriverContextP ctx,
                         struct encode_state *encode_state,
                         struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
-    VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
     struct i965_coded_buffer_segment *coded_buffer_segment;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     dri_bo *bo;
@@ -1026,7 +1024,7 @@ gen7_mfc_mpeg2_prepare(VADriverContextP ctx,
     mfc_context->surface_state.h_pitch = obj_surface->height;
 
     /* forward reference */
-    obj_surface = SURFACE(pic_param->forward_reference_picture);
+    obj_surface = encode_state->reference_objects[0];
 
     if (obj_surface && obj_surface->bo) {
         mfc_context->reference_surfaces[0].bo = obj_surface->bo;
@@ -1035,7 +1033,7 @@ gen7_mfc_mpeg2_prepare(VADriverContextP ctx,
         mfc_context->reference_surfaces[0].bo = NULL;
 
     /* backward reference */
-    obj_surface = SURFACE(pic_param->backward_reference_picture);
+    obj_surface = encode_state->reference_objects[1];
 
     if (obj_surface && obj_surface->bo) {
         mfc_context->reference_surfaces[1].bo = obj_surface->bo;

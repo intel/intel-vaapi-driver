@@ -266,9 +266,7 @@ gen75_vme_surface_setup(VADriverContextP ctx,
                         int is_intra,
                         struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
-    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
 
     /*Setup surfaces state*/
     /* current picture for encoding */
@@ -279,15 +277,15 @@ gen75_vme_surface_setup(VADriverContextP ctx,
 
     if (!is_intra) {
         /* reference 0 */
-        obj_surface = SURFACE(pPicParameter->ReferenceFrames[0].picture_id);
-        assert(obj_surface);
-        if ( obj_surface->bo != NULL)
+        obj_surface = encode_state->reference_objects[0];
+
+        if (obj_surface && obj_surface->bo)
             gen75_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
 
         /* reference 1 */
-        obj_surface = SURFACE(pPicParameter->ReferenceFrames[1].picture_id);
-        assert(obj_surface);
-        if ( obj_surface->bo != NULL ) 
+        obj_surface = encode_state->reference_objects[1];
+
+        if (obj_surface && obj_surface->bo)
             gen75_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
     }
 
@@ -776,9 +774,7 @@ gen75_vme_mpeg2_surface_setup(VADriverContextP ctx,
                               int is_intra,
                               struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
-    VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
 
     /*Setup surfaces state*/
     /* current picture for encoding */
@@ -789,13 +785,12 @@ gen75_vme_mpeg2_surface_setup(VADriverContextP ctx,
 
     if (!is_intra) {
         /* reference 0 */
-        obj_surface = SURFACE(pic_param->forward_reference_picture);
-        assert(obj_surface);
-        if ( obj_surface->bo != NULL)
+        obj_surface = encode_state->reference_objects[0];
+        if (obj_surface->bo != NULL)
             gen75_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
 
         /* reference 1 */
-        obj_surface = SURFACE(pic_param->backward_reference_picture);
+        obj_surface = encode_state->reference_objects[1];
         if (obj_surface && obj_surface->bo != NULL) 
             gen75_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
     }

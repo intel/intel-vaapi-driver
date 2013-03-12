@@ -135,6 +135,7 @@ struct encode_state
     struct object_surface *input_yuv_object;
     struct object_surface *reconstructed_object;
     struct object_buffer *coded_buf_object;
+    struct object_surface *reference_objects[16]; /* Up to 2 reference surfaces are valid for MPEG-2,*/
 };
 
 struct proc_state

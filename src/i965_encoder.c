@@ -142,6 +142,7 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     struct object_surface *obj_surface;	
     struct object_buffer *obj_buffer;
     VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    int i;
 
     assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
 
@@ -162,6 +163,27 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
         goto error;
 
     encode_state->coded_buf_object = obj_buffer;
+
+    for (i = 0; i < 16; i++) {
+        if (pic_param->ReferenceFrames[i].flags & VA_PICTURE_H264_INVALID ||
+            pic_param->ReferenceFrames[i].picture_id == VA_INVALID_SURFACE)
+            break;
+        else {
+            obj_surface = SURFACE(pic_param->ReferenceFrames[i].picture_id);
+            assert(obj_surface);
+
+            if (!obj_surface)
+                goto error;
+
+            if (obj_surface->bo)
+                encode_state->reference_objects[i] = obj_surface;
+            else
+                encode_state->reference_objects[i] = NULL; /* FIXME: Warning or Error ??? */
+        }
+    }
+
+    for ( ; i < 16; i++)
+        encode_state->reference_objects[i] = NULL;
     
     return VA_STATUS_SUCCESS;
 
@@ -178,7 +200,8 @@ intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
     VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
     struct object_surface *obj_surface;	
     struct object_buffer *obj_buffer;
-
+    int i = 0;
+    
     obj_surface = SURFACE(pic_param->reconstructed_picture);
     assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
     
@@ -193,6 +216,40 @@ intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
         goto error;
 
     encode_state->coded_buf_object = obj_buffer;
+
+    if (pic_param->picture_type == VAEncPictureTypeIntra) {
+    } else if (pic_param->picture_type == VAEncPictureTypePredictive) {
+        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->forward_reference_picture);
+        assert(obj_surface && obj_surface->bo);
+
+        if (!obj_surface || !obj_surface->bo)
+            goto error;
+
+        encode_state->reference_objects[i++] = obj_surface;
+    } else if (pic_param->picture_type == VAEncPictureTypeBidirectional) {
+        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->forward_reference_picture);
+        assert(obj_surface && obj_surface->bo);
+
+        if (!obj_surface || !obj_surface->bo)
+            goto error;
+
+        encode_state->reference_objects[i++] = obj_surface;
+
+        assert(pic_param->backward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->backward_reference_picture);
+        assert(obj_surface && obj_surface->bo);
+
+        if (!obj_surface || !obj_surface->bo)
+            goto error;
+
+        encode_state->reference_objects[i++] = obj_surface;
+    } else 
+        goto error;
+
+    for ( ; i < 16; i++)
+        encode_state->reference_objects[i] = NULL;
 
     return VA_STATUS_SUCCESS;
 

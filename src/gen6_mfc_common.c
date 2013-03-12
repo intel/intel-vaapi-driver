@@ -515,7 +515,6 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
     struct object_buffer *obj_buffer;
     GenAvcSurface *gen6_avc_surface;
     dri_bo *bo;
-    VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i, j, enable_avc_ildb = 0;
     VAEncSliceParameterBufferH264 *slice_param;
@@ -593,13 +592,12 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
     
     /* Setup reference frames and direct mv buffers*/
     for(i = 0; i < MAX_MFC_REFERENCE_SURFACES; i++) {
-        if ( pPicParameter->ReferenceFrames[i].picture_id != VA_INVALID_ID ) { 
-            obj_surface = SURFACE(pPicParameter->ReferenceFrames[i].picture_id);
-            assert(obj_surface);
-            if (obj_surface->bo != NULL) {
-                mfc_context->reference_surfaces[i].bo = obj_surface->bo;
-                dri_bo_reference(obj_surface->bo);
-            }
+        obj_surface = encode_state->reference_objects[i];
+        
+        if (obj_surface && obj_surface->bo) {
+            mfc_context->reference_surfaces[i].bo = obj_surface->bo;
+            dri_bo_reference(obj_surface->bo);
+
             /* Check DMV buffer */
             if ( obj_surface->private_data == NULL) {
                 
