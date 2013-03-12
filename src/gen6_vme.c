@@ -277,8 +277,7 @@ gen6_vme_surface_setup(VADriverContextP ctx,
 
     /*Setup surfaces state*/
     /* current picture for encoding */
-    obj_surface = SURFACE(encoder_context->input_yuv_surface);
-    assert(obj_surface);
+    obj_surface = encode_state->input_yuv_object;
     gen6_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen6_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
 
@@ -741,8 +740,7 @@ gen6_vme_mpeg2_surface_setup(VADriverContextP ctx,
 
     /*Setup surfaces state*/
     /* current picture for encoding */
-    obj_surface = SURFACE(encoder_context->input_yuv_surface);
-    assert(obj_surface);
+    obj_surface = encode_state->input_yuv_object;
     gen6_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen6_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
 

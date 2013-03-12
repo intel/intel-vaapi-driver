@@ -132,6 +132,7 @@ struct encode_state
     struct buffer_store *misc_param[8];
 
     VASurfaceID current_render_target;
+    struct object_surface *input_yuv_object;
 };
 
 struct proc_state

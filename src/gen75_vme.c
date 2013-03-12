@@ -272,8 +272,7 @@ gen75_vme_surface_setup(VADriverContextP ctx,
 
     /*Setup surfaces state*/
     /* current picture for encoding */
-    obj_surface = SURFACE(encoder_context->input_yuv_surface);
-    assert(obj_surface);
+    obj_surface = encode_state->input_yuv_object;
     gen75_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen75_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
     gen75_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);
@@ -783,8 +782,7 @@ gen75_vme_mpeg2_surface_setup(VADriverContextP ctx,
 
     /*Setup surfaces state*/
     /* current picture for encoding */
-    obj_surface = SURFACE(encoder_context->input_yuv_surface);
-    assert(obj_surface);
+    obj_surface = encode_state->input_yuv_object;
     gen75_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen75_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
     gen75_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);

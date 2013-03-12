@@ -56,7 +56,7 @@ i965_CreateSurfaces(VADriverContextP ctx,
                     int num_surfaces,
                     VASurfaceID *surfaces);
 
-static void
+static VAStatus
 intel_encoder_check_yuv_surface(VADriverContextP ctx,
                                 VAProfile profile,
                                 struct encode_state *encode_state,
@@ -71,11 +71,15 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     /* releae the temporary surface */
     if (encoder_context->is_tmp_id) {
         i965_DestroySurfaces(ctx, &encoder_context->input_yuv_surface, 1);
+        encode_state->input_yuv_object = NULL;
     }
 
     encoder_context->is_tmp_id = 0;
     obj_surface = SURFACE(encode_state->current_render_target);
     assert(obj_surface && obj_surface->bo);
+
+    if (!obj_surface || !obj_surface->bo)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2')) {
         unsigned int tiling = 0, swizzle = 0;
@@ -84,7 +88,8 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
 
         if (tiling == I915_TILING_Y) {
             encoder_context->input_yuv_surface = encode_state->current_render_target;
-            return;
+            encode_state->input_yuv_object = obj_surface;
+            return VA_STATUS_SUCCESS;
         }
     }
 
@@ -104,7 +109,12 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
                                  1,
                                  &encoder_context->input_yuv_surface);
     assert(status == VA_STATUS_SUCCESS);
+
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
     obj_surface = SURFACE(encoder_context->input_yuv_surface);
+    encode_state->input_yuv_object = obj_surface;
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
     
     dst_surface.id = encoder_context->input_yuv_surface;
@@ -119,6 +129,8 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     assert(status == VA_STATUS_SUCCESS);
 
     encoder_context->is_tmp_id = 1;
+
+    return VA_STATUS_SUCCESS;
 }
 
 static VAStatus
@@ -131,7 +143,10 @@ intel_encoder_end_picture(VADriverContextP ctx,
     struct encode_state *encode_state = &codec_state->encode;
     VAStatus vaStatus;
 
-    intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+    vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+
+    if (vaStatus != VA_STATUS_SUCCESS)
+        return vaStatus;
 
     encoder_context->mfc_brc_prepare(encode_state, encoder_context);
 
@@ -163,6 +178,8 @@ gen6_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     encoder_context->base.destroy = intel_encoder_context_destroy;
     encoder_context->base.run = intel_encoder_end_picture;
     encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
+    encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
+    encoder_context->is_tmp_id = 0;
     encoder_context->rate_control_mode = VA_RC_NONE;
     encoder_context->profile = obj_config->profile;
 

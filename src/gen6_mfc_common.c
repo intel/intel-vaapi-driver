@@ -632,9 +632,7 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
         }
     }
 	
-    obj_surface = SURFACE(encoder_context->input_yuv_surface);
-    assert(obj_surface && obj_surface->bo);
-    mfc_context->uncompressed_picture_source.bo = obj_surface->bo;
+    mfc_context->uncompressed_picture_source.bo = encode_state->input_yuv_object->bo;
     dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
 
     obj_buffer = BUFFER (pPicParameter->coded_buf); /* FIXME: fix this later */
