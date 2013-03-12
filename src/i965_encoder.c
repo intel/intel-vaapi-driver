@@ -168,8 +168,13 @@ intel_encoder_context_destroy(void *hw_context)
     free(encoder_context);
 }
 
-struct hw_context *
-gen6_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
+typedef Bool (* hw_init_func)(VADriverContextP, struct intel_encoder_context *);
+
+static struct hw_context *
+intel_enc_hw_context_init(VADriverContextP ctx,
+                          struct object_config *obj_config,
+                          hw_init_func vme_context_init,
+                          hw_init_func mfc_context_init)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct intel_encoder_context *encoder_context = calloc(1, sizeof(struct intel_encoder_context));
@@ -190,85 +195,33 @@ gen6_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
         }
     }
 
-    gen6_vme_context_init(ctx, encoder_context);
+    vme_context_init(ctx, encoder_context);
     assert(encoder_context->vme_context);
     assert(encoder_context->vme_context_destroy);
     assert(encoder_context->vme_pipeline);
 
-    gen6_mfc_context_init(ctx, encoder_context);
+    mfc_context_init(ctx, encoder_context);
     assert(encoder_context->mfc_context);
     assert(encoder_context->mfc_context_destroy);
     assert(encoder_context->mfc_pipeline);
 
     return (struct hw_context *)encoder_context;
+}
+
+struct hw_context *
+gen6_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
+{
+    return intel_enc_hw_context_init(ctx, obj_config, gen6_vme_context_init, gen6_mfc_context_init);
 }
 
 struct hw_context *
 gen7_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
-    struct intel_driver_data *intel = intel_driver_data(ctx);
-    struct intel_encoder_context *encoder_context = calloc(1, sizeof(struct intel_encoder_context));
-    int i;
-
-    encoder_context->base.destroy = intel_encoder_context_destroy;
-    encoder_context->base.run = intel_encoder_end_picture;
-    encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
-    encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
-    encoder_context->is_tmp_id = 0;
-    encoder_context->rate_control_mode = VA_RC_NONE;
-    encoder_context->profile = obj_config->profile;
-
-    for (i = 0; i < obj_config->num_attribs; i++) {
-        if (obj_config->attrib_list[i].type == VAConfigAttribRateControl) {
-            encoder_context->rate_control_mode = obj_config->attrib_list[i].value;
-            break;
-        }
-    }
-
-    gen7_vme_context_init(ctx, encoder_context);
-    assert(encoder_context->vme_context);
-    assert(encoder_context->vme_context_destroy);
-    assert(encoder_context->vme_pipeline);
-
-    gen7_mfc_context_init(ctx, encoder_context);
-    assert(encoder_context->mfc_context);
-    assert(encoder_context->mfc_context_destroy);
-    assert(encoder_context->mfc_pipeline);
-
-    return (struct hw_context *)encoder_context;
+    return intel_enc_hw_context_init(ctx, obj_config, gen7_vme_context_init, gen7_mfc_context_init);
 }
 
 struct hw_context *
 gen75_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
-    struct intel_driver_data *intel = intel_driver_data(ctx);
-    struct intel_encoder_context *encoder_context = calloc(1, sizeof(struct intel_encoder_context));
-    int i;
-
-    encoder_context->base.destroy = intel_encoder_context_destroy;
-    encoder_context->base.run = intel_encoder_end_picture;
-    encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
-    encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
-    encoder_context->is_tmp_id = 0;
-    encoder_context->rate_control_mode = VA_RC_NONE;
-    encoder_context->profile = obj_config->profile;
-
-    for (i = 0; i < obj_config->num_attribs; i++) {
-        if (obj_config->attrib_list[i].type == VAConfigAttribRateControl) {
-            encoder_context->rate_control_mode = obj_config->attrib_list[i].value;
-            break;
-        }
-    }
-
-    gen75_vme_context_init(ctx, encoder_context);
-    assert(encoder_context->vme_context);
-    assert(encoder_context->vme_context_destroy);
-    assert(encoder_context->vme_pipeline);
-
-    gen75_mfc_context_init(ctx, encoder_context);
-    assert(encoder_context->mfc_context);
-    assert(encoder_context->mfc_context_destroy);
-    assert(encoder_context->mfc_pipeline);
-
-    return (struct hw_context *)encoder_context;
+    return intel_enc_hw_context_init(ctx, obj_config, gen75_vme_context_init, gen75_mfc_context_init);
 }
