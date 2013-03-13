@@ -87,6 +87,7 @@ struct gen7_mfd_context
     GenBuffer           bitplane_read_buffer;
     
     VASurfaceID jpeg_wa_surface_id;
+    struct object_surface *jpeg_wa_surface_object;
     dri_bo *jpeg_wa_slice_data_bo;
 
     int                 wa_mpeg2_slice_vertical_position;

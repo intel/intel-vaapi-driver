@@ -2159,6 +2159,7 @@ gen7_jpeg_wa_init(VADriverContextP ctx,
     obj_surface = SURFACE(gen7_mfd_context->jpeg_wa_surface_id);
     assert(obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+    gen7_mfd_context->jpeg_wa_surface_object = obj_surface;
 
     if (!gen7_mfd_context->jpeg_wa_slice_data_bo) {
         gen7_mfd_context->jpeg_wa_slice_data_bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -2204,8 +2205,7 @@ static void
 gen7_jpeg_wa_surface_state(VADriverContextP ctx,
                            struct gen7_mfd_context *gen7_mfd_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface *obj_surface = SURFACE(gen7_mfd_context->jpeg_wa_surface_id);
+    struct object_surface *obj_surface = gen7_mfd_context->jpeg_wa_surface_object;
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 6);
@@ -2236,7 +2236,7 @@ gen7_jpeg_wa_pipe_buf_addr_state(VADriverContextP ctx,
                                  struct gen7_mfd_context *gen7_mfd_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface *obj_surface = SURFACE(gen7_mfd_context->jpeg_wa_surface_id);
+    struct object_surface *obj_surface = gen7_mfd_context->jpeg_wa_surface_object;
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     dri_bo *intra_bo;
     int i;
@@ -2713,6 +2713,7 @@ gen7_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     }
 
     gen7_mfd_context->jpeg_wa_surface_id = VA_INVALID_SURFACE;
+    gen7_mfd_context->jpeg_wa_surface_object = NULL;
 
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
