@@ -80,4 +80,15 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
                                  VAProfile profile,
                                  struct decode_state *decode_state);
 
+void
+intel_update_avc_frame_store_index(VADriverContextP ctx,
+                                   struct decode_state *decode_state,
+                                   VAPictureParameterBufferH264 *pic_param,
+                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES]);
+
+void
+intel_update_vc1_frame_store_index(VADriverContextP ctx,
+                                   struct decode_state *decode_state,
+                                   VAPictureParameterBufferVC1 *pic_param,
+                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES]);
 #endif /* I965_DECODER_UTILS_H */

@@ -35,19 +35,18 @@ static inline int
 set_ref_frame(
     struct i965_driver_data *i965,
     GenFrameStore           *ref_frame,
-    VASurfaceID              va_surface
+    VASurfaceID              va_surface,
+    struct object_surface   *obj_surface
 )
 {
-    struct object_surface *obj_surface;
-
     if (va_surface == VA_INVALID_ID)
         return 0;
 
-    obj_surface = SURFACE(va_surface);
     if (!obj_surface || !obj_surface->bo)
         return 0;
 
     ref_frame->surface_id = va_surface;
+    ref_frame->obj_surface = obj_surface;
     return 1;
 }
 
@@ -103,61 +102,76 @@ mpeg2_set_reference_surfaces(
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     VASurfaceID va_surface;
     unsigned pic_structure, is_second_field, n = 0;
+    struct object_surface *obj_surface;
 
     pic_structure = pic_param->picture_coding_extension.bits.picture_structure;
     is_second_field = pic_structure != MPEG_FRAME &&
         !pic_param->picture_coding_extension.bits.is_first_field;
 
     ref_frames[0].surface_id = VA_INVALID_ID;
+    ref_frames[0].obj_surface = NULL;
 
     /* Reference frames are indexed by frame store ID  (0:top, 1:bottom) */
     switch (pic_param->picture_coding_type) {
     case MPEG_P_PICTURE:
         if (is_second_field && pic_structure == MPEG_BOTTOM_FIELD) {
             va_surface = decode_state->current_render_target;
-            n += set_ref_frame(i965, &ref_frames[n], va_surface);
+            obj_surface = decode_state->render_object;
+            n += set_ref_frame(i965, &ref_frames[n], va_surface, obj_surface);
         }
         va_surface = pic_param->forward_reference_picture;
-        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        obj_surface = decode_state->reference_objects[0];
+        n += set_ref_frame(i965, &ref_frames[n], va_surface, obj_surface);
         break;
 
     case MPEG_B_PICTURE:
         va_surface = pic_param->forward_reference_picture;
-        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        obj_surface = decode_state->reference_objects[0];
+        n += set_ref_frame(i965, &ref_frames[n], va_surface, obj_surface);
         va_surface = pic_param->backward_reference_picture;
-        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        obj_surface = decode_state->reference_objects[1];
+        n += set_ref_frame(i965, &ref_frames[n], va_surface, obj_surface);
         break;
     }
 
-    while (n != 2)
+    while (n != 2) {
+        ref_frames[n].obj_surface = ref_frames[0].obj_surface;
         ref_frames[n++].surface_id = ref_frames[0].surface_id;
+    }
 
     if (pic_param->picture_coding_extension.bits.progressive_frame)
         return;
 
     ref_frames[2].surface_id = VA_INVALID_ID;
+    ref_frames[2].obj_surface = NULL;
 
     /* Bottom field pictures used as reference */
     switch (pic_param->picture_coding_type) {
     case MPEG_P_PICTURE:
         if (is_second_field && pic_structure == MPEG_TOP_FIELD) {
             va_surface = decode_state->current_render_target;
-            n += set_ref_frame(i965, &ref_frames[n], va_surface);
+            obj_surface = decode_state->render_object;
+            n += set_ref_frame(i965, &ref_frames[n], va_surface, obj_surface);
         }
         va_surface = pic_param->forward_reference_picture;
-        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        obj_surface = decode_state->reference_objects[0];
+        n += set_ref_frame(i965, &ref_frames[n], va_surface, obj_surface);
         break;
 
     case MPEG_B_PICTURE:
         va_surface = pic_param->forward_reference_picture;
-        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        obj_surface = decode_state->reference_objects[0];
+        n += set_ref_frame(i965, &ref_frames[n], va_surface, obj_surface);
         va_surface = pic_param->backward_reference_picture;
-        n += set_ref_frame(i965, &ref_frames[n], va_surface);
+        obj_surface = decode_state->reference_objects[1];
+        n += set_ref_frame(i965, &ref_frames[n], va_surface, obj_surface);
         break;
     }
 
-    while (n != 4)
+    while (n != 4) {
+        ref_frames[n].obj_surface = ref_frames[2].obj_surface;
         ref_frames[n++].surface_id = ref_frames[2].surface_id;
+    }
 }
 
 /* Generate flat scaling matrices for H.264 decoding */
@@ -327,6 +341,179 @@ gen6_send_avc_ref_idx_state(
     );
 }
 
+void
+intel_update_avc_frame_store_index(VADriverContextP ctx,
+                                   struct decode_state *decode_state,
+                                   VAPictureParameterBufferH264 *pic_param,
+                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES])
+{
+    int i, j;
+
+    assert(MAX_GEN_REFERENCE_FRAMES == ARRAY_ELEMS(pic_param->ReferenceFrames));
+
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        int found = 0;
+
+        if (frame_store[i].surface_id == VA_INVALID_ID ||
+            frame_store[i].obj_surface == NULL)
+            continue;
+
+        assert(frame_store[i].frame_store_id != -1);
+
+        for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
+            VAPictureH264 *ref_pic = &pic_param->ReferenceFrames[j];
+            if (ref_pic->flags & VA_PICTURE_H264_INVALID)
+                continue;
+
+            if (frame_store[i].surface_id == ref_pic->picture_id) {
+                found = 1;
+                break;
+            }
+        }
+
+        /* remove it from the internal DPB */
+        if (!found) {
+            struct object_surface *obj_surface = frame_store[i].obj_surface;
+            
+            obj_surface->flags &= ~SURFACE_REFERENCED;
+
+            if ((obj_surface->flags & SURFACE_ALL_MASK) == SURFACE_DISPLAYED) {
+                dri_bo_unreference(obj_surface->bo);
+                obj_surface->bo = NULL;
+                obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
+            }
+
+            if (obj_surface->free_private_data)
+                obj_surface->free_private_data(&obj_surface->private_data);
+
+            frame_store[i].surface_id = VA_INVALID_ID;
+            frame_store[i].frame_store_id = -1;
+            frame_store[i].obj_surface = NULL;
+        }
+    }
+
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        VAPictureH264 *ref_pic = &pic_param->ReferenceFrames[i];
+        int found = 0;
+
+        if (ref_pic->flags & VA_PICTURE_H264_INVALID ||
+            ref_pic->picture_id == VA_INVALID_SURFACE ||
+            decode_state->reference_objects[i] == NULL)
+            continue;
+
+        for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
+            if (frame_store[j].surface_id == ref_pic->picture_id) {
+                found = 1;
+                break;
+            }
+        }
+
+        /* add the new reference frame into the internal DPB */
+        if (!found) {
+            int frame_idx;
+            struct object_surface *obj_surface = decode_state->reference_objects[i];
+
+            /* 
+             * Sometimes a dummy frame comes from the upper layer library, call i965_check_alloc_surface_bo()
+             * to ake sure the store buffer is allocated for this reference frame
+             */
+            i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+
+            /* Find a free frame store index */
+            for (frame_idx = 0; frame_idx < MAX_GEN_REFERENCE_FRAMES; frame_idx++) {
+                for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
+                    if (frame_store[j].surface_id == VA_INVALID_ID ||
+                        frame_store[j].obj_surface == NULL)
+                        continue;
+
+                    if (frame_store[j].frame_store_id == frame_idx) /* the store index is in use */
+                        break;
+                }
+
+                if (j == MAX_GEN_REFERENCE_FRAMES)
+                    break;
+            }
+
+            assert(frame_idx < MAX_GEN_REFERENCE_FRAMES);
+
+            for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
+                if (frame_store[j].surface_id == VA_INVALID_ID ||
+                    frame_store[j].obj_surface == NULL) {
+                    frame_store[j].surface_id = ref_pic->picture_id;
+                    frame_store[j].frame_store_id = frame_idx;
+                    frame_store[j].obj_surface = obj_surface;
+                    break;
+                }
+            }
+        }
+    }
+
+    /* sort */
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES - 1; i++) {
+        if (frame_store[i].surface_id != VA_INVALID_ID &&
+            frame_store[i].obj_surface != NULL &&
+            frame_store[i].frame_store_id == i)
+            continue;
+
+        for (j = i + 1; j < MAX_GEN_REFERENCE_FRAMES; j++) {
+            if (frame_store[j].surface_id != VA_INVALID_ID &&
+                frame_store[j].obj_surface != NULL &&
+                frame_store[j].frame_store_id == i) {
+                VASurfaceID id = frame_store[i].surface_id;
+                int frame_idx = frame_store[i].frame_store_id;
+                struct object_surface *obj_surface = frame_store[i].obj_surface;
+
+                frame_store[i].surface_id = frame_store[j].surface_id;
+                frame_store[i].frame_store_id = frame_store[j].frame_store_id;
+                frame_store[i].obj_surface = frame_store[j].obj_surface;
+                frame_store[j].surface_id = id;
+                frame_store[j].frame_store_id = frame_idx;
+                frame_store[j].obj_surface = obj_surface;
+                break;
+            }
+        }
+    }
+}
+
+void
+intel_update_vc1_frame_store_index(VADriverContextP ctx,
+                                   struct decode_state *decode_state,
+                                   VAPictureParameterBufferVC1 *pic_param,
+                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES])
+{
+    struct object_surface *obj_surface;
+    int i;
+
+    obj_surface = decode_state->reference_objects[0];
+
+    if (pic_param->forward_reference_picture == VA_INVALID_ID ||
+        !obj_surface || 
+        !obj_surface->bo) {
+        frame_store[0].surface_id = VA_INVALID_ID;
+        frame_store[0].obj_surface = NULL;
+    } else {
+        frame_store[0].surface_id = pic_param->forward_reference_picture;
+        frame_store[0].obj_surface = obj_surface;
+    }
+
+    obj_surface = decode_state->reference_objects[1];
+
+    if (pic_param->backward_reference_picture == VA_INVALID_ID ||
+        !obj_surface || 
+        !obj_surface->bo) {
+        frame_store[1].surface_id = frame_store[0].surface_id;
+        frame_store[1].obj_surface = frame_store[0].obj_surface;
+    } else {
+        frame_store[1].surface_id = pic_param->backward_reference_picture;
+        frame_store[1].obj_surface = obj_surface;
+    }
+    for (i = 2; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        frame_store[i].surface_id = frame_store[i % 2].surface_id;
+        frame_store[i].obj_surface = frame_store[i % 2].obj_surface;
+    }
+
+}
+
 static VAStatus
 intel_decoder_check_avc_parameter(VADriverContextP ctx,
                                   struct decode_state *decode_state)
@@ -385,41 +572,29 @@ intel_decoder_check_mpeg2_parameter(VADriverContextP ctx,
     struct object_surface *obj_surface;	
     int i = 0;
     
-    if (pic_param->picture_coding_type == 1) {
-    } else if (pic_param->picture_coding_type == 2) {
-        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
+    if (pic_param->picture_coding_type == MPEG_I_PICTURE) {
+    } else if (pic_param->picture_coding_type == MPEG_P_PICTURE) {
         obj_surface = SURFACE(pic_param->forward_reference_picture);
 
-        if (!obj_surface)
-            goto error;
-
-        if (!obj_surface->bo)
+        if (!obj_surface || !obj_surface->bo)
             decode_state->reference_objects[i++] = NULL;
         else
             decode_state->reference_objects[i++] = obj_surface;
-    } else if (pic_param->picture_coding_type == 3) {
-        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
+    } else if (pic_param->picture_coding_type == MPEG_B_PICTURE) {
         obj_surface = SURFACE(pic_param->forward_reference_picture);
 
-        if (!obj_surface)
-            goto error;
-
-        if (!obj_surface->bo)
+        if (!obj_surface || !obj_surface->bo)
             decode_state->reference_objects[i++] = NULL;
         else
             decode_state->reference_objects[i++] = obj_surface;
 
-        assert(pic_param->backward_reference_picture != VA_INVALID_SURFACE);
         obj_surface = SURFACE(pic_param->backward_reference_picture);
 
-        if (!obj_surface)
-            goto error;
-
-        if (!obj_surface->bo)
+        if (!obj_surface || !obj_surface->bo)
             decode_state->reference_objects[i++] = NULL;
         else
             decode_state->reference_objects[i++] = obj_surface;
-    } else 
+    } else
         goto error;
 
     for ( ; i < 16; i++)
@@ -444,35 +619,23 @@ intel_decoder_check_vc1_parameter(VADriverContextP ctx,
         pic_param->picture_fields.bits.picture_type == 3) {
     } else if (pic_param->picture_fields.bits.picture_type == 1 ||
                pic_param->picture_fields.bits.picture_type == 4) {
-        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
         obj_surface = SURFACE(pic_param->forward_reference_picture);
 
-        if (!obj_surface)
-            goto error;
-
-        if (!obj_surface->bo)
+        if (!obj_surface || !obj_surface->bo)
             decode_state->reference_objects[i++] = NULL;
         else
             decode_state->reference_objects[i++] = obj_surface;
     } else if (pic_param->picture_fields.bits.picture_type == 2) {
-        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
         obj_surface = SURFACE(pic_param->forward_reference_picture);
 
-        if (!obj_surface)
-            goto error;
-
-        if (!obj_surface->bo)
+        if (!obj_surface || !obj_surface->bo)
             decode_state->reference_objects[i++] = NULL;
         else
             decode_state->reference_objects[i++] = obj_surface;
 
-        assert(pic_param->backward_reference_picture != VA_INVALID_SURFACE);
         obj_surface = SURFACE(pic_param->backward_reference_picture);
 
-        if (!obj_surface)
-            goto error;
-
-        if (!obj_surface->bo)
+        if (!obj_surface || !obj_surface->bo)
             decode_state->reference_objects[i++] = NULL;
         else
             decode_state->reference_objects[i++] = obj_surface;

@@ -339,7 +339,6 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
                                struct decode_state *decode_state,
                                struct i965_media_context *media_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_h264_context *i965_h264_context;
     struct object_surface *obj_surface;
     VAPictureParameterBufferH264 *pic_param;
@@ -376,7 +375,8 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
 
     /* Reference Pictures */
     for (i = 0; i < ARRAY_ELEMS(i965_h264_context->fsid_list); i++) {
-        if (i965_h264_context->fsid_list[i].surface_id != VA_INVALID_ID) {
+        if (i965_h264_context->fsid_list[i].surface_id != VA_INVALID_ID &&
+            i965_h264_context->fsid_list[i].obj_surface != NULL) {
             int found = 0;
             for (j = 0; j < ARRAY_ELEMS(pic_param->ReferenceFrames); j++) {
                 va_pic = &pic_param->ReferenceFrames[j];
@@ -392,8 +392,7 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
 
             assert(found == 1);
 
-            obj_surface = SURFACE(va_pic->picture_id);
-            assert(obj_surface);
+            obj_surface = i965_h264_context->fsid_list[i].obj_surface;
             w = obj_surface->width;
             h = obj_surface->height;
             field_picture = !!(va_pic->flags & (VA_PICTURE_H264_TOP_FIELD | VA_PICTURE_H264_BOTTOM_FIELD));

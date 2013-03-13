@@ -37,6 +37,7 @@ typedef struct gen_frame_store GenFrameStore;
 struct gen_frame_store {
     VASurfaceID surface_id;
     int         frame_store_id;
+    struct      object_surface *obj_surface;
 };
 
 typedef struct gen_buffer GenBuffer;

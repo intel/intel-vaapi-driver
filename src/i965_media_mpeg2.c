@@ -594,7 +594,6 @@ i965_media_mpeg2_surfaces_setup(VADriverContextP ctx,
                                 struct decode_state *decode_state,
                                 struct i965_media_context *media_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);  
     struct object_surface *obj_surface;
     VAPictureParameterBufferMPEG2 *param;
 
@@ -608,7 +607,8 @@ i965_media_mpeg2_surfaces_setup(VADriverContextP ctx,
                                    SURFACE_TARGET,
                                    media_context);
 
-    obj_surface = SURFACE(param->forward_reference_picture);
+    obj_surface = decode_state->reference_objects[0];
+
     if (!obj_surface) {
 //        assert(param->picture_coding_type == 1); /* I-picture */
     } else {
@@ -616,11 +616,13 @@ i965_media_mpeg2_surfaces_setup(VADriverContextP ctx,
                                        param->picture_coding_extension.bits.picture_structure, 
                                        SURFACE_FORWARD,
                                        media_context);
-        obj_surface = SURFACE(param->backward_reference_picture);
+
+        obj_surface = decode_state->reference_objects[1];
+
         if (!obj_surface) {
             assert(param->picture_coding_type == 2); /* P-picture */
 
-            obj_surface = SURFACE(param->forward_reference_picture);
+            obj_surface = decode_state->reference_objects[0];
             i965_media_mpeg2_surface_setup(ctx, 7, obj_surface, False,
                                            param->picture_coding_extension.bits.picture_structure, 
                                            SURFACE_BACKWARD,
