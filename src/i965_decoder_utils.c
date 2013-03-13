@@ -331,7 +331,10 @@ static VAStatus
 intel_decoder_check_avc_parameter(VADriverContextP ctx,
                                   struct decode_state *decode_state)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAPictureParameterBufferH264 *pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
+    struct object_surface *obj_surface;	
+    int i;
 
     assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
     assert(pic_param->CurrPic.picture_id != VA_INVALID_SURFACE);
@@ -344,6 +347,140 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
 
     if (pic_param->CurrPic.picture_id != decode_state->current_render_target)
         goto error;
+
+    for (i = 0; i < 16; i++) {
+        if (pic_param->ReferenceFrames[i].flags & VA_PICTURE_H264_INVALID ||
+            pic_param->ReferenceFrames[i].picture_id == VA_INVALID_SURFACE)
+            break;
+        else {
+            obj_surface = SURFACE(pic_param->ReferenceFrames[i].picture_id);
+            assert(obj_surface);
+
+            if (!obj_surface)
+                goto error;
+
+            if (!obj_surface->bo) { /* a reference frame  without store buffer */
+                WARN_ONCE("Invalid reference frame!!!\n");
+            }
+
+            decode_state->reference_objects[i] = obj_surface;
+        }
+    }
+
+    for ( ; i < 16; i++)
+        decode_state->reference_objects[i] = NULL;
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
+intel_decoder_check_mpeg2_parameter(VADriverContextP ctx,
+                                    struct decode_state *decode_state)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAPictureParameterBufferMPEG2 *pic_param = (VAPictureParameterBufferMPEG2 *)decode_state->pic_param->buffer;
+    struct object_surface *obj_surface;	
+    int i = 0;
+    
+    if (pic_param->picture_coding_type == 1) {
+    } else if (pic_param->picture_coding_type == 2) {
+        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->forward_reference_picture);
+
+        if (!obj_surface)
+            goto error;
+
+        if (!obj_surface->bo)
+            decode_state->reference_objects[i++] = NULL;
+        else
+            decode_state->reference_objects[i++] = obj_surface;
+    } else if (pic_param->picture_coding_type == 3) {
+        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->forward_reference_picture);
+
+        if (!obj_surface)
+            goto error;
+
+        if (!obj_surface->bo)
+            decode_state->reference_objects[i++] = NULL;
+        else
+            decode_state->reference_objects[i++] = obj_surface;
+
+        assert(pic_param->backward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->backward_reference_picture);
+
+        if (!obj_surface)
+            goto error;
+
+        if (!obj_surface->bo)
+            decode_state->reference_objects[i++] = NULL;
+        else
+            decode_state->reference_objects[i++] = obj_surface;
+    } else 
+        goto error;
+
+    for ( ; i < 16; i++)
+        decode_state->reference_objects[i] = NULL;
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
+intel_decoder_check_vc1_parameter(VADriverContextP ctx,
+                                  struct decode_state *decode_state)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAPictureParameterBufferVC1 *pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
+    struct object_surface *obj_surface;	
+    int i = 0;
+    
+    if (pic_param->picture_fields.bits.picture_type == 0 ||
+        pic_param->picture_fields.bits.picture_type == 3) {
+    } else if (pic_param->picture_fields.bits.picture_type == 1 ||
+               pic_param->picture_fields.bits.picture_type == 4) {
+        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->forward_reference_picture);
+
+        if (!obj_surface)
+            goto error;
+
+        if (!obj_surface->bo)
+            decode_state->reference_objects[i++] = NULL;
+        else
+            decode_state->reference_objects[i++] = obj_surface;
+    } else if (pic_param->picture_fields.bits.picture_type == 2) {
+        assert(pic_param->forward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->forward_reference_picture);
+
+        if (!obj_surface)
+            goto error;
+
+        if (!obj_surface->bo)
+            decode_state->reference_objects[i++] = NULL;
+        else
+            decode_state->reference_objects[i++] = obj_surface;
+
+        assert(pic_param->backward_reference_picture != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->backward_reference_picture);
+
+        if (!obj_surface)
+            goto error;
+
+        if (!obj_surface->bo)
+            decode_state->reference_objects[i++] = NULL;
+        else
+            decode_state->reference_objects[i++] = obj_surface;
+    } else 
+        goto error;
+
+    for ( ; i < 16; i++)
+        decode_state->reference_objects[i] = NULL;
 
     return VA_STATUS_SUCCESS;
 
@@ -373,7 +510,7 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
     switch (profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
-        vaStatus = VA_STATUS_SUCCESS;
+        vaStatus = intel_decoder_check_mpeg2_parameter(ctx, decode_state);
         break;
         
     case VAProfileH264Baseline:
@@ -385,7 +522,7 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
     case VAProfileVC1Simple:
     case VAProfileVC1Main:
     case VAProfileVC1Advanced:
-        vaStatus = VA_STATUS_SUCCESS;
+        vaStatus = intel_decoder_check_vc1_parameter(ctx, decode_state);
         break;
 
     case VAProfileJPEGBaseline:

@@ -108,6 +108,7 @@ struct decode_state
     int num_slice_datas;
 
     struct object_surface *render_object;
+    struct object_surface *reference_objects[16]; /* Up to 2 reference surfaces are valid for MPEG-2,*/
 };
 
 struct encode_state
