@@ -622,6 +622,25 @@ send (16)
         rlen obw_wb_length
         {align1};
 
+NOP;
+
+/* Issue message fence so that the previous write message is committed */
+send (16)
+        mb_ind
+        mb_wb.0<1>:ud
+	NULL
+        data_port(
+                OBR_CACHE_TYPE,
+                OBR_MESSAGE_FENCE,
+                OBR_MF_COMMIT,
+                OBR_BIND_IDX,
+                OBR_WRITE_COMMIT_CATEGORY,
+                OBR_HEADER_PRESENT
+        )
+        mlen 1
+        rlen 1
+        {align1};
+
 __EXIT: 
 /*
  * kill thread

@@ -313,3 +313,7 @@ define(`INTER_BLOCK2',			`0x2')
 define(`INTER_BLOCK3',			`0x3')
 define(`INTER_16X8MODE',		`0x01')
 define(`INTER_8X16MODE',		`0x02')
+
+define(`OBR_MESSAGE_FENCE',              `7')
+define(`OBR_MF_NOCOMMIT',		 `0')
+define(`OBR_MF_COMMIT',			 `0x20')
