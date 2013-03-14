@@ -3023,7 +3023,6 @@ i965_DestroySurfaces(VADriverContextP ctx,
 void
 intel_render_put_surface(
     VADriverContextP   ctx,
-    VASurfaceID        surface,
     struct object_surface *obj_surface,
     const VARectangle *src_rect,
     const VARectangle *dst_rect,
@@ -3032,7 +3031,12 @@ intel_render_put_surface(
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int has_done_scaling = 0;
-    VASurfaceID out_surface_id = i965_post_processing(ctx, surface, src_rect, dst_rect, flags, &has_done_scaling);
+    VASurfaceID out_surface_id = i965_post_processing(ctx,
+                                                      obj_surface,
+                                                      src_rect,
+                                                      dst_rect,
+                                                      flags,
+                                                      &has_done_scaling);
 
     assert((!has_done_scaling) || (out_surface_id != VA_INVALID_ID));
 

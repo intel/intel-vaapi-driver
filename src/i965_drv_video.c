@@ -3088,11 +3088,11 @@ i965_hw_getimage(VADriverContextP ctx,
     rect.width = width;
     rect.height = height;
 
-    src_surface.id = surface;
+    src_surface.base = (struct object_base *)obj_surface;
     src_surface.type = I965_SURFACE_TYPE_SURFACE;
     src_surface.flags = I965_SURFACE_FLAG_FRAME;
 
-    dst_surface.id = image;
+    dst_surface.base = (struct object_base *)obj_image;
     dst_surface.type = I965_SURFACE_TYPE_IMAGE;
     dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
@@ -3435,7 +3435,7 @@ i965_hw_putimage(VADriverContextP ctx,
 
     assert(obj_surface->fourcc);
 
-    src_surface.id = image;
+    src_surface.base = (struct object_base *)image;
     src_surface.type = I965_SURFACE_TYPE_IMAGE;
     src_surface.flags = I965_SURFACE_FLAG_FRAME;
     src_rect.x = src_x;
@@ -3443,7 +3443,7 @@ i965_hw_putimage(VADriverContextP ctx,
     src_rect.width = src_width;
     src_rect.height = src_height;
 
-    dst_surface.id = surface;
+    dst_surface.base = (struct object_base *)obj_surface;
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
     dst_surface.flags = I965_SURFACE_FLAG_FRAME;
     dst_rect.x = dest_x;

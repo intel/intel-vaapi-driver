@@ -102,7 +102,6 @@ static VAStatus
 gpe_surfaces_setup(VADriverContextP ctx, 
                    struct vpp_gpe_context *vpp_gpe_ctx)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
     unsigned int i = 0;
     unsigned char input_surface_sum = (1 + vpp_gpe_ctx->forward_surf_sum +
@@ -110,7 +109,7 @@ gpe_surfaces_setup(VADriverContextP ctx,
 
     /* Binding input NV12 surfaces (Luma + Chroma)*/
     for( i = 0; i < input_surface_sum; i += 2){ 
-         obj_surface = SURFACE(vpp_gpe_ctx->surface_input[i/2]);
+         obj_surface = vpp_gpe_ctx->surface_input_object[i/2];
          assert(obj_surface);
          vpp_gpe_ctx->vpp_media_rw_surface_setup(ctx,
                                                  &vpp_gpe_ctx->gpe_ctx,
@@ -126,7 +125,7 @@ gpe_surfaces_setup(VADriverContextP ctx,
     }
 
     /* Binding output NV12 surface(Luma + Chroma) */
-    obj_surface = SURFACE(vpp_gpe_ctx->surface_output);
+    obj_surface = vpp_gpe_ctx->surface_output_object;
     assert(obj_surface);
     vpp_gpe_ctx->vpp_media_rw_surface_setup(ctx,
                                             &vpp_gpe_ctx->gpe_ctx,
@@ -338,12 +337,18 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
 {
      VAStatus va_status = VA_STATUS_SUCCESS;
      struct i965_driver_data *i965 = i965_driver_data(ctx);
-     VASurfaceID origin_in_surf_id = vpp_gpe_ctx-> surface_input[0];
-     VASurfaceID origin_out_surf_id = vpp_gpe_ctx-> surface_output;
+     struct object_surface *origin_in_obj_surface = vpp_gpe_ctx->surface_input_object[0];
+     struct object_surface *origin_out_obj_surface = vpp_gpe_ctx->surface_output_object;
 
      VAProcPipelineParameterBuffer* pipe = vpp_gpe_ctx->pipeline_param;
      VABufferID *filter_ids = (VABufferID*)pipe->filters ;
      struct object_buffer *obj_buf = BUFFER((*(filter_ids + 0)));
+
+     assert(obj_buf && obj_buf->buffer_store);
+       
+     if (!obj_buf || !obj_buf->buffer_store)
+         goto error;
+
      VAProcFilterParameterBuffer* filter =
                   (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
      float sharpening_intensity = filter->value;
@@ -361,7 +366,7 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
                                vpp_gpe_ctx->sub_shader_sum);
      }
 
-     if(!vpp_gpe_ctx->surface_tmp){
+     if(vpp_gpe_ctx->surface_tmp == VA_INVALID_ID){
         va_status = i965_CreateSurfaces(ctx,
                                        vpp_gpe_ctx->in_frame_w,
                                        vpp_gpe_ctx->in_frame_h,
@@ -371,8 +376,13 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
        assert(va_status == VA_STATUS_SUCCESS);
     
        struct object_surface * obj_surf = SURFACE(vpp_gpe_ctx->surface_tmp);
-       i965_check_alloc_surface_bo(ctx, obj_surf, 1, VA_FOURCC('N','V','1','2'),
-                                   SUBSAMPLE_YUV420);
+       assert(obj_surf);
+
+       if (obj_surf) {
+           i965_check_alloc_surface_bo(ctx, obj_surf, 1, VA_FOURCC('N','V','1','2'),
+                                       SUBSAMPLE_YUV420);
+           vpp_gpe_ctx->surface_tmp_object = obj_surf;
+       }
     }                
 
     assert(sharpening_intensity >= 0.0 && sharpening_intensity <= 1.0);
@@ -403,8 +413,8 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
     free(vpp_gpe_ctx->thread_param);
 
     /* Step 2: vertical blur process */      
-    vpp_gpe_ctx->surface_input[0] = vpp_gpe_ctx->surface_output;
-    vpp_gpe_ctx->surface_output = vpp_gpe_ctx->surface_tmp;
+    vpp_gpe_ctx->surface_input_object[0] = vpp_gpe_ctx->surface_output_object;
+    vpp_gpe_ctx->surface_output_object = vpp_gpe_ctx->surface_tmp_object;
     vpp_gpe_ctx->forward_surf_sum = 0;
     vpp_gpe_ctx->backward_surf_sum = 0;
  
@@ -425,9 +435,9 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
     free(vpp_gpe_ctx->thread_param);
 
     /* Step 3: apply the blur to original surface */      
-    vpp_gpe_ctx->surface_input[0]  = origin_in_surf_id;
-    vpp_gpe_ctx->surface_input[1]  = vpp_gpe_ctx->surface_tmp;
-    vpp_gpe_ctx->surface_output    = origin_out_surf_id;
+    vpp_gpe_ctx->surface_input_object[0]  = origin_in_obj_surface;
+    vpp_gpe_ctx->surface_input_object[1]  = vpp_gpe_ctx->surface_tmp_object;
+    vpp_gpe_ctx->surface_output_object    = origin_out_obj_surface;
     vpp_gpe_ctx->forward_surf_sum  = 1;
     vpp_gpe_ctx->backward_surf_sum = 0;
  
@@ -448,6 +458,9 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
     free(vpp_gpe_ctx->thread_param);
 
     return va_status;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 
 VAStatus gen75_gpe_process_picture(VADriverContextP ctx, 
@@ -458,9 +471,16 @@ VAStatus gen75_gpe_process_picture(VADriverContextP ctx,
     VAProcPipelineParameterBuffer* pipe = vpp_gpe_ctx->pipeline_param;
     VAProcFilterParameterBuffer* filter = NULL;
     unsigned int i;
+    struct object_surface *obj_surface = NULL;
 
     for(i = 0; i < pipe->num_filters; i++){
         struct object_buffer *obj_buf = BUFFER(pipe->filters[i]);
+
+        assert(obj_buf && obj_buf->buffer_store);
+
+        if (!obj_buf || !obj_buf->buffer_store)
+            goto error;
+
         filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
         if(filter->type == VAProcFilterSharpening){
            break;
@@ -468,25 +488,30 @@ VAStatus gen75_gpe_process_picture(VADriverContextP ctx,
     }
        
     assert(pipe->num_forward_references + pipe->num_backward_references <= 4);
-    vpp_gpe_ctx->surface_input[0] = pipe->surface;
+    vpp_gpe_ctx->surface_input_object[0] = vpp_gpe_ctx->surface_pipeline_input_object;
 
     vpp_gpe_ctx->forward_surf_sum = 0;
     vpp_gpe_ctx->backward_surf_sum = 0;
  
     for(i = 0; i < pipe->num_forward_references; i ++)
     {
-        vpp_gpe_ctx->surface_input[i + 1] = pipe->forward_references[i]; 
-        vpp_gpe_ctx->forward_surf_sum ++;
+        obj_surface = SURFACE(pipe->forward_references[i]);
+
+        assert(obj_surface);
+        vpp_gpe_ctx->surface_input_object[i + 1] = obj_surface;
+        vpp_gpe_ctx->forward_surf_sum++;
     } 
 
     for(i = 0; i < pipe->num_backward_references; i ++)
     {
-         vpp_gpe_ctx->surface_input[vpp_gpe_ctx->forward_surf_sum + 1 + i ] = 
-                                    pipe->backward_references[i]; 
-         vpp_gpe_ctx->backward_surf_sum ++;
+        obj_surface = SURFACE(pipe->backward_references[i]);
+        
+        assert(obj_surface);
+        vpp_gpe_ctx->surface_input_object[vpp_gpe_ctx->forward_surf_sum + 1 + i ] = obj_surface;
+        vpp_gpe_ctx->backward_surf_sum++;
     } 
 
-    struct object_surface *obj_surface = SURFACE(vpp_gpe_ctx->surface_input[0]);
+    obj_surface = vpp_gpe_ctx->surface_input_object[0];
     vpp_gpe_ctx->in_frame_w = obj_surface->orig_width;
     vpp_gpe_ctx->in_frame_h = obj_surface->orig_height;
 
@@ -499,6 +524,9 @@ VAStatus gen75_gpe_process_picture(VADriverContextP ctx,
     vpp_gpe_ctx->is_first_frame = 0;
 
     return va_status;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 
 void 
@@ -513,9 +541,11 @@ gen75_gpe_context_destroy(VADriverContextP ctx,
 
     i965_gpe_context_destroy(&vpp_gpe_ctx->gpe_ctx);
 
-    if(vpp_gpe_ctx->surface_tmp){
-       i965_DestroySurfaces(ctx, &vpp_gpe_ctx->surface_tmp, 1);
-       vpp_gpe_ctx->surface_tmp = 0;
+    if(vpp_gpe_ctx->surface_tmp != VA_INVALID_ID){
+        assert(vpp_gpe_ctx->surface_tmp_object != NULL);
+        i965_DestroySurfaces(ctx, &vpp_gpe_ctx->surface_tmp, 1);
+        vpp_gpe_ctx->surface_tmp = VA_INVALID_ID;
+        vpp_gpe_ctx->surface_tmp_object = NULL;
     }   
 
     free(vpp_gpe_ctx->batch);
@@ -547,6 +577,8 @@ gen75_gpe_context_init(VADriverContextP ctx)
     vpp_gpe_ctx->vpp_media_rw_surface_setup     = gen7_gpe_media_rw_surface_setup;
     vpp_gpe_ctx->vpp_buffer_surface_setup       = gen7_gpe_buffer_suface_setup;
     vpp_gpe_ctx->vpp_media_chroma_surface_setup = gen75_gpe_media_chroma_surface_setup;
+    vpp_gpe_ctx->surface_tmp = VA_INVALID_ID;
+    vpp_gpe_ctx->surface_tmp_object = NULL;
 
     vpp_gpe_ctx->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, 0);
 

@@ -64,56 +64,12 @@ i965_CreateSurfaces(VADriverContextP ctx,
                     int format,
                     int num_surfaces,
                     VASurfaceID *surfaces);
-VAStatus
-vpp_surface_convert(VADriverContextP ctx,
-                    VASurfaceID dstSurfaceID,
-                    VASurfaceID srcSurfaceID);
 
-VAStatus vpp_surface_copy(VADriverContextP ctx, VASurfaceID dstSurfaceID, VASurfaceID srcSurfaceID)
+VAStatus vpp_surface_convert(VADriverContextP ctx,
+                             struct object_surface *src_obj_surf,
+                             struct object_surface *dst_obj_surf)
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
-    VAImage srcImage, dstImage;
-    void *pBufferSrc, *pBufferDst;
-
-    va_status = vpp_surface_convert(ctx, dstSurfaceID, srcSurfaceID);
-    if(va_status == VA_STATUS_SUCCESS){
-       return va_status;
-    }
-
-    va_status = i965_DeriveImage(ctx, srcSurfaceID, &srcImage);
-    assert(va_status == VA_STATUS_SUCCESS);
-
-    va_status = i965_DeriveImage(ctx, dstSurfaceID, &dstImage);
-    assert(va_status == VA_STATUS_SUCCESS);
-
-    if(srcImage.width  != dstImage.width  ||
-       srcImage.height != dstImage.height ||
-       srcImage.format.fourcc != dstImage.format.fourcc) {
-        return VA_STATUS_ERROR_UNIMPLEMENTED;
-    }
-
-    va_status = i965_MapBuffer(ctx, srcImage.buf, &pBufferSrc);
-    assert(va_status == VA_STATUS_SUCCESS);
-
-    va_status = i965_MapBuffer(ctx, dstImage.buf, &pBufferDst);
-    assert(va_status == VA_STATUS_SUCCESS);
-
-    memcpy(pBufferDst, pBufferSrc, dstImage.data_size);
-
-    i965_UnmapBuffer(ctx, srcImage.buf);
-    i965_UnmapBuffer(ctx, dstImage.buf);
-    i965_DestroyImage(ctx, srcImage.image_id);
-    i965_DestroyImage(ctx, dstImage.image_id);
-
-    return va_status;;
-}
-
-VAStatus vpp_surface_convert(VADriverContextP ctx, VASurfaceID dstSurfaceID, VASurfaceID srcSurfaceID)
-{
-    VAStatus va_status = VA_STATUS_SUCCESS;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface* src_obj_surf = SURFACE(srcSurfaceID);
-    struct object_surface* dst_obj_surf = SURFACE(dstSurfaceID);
 
     assert(src_obj_surf->orig_width  == dst_obj_surf->orig_width);
     assert(src_obj_surf->orig_height == dst_obj_surf->orig_height);
@@ -125,11 +81,11 @@ VAStatus vpp_surface_convert(VADriverContextP ctx, VASurfaceID dstSurfaceID, VAS
     src_rect.height = dst_rect.height = dst_obj_surf->orig_height;
 
     struct i965_surface src_surface, dst_surface;
-    src_surface.id    = srcSurfaceID;
+    src_surface.base  = (struct object_base *)src_obj_surf;
     src_surface.type  = I965_SURFACE_TYPE_SURFACE;
     src_surface.flags = I965_SURFACE_FLAG_FRAME;
 
-    dst_surface.id    = dstSurfaceID;
+    dst_surface.base  = (struct object_base *)dst_obj_surf;
     dst_surface.type  = I965_SURFACE_TYPE_SURFACE;
     dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
@@ -141,13 +97,12 @@ VAStatus vpp_surface_convert(VADriverContextP ctx, VASurfaceID dstSurfaceID, VAS
     return va_status;
 }
 
-VAStatus vpp_surface_scaling(VADriverContextP ctx, VASurfaceID dstSurfaceID, VASurfaceID srcSurfaceID)
+VAStatus vpp_surface_scaling(VADriverContextP ctx,
+                             struct object_surface *dst_obj_surf,
+                             struct object_surface *src_obj_surf)
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
     int flags = I965_PP_FLAG_AVS;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface* src_obj_surf = SURFACE(srcSurfaceID);
-    struct object_surface* dst_obj_surf = SURFACE(dstSurfaceID);
 
     assert(src_obj_surf->fourcc == VA_FOURCC('N','V','1','2'));
     assert(dst_obj_surf->fourcc == VA_FOURCC('N','V','1','2'));
@@ -164,9 +119,9 @@ VAStatus vpp_surface_scaling(VADriverContextP ctx, VASurfaceID dstSurfaceID, VAS
     dst_rect.height = dst_obj_surf->orig_height;
 
     va_status = i965_scaling_processing(ctx,
-                                       srcSurfaceID,
+                                       src_obj_surf,
                                        &src_rect,
-                                       dstSurfaceID,
+                                       dst_obj_surf,
                                        &dst_rect,
                                        flags);
      
@@ -606,7 +561,6 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
 
 void hsw_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *proc_ctx, unsigned int is_output)
 {
-    struct  i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = proc_ctx->batch;
     unsigned int u_offset_y = 0, v_offset_y = 0;
     unsigned int is_uv_interleaved = 0, tiling = 0, swizzle = 0;
@@ -616,9 +570,9 @@ void hsw_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *pro
     unsigned int half_pitch_chroma = 0;
 
     if(is_output){   
-         obj_surf = SURFACE(proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id);
+        obj_surf = proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface;
     }else {
-         obj_surf = SURFACE(proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id);
+        obj_surf = proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface;
     }
 
     assert(obj_surf->fourcc == VA_FOURCC_NV12 ||
@@ -720,28 +674,28 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
                   startingX << 16 |
                   endingX);
     OUT_RELOC(batch,
-              proc_ctx->frame_store[FRAME_IN_CURRENT].bo,
+              proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);
     OUT_RELOC(batch,
-              proc_ctx->frame_store[FRAME_IN_PREVIOUS].bo,
+              proc_ctx->frame_store[FRAME_IN_PREVIOUS].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);
     OUT_RELOC(batch,
-              proc_ctx->frame_store[FRAME_IN_STMM].bo,
+              proc_ctx->frame_store[FRAME_IN_STMM].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);
     OUT_RELOC(batch,
-              proc_ctx->frame_store[FRAME_OUT_STMM].bo,
+              proc_ctx->frame_store[FRAME_OUT_STMM].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);
     OUT_RELOC(batch,
-              proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].bo,
+              proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);
     OUT_RELOC(batch,
-              proc_ctx->frame_store[FRAME_OUT_CURRENT].bo,
+              proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);
     OUT_RELOC(batch,
-              proc_ctx->frame_store[FRAME_OUT_PREVIOUS].bo,
+              proc_ctx->frame_store[FRAME_OUT_PREVIOUS].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);
     OUT_RELOC(batch,
-              proc_ctx->frame_store[FRAME_OUT_STATISTIC].bo,
+              proc_ctx->frame_store[FRAME_OUT_STATISTIC].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);
 
     ADVANCE_VEB_BATCH(batch);
@@ -756,24 +710,21 @@ void hsw_veb_resource_prepare(VADriverContextP ctx,
     unsigned int input_fourcc, output_fourcc;
     unsigned int input_sampling, output_sampling;
     unsigned int input_tiling, output_tiling;
-    VAGenericID vebox_in_id, vebox_out_id;
     unsigned int i, swizzle;
+    struct object_surface *obj_surf_out = NULL, *obj_surf_in = NULL;
 
-    if(proc_ctx->surface_input_vebox != -1){
-       vebox_in_id = proc_ctx->surface_input_vebox;
-    }else{
-       vebox_in_id = proc_ctx->surface_input;
+    if (proc_ctx->surface_input_vebox_object != NULL) {
+        obj_surf_in = proc_ctx->surface_input_vebox_object;
+    } else {
+        obj_surf_in = proc_ctx->surface_input_object;
     } 
 
-    if(proc_ctx->surface_output_vebox != -1){
-       vebox_out_id = proc_ctx->surface_output_vebox;
-    }else{
-       vebox_out_id = proc_ctx->surface_output;
+    if (proc_ctx->surface_output_vebox_object != NULL) {
+        obj_surf_out = proc_ctx->surface_output_vebox_object;
+    } else {
+        obj_surf_out = proc_ctx->surface_output_object;
     } 
 
-    struct object_surface* obj_surf_in  = SURFACE(vebox_in_id);
-    struct object_surface* obj_surf_out = SURFACE(vebox_out_id);
-       
     if(obj_surf_in->bo == NULL){
           input_fourcc = VA_FOURCC('N','V','1','2');
           input_sampling = SUBSAMPLE_YUV420;
@@ -813,11 +764,13 @@ void hsw_veb_resource_prepare(VADriverContextP ctx,
     assert(va_status == VA_STATUS_SUCCESS);
 
     for(i = 0; i < FRAME_STORE_SUM; i ++) {
-        if(proc_ctx->frame_store[i].bo){
+        if(proc_ctx->frame_store[i].obj_surface){
             continue; //refer external surface for vebox pipeline
         }
     
         VASurfaceID new_surface;
+        struct object_surface *obj_surf = NULL;
+
         va_status =   i965_CreateSurfaces(ctx,
                                           proc_ctx ->width_input,
                                           proc_ctx ->height_input,
@@ -826,19 +779,20 @@ void hsw_veb_resource_prepare(VADriverContextP ctx,
                                           &new_surface);
         assert(va_status == VA_STATUS_SUCCESS);
 
-        proc_ctx->frame_store[i].surface_id = new_surface;
-        struct object_surface* obj_surf = SURFACE(new_surface);
+        obj_surf = SURFACE(new_surface);
+        assert(obj_surf);
 
         if( i <= FRAME_IN_PREVIOUS || i == FRAME_OUT_CURRENT_DN) {
-           i965_check_alloc_surface_bo(ctx, obj_surf, input_tiling, input_fourcc, input_sampling);
+            i965_check_alloc_surface_bo(ctx, obj_surf, input_tiling, input_fourcc, input_sampling);
         } else if( i == FRAME_IN_STMM || i == FRAME_OUT_STMM){
             i965_check_alloc_surface_bo(ctx, obj_surf, 1, input_fourcc, input_sampling);
         } else if( i >= FRAME_OUT_CURRENT){
             i965_check_alloc_surface_bo(ctx, obj_surf, output_tiling, output_fourcc, output_sampling);
         }
-        proc_ctx->frame_store[i].bo = obj_surf->bo;
-        dri_bo_reference(proc_ctx->frame_store[i].bo);
+
+        proc_ctx->frame_store[i].surface_id = new_surface;
         proc_ctx->frame_store[i].is_internal_surface = 1;
+        proc_ctx->frame_store[i].obj_surface = obj_surf;
     }
 
     /* alloc dndi state table  */
@@ -879,66 +833,53 @@ void hsw_veb_surface_reference(VADriverContextP ctx,
                               struct intel_vebox_context *proc_ctx)
 {
     struct object_surface * obj_surf; 
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    VAGenericID vebox_in_id, vebox_out_id;
 
-    if(proc_ctx->surface_input_vebox != -1){
-       vebox_in_id = proc_ctx->surface_input_vebox;
-    }else{
-       vebox_in_id = proc_ctx->surface_input;
-    } 
-
-    if(proc_ctx->surface_output_vebox != -1){
-       vebox_out_id = proc_ctx->surface_output_vebox;
-    }else{
-       vebox_out_id = proc_ctx->surface_output;
+    if (proc_ctx->surface_input_vebox_object != NULL) {
+        obj_surf = proc_ctx->surface_input_vebox_object;
+    } else {
+        obj_surf = proc_ctx->surface_input_object;
     } 
 
     /* update the input surface */ 
-     obj_surf = SURFACE(vebox_in_id);
-     dri_bo_unreference(proc_ctx->frame_store[FRAME_IN_CURRENT].bo);
-     proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id = vebox_in_id;
-     proc_ctx->frame_store[FRAME_IN_CURRENT].bo = obj_surf->bo;
-     proc_ctx->frame_store[FRAME_IN_CURRENT].is_internal_surface = 0;
-     dri_bo_reference(proc_ctx->frame_store[FRAME_IN_CURRENT].bo);
+    proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id = VA_INVALID_ID;
+    proc_ctx->frame_store[FRAME_IN_CURRENT].is_internal_surface = 0;
+    proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface = obj_surf;
+
+    if (proc_ctx->surface_output_vebox_object != NULL) {
+        obj_surf = proc_ctx->surface_output_vebox_object;
+    } else {
+        obj_surf = proc_ctx->surface_output_object;
+    } 
 
      /* update the output surface */ 
-     obj_surf = SURFACE(vebox_out_id);
-     if(proc_ctx->filters_mask == VPP_DNDI_DN){
-         dri_bo_unreference(proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].bo);
-         proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].surface_id = vebox_out_id;
-         proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].bo = obj_surf->bo;
-         proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].is_internal_surface = 0;
-         dri_bo_reference(proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].bo);
-     }else {
-         dri_bo_unreference(proc_ctx->frame_store[FRAME_OUT_CURRENT].bo);
-         proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = vebox_out_id;
-         proc_ctx->frame_store[FRAME_OUT_CURRENT].bo = obj_surf->bo;
-         proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
-         dri_bo_reference(proc_ctx->frame_store[FRAME_OUT_CURRENT].bo);
-     } 
+    if (proc_ctx->filters_mask == VPP_DNDI_DN) {
+        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].surface_id = VA_INVALID_ID;
+        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].is_internal_surface = 0;
+        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface = obj_surf;
+    } else {
+        proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = VA_INVALID_ID;
+        proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
+        proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface = obj_surf;
+    }
 }
 
 void hsw_veb_surface_unreference(VADriverContextP ctx,
                                  struct intel_vebox_context *proc_ctx)
 {
     /* unreference the input surface */ 
-    dri_bo_unreference(proc_ctx->frame_store[FRAME_IN_CURRENT].bo);
-    proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id = -1;
-    proc_ctx->frame_store[FRAME_IN_CURRENT].bo = NULL;
+    proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id = VA_INVALID_ID;
     proc_ctx->frame_store[FRAME_IN_CURRENT].is_internal_surface = 0;
+    proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface = NULL;
 
     /* unreference the shared output surface */ 
-    if(proc_ctx->filters_mask == VPP_DNDI_DN){
-       dri_bo_unreference(proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].bo);
-       proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].surface_id = -1;
-       proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].bo = NULL;
-       proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].is_internal_surface = 0;
-    }else{
-       dri_bo_unreference(proc_ctx->frame_store[FRAME_OUT_CURRENT].bo);
-       proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = -1;
-       proc_ctx->frame_store[FRAME_OUT_CURRENT].bo = NULL;
-       proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
+    if (proc_ctx->filters_mask == VPP_DNDI_DN) {
+        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].surface_id = VA_INVALID_ID;
+        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].is_internal_surface = 0;
+        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface = NULL;
+    } else {
+        proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = VA_INVALID_ID;
+        proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
+        proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface = NULL;
     }
 }
 
@@ -947,8 +888,8 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
 {
     VAStatus va_status;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface* obj_surf_input = SURFACE(proc_ctx->surface_input);
-    struct object_surface* obj_surf_output = SURFACE(proc_ctx->surface_output);
+    struct object_surface* obj_surf_input = proc_ctx->surface_input_object;
+    struct object_surface* obj_surf_output = proc_ctx->surface_output_object;
     struct object_surface* obj_surf_input_vebox;
     struct object_surface* obj_surf_output_vebox;
 
@@ -988,8 +929,8 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
            assert(0);
      }
     
-     if(proc_ctx->format_convert_flags & PRE_FORMAT_CONVERT){
-        if(proc_ctx->surface_input_vebox == -1){
+     if (proc_ctx->format_convert_flags & PRE_FORMAT_CONVERT) {
+         if(proc_ctx->surface_input_vebox_object == NULL){
              va_status = i965_CreateSurfaces(ctx,
                                             proc_ctx->width_input,
                                             proc_ctx->height_input,
@@ -998,10 +939,15 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
                                             &(proc_ctx->surface_input_vebox));
              assert(va_status == VA_STATUS_SUCCESS);
              obj_surf_input_vebox = SURFACE(proc_ctx->surface_input_vebox);
-             i965_check_alloc_surface_bo(ctx, obj_surf_input_vebox, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+             assert(obj_surf_input_vebox);
+
+             if (obj_surf_input_vebox) {
+                 proc_ctx->surface_input_vebox_object = obj_surf_input_vebox;
+                 i965_check_alloc_surface_bo(ctx, obj_surf_input_vebox, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+             }
          }
        
-         vpp_surface_convert(ctx, proc_ctx->surface_input_vebox, proc_ctx->surface_input);
+         vpp_surface_convert(ctx, proc_ctx->surface_input_vebox_object, proc_ctx->surface_input_object);
       }
 
       /* create one temporary NV12 surfaces for conversion*/
@@ -1023,7 +969,7 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
   
      if(proc_ctx->format_convert_flags & POST_FORMAT_CONVERT ||
         proc_ctx->format_convert_flags & POST_SCALING_CONVERT){
-       if(proc_ctx->surface_output_vebox == -1){
+       if(proc_ctx->surface_output_vebox_object == NULL){
              va_status = i965_CreateSurfaces(ctx,
                                             proc_ctx->width_input,
                                             proc_ctx->height_input,
@@ -1032,12 +978,17 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
                                             &(proc_ctx->surface_output_vebox));
              assert(va_status == VA_STATUS_SUCCESS);
              obj_surf_output_vebox = SURFACE(proc_ctx->surface_output_vebox);
-             i965_check_alloc_surface_bo(ctx, obj_surf_output_vebox, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+             assert(obj_surf_output_vebox);
+
+             if (obj_surf_output_vebox) {
+                 proc_ctx->surface_output_vebox_object = obj_surf_output_vebox;
+                 i965_check_alloc_surface_bo(ctx, obj_surf_output_vebox, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+             }
        }
      }   
 
      if(proc_ctx->format_convert_flags & POST_SCALING_CONVERT){
-       if(proc_ctx->surface_output_scaled == -1){
+       if(proc_ctx->surface_output_scaled_object == NULL){
              va_status = i965_CreateSurfaces(ctx,
                                             proc_ctx->width_output,
                                             proc_ctx->height_output,
@@ -1046,7 +997,12 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
                                             &(proc_ctx->surface_output_scaled));
              assert(va_status == VA_STATUS_SUCCESS);
              obj_surf_output_vebox = SURFACE(proc_ctx->surface_output_scaled);
-             i965_check_alloc_surface_bo(ctx, obj_surf_output_vebox, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+             assert(obj_surf_output_vebox);
+
+             if (obj_surf_output_vebox) {
+                 proc_ctx->surface_output_scaled_object = obj_surf_output_vebox;
+                 i965_check_alloc_surface_bo(ctx, obj_surf_output_vebox, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+             }
        }
      } 
     
@@ -1056,13 +1012,12 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
 int hsw_veb_post_format_convert(VADriverContextP ctx,
                            struct intel_vebox_context *proc_ctx)
 {
-     struct i965_driver_data *i965 = i965_driver_data(ctx);
-     VASurfaceID surf_id_pipe_out = 0;
+     struct object_surface *obj_surface = NULL;
 
      if(proc_ctx->filters_mask == VPP_DNDI_DN){
-         surf_id_pipe_out = proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].surface_id;
+         obj_surface = proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface;
      } else {
-         surf_id_pipe_out = proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id;
+         obj_surface = proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface;
      }
  
     if(!(proc_ctx->format_convert_flags & POST_FORMAT_CONVERT) &&
@@ -1073,24 +1028,25 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
     } else if ((proc_ctx->format_convert_flags & POST_FORMAT_CONVERT) &&
                !(proc_ctx->format_convert_flags & POST_SCALING_CONVERT)){
        /* convert and copy NV12 to YV12/IMC3/IMC2 output*/
-        vpp_surface_convert(ctx,proc_ctx->surface_output, surf_id_pipe_out);
+        vpp_surface_convert(ctx,proc_ctx->surface_output_object, obj_surface);
 
     } else if(proc_ctx->format_convert_flags & POST_SCALING_CONVERT) {
        /* scaling, convert and copy NV12 to YV12/IMC3/IMC2/ output*/
-        assert((SURFACE(surf_id_pipe_out))->fourcc == VA_FOURCC('N','V','1','2'));
+        assert(obj_surface->fourcc == VA_FOURCC('N','V','1','2'));
      
         /* first step :surface scaling */
-        vpp_surface_scaling(ctx,proc_ctx->surface_output_scaled, surf_id_pipe_out);
+        vpp_surface_scaling(ctx,proc_ctx->surface_output_scaled_object, obj_surface);
 
         /* second step: color format convert and copy to output */
-        struct object_surface *obj_surf = SURFACE(proc_ctx->surface_output);
-        if(obj_surf->fourcc ==  VA_FOURCC('N','V','1','2') ||
-           obj_surf->fourcc ==  VA_FOURCC('Y','V','1','2') ||
-           obj_surf->fourcc ==  VA_FOURCC('I','4','2','0') ||
-           obj_surf->fourcc ==  VA_FOURCC('Y','U','Y','2') ||
-           obj_surf->fourcc ==  VA_FOURCC('I','M','C','1') ||
-           obj_surf->fourcc ==  VA_FOURCC('I','M','C','3')) {  
-           vpp_surface_convert(ctx,proc_ctx->surface_output, proc_ctx->surface_output_scaled);
+        obj_surface = proc_ctx->surface_output_object;
+
+        if(obj_surface->fourcc ==  VA_FOURCC('N','V','1','2') ||
+           obj_surface->fourcc ==  VA_FOURCC('Y','V','1','2') ||
+           obj_surface->fourcc ==  VA_FOURCC('I','4','2','0') ||
+           obj_surface->fourcc ==  VA_FOURCC('Y','U','Y','2') ||
+           obj_surface->fourcc ==  VA_FOURCC('I','M','C','1') ||
+           obj_surface->fourcc ==  VA_FOURCC('I','M','C','3')) {  
+           vpp_surface_convert(ctx, proc_ctx->surface_output_object, proc_ctx->surface_output_scaled_object);
        }else {
            assert(0); 
        }
@@ -1111,6 +1067,12 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
 
     for (i = 0; i < pipe->num_filters; i ++) {
          obj_buf = BUFFER(pipe->filters[i]);
+         
+         assert(obj_buf && obj_buf->buffer_store);
+
+         if (!obj_buf || !obj_buf->buffer_store)
+             goto error;
+
          filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
             
          if (filter->type == VAProcFilterNoiseReduction) {
@@ -1155,6 +1117,9 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
        proc_ctx->is_first_frame = 0; 
      
     return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 
 void gen75_vebox_context_destroy(VADriverContextP ctx, 
@@ -1162,30 +1127,35 @@ void gen75_vebox_context_destroy(VADriverContextP ctx,
 {
     int i;
 
-    if(proc_ctx->surface_input_vebox != -1){
+    if(proc_ctx->surface_input_vebox != VA_INVALID_ID){
        i965_DestroySurfaces(ctx, &proc_ctx->surface_input_vebox, 1);
-       proc_ctx->surface_input_vebox = -1;
+       proc_ctx->surface_input_vebox = VA_INVALID_ID;
+       proc_ctx->surface_input_vebox_object = NULL;
      }
 
-    if(proc_ctx->surface_output_vebox != -1){
+    if(proc_ctx->surface_output_vebox != VA_INVALID_ID){
        i965_DestroySurfaces(ctx, &proc_ctx->surface_output_vebox, 1);
-       proc_ctx->surface_output_vebox = -1;
+       proc_ctx->surface_output_vebox = VA_INVALID_ID;
+       proc_ctx->surface_output_vebox_object = NULL;
      }
 
-    if(proc_ctx->surface_output_scaled != -1){
+    if(proc_ctx->surface_output_scaled != VA_INVALID_ID){
        i965_DestroySurfaces(ctx, &proc_ctx->surface_output_scaled, 1);
-       proc_ctx->surface_output_scaled = -1;
+       proc_ctx->surface_output_scaled = VA_INVALID_ID;
+       proc_ctx->surface_output_scaled_object = NULL;
      }
 
     for(i = 0; i < FRAME_STORE_SUM; i ++) {
-        if(proc_ctx->frame_store[i].bo){
-           dri_bo_unreference(proc_ctx->frame_store[i].bo);
-           i965_DestroySurfaces(ctx, &proc_ctx->frame_store[i].surface_id, 1);
+        if (proc_ctx->frame_store[i].is_internal_surface == 1) {
+            assert(proc_ctx->frame_store[i].surface_id != VA_INVALID_ID);
+
+            if (proc_ctx->frame_store[i].surface_id != VA_INVALID_ID)
+                i965_DestroySurfaces(ctx, &proc_ctx->frame_store[i].surface_id, 1);
         }
 
-       proc_ctx->frame_store[i].surface_id = -1;
-       proc_ctx->frame_store[i].bo = NULL;
-       proc_ctx->frame_store[i].valid = 0;
+        proc_ctx->frame_store[i].surface_id = VA_INVALID_ID;
+        proc_ctx->frame_store[i].is_internal_surface = 0;
+        proc_ctx->frame_store[i].obj_surface = NULL;
     }
 
     /* dndi state table  */
@@ -1213,15 +1183,27 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct intel_vebox_context *proc_context = calloc(1, sizeof(struct intel_vebox_context));
+    int i;
 
     proc_context->batch = intel_batchbuffer_new(intel, I915_EXEC_VEBOX, 0);
     memset(proc_context->frame_store, 0, sizeof(VEBFrameStore)*FRAME_STORE_SUM);
+
+    for (i = 0; i < FRAME_STORE_SUM; i ++) {
+        proc_context->frame_store[i].surface_id = VA_INVALID_ID;
+        proc_context->frame_store[i].is_internal_surface = 0;
+        proc_context->frame_store[i].obj_surface = NULL;
+    }
   
     proc_context->filters_mask          = 0;
     proc_context->is_first_frame        = 1;
-    proc_context->surface_input_vebox   = -1;
-    proc_context->surface_output_vebox  = -1;
-    proc_context->surface_output_scaled = -1;
+    proc_context->surface_output_object = NULL;
+    proc_context->surface_input_object  = NULL;
+    proc_context->surface_input_vebox   = VA_INVALID_ID;
+    proc_context->surface_input_vebox_object = NULL;
+    proc_context->surface_output_vebox  = VA_INVALID_ID;
+    proc_context->surface_output_vebox_object = NULL;
+    proc_context->surface_output_scaled = VA_INVALID_ID;
+    proc_context->surface_output_scaled_object = NULL;
     proc_context->filters_mask          = 0;
     proc_context->format_convert_flags  = 0;
 

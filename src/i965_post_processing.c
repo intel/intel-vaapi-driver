@@ -1086,14 +1086,13 @@ static struct pp_module pp_modules_gen75[] = {
 static int
 pp_get_surface_fourcc(VADriverContextP ctx, const struct i965_surface *surface)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int fourcc;
 
     if (surface->type == I965_SURFACE_TYPE_IMAGE) {
-        struct object_image *obj_image = IMAGE(surface->id);
+        struct object_image *obj_image = (struct object_image *)surface->base;
         fourcc = obj_image->image.format.fourcc;
     } else {
-        struct object_surface *obj_surface = SURFACE(surface->id);
+        struct object_surface *obj_surface = (struct object_surface *)surface->base;
         fourcc = obj_surface->fourcc;
     }
 
@@ -1621,7 +1620,6 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
                                 int base_index, int is_target,
                                 int *width, int *height, int *pitch, int *offset)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
     struct object_image *obj_image;
     dri_bo *bo;
@@ -1639,7 +1637,7 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
     int scale_factor_of_1st_plane_width_in_byte = 1;
                               
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
-        obj_surface = SURFACE(surface->id);
+        obj_surface = (struct object_surface *)surface->base;
         bo = obj_surface->bo;
         width[0] = obj_surface->orig_width;
         height[0] = obj_surface->orig_height;
@@ -1670,7 +1668,7 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
             offset[2] = offset[1] + (obj_surface->width / 2) * (obj_surface->height / 2);
         }
     } else {
-        obj_image = IMAGE(surface->id);
+        obj_image = (struct object_image *)surface->base;
         bo = obj_image->bo;
         width[0] = obj_image->image.width;
         height[0] = obj_image->image.height;
@@ -1735,7 +1733,6 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                                      int base_index, int is_target,
                                      int *width, int *height, int *pitch, int *offset)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
     struct object_image *obj_image;
     dri_bo *bo;
@@ -1752,7 +1749,7 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                               fourcc == VA_FOURCC('B', 'G', 'R', 'X'));
 
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
-        obj_surface = SURFACE(surface->id);
+        obj_surface = (struct object_surface *)surface->base;
         bo = obj_surface->bo;
         width[0] = obj_surface->orig_width;
         height[0] = obj_surface->orig_height;
@@ -1781,7 +1778,7 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         pitch[2] = obj_surface->cb_cr_pitch;
         offset[2] = obj_surface->y_cr_offset * obj_surface->width;
     } else {
-        obj_image = IMAGE(surface->id);
+        obj_image = (struct object_image *)surface->base;
         bo = obj_image->bo;
         width[0] = obj_image->image.width;
         height[0] = obj_image->image.height;
@@ -2088,7 +2085,6 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
                            const VARectangle *dst_rect,
                            void *filter_param)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_scaling_context *pp_scaling_context = (struct pp_scaling_context *)&pp_context->private_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
@@ -2098,7 +2094,7 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     int out_w, out_h, out_wpitch, out_hpitch;
 
     /* source surface */
-    obj_surface = SURFACE(src_surface->id);
+    obj_surface = (struct object_surface *)src_surface->base;
     in_w = obj_surface->orig_width;
     in_h = obj_surface->orig_height;
     in_wpitch = obj_surface->width;
@@ -2117,7 +2113,7 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
                               2, 0);
 
     /* destination surface */
-    obj_surface = SURFACE(dst_surface->id);
+    obj_surface = (struct object_surface *)dst_surface->base;
     out_w = obj_surface->orig_width;
     out_h = obj_surface->orig_height;
     out_wpitch = obj_surface->width;
@@ -2305,7 +2301,6 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
                        void *filter_param,
                        int nlas)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
@@ -2318,7 +2313,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     int i;
 
     /* surface */
-    obj_surface = SURFACE(src_surface->id);
+    obj_surface = (struct object_surface *)src_surface->base;
     in_w = obj_surface->orig_width;
     in_h = obj_surface->orig_height;
     in_wpitch = obj_surface->width;
@@ -2341,7 +2336,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
                                2);
 
     /* destination surface */
-    obj_surface = SURFACE(dst_surface->id);
+    obj_surface = (struct object_surface *)dst_surface->base;
     out_w = obj_surface->orig_width;
     out_h = obj_surface->orig_height;
     out_wpitch = obj_surface->width;
@@ -3129,7 +3124,7 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
         dndi_top_first = 0;
 
     /* surface */
-    obj_surface = SURFACE(src_surface->id);
+    obj_surface = (struct object_surface *)src_surface->base;
     orig_w = obj_surface->orig_width;
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
@@ -3164,7 +3159,7 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
                               20, 1);
 
     /* destination surface */
-    obj_surface = SURFACE(dst_surface->id);
+    obj_surface = (struct object_surface *)dst_surface->base;
     orig_w = obj_surface->orig_width;
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
@@ -3335,7 +3330,7 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
     }
 
     /* surface */
-    obj_surface = SURFACE(src_surface->id);
+    obj_surface = (struct object_surface *)src_surface->base;
     orig_w = obj_surface->orig_width;
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
@@ -3370,7 +3365,7 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
                               20, 1);
 
     /* destination surface */
-    obj_surface = SURFACE(dst_surface->id);
+    obj_surface = (struct object_surface *)dst_surface->base;
     orig_w = obj_surface->orig_width;
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
@@ -3524,7 +3519,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
         dndi_top_first = 0;
 
     /* surface */
-    obj_surface = SURFACE(src_surface->id);
+    obj_surface = (struct object_surface *)src_surface->base;
     orig_w = obj_surface->orig_width;
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
@@ -3567,7 +3562,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
                               5, 1);
 
     /* destination surface */
-    obj_surface = SURFACE(dst_surface->id);
+    obj_surface = (struct object_surface *)dst_surface->base;
     orig_w = obj_surface->orig_width;
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
@@ -3771,7 +3766,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     }
 
     /* surface */
-    obj_surface = SURFACE(src_surface->id);
+    obj_surface = (struct object_surface *)src_surface->base;
     orig_w = obj_surface->orig_width;
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
@@ -3814,7 +3809,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
                               33, 1);
 
     /* destination surface */
-    obj_surface = SURFACE(dst_surface->id);
+    obj_surface = (struct object_surface *)dst_surface->base;
     orig_w = obj_surface->orig_width;
     orig_h = obj_surface->orig_height;
     w = obj_surface->width;
@@ -4547,12 +4542,11 @@ rgb_to_yuv(unsigned int argb,
 static void 
 i965_vpp_clear_surface(VADriverContextP ctx,
                        struct i965_post_processing_context *pp_context,
-                       VASurfaceID surface,
+                       struct object_surface *obj_surface,
                        unsigned int color)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = pp_context->batch;
-    struct object_surface *obj_surface = SURFACE(surface);
     unsigned int blt_cmd, br13;
     unsigned int tiling = 0, swizzle = 0;
     int pitch;
@@ -4626,16 +4620,14 @@ i965_vpp_clear_surface(VADriverContextP ctx,
 VAStatus
 i965_scaling_processing(
     VADriverContextP   ctx,
-    VASurfaceID        src_surface_id,
+    struct object_surface *src_surface_obj,
     const VARectangle *src_rect,
-    VASurfaceID        dst_surface_id,
+    struct object_surface *dst_surface_obj,
     const VARectangle *dst_rect,
     unsigned int       flags)
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface *src_surface_obj = SURFACE(src_surface_id);
-    struct object_surface *dst_surface_obj = SURFACE(dst_surface_id);
  
     assert(src_surface_obj->fourcc == VA_FOURCC('N', 'V', '1', '2'));
     assert(dst_surface_obj->fourcc == VA_FOURCC('N', 'V', '1', '2'));
@@ -4646,10 +4638,10 @@ i965_scaling_processing(
 
          _i965LockMutex(&i965->pp_mutex);
 
-         src_surface.id = src_surface_id;
+         src_surface.base = (struct object_base *)src_surface_obj;
          src_surface.type = I965_SURFACE_TYPE_SURFACE;
          src_surface.flags = I965_SURFACE_FLAG_FRAME;
-         dst_surface.id = dst_surface_id;
+         dst_surface.base = (struct object_base *)dst_surface_obj;
          dst_surface.type = I965_SURFACE_TYPE_SURFACE;
          dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
@@ -4670,7 +4662,7 @@ i965_scaling_processing(
 VASurfaceID
 i965_post_processing(
     VADriverContextP   ctx,
-    VASurfaceID        surface,
+    struct object_surface *obj_surface,
     const VARectangle *src_rect,
     const VARectangle *dst_rect,
     unsigned int       flags,
@@ -4678,18 +4670,15 @@ i965_post_processing(
 )
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    VASurfaceID in_surface_id = surface;
     VASurfaceID out_surface_id = VA_INVALID_ID;
+    VASurfaceID tmp_id = VA_INVALID_ID;
     
     *has_done_scaling = 0;
 
     if (HAS_PP(i965)) {
-        struct object_surface *obj_surface;
         VAStatus status;
         struct i965_surface src_surface;
         struct i965_surface dst_surface;
-
-        obj_surface = SURFACE(in_surface_id);
 
         /* Currently only support post processing for NV12 surface */
         if (obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2'))
@@ -4698,6 +4687,11 @@ i965_post_processing(
         _i965LockMutex(&i965->pp_mutex);
 
         if (flags & I965_PP_FLAG_MCDI) {
+            src_surface.base = (struct object_base *)obj_surface;
+            src_surface.type = I965_SURFACE_TYPE_SURFACE;
+            src_surface.flags = (flags & I965_PP_FLAG_TOP_FIELD) ? 
+                I965_SURFACE_FLAG_TOP_FIELD_FIRST : I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST;
+
             status = i965_CreateSurfaces(ctx,
                                          obj_surface->orig_width,
                                          obj_surface->orig_height,
@@ -4706,13 +4700,11 @@ i965_post_processing(
                                          &out_surface_id);
             assert(status == VA_STATUS_SUCCESS);
             obj_surface = SURFACE(out_surface_id);
+            assert(obj_surface);
             i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-            i965_vpp_clear_surface(ctx, i965->pp_context, out_surface_id, 0); 
-            src_surface.id = in_surface_id;
-            src_surface.type = I965_SURFACE_TYPE_SURFACE;
-            src_surface.flags = (flags & I965_PP_FLAG_TOP_FIELD) ? 
-                I965_SURFACE_FLAG_TOP_FIELD_FIRST : I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST;
-            dst_surface.id = out_surface_id;
+            i965_vpp_clear_surface(ctx, i965->pp_context, obj_surface, 0); 
+
+            dst_surface.base = (struct object_base *)obj_surface;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
             dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
@@ -4730,7 +4722,11 @@ i965_post_processing(
             struct intel_region *dest_region = render_state->draw_region;
 
             if (out_surface_id != VA_INVALID_ID)
-                in_surface_id = out_surface_id;
+                tmp_id = out_surface_id;
+
+            src_surface.base = (struct object_base *)obj_surface;
+            src_surface.type = I965_SURFACE_TYPE_SURFACE;
+            src_surface.flags = I965_SURFACE_FLAG_FRAME;
 
             status = i965_CreateSurfaces(ctx,
                                          dest_region->width,
@@ -4740,12 +4736,11 @@ i965_post_processing(
                                          &out_surface_id);
             assert(status == VA_STATUS_SUCCESS);
             obj_surface = SURFACE(out_surface_id);
+            assert(obj_surface);
             i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-            i965_vpp_clear_surface(ctx, i965->pp_context, out_surface_id, 0); 
-            src_surface.id = in_surface_id;
-            src_surface.type = I965_SURFACE_TYPE_SURFACE;
-            src_surface.flags = I965_SURFACE_FLAG_FRAME;
-            dst_surface.id = out_surface_id;
+            i965_vpp_clear_surface(ctx, i965->pp_context, obj_surface, 0); 
+
+            dst_surface.base = (struct object_base *)obj_surface;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
             dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
@@ -4757,8 +4752,8 @@ i965_post_processing(
                                           PP_NV12_AVS,
                                           NULL);
 
-            if (in_surface_id != surface)
-                i965_DestroySurfaces(ctx, &in_surface_id, 1);
+            if (tmp_id != VA_INVALID_ID)
+                i965_DestroySurfaces(ctx, &tmp_id, 1);
                 
             *has_done_scaling = 1;
         }
@@ -5191,17 +5186,22 @@ i965_proc_picture(VADriverContextP ctx,
     assert(proc_state->current_render_target != VA_INVALID_ID);
 
     obj_surface = SURFACE(pipeline_param->surface);
+    assert(obj_surface && obj_surface->bo);
+
+    if (!obj_surface || !obj_surface->bo)
+        goto error;
+
     in_width = obj_surface->orig_width;
     in_height = obj_surface->orig_height;
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
-    src_surface.id = pipeline_param->surface;
+    src_surface.base = (struct object_base *)obj_surface;
     src_surface.type = I965_SURFACE_TYPE_SURFACE;
     src_surface.flags = proc_frame_to_pp_frame[pipeline_param->filter_flags & 0x3];
 
     VASurfaceID out_surface_id = VA_INVALID_ID;
     if (obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2')) {
-        src_surface.id = pipeline_param->surface;
+        src_surface.base = (struct object_base *)obj_surface;
         src_surface.type = I965_SURFACE_TYPE_SURFACE;
         src_surface.flags = I965_SURFACE_FLAG_FRAME;
         src_rect.x = 0;
@@ -5218,9 +5218,10 @@ i965_proc_picture(VADriverContextP ctx,
         assert(status == VA_STATUS_SUCCESS);
         tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
         obj_surface = SURFACE(out_surface_id);
+        assert(obj_surface);
         i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
-        dst_surface.id = out_surface_id;
+        dst_surface.base = (struct object_base *)obj_surface;
         dst_surface.type = I965_SURFACE_TYPE_SURFACE;
         dst_surface.flags = I965_SURFACE_FLAG_FRAME;
         dst_rect.x = 0;
@@ -5235,7 +5236,7 @@ i965_proc_picture(VADriverContextP ctx,
                                        &dst_rect);
         assert(status == VA_STATUS_SUCCESS);
 
-        src_surface.id = out_surface_id;
+        src_surface.base = (struct object_base *)obj_surface;
         src_surface.type = I965_SURFACE_TYPE_SURFACE;
         src_surface.flags = proc_frame_to_pp_frame[pipeline_param->filter_flags & 0x3];
     }
@@ -5266,10 +5267,19 @@ i965_proc_picture(VADriverContextP ctx,
 
     for (i = 0; i < pipeline_param->num_filters; i++) {
         struct object_buffer *obj_buffer = BUFFER(pipeline_param->filters[i]);
-        VAProcFilterParameterBufferBase *filter_param = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
-        VAProcFilterType filter_type = filter_param->type;
+        VAProcFilterParameterBufferBase *filter_param = NULL;
+        VAProcFilterType filter_type;
+        int kernel_index;
+
+        assert(obj_buffer && obj_buffer->buffer_store);
+
+        if (!obj_buffer || !obj_buffer->buffer_store)
+            goto error;
+
         out_surface_id = VA_INVALID_ID;
-        int kernel_index = procfilter_to_pp_flag[filter_type];
+        filter_param = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
+        filter_type = filter_param->type;
+        kernel_index = procfilter_to_pp_flag[filter_type];
 
         if (kernel_index != PP_NULL &&
             proc_context->pp_context.pp_modules[kernel_index].kernel.bo != NULL) {
@@ -5282,8 +5292,9 @@ i965_proc_picture(VADriverContextP ctx,
             assert(status == VA_STATUS_SUCCESS);
             tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
             obj_surface = SURFACE(out_surface_id);
+            assert(obj_surface);
             i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-            dst_surface.id = out_surface_id;
+            dst_surface.base = (struct object_base *)obj_surface;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
             status = i965_post_processing_internal(ctx, &proc_context->pp_context,
                                                    &src_surface,
@@ -5294,7 +5305,7 @@ i965_proc_picture(VADriverContextP ctx,
                                                    filter_param);
 
             if (status == VA_STATUS_SUCCESS) {
-                src_surface.id = dst_surface.id;
+                src_surface.base = dst_surface.base;
                 src_surface.type = dst_surface.type;
                 src_surface.flags = dst_surface.flags;
             }
@@ -5302,6 +5313,11 @@ i965_proc_picture(VADriverContextP ctx,
     }
 
     obj_surface = SURFACE(proc_state->current_render_target);
+    assert(obj_surface);
+    
+    if (!obj_surface)
+        goto error;
+
     int csc_needed = 0;
     if (obj_surface->fourcc && obj_surface->fourcc !=  VA_FOURCC('N','V','1','2')){
         csc_needed = 1;
@@ -5315,15 +5331,16 @@ i965_proc_picture(VADriverContextP ctx,
         assert(status == VA_STATUS_SUCCESS);
         tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
         struct object_surface *csc_surface = SURFACE(out_surface_id);
+        assert(csc_surface);
         i965_check_alloc_surface_bo(ctx, csc_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-        dst_surface.id = out_surface_id;
+        dst_surface.base = (struct object_base *)csc_surface;
     } else {
         i965_check_alloc_surface_bo(ctx, obj_surface, !!tiling, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
-        dst_surface.id = proc_state->current_render_target;
+        dst_surface.base = (struct object_base *)obj_surface;
     }
 
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
-    i965_vpp_clear_surface(ctx, &proc_context->pp_context, proc_state->current_render_target, pipeline_param->output_background_color); 
+    i965_vpp_clear_surface(ctx, &proc_context->pp_context, obj_surface, pipeline_param->output_background_color); 
 
     // load/save doesn't support different origin offset for src and dst surface
     if (src_rect.width == dst_rect.width &&
@@ -5350,10 +5367,10 @@ i965_proc_picture(VADriverContextP ctx,
     }
 
     if (csc_needed) {
-        src_surface.id = dst_surface.id;
+        src_surface.base = dst_surface.base;
         src_surface.type = dst_surface.type;
         src_surface.flags = dst_surface.flags;
-        dst_surface.id = proc_state->current_render_target;
+        dst_surface.base = (struct object_base *)obj_surface;
         dst_surface.type = I965_SURFACE_TYPE_SURFACE;
         i965_image_processing(ctx, &src_surface, &dst_rect, &dst_surface, &dst_rect);
     }
@@ -5366,6 +5383,14 @@ i965_proc_picture(VADriverContextP ctx,
     intel_batchbuffer_flush(hw_context->batch);
 
     return VA_STATUS_SUCCESS;
+
+error:
+    if (num_tmp_surfaces)
+        i965_DestroySurfaces(ctx,
+                             tmp_surfaces,
+                             num_tmp_surfaces);
+
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 
 static void

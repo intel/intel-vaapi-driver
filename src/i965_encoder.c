@@ -98,7 +98,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     rect.width = obj_surface->orig_width;
     rect.height = obj_surface->orig_height;
     
-    src_surface.id = encode_state->current_render_target;
+    src_surface.base = (struct object_base *)obj_surface;
     src_surface.type = I965_SURFACE_TYPE_SURFACE;
     src_surface.flags = I965_SURFACE_FLAG_FRAME;
     
@@ -115,9 +115,10 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
 
     obj_surface = SURFACE(encoder_context->input_yuv_surface);
     encode_state->input_yuv_object = obj_surface;
+    assert(obj_surface);
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
     
-    dst_surface.id = encoder_context->input_yuv_surface;
+    dst_surface.base = (struct object_base *)obj_surface;
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
     dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 

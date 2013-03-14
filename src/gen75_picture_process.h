@@ -45,7 +45,8 @@ struct intel_video_process_context
     VAProcPipelineParameterBuffer* pipeline_param;
     VAProcFilterType filter_type;
 
-    VASurfaceID surface_render_output;
+    struct object_surface *surface_render_output_object;
+    struct object_surface *surface_pipeline_input_object;
 };
 
 struct hw_context *

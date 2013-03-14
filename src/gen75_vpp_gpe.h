@@ -83,9 +83,11 @@ struct vpp_gpe_context{
     unsigned int thread_param_size;
     unsigned int thread_num;
 
-    VASurfaceID  surface_output;
+    struct object_surface *surface_pipeline_input_object;
+    struct object_surface *surface_output_object;
     VASurfaceID  surface_tmp;
-    VASurfaceID  surface_input[MAX_SURF_IN_SUM];
+    struct object_surface *surface_tmp_object;
+    struct object_surface *surface_input_object[MAX_SURF_IN_SUM];
     unsigned  int forward_surf_sum;
     unsigned  int backward_surf_sum;
 

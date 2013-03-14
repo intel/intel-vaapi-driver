@@ -86,7 +86,6 @@ void i965_render_terminate(VADriverContextP ctx);
 void
 intel_render_put_surface(
     VADriverContextP   ctx,
-    VASurfaceID        surface,
     struct object_surface *obj_surface,
     const VARectangle *src_rect,
     const VARectangle *dst_rect,

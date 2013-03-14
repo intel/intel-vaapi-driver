@@ -60,7 +60,7 @@
 
 struct i965_surface
 {
-    VAGenericID id;
+    struct object_base *base;
     int type;
     int flags;
 };

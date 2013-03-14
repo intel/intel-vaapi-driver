@@ -500,7 +500,7 @@ struct i965_proc_context
 VASurfaceID
 i965_post_processing(
     VADriverContextP   ctx,
-    VASurfaceID        surface,
+    struct object_surface *obj_surface,
     const VARectangle *src_rect,
     const VARectangle *dst_rect,
     unsigned int       flags,
@@ -510,9 +510,9 @@ i965_post_processing(
 VAStatus
 i965_scaling_processing(
     VADriverContextP   ctx,
-    VASurfaceID        src_surface_id,
+    struct object_surface *src_surface_obj,
     const VARectangle *src_rect,
-    VASurfaceID        dst_surface_id,
+    struct object_surface *dst_surface_obj,
     const VARectangle *dst_rect,
     unsigned int       flags
 );

@@ -189,7 +189,7 @@ i965_put_surface_dri(
     else if (flags & VA_BOTTOM_FIELD)
         pp_flag |= I965_PP_FLAG_BOTTOM_FIELD;
 
-    intel_render_put_surface(ctx, surface, obj_surface, src_rect, dst_rect, pp_flag);
+    intel_render_put_surface(ctx, obj_surface, src_rect, dst_rect, pp_flag);
 
     for(i = 0; i < I965_MAX_SUBPIC_SUM; i++){
         if(obj_surface->subpic[i] != VA_INVALID_ID) {

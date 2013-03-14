@@ -82,8 +82,8 @@ gen75_vpp_vebox(VADriverContextP ctx,
      }
 
      proc_ctx->vpp_vebox_ctx->pipeline_param  = pipeline_param;
-     proc_ctx->vpp_vebox_ctx->surface_input   = pipeline_param->surface;
-     proc_ctx->vpp_vebox_ctx->surface_output  = proc_ctx->surface_render_output;
+     proc_ctx->vpp_vebox_ctx->surface_input_object = proc_ctx->surface_pipeline_input_object;
+     proc_ctx->vpp_vebox_ctx->surface_output_object  = proc_ctx->surface_render_output_object;
 
      va_status = gen75_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
  
@@ -100,8 +100,9 @@ gen75_vpp_gpe(VADriverContextP ctx,
          proc_ctx->vpp_gpe_ctx = gen75_gpe_context_init(ctx);
      }
    
-     proc_ctx->vpp_gpe_ctx->pipeline_param = proc_ctx->pipeline_param; 
-     proc_ctx->vpp_gpe_ctx->surface_output = proc_ctx->surface_render_output;
+     proc_ctx->vpp_gpe_ctx->pipeline_param = proc_ctx->pipeline_param;
+     proc_ctx->vpp_gpe_ctx->surface_pipeline_input_object = proc_ctx->surface_pipeline_input_object;
+     proc_ctx->vpp_gpe_ctx->surface_output_object = proc_ctx->surface_render_output_object;
 
      va_status = gen75_gpe_process_picture(ctx, proc_ctx->vpp_gpe_ctx);
  
@@ -120,20 +121,34 @@ gen75_proc_picture(VADriverContextP ctx,
              (struct intel_video_process_context *)hw_context;
     VAProcPipelineParameterBuffer *pipeline_param = 
              (VAProcPipelineParameterBuffer *)proc_st->pipeline_param->buffer;
-
+    struct object_surface *obj_dst_surf = NULL;
+    struct object_surface *obj_src_surf = NULL;
     proc_ctx->pipeline_param = pipeline_param;
-    proc_ctx->surface_render_output = proc_st->current_render_target;
+    assert(proc_st->current_render_target != VA_INVALID_SURFACE);
 
-    assert(proc_ctx->surface_render_output != VA_INVALID_SURFACE);
+    if (proc_st->current_render_target == VA_INVALID_SURFACE ||
+        pipeline_param->surface == VA_INVALID_SURFACE)
+        goto error;
 
-    struct object_surface * obj_dst_surf = SURFACE(proc_ctx->surface_render_output);
-    if(!obj_dst_surf->bo){
-       unsigned int is_tiled = 0;
-       unsigned int fourcc = VA_FOURCC('N','V','1','2');
-       int sampling = SUBSAMPLE_YUV420;
-       i965_check_alloc_surface_bo(ctx, obj_dst_surf, is_tiled, fourcc, sampling);
+    obj_dst_surf = SURFACE(proc_st->current_render_target);
+
+    if (!obj_dst_surf)
+        goto error;
+
+    obj_src_surf = SURFACE(proc_ctx->pipeline_param->surface);
+
+    if (!obj_src_surf)
+        goto error;
+
+    if (!obj_dst_surf->bo) {
+        unsigned int is_tiled = 0;
+        unsigned int fourcc = VA_FOURCC('N','V','1','2');
+        int sampling = SUBSAMPLE_YUV420;
+        i965_check_alloc_surface_bo(ctx, obj_dst_surf, is_tiled, fourcc, sampling);
     }  
 
+    proc_ctx->surface_render_output_object = obj_dst_surf;
+    proc_ctx->surface_pipeline_input_object = obj_src_surf;
     assert(pipeline_param->num_filters <= 4);
 
     VABufferID *filter_id = (VABufferID*) pipeline_param->filters;
@@ -143,6 +158,12 @@ gen75_proc_picture(VADriverContextP ctx,
         gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
     }else if(pipeline_param->num_filters == 1) {
        struct object_buffer * obj_buf = BUFFER((*filter_id) + 0);
+
+       assert(obj_buf && obj_buf->buffer_store);
+       
+       if (!obj_buf || !obj_buf->buffer_store)
+           goto error;
+
        VAProcFilterParameterBuffer* filter =
            (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
 
@@ -153,9 +174,13 @@ gen75_proc_picture(VADriverContextP ctx,
                  filter->type == VAProcFilterColorBalance){
            gen75_vpp_vebox(ctx, proc_ctx);
        }else if(filter->type == VAProcFilterSharpening){
-           struct object_surface *obj_src_surf = SURFACE(proc_ctx->pipeline_param->surface);
            assert(obj_src_surf->fourcc == VA_FOURCC('N','V','1','2') && 
-                  obj_dst_surf->fourcc == VA_FOURCC('N','V','1','2'));   
+                  obj_dst_surf->fourcc == VA_FOURCC('N','V','1','2'));
+
+           if (obj_src_surf->fourcc != VA_FOURCC('N', 'V', '1', '2') ||
+               obj_dst_surf->fourcc != VA_FOURCC('N', 'V', '1', '2'))
+               goto error;
+
            gen75_vpp_gpe(ctx, proc_ctx);
        } 
     }else if (pipeline_param->num_filters >= 2) {
@@ -177,6 +202,9 @@ gen75_proc_picture(VADriverContextP ctx,
     }     
 
     return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 
 static void 

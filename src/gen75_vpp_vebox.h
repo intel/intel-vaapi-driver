@@ -87,9 +87,8 @@ enum SURFACE_FORMAT{
 
 typedef struct veb_frame_store {
     VASurfaceID surface_id;
-    dri_bo  *bo;
-    unsigned char  valid;
     unsigned int is_internal_surface;
+    struct object_surface *obj_surface;
 } VEBFrameStore;
 
 typedef struct veb_buffer {
@@ -102,11 +101,14 @@ struct intel_vebox_context
 {
     struct intel_batchbuffer *batch;
 
-    VASurfaceID surface_input;
+    struct object_surface *surface_input_object;
+    struct object_surface *surface_output_object;
     VASurfaceID surface_input_vebox;
-    VASurfaceID surface_output;
+    struct object_surface *surface_input_vebox_object;    
     VASurfaceID surface_output_vebox;
+    struct object_surface *surface_output_vebox_object;
     VASurfaceID surface_output_scaled;
+    struct object_surface *surface_output_scaled_object;
 
     unsigned int fourcc_input;
     unsigned int fourcc_output;
