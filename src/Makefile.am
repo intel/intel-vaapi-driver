@@ -22,7 +22,7 @@
 
 SUBDIRS = shaders
 
-INCLUDES = \
+AM_CPPFLAGS = \
 	-DPTHREADS		\
 	$(DRM_CFLAGS)		\
 	$(LIBVA_DEPS_CFLAGS)	\

@@ -1,3 +1,7 @@
 #! /bin/sh
+
 autoreconf -v --install
-./configure "$@"
+
+if test -z "$NOCONFIGURE"; then
+    ./configure "$@"
+fi

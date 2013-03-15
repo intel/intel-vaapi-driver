@@ -22,7 +22,7 @@ AC_INIT([intel_driver], [intel_driver_version], [haihao.xiang@intel.com],
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_INIT_AUTOMAKE([1.9 tar-ustar])
 
-AM_CONFIG_HEADER([src/config.h])
+AC_CONFIG_HEADERS([src/config.h])
 
 INTEL_DRIVER_MAJOR_VERSION=intel_driver_major_version
 INTEL_DRIVER_MINOR_VERSION=intel_driver_minor_version
