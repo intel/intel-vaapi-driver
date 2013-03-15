@@ -191,10 +191,11 @@ i965_put_surface_dri(
 
     intel_render_put_surface(ctx, obj_surface, src_rect, dst_rect, pp_flag);
 
-    for(i = 0; i < I965_MAX_SUBPIC_SUM; i++){
-        if(obj_surface->subpic[i] != VA_INVALID_ID) {
-           obj_surface->subpic_render_idx = i;
-           intel_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
+    for (i = 0; i < I965_MAX_SUBPIC_SUM; i++) {
+        if (obj_surface->obj_subpic[i] != NULL) {
+            assert(obj_surface->subpic[i] != VA_INVALID_ID);
+            obj_surface->subpic_render_idx = i;
+            intel_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
         }
     }
 

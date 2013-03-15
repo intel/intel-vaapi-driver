@@ -884,11 +884,10 @@ static void
 i965_subpic_render_src_surfaces_state(VADriverContextP ctx,
                                       struct object_surface *obj_surface)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);  
     dri_bo *subpic_region;
     unsigned int index = obj_surface->subpic_render_idx;
-    struct object_subpic *obj_subpic = SUBPIC(obj_surface->subpic[index]);
-    struct object_image *obj_image = IMAGE(obj_subpic->image);
+    struct object_subpic *obj_subpic = obj_surface->obj_subpic[index];
+    struct object_image *obj_image = obj_subpic->obj_image;
     assert(obj_surface);
     assert(obj_surface->bo);
     subpic_region = obj_image->bo;
@@ -991,9 +990,8 @@ i965_subpic_render_upload_vertex(VADriverContextP ctx,
                                  struct object_surface *obj_surface,
                                  const VARectangle *output_rect)
 {    
-    struct i965_driver_data  *i965         = i965_driver_data(ctx);
     unsigned int index = obj_surface->subpic_render_idx;
-    struct object_subpic     *obj_subpic   = SUBPIC(obj_surface->subpic[index]);
+    struct object_subpic     *obj_subpic   = obj_surface->obj_subpic[index];
     float tex_coords[4], vid_coords[4];
     VARectangle dst_rect;
 
@@ -1086,13 +1084,11 @@ i965_subpic_render_upload_constants(VADriverContextP ctx,
     float *constant_buffer;
     float global_alpha = 1.0;
     unsigned int index = obj_surface->subpic_render_idx;
-
-    if(obj_surface->subpic[index] != VA_INVALID_ID){
-        struct object_subpic *obj_subpic= SUBPIC(obj_surface->subpic[index]);
-        if(obj_subpic->flags & VA_SUBPICTURE_GLOBAL_ALPHA){
-           global_alpha = obj_subpic->global_alpha;
-        }
-     }   
+    struct object_subpic *obj_subpic = obj_surface->obj_subpic[index];
+    
+    if (obj_subpic->flags & VA_SUBPICTURE_GLOBAL_ALPHA) {
+        global_alpha = obj_subpic->global_alpha;
+    }
 
     dri_bo_map(render_state->curbe.bo, 1);
 
@@ -1391,7 +1387,7 @@ i965_render_vertex_elements(VADriverContextP ctx)
 static void
 i965_render_upload_image_palette(
     VADriverContextP ctx,
-    VAImageID        image_id,
+    struct object_image *obj_image,
     unsigned int     alpha
 )
 {
@@ -1399,8 +1395,10 @@ i965_render_upload_image_palette(
     struct intel_batchbuffer *batch = i965->batch;
     unsigned int i;
 
-    struct object_image *obj_image = IMAGE(image_id);
     assert(obj_image);
+
+    if (!obj_image)
+        return;
 
     if (obj_image->image.num_palette_entries == 0)
         return;
@@ -1657,14 +1655,14 @@ i965_render_put_subpicture(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965->batch;
     unsigned int index = obj_surface->subpic_render_idx;
-    struct object_subpic *obj_subpic = SUBPIC(obj_surface->subpic[index]);
+    struct object_subpic *obj_subpic = obj_surface->obj_subpic[index];
 
     assert(obj_subpic);
 
     i965_render_initialize(ctx);
     i965_subpic_render_state_setup(ctx, obj_surface, src_rect, dst_rect);
     i965_subpic_render_pipeline_setup(ctx);
-    i965_render_upload_image_palette(ctx, obj_subpic->image, 0xff);
+    i965_render_upload_image_palette(ctx, obj_subpic->obj_image, 0xff);
     intel_batchbuffer_flush(batch);
 }
 
@@ -2224,13 +2222,13 @@ gen6_render_put_subpicture(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965->batch;
     unsigned int index = obj_surface->subpic_render_idx;
-    struct object_subpic *obj_subpic = SUBPIC(obj_surface->subpic[index]);
+    struct object_subpic *obj_subpic = obj_surface->obj_subpic[index];
 
     assert(obj_subpic);
     gen6_render_initialize(ctx);
     gen6_subpicture_render_setup_states(ctx, obj_surface, src_rect, dst_rect);
     gen6_render_emit_states(ctx, PS_SUBPIC_KERNEL);
-    i965_render_upload_image_palette(ctx, obj_subpic->image, 0xff);
+    i965_render_upload_image_palette(ctx, obj_subpic->obj_image, 0xff);
     intel_batchbuffer_flush(batch);
 }
 
@@ -3002,13 +3000,13 @@ gen7_render_put_subpicture(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965->batch;
     unsigned int index = obj_surface->subpic_render_idx;
-    struct object_subpic *obj_subpic = SUBPIC(obj_surface->subpic[index]);
+    struct object_subpic *obj_subpic = obj_surface->obj_subpic[index];
 
     assert(obj_subpic);
     gen7_render_initialize(ctx);
     gen7_subpicture_render_setup_states(ctx, obj_surface, src_rect, dst_rect);
     gen7_render_emit_states(ctx, PS_SUBPIC_KERNEL);
-    i965_render_upload_image_palette(ctx, obj_subpic->image, 0xff);
+    i965_render_upload_image_palette(ctx, obj_subpic->obj_image, 0xff);
     intel_batchbuffer_flush(batch);
 }
 

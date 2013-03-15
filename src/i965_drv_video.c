@@ -702,6 +702,7 @@ i965_CreateSurfaces2(
         obj_surface->subpic_render_idx = 0;
         for(j = 0; j < I965_MAX_SUBPIC_SUM; j++){
            obj_surface->subpic[j] = VA_INVALID_ID;
+           obj_surface->obj_subpic[j] = NULL;
         }
 
         obj_surface->width = ALIGN(width, 16);
@@ -915,6 +916,7 @@ i965_CreateSubpicture(VADriverContextP ctx,
 
     *subpicture = subpicID;
     obj_subpic->image  = image;
+    obj_subpic->obj_image = obj_image;
     obj_subpic->format = m->format;
     obj_subpic->width  = obj_image->image.width;
     obj_subpic->height = obj_image->image.height;
@@ -931,6 +933,11 @@ i965_DestroySubpicture(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_subpic *obj_subpic = SUBPIC(subpicture);
+
+    if (!obj_subpic)
+        return VA_STATUS_ERROR_INVALID_SUBPICTURE;
+
+    assert(obj_subpic->obj_image);
     i965_destroy_subpic(&i965->subpic_heap, (struct object_base *)obj_subpic);
     return VA_STATUS_SUCCESS;
 }
@@ -966,6 +973,10 @@ i965_SetSubpictureGlobalAlpha(VADriverContextP ctx,
     if(global_alpha > 1.0 || global_alpha < 0.0){
        return VA_STATUS_ERROR_INVALID_PARAMETER;
     }
+
+    if (!obj_subpic)
+        return VA_STATUS_ERROR_INVALID_SUBPICTURE;
+
     obj_subpic->global_alpha  = global_alpha;
 
     return VA_STATUS_SUCCESS;
@@ -994,6 +1005,11 @@ i965_AssociateSubpicture(VADriverContextP ctx,
     struct object_subpic *obj_subpic = SUBPIC(subpicture);
     int i, j;
 
+    if (!obj_subpic)
+        return VA_STATUS_ERROR_INVALID_SUBPICTURE;
+    
+    assert(obj_subpic->obj_image);
+
     obj_subpic->src_rect.x      = src_x;
     obj_subpic->src_rect.y      = src_y;
     obj_subpic->src_rect.width  = src_width;
@@ -1011,8 +1027,10 @@ i965_AssociateSubpicture(VADriverContextP ctx,
 
         for(j = 0; j < I965_MAX_SUBPIC_SUM; j ++){
             if(obj_surface->subpic[j] == VA_INVALID_ID){
-               obj_surface->subpic[j] = subpicture;
-               break;
+                assert(obj_surface->obj_subpic[j] == NULL);
+                obj_surface->subpic[j] = subpicture;
+                obj_surface->obj_subpic[j] = obj_subpic;
+                break;
             }
         }
         
@@ -1032,7 +1050,11 @@ i965_DeassociateSubpicture(VADriverContextP ctx,
                            int num_surfaces)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_subpic *obj_subpic = SUBPIC(subpicture);
     int i, j;
+
+    if (!obj_subpic)
+        return VA_STATUS_ERROR_INVALID_SUBPICTURE;
 
     for (i = 0; i < num_surfaces; i++) {
         struct object_surface *obj_surface = SURFACE(target_surfaces[i]);
@@ -1040,9 +1062,11 @@ i965_DeassociateSubpicture(VADriverContextP ctx,
             return VA_STATUS_ERROR_INVALID_SURFACE;
 
         for(j = 0; j < I965_MAX_SUBPIC_SUM; j ++){
-            if(obj_surface->subpic[j] == subpicture){
-               obj_surface->subpic[j] = VA_INVALID_ID;
-               break;
+            if (obj_surface->subpic[j] == subpicture) {
+                assert(obj_surface->obj_subpic[j] == obj_subpic);
+                obj_surface->subpic[j] = VA_INVALID_ID;
+                obj_surface->obj_subpic[j] = NULL;
+                break;
             }
         }
         

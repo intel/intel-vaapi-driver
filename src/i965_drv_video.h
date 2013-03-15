@@ -198,6 +198,7 @@ struct object_surface
     struct object_base base;
     VASurfaceStatus status;
     VASubpictureID subpic[I965_MAX_SUBPIC_SUM];
+    struct object_subpic *obj_subpic[I965_MAX_SUBPIC_SUM];
     unsigned int subpic_render_idx;
 
     int width;
@@ -244,6 +245,7 @@ struct object_subpic
 {
     struct object_base base;
     VAImageID image;
+    struct object_image *obj_image;
     VARectangle src_rect;
     VARectangle dst_rect;
     unsigned int format;
