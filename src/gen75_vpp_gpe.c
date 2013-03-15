@@ -403,6 +403,11 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
     vpp_gpe_ctx->thread_param = (unsigned char*) malloc(vpp_gpe_ctx->thread_param_size
                                                        *vpp_gpe_ctx->thread_num);
     pos = vpp_gpe_ctx->thread_param;
+
+    if (!pos) {
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
     for( i = 0 ; i < vpp_gpe_ctx->thread_num; i++){
         thr_param.base.v_pos = 16 * i;
         thr_param.base.h_pos = 0;
@@ -425,6 +430,11 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
     vpp_gpe_ctx->thread_param = (unsigned char*) malloc(vpp_gpe_ctx->thread_param_size
                                                        *vpp_gpe_ctx->thread_num);
     pos = vpp_gpe_ctx->thread_param;
+
+    if (!pos) {
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
     for( i = 0 ; i < vpp_gpe_ctx->thread_num; i++){
         thr_param.base.v_pos = 0;
         thr_param.base.h_pos = 16 * i;
@@ -448,6 +458,11 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
     vpp_gpe_ctx->thread_param = (unsigned char*) malloc(vpp_gpe_ctx->thread_param_size
                                                        *vpp_gpe_ctx->thread_num);
     pos = vpp_gpe_ctx->thread_param;
+
+    if (!pos) {
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
     for( i = 0 ; i < vpp_gpe_ctx->thread_num; i++){
         thr_param.base.v_pos = 4 * i;
         thr_param.base.h_pos = 0;
