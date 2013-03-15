@@ -2035,13 +2035,19 @@ gen7_mfd_jpeg_qm_state(VADriverContextP ctx,
     assert(pic_param->num_components <= 3);
 
     for (index = 0; index < pic_param->num_components; index++) {
-        int qm_type = va_to_gen7_jpeg_qm[pic_param->components[index].component_id - pic_param->components[0].component_id + 1];
+        int id = pic_param->components[index].component_id - pic_param->components[0].component_id + 1;
+        int qm_type;
         unsigned char *qm = iq_matrix->quantiser_table[pic_param->components[index].quantiser_table_selector];
         unsigned char raster_qm[64];
         int j;
 
+        if (id > 4 || id < 1)
+            continue;
+
         if (!iq_matrix->load_quantiser_table[pic_param->components[index].quantiser_table_selector])
             continue;
+
+        qm_type = va_to_gen7_jpeg_qm[id];
 
         for (j = 0; j < 64; j++)
             raster_qm[zigzag_direct[j]] = qm[j];
