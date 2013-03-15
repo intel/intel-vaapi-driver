@@ -43,7 +43,6 @@ struct intel_video_process_context
     struct vpp_gpe_context     *vpp_gpe_ctx;
 
     VAProcPipelineParameterBuffer* pipeline_param;
-    VAProcFilterType filter_type;
 
     struct object_surface *surface_render_output_object;
     struct object_surface *surface_pipeline_input_object;

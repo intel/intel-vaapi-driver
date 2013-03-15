@@ -344,9 +344,11 @@ gen75_gpe_process_sharpening(VADriverContextP ctx,
      VABufferID *filter_ids = (VABufferID*)pipe->filters ;
      struct object_buffer *obj_buf = BUFFER((*(filter_ids + 0)));
 
-     assert(obj_buf && obj_buf->buffer_store);
+     assert(obj_buf && obj_buf->buffer_store && obj_buf->buffer_store->buffer);
        
-     if (!obj_buf || !obj_buf->buffer_store)
+     if (!obj_buf ||
+         !obj_buf->buffer_store ||
+         !obj_buf->buffer_store->buffer)
          goto error;
 
      VAProcFilterParameterBuffer* filter =
@@ -473,12 +475,17 @@ VAStatus gen75_gpe_process_picture(VADriverContextP ctx,
     unsigned int i;
     struct object_surface *obj_surface = NULL;
 
+    if (pipe->num_filters && !pipe->filters)
+        goto error;
+
     for(i = 0; i < pipe->num_filters; i++){
         struct object_buffer *obj_buf = BUFFER(pipe->filters[i]);
 
-        assert(obj_buf && obj_buf->buffer_store);
+        assert(obj_buf && obj_buf->buffer_store && obj_buf->buffer_store->buffer);
 
-        if (!obj_buf || !obj_buf->buffer_store)
+        if (!obj_buf ||
+            !obj_buf->buffer_store ||
+            !obj_buf->buffer_store->buffer)
             goto error;
 
         filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
@@ -515,7 +522,7 @@ VAStatus gen75_gpe_process_picture(VADriverContextP ctx,
     vpp_gpe_ctx->in_frame_w = obj_surface->orig_width;
     vpp_gpe_ctx->in_frame_h = obj_surface->orig_height;
 
-    if(filter->type == VAProcFilterSharpening) {
+    if(filter && filter->type == VAProcFilterSharpening) {
        va_status = gen75_gpe_process_sharpening(ctx, vpp_gpe_ctx); 
     } else {
        va_status = VA_STATUS_ERROR_ATTR_NOT_SUPPORTED;

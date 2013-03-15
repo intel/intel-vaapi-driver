@@ -140,6 +140,9 @@ gen75_proc_picture(VADriverContextP ctx,
     if (!obj_src_surf)
         goto error;
 
+    if (pipeline_param->num_filters && !pipeline_param->filters)
+        goto error;
+
     if (!obj_dst_surf->bo) {
         unsigned int is_tiled = 0;
         unsigned int fourcc = VA_FOURCC('N','V','1','2');
@@ -159,9 +162,11 @@ gen75_proc_picture(VADriverContextP ctx,
     }else if(pipeline_param->num_filters == 1) {
        struct object_buffer * obj_buf = BUFFER((*filter_id) + 0);
 
-       assert(obj_buf && obj_buf->buffer_store);
+       assert(obj_buf && obj_buf->buffer_store && obj_buf->buffer_store->buffer);
        
-       if (!obj_buf || !obj_buf->buffer_store)
+       if (!obj_buf ||
+           !obj_buf->buffer_store ||
+           !obj_buf->buffer_store->buffer)
            goto error;
 
        VAProcFilterParameterBuffer* filter =
@@ -186,17 +191,25 @@ gen75_proc_picture(VADriverContextP ctx,
     }else if (pipeline_param->num_filters >= 2) {
          unsigned int i = 0;
          for (i = 0; i < pipeline_param->num_filters; i++){
-            struct object_buffer * obj_buf = BUFFER(pipeline_param->filters[i]);
-            VAProcFilterParameterBuffer* filter =
-               (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+             struct object_buffer * obj_buf = BUFFER(pipeline_param->filters[i]);
 
-            if (filter->type != VAProcFilterNoiseReduction &&
-                filter->type != VAProcFilterDeinterlacing  &&
-                filter->type != VAProcFilterColorBalance   && 
-                filter->type != VAProcFilterNone ){ 
-                printf("Do not support multiply filters outside vebox pipeline \n");
-                assert(0);
-            }
+             assert(obj_buf && obj_buf->buffer_store && obj_buf->buffer_store->buffer);
+       
+             if (!obj_buf ||
+                 !obj_buf->buffer_store ||
+                 !obj_buf->buffer_store->buffer)
+                 goto error;
+
+             VAProcFilterParameterBuffer* filter =
+                 (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+
+             if (filter->type != VAProcFilterNoiseReduction &&
+                 filter->type != VAProcFilterDeinterlacing  &&
+                 filter->type != VAProcFilterColorBalance   && 
+                 filter->type != VAProcFilterNone ){ 
+                 printf("Do not support multiply filters outside vebox pipeline \n");
+                 assert(0);
+             }
          }
          gen75_vpp_vebox(ctx, proc_ctx);
     }     
