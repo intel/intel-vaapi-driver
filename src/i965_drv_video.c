@@ -1462,9 +1462,12 @@ i965_BufferSetNumElements(VADriverContextP ctx,
 
     assert(obj_buffer);
 
+    if (!obj_buffer)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
     if ((num_elements < 0) || 
         (num_elements > obj_buffer->max_num_elements)) {
-        vaStatus = VA_STATUS_ERROR_UNKNOWN;
+        vaStatus = VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
     } else {
         obj_buffer->num_elements = num_elements;
         if (obj_buffer->buffer_store != NULL) {
@@ -1487,6 +1490,9 @@ i965_MapBuffer(VADriverContextP ctx,
     assert(obj_buffer && obj_buffer->buffer_store);
     assert(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer);
     assert(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer));
+
+    if (!obj_buffer || !obj_buffer->buffer_store)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
 
     if (NULL != obj_buffer->buffer_store->bo) {
         unsigned int tiling, swizzle;
@@ -1567,6 +1573,9 @@ i965_UnmapBuffer(VADriverContextP ctx, VABufferID buf_id)
     assert(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer);
     assert(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer));
 
+    if (!obj_buffer || !obj_buffer->buffer_store)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
     if (NULL != obj_buffer->buffer_store->bo) {
         unsigned int tiling, swizzle;
 
@@ -1593,6 +1602,10 @@ i965_DestroyBuffer(VADriverContextP ctx, VABufferID buffer_id)
     struct object_buffer *obj_buffer = BUFFER(buffer_id);
 
     assert(obj_buffer);
+
+    if (!obj_buffer)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
     i965_destroy_buffer(&i965->buffer_heap, (struct object_base *)obj_buffer);
 
     return VA_STATUS_SUCCESS;
@@ -1766,6 +1779,9 @@ i965_decoder_render_picture(VADriverContextP ctx,
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
         assert(obj_buffer);
 
+        if (!obj_buffer)
+            return VA_STATUS_ERROR_INVALID_BUFFER;
+
         switch (obj_buffer->type) {
         case VAPictureParameterBufferType:
             vaStatus = I965_RENDER_DECODE_BUFFER(picture_parameter);
@@ -1886,6 +1902,9 @@ i965_encoder_render_picture(VADriverContextP ctx,
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
         assert(obj_buffer);
 
+        if (!obj_buffer)
+            return VA_STATUS_ERROR_INVALID_BUFFER;
+
         switch (obj_buffer->type) {
         case VAQMatrixBufferType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(qmatrix);
@@ -1975,6 +1994,9 @@ i965_proc_render_picture(VADriverContextP ctx,
     for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
         assert(obj_buffer);
+
+        if (!obj_buffer)
+            return VA_STATUS_ERROR_INVALID_BUFFER;
 
         switch (obj_buffer->type) {
         case VAProcPipelineParameterBufferType:
@@ -2393,7 +2415,14 @@ i965_CreateImage(VADriverContextP ctx,
     if (va_status != VA_STATUS_SUCCESS)
         goto error;
 
-    obj_image->bo = BUFFER(image->buf)->buffer_store->bo;
+    struct object_buffer *obj_buffer = BUFFER(image->buf);
+
+    if (!obj_buffer ||
+        !obj_buffer->buffer_store ||
+        !obj_buffer->buffer_store->bo)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+    obj_image->bo = obj_buffer->buffer_store->bo;
     dri_bo_reference(obj_image->bo);
 
     if (image->num_palette_entries > 0 && image->entry_bytes > 0) {
@@ -2743,7 +2772,14 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     if (va_status != VA_STATUS_SUCCESS)
         goto error;
 
-    obj_image->bo = BUFFER(image->buf)->buffer_store->bo;
+    struct object_buffer *obj_buffer = BUFFER(image->buf);
+
+    if (!obj_buffer ||
+        !obj_buffer->buffer_store ||
+        !obj_buffer->buffer_store->bo)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+    obj_image->bo = obj_buffer->buffer_store->bo;
     dri_bo_reference(obj_image->bo);
 
     if (image->num_palette_entries > 0 && image->entry_bytes > 0) {
@@ -3604,6 +3640,11 @@ i965_BufferInfo(
     i965 = i965_driver_data(ctx);
     obj_buffer = BUFFER(buf_id);
 
+    assert(obj_buffer);
+
+    if (!obj_buffer)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
     *type = obj_buffer->type;
     *size = obj_buffer->size_element;
     *num_elements = obj_buffer->num_elements;
@@ -4054,6 +4095,12 @@ VAStatus i965_QueryVideoProcPipelineCaps(
 
     for (i = 0; i < num_filters; i++) {
         struct object_buffer *obj_buffer = BUFFER(filters[i]);
+
+        if (!obj_buffer ||
+            !obj_buffer->buffer_store ||
+            !obj_buffer->buffer_store->bo)
+            return VA_STATUS_ERROR_INVALID_BUFFER;
+
         VAProcFilterParameterBufferBase *base = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
 
         if (base->type == VAProcFilterNoiseReduction) {
