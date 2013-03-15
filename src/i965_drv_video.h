@@ -173,7 +173,7 @@ struct object_context
 {
     struct object_base base;
     VAContextID context_id;
-    VAConfigID config_id;
+    struct object_config *obj_config;
     VASurfaceID *render_targets;		//input->encode, output->decode
     int num_render_targets;
     int picture_width;

@@ -836,10 +836,11 @@ i965_guess_surface_format(VADriverContextP ctx,
 
     obj_context = CONTEXT(i965->current_context_id);
 
-    if (!obj_context || obj_context->config_id == VA_INVALID_ID)
+    if (!obj_context)
         return;
 
-    obj_config = CONFIG(obj_context->config_id);
+    obj_config = obj_context->obj_config;
+    assert(obj_config);
 
     if (!obj_config)
         return;
@@ -1233,7 +1234,7 @@ i965_CreateContext(VADriverContextP ctx,
     *context = contextID;
     obj_context->flags = flag;
     obj_context->context_id = contextID;
-    obj_context->config_id = config_id;
+    obj_context->obj_config = obj_config;
     obj_context->picture_width = picture_width;
     obj_context->picture_height = picture_height;
     obj_context->num_render_targets = num_render_targets;
@@ -1606,15 +1607,20 @@ i965_BeginPicture(VADriverContextP ctx,
     struct object_context *obj_context = CONTEXT(context);
     struct object_surface *obj_surface = SURFACE(render_target);
     struct object_config *obj_config;
-    VAContextID config;
     VAStatus vaStatus;
     int i;
 
     assert(obj_context);
+
+    if (!obj_context)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+
     assert(obj_surface);
 
-    config = obj_context->config_id;
-    obj_config = CONFIG(config);
+    if (!obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    obj_config = obj_context->obj_config;
     assert(obj_config);
 
     switch (obj_config->profile) {
@@ -1750,6 +1756,11 @@ i965_decoder_render_picture(VADriverContextP ctx,
     struct object_context *obj_context = CONTEXT(context);
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
+    
+    assert(obj_context);
+
+    if (!obj_context)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
 
     for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
@@ -1866,6 +1877,11 @@ i965_encoder_render_picture(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
     int i;
 
+    assert(obj_context);
+
+    if (!obj_context)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+
     for (i = 0; i < num_buffers; i++) {  
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
         assert(obj_buffer);
@@ -1951,6 +1967,11 @@ i965_proc_render_picture(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
+    assert(obj_context);
+
+    if (!obj_context)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+
     for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
         assert(obj_buffer);
@@ -1978,14 +1999,15 @@ i965_RenderPicture(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_context *obj_context;
     struct object_config *obj_config;
-    VAContextID config;
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
 
     obj_context = CONTEXT(context);
     assert(obj_context);
 
-    config = obj_context->config_id;
-    obj_config = CONFIG(config);
+    if (!obj_context)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+    
+    obj_config = obj_context->obj_config;
     assert(obj_config);
 
     if (VAEntrypointVideoProc == obj_config->entrypoint) {
@@ -2005,11 +2027,13 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_context *obj_context = CONTEXT(context);
     struct object_config *obj_config;
-    VAContextID config;
 
     assert(obj_context);
-    config = obj_context->config_id;
-    obj_config = CONFIG(config);
+
+    if (!obj_context)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+    obj_config = obj_context->obj_config;
     assert(obj_config);
 
     if (obj_context->codec_type == CODEC_PROC) {
