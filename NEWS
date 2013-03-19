@@ -1,5 +1,21 @@
-libva-intel-driver NEWS -- summary of changes.  2012-11-09
+libva-intel-driver NEWS -- summary of changes.  2013-03-19
 Copyright (C) 2009-2011 Intel Corporation
+
+Version 1.0.20 - 19.Mar.2013
+* Add support for wayland 1.0 protocol (Rob Bradford)
+* Add global alpha support for subpicture
+* Add support for IA88/AI88 subpicture
+* Support up to 4 subpictures for each VA surface
+* Update PCI IDs for Haswell CRW
+* Automake 1.13 fixups (Armin K)
+* Fix libva-intel-driver-1.0.19 display corruption on IVB GT1
+  https://bugs.freedesktop.org/show_bug.cgi?id=57323
+* Fix decoding with FREXT02_JVC_C.264 on SNB
+  https://bugs.freedesktop.org/show_bug.cgi?id=57720
+* Fix H.264 decoding broken/visual errors on ILK (Tobias Jakobi)
+  https://bugs.freedesktop.org/show_bug.cgi?id=58875
+* Fix GPU hung with h.264 video and a resolution of 1920x816 on IVB
+  https://bugs.freedesktop.org/show_bug.cgi?id=59050
 
 Version 1.0.19 - 09.Nov.2012
 * Add support for Haswell
