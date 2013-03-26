@@ -3519,7 +3519,7 @@ i965_hw_putimage(VADriverContextP ctx,
 
     assert(obj_surface->fourcc);
 
-    src_surface.base = (struct object_base *)image;
+    src_surface.base = (struct object_base *)obj_image;
     src_surface.type = I965_SURFACE_TYPE_IMAGE;
     src_surface.flags = I965_SURFACE_FLAG_FRAME;
     src_rect.x = src_x;
