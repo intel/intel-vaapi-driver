@@ -367,6 +367,9 @@ gen8_mfc_avc_insert_object(VADriverContextP ctx, struct intel_encoder_context *e
     if (batch == NULL)
         batch = encoder_context->base.batch;
 
+    if (data_bits_in_last_dw == 0)
+	data_bits_in_last_dw = 32;
+
     BEGIN_BCS_BATCH(batch, lenght_in_dws + 2);
 
     OUT_BCS_BATCH(batch, MFX_INSERT_OBJECT | (lenght_in_dws + 2 - 2));
