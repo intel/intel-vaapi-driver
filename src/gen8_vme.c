@@ -51,8 +51,7 @@
 
 #define VME_INTRA_SHADER        0
 #define VME_INTER_SHADER        1
-#define VME_BINTER_SHADER	3
-#define VME_BATCHBUFFER         2
+#define VME_BINTER_SHADER	2
 
 #define CURBE_ALLOCATION_SIZE   37              /* in 256-bit */
 #define CURBE_TOTAL_DATA_LENGTH (4 * 32)        /* in byte, it should be less than or equal to CURBE_ALLOCATION_SIZE * 32 */
@@ -61,19 +60,15 @@
 #define VME_MSG_LENGTH		32
   
 static const uint32_t gen8_vme_intra_frame[][4] = {
-#include "shaders/vme/intra_frame_haswell.g75b"
+#include "shaders/vme/intra_frame_gen8.g8b"
 };
 
 static const uint32_t gen8_vme_inter_frame[][4] = {
-#include "shaders/vme/inter_frame_haswell.g75b"
+#include "shaders/vme/inter_frame_gen8.g8b"
 };
 
 static const uint32_t gen8_vme_inter_bframe[][4] = {
-#include "shaders/vme/inter_bframe_haswell.g75b"
-};
-
-static const uint32_t gen8_vme_batchbuffer[][4] = {
-#include "shaders/vme/batchbuffer.g75b"
+#include "shaders/vme/inter_bframe_gen8.g8b"
 };
 
 static struct i965_kernel gen8_vme_kernels[] = {
@@ -92,13 +87,6 @@ static struct i965_kernel gen8_vme_kernels[] = {
         NULL
     },
     {
-        "VME BATCHBUFFER",
-        VME_BATCHBUFFER,
-        gen8_vme_batchbuffer,
-        sizeof(gen8_vme_batchbuffer),
-        NULL
-    },
-    {
         "VME inter BFrame",
         VME_BINTER_SHADER,
         gen8_vme_inter_bframe,
@@ -108,15 +96,11 @@ static struct i965_kernel gen8_vme_kernels[] = {
 };
 
 static const uint32_t gen8_vme_mpeg2_intra_frame[][4] = {
-#include "shaders/vme/intra_frame_haswell.g75b"
+#include "shaders/vme/intra_frame_gen8.g8b"
 };
 
 static const uint32_t gen8_vme_mpeg2_inter_frame[][4] = {
-#include "shaders/vme/mpeg2_inter_haswell.g75b"
-};
-
-static const uint32_t gen8_vme_mpeg2_batchbuffer[][4] = {
-#include "shaders/vme/batchbuffer.g75b"
+#include "shaders/vme/mpeg2_inter_frame_gen8.g8b"
 };
 
 static struct i965_kernel gen8_vme_mpeg2_kernels[] = {
@@ -132,13 +116,6 @@ static struct i965_kernel gen8_vme_mpeg2_kernels[] = {
         VME_INTER_SHADER,
         gen8_vme_mpeg2_inter_frame,
         sizeof(gen8_vme_mpeg2_inter_frame),
-        NULL
-    },
-    {
-        "VME BATCHBUFFER",
-        VME_BATCHBUFFER,
-        gen8_vme_mpeg2_batchbuffer,
-        sizeof(gen8_vme_mpeg2_batchbuffer),
         NULL
     },
 };

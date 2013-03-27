@@ -2463,7 +2463,7 @@ Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     mfc_context->avc_qm_state = gen8_mfc_avc_qm_state;
     mfc_context->avc_fqm_state = gen8_mfc_avc_fqm_state;
     mfc_context->insert_object = gen8_mfc_avc_insert_object;
-    mfc_context->buffer_suface_setup = gen7_gpe_buffer_suface_setup;
+    mfc_context->buffer_suface_setup = gen8_gpe_buffer_suface_setup;
 
     encoder_context->mfc_context = mfc_context;
     encoder_context->mfc_context_destroy = gen8_mfc_context_destroy;
