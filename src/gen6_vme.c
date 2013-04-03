@@ -536,7 +536,7 @@ static void gen6_vme_pipeline_programing(VADriverContextP ctx,
               0);
     ADVANCE_BATCH(batch);
 
-    intel_batchbuffer_end_atomic(batch);	
+    intel_batchbuffer_end_atomic(batch);
 }
 
 static VAStatus gen6_vme_prepare(VADriverContextP ctx, 

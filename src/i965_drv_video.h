@@ -303,7 +303,6 @@ struct i965_driver_data
     VADisplayAttribute *display_attributes;
     unsigned int num_display_attributes;
     VADisplayAttribute *rotation_attrib;
-    
     VAContextID current_context_id;
 
     /* VA/DRI (X11) specific data */
@@ -373,7 +372,6 @@ struct i965_coded_buffer_segment
 };
 
 #define I965_CODEDBUFFER_HEADER_SIZE   ALIGN(sizeof(struct i965_coded_buffer_segment), 64)
-
 
 extern VAStatus i965_MapBuffer(VADriverContextP ctx,
 		VABufferID buf_id,       /* in */

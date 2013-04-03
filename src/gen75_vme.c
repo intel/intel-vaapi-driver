@@ -1,5 +1,5 @@
 /*
- * Copyright © 2012 Intel Corporation
+ * Copyright © 2010-2012 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -24,13 +24,10 @@
  * Authors:
  *    Zhao Yakui <yakui.zhao@intel.com>
  *    Xiang Haihao <haihao.xiang@intel.com>
+ *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
+#include "sysdeps.h"
 
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
@@ -490,7 +487,6 @@ static VAStatus gen75_vme_vme_state_setup(VADriverContextP ctx,
 
     return VA_STATUS_SUCCESS;
 }
-
 
 static void
 gen75_vme_fill_vme_batchbuffer(VADriverContextP ctx, 

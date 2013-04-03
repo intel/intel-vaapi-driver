@@ -36,4 +36,4 @@ VC-1    D   SNB+
 Requirements
 ------------
 
-libva >= 1.0.14
+libva >= 1.0.16

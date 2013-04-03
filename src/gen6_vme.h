@@ -41,8 +41,8 @@
 #define INTER_VME_OUTPUT_IN_BYTES       160     /* the first 128 bytes for MVs and the last 32 bytes for other info */
 #define INTER_VME_OUTPUT_IN_DWS         (INTER_VME_OUTPUT_IN_BYTES / 4)
 
-#define MAX_INTERFACE_DESC_GEN6      MAX_GPE_KERNELS
-#define MAX_MEDIA_SURFACES_GEN6      34
+#define MAX_INTERFACE_DESC_GEN6         MAX_GPE_KERNELS
+#define MAX_MEDIA_SURFACES_GEN6         34
 
 #define GEN6_VME_KERNEL_NUMBER          3
 

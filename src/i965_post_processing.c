@@ -215,7 +215,7 @@ static struct pp_module pp_modules_gen5[] = {
     {
         {
             "PL3_PL3",
-            PP_PL3_LOAD_SAVE_N12,
+            PP_PL3_LOAD_SAVE_PL3,
             pp_pl3_load_save_pl3_gen5,
             sizeof(pp_pl3_load_save_pl3_gen5),
             NULL,
@@ -343,7 +343,6 @@ static struct pp_module pp_modules_gen5[] = {
     
         pp_plx_load_save_plx_initialize,
     },
-                    
 };
 
 static const uint32_t pp_null_gen6[][4] = {
@@ -458,7 +457,7 @@ static struct pp_module pp_modules_gen6[] = {
     {
         {
             "PL3_PL3",
-            PP_PL3_LOAD_SAVE_N12,
+            PP_PL3_LOAD_SAVE_PL3,
             pp_pl3_load_save_pl3_gen6,
             sizeof(pp_pl3_load_save_pl3_gen6),
             NULL,
@@ -525,7 +524,7 @@ static struct pp_module pp_modules_gen6[] = {
     
         pp_plx_load_save_plx_initialize,
     },
-    
+
     {
         {
             "PL3_PA module",
@@ -537,7 +536,7 @@ static struct pp_module pp_modules_gen6[] = {
     
         pp_plx_load_save_plx_initialize,
     },
-    
+
     {
         {
             "PA_NV12 module",
@@ -718,7 +717,7 @@ static struct pp_module pp_modules_gen7[] = {
     {
         {
             "PL3_PL3",
-            PP_PL3_LOAD_SAVE_N12,
+            PP_PL3_LOAD_SAVE_PL3,
             pp_pl3_load_save_pl3_gen7,
             sizeof(pp_pl3_load_save_pl3_gen7),
             NULL,
@@ -953,7 +952,7 @@ static struct pp_module pp_modules_gen75[] = {
     {
         {
             "PL3_PL3",
-            PP_PL3_LOAD_SAVE_N12,
+            PP_PL3_LOAD_SAVE_PL3,
             pp_pl3_load_save_pl3_gen75,
             sizeof(pp_pl3_load_save_pl3_gen75),
             NULL,
@@ -1009,6 +1008,7 @@ static struct pp_module pp_modules_gen75[] = {
 
         gen7_pp_nv12_dn_initialize,
     },
+
     {
         {
             "NV12_PA module",
@@ -3644,7 +3644,6 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     sampler_dndi[index].dw5.sdi_fallback_mode_2_constant = 0;
     sampler_dndi[index].dw5.sdi_fallback_mode_1_t2_constant = 0;
     sampler_dndi[index].dw5.sdi_fallback_mode_1_t1_constant = 0;
-
     sampler_dndi[index].dw6.dn_enable = 0;
     sampler_dndi[index].dw6.di_enable = 1;
     sampler_dndi[index].dw6.di_partial = 0;
@@ -3924,13 +3923,13 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
 
 static VAStatus
 ironlake_pp_initialize(
-    VADriverContextP   ctx,
+    VADriverContextP ctx,
     struct i965_post_processing_context *pp_context,
     const struct i965_surface *src_surface,
     const VARectangle *src_rect,
     struct i965_surface *dst_surface,
     const VARectangle *dst_rect,
-    int                pp_index,
+    int pp_index,
     void *filter_param
 )
 {
@@ -4055,13 +4054,13 @@ ironlake_post_processing(
 
 static VAStatus
 gen6_pp_initialize(
-    VADriverContextP   ctx,
+    VADriverContextP ctx,
     struct i965_post_processing_context *pp_context,
     const struct i965_surface *src_surface,
     const VARectangle *src_rect,
     struct i965_surface *dst_surface,
     const VARectangle *dst_rect,
-    int                pp_index,
+    int pp_index,
     void *filter_param
 )
 {
@@ -4157,7 +4156,7 @@ gen6_pp_initialize(
         va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
 
     calculate_boundary_block_mask(pp_context, dst_rect);
-    
+
     return va_status;
 }
 
@@ -4458,14 +4457,14 @@ gen6_pp_pipeline_setup(VADriverContextP ctx,
 
 static VAStatus
 gen6_post_processing(
-    VADriverContextP   ctx,
+    VADriverContextP ctx,
     struct i965_post_processing_context *pp_context,
     const struct i965_surface *src_surface,
     const VARectangle *src_rect,
     struct i965_surface *dst_surface,
     const VARectangle *dst_rect,
-    int                pp_index,
-    void * filter_param
+    int pp_index,
+    void *filter_param
 )
 {
     VAStatus va_status;
@@ -4498,8 +4497,8 @@ i965_post_processing_internal(
     void *filter_param
 )
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
 
     if (IS_GEN6(i965->intel.device_id) ||
         IS_GEN7(i965->intel.device_id))
@@ -4766,10 +4765,10 @@ i965_post_processing(
 
 static VAStatus
 i965_image_pl1_rgbx_processing(VADriverContextP ctx,
-                          const struct i965_surface *src_surface,
-                          const VARectangle *src_rect,
-                          struct i965_surface *dst_surface,
-                          const VARectangle *dst_rect)
+                               const struct i965_surface *src_surface,
+                               const VARectangle *src_rect,
+                               struct i965_surface *dst_surface,
+                               const VARectangle *dst_rect)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = i965->pp_context;
@@ -4888,12 +4887,12 @@ i965_image_pl2_processing(VADriverContextP ctx,
                fourcc == VA_FOURCC('R', 'G', 'B', 'X') ||
                fourcc == VA_FOURCC('R', 'G', 'B', 'A') ) {
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
-                                      src_surface,
-                                      src_rect,
-                                      dst_surface,
-                                      dst_rect,
-                                      PP_NV12_LOAD_SAVE_RGBX,
-                                      NULL);
+                                                 src_surface,
+                                                 src_rect,
+                                                 dst_surface,
+                                                 dst_rect,
+                                                 PP_NV12_LOAD_SAVE_RGBX,
+                                                 NULL);
     } else {
         assert(0);
         return VA_STATUS_ERROR_UNKNOWN;
@@ -4923,8 +4922,7 @@ i965_image_pl1_processing(VADriverContextP ctx,
                                       dst_rect,
                                       PP_PA_LOAD_SAVE_NV12,
                                       NULL);
-    }
-    else if (fourcc == VA_FOURCC_YV12) {
+    } else if (fourcc == VA_FOURCC_YV12) {
         i965_post_processing_internal(ctx, i965->pp_context,
                                       src_surface,
                                       src_rect,
@@ -4933,8 +4931,7 @@ i965_image_pl1_processing(VADriverContextP ctx,
                                       PP_PA_LOAD_SAVE_PL3,
                                       NULL);
 
-    }
-    else {
+    } else {
         return VA_STATUS_ERROR_UNKNOWN;
     }
 
@@ -5416,3 +5413,5 @@ i965_proc_context_init(VADriverContextP ctx, struct object_config *obj_config)
 
     return (struct hw_context *)proc_context;
 }
+
+

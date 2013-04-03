@@ -21,10 +21,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
+#include "sysdeps.h"
+
 #include <alloca.h>
+
 #include "intel_batchbuffer.h"
 #include "i965_drv_video.h"
 #include "i965_decoder_utils.h"
@@ -212,12 +212,14 @@ avc_get_first_mb_bit_offset_with_epb(
 {
     unsigned int in_slice_data_bit_offset = slice_param->slice_data_bit_offset;
     unsigned int out_slice_data_bit_offset;
-    unsigned int i, n, buf_size, data_size;
+    unsigned int i, j, n, buf_size, data_size, header_size;
     uint8_t *buf;
     int ret;
 
-    buf_size  = slice_param->slice_data_bit_offset / 8;
-    data_size = slice_param->slice_data_size - slice_param->slice_data_offset;
+    header_size = slice_param->slice_data_bit_offset / 8;
+    data_size   = slice_param->slice_data_size - slice_param->slice_data_offset;
+    buf_size    = (header_size * 3 + 1) / 2; // Max possible header size (x1.5)
+
     if (buf_size > data_size)
         buf_size = data_size;
 
@@ -228,10 +230,11 @@ avc_get_first_mb_bit_offset_with_epb(
     );
     assert(ret == 0);
 
-    for (i = 2, n = 0; i < buf_size; i++) {
-        if (!buf[i - 2] && !buf[i - 1] && buf[i] == 3)
-            i += 2, n++;
+    for (i = 2, j = 2, n = 0; i < buf_size && j < header_size; i++, j++) {
+        if (buf[i] == 0x03 && buf[i - 1] == 0x00 && buf[i - 2] == 0x00)
+            i += 2, j++, n++;
     }
+
     out_slice_data_bit_offset = in_slice_data_bit_offset + n * 8;
 
     if (mode_flag == ENTROPY_CABAC)

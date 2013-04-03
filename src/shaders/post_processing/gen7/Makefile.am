@@ -7,11 +7,11 @@ INTEL_PP_G7B = \
 	pl2_to_pa.g7b		\
 	pl2_to_pl2.g7b		\
 	pl2_to_pl3.g7b		\
+	pl2_to_rgbx.g7b		\
 	pl3_to_pa.g7b		\
 	pl3_to_pl2.g7b		\
 	pl3_to_pl3.g7b		\
-	pl2_to_rgbx.g7b		\
-	rgbx_to_nv12.g7b		\
+	rgbx_to_nv12.g7b	\
 	$(NULL)
 
 INTEL_PP_G4A = \
@@ -51,13 +51,12 @@ INTEL_PP_G4A = \
 	PL3_DN_PL3.g4a			\
 	PL_DI_422CP.g4a			\
 	PL_DI_PA.g4a			\
+	RGB_to_YUV.g4a			\
 	Save_AVS_PA.g4a  		\
 	Save_AVS_PL3.g4a		\
 	Save_AVS_NV12.g4a		\
 	Save_AVS_RGB.g4a		\
 	Save_AVS_RGBX.g4a		\
-	YUV_to_RGB.g4a			\
-	RGB_to_YUV.g4a			\
 	Set_AVS_Buf_0123_BGRA.g4a	\
 	Set_AVS_Buf_0123_PL2.g4a	\
 	Set_AVS_Buf_0123_PL3.g4a	\
@@ -65,6 +64,7 @@ INTEL_PP_G4A = \
 	Set_AVS_Buf_0123_VYUA.g4a	\
 	Set_Layer_0.g4a			\
 	VP_Setup.g4a			\
+	YUV_to_RGB.g4a			\
 	$(NULL)
 
 INTEL_PP_ASM = $(INTEL_PP_G7B:%.g7b=%.asm)

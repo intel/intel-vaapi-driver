@@ -26,14 +26,9 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-
+#include "sysdeps.h"
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
-
 #include "i965_defines.h"
 #include "i965_drv_video.h"
 #include "i965_decoder_utils.h"
@@ -277,29 +272,6 @@ gen6_mfd_bsp_buf_base_addr_state(VADriverContextP ctx,
 
     ADVANCE_BCS_BATCH(batch);
 }
-
-#if 0
-static void
-gen6_mfd_aes_state(VADriverContextP ctx,
-                   struct decode_state *decode_state,
-                   int standard_select)
-{
-    /* FIXME */
-}
-
-static void
-gen6_mfd_wait(VADriverContextP ctx,
-              struct decode_state *decode_state,
-              int standard_select,
-              struct gen6_mfd_context *gen6_mfd_context)
-{
-    struct intel_batchbuffer *batch = gen6_mfd_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 1);
-    OUT_BCS_BATCH(batch, MFX_WAIT | (1 << 8));
-    ADVANCE_BCS_BATCH(batch);
-}
-#endif
 
 static void
 gen6_mfd_avc_img_state(VADriverContextP ctx,
@@ -547,6 +519,7 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
                          pic_param->seq_fields.bits.mb_adaptive_frame_field_flag);
     int weighted_pred_idc = 0;
     int first_mb_in_slice = 0, first_mb_in_next_slice = 0;
+    unsigned int chroma_log2_weight_denom, luma_log2_weight_denom;
     int slice_type;
 
     if (slice_param->slice_type == SLICE_TYPE_I ||
@@ -559,6 +532,9 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
         assert(slice_param->slice_type == SLICE_TYPE_B);
         slice_type = SLICE_TYPE_B;
     }
+
+    luma_log2_weight_denom   = slice_param->luma_log2_weight_denom;
+    chroma_log2_weight_denom = slice_param->chroma_log2_weight_denom;
 
     if (slice_type == SLICE_TYPE_I) {
         assert(slice_param->num_ref_idx_l0_active_minus1 == 0);
@@ -573,7 +549,13 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
     } else {
         num_ref_idx_l0 = slice_param->num_ref_idx_l0_active_minus1 + 1;
         num_ref_idx_l1 = slice_param->num_ref_idx_l1_active_minus1 + 1;
-        weighted_pred_idc = (pic_param->pic_fields.bits.weighted_bipred_idc == 1);
+        weighted_pred_idc = pic_param->pic_fields.bits.weighted_bipred_idc;
+
+        if (weighted_pred_idc == 2) {
+            /* 8.4.3 - Derivation process for prediction weights (8-279) */
+            luma_log2_weight_denom   = 5;
+            chroma_log2_weight_denom = 5;
+        }
     }
 
     first_mb_in_slice = slice_param->first_mb_in_slice << mbaff_picture;
@@ -595,8 +577,8 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 
                   (num_ref_idx_l1 << 24) |
                   (num_ref_idx_l0 << 16) |
-                  (slice_param->chroma_log2_weight_denom << 8) |
-                  (slice_param->luma_log2_weight_denom << 0));
+                  (chroma_log2_weight_denom << 8) |
+                  (luma_log2_weight_denom << 0));
     OUT_BCS_BATCH(batch, 
                   (weighted_pred_idc << 30) |
                   (slice_param->direct_spatial_mv_pred_flag << 29) |

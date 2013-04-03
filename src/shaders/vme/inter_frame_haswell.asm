@@ -371,6 +371,7 @@ __mb_hwdep_end:
 asr	(2)	mb_ref_win.0<1>:w	mb_mvp_ref.0<2,2,1>:w	2:w	{align1};
 add	(2)	mb_ref_win.8<1>:w	mb_ref_win.0<2,2,1>:w	3:w	{align1};
 and	(2)	mb_ref_win.16<1>:uw	mb_ref_win.8<2,2,1>:uw	0xFFFC:uw {align1};
+        
 /* m2, get the MV/Mb cost passed from constant buffer when
 spawning thread by MEDIA_OBJECT */       
 mov (8) vme_m2<1>:UD            r1.0<8,8,1>:UD {align1};
@@ -396,7 +397,6 @@ mov  (1) vme_msg_5.20<1>:UW      CHROMA_ROW.6<0,1,0>:UW {align1};
 
 
 /* m6 */
-
 mov  (4) vme_msg_6.16<1>:UD      CHROMA_ROW.8<4,4,1>:UD {align1};
 mov  (8) vme_msg_6.0<1>:UW       CHROMA_COL.2<16,8,2>:UW {align1};
 
@@ -674,7 +674,6 @@ __EXIT:
 mov  (8) ts_msg_reg0<1>:UD         r0<8,8,1>:UD {align1};
 send (16) ts_msg_ind acc0<1>UW null thread_spawner(0, 0, 1) mlen 1 rlen 0 {align1 EOT};
 
-
 	nop		;
 	nop		;
 /* Compare three word data to get the min value */
@@ -716,4 +715,3 @@ cmp_a_ge_b:
 	(-f0.0) mov (1) RET_ARG<1>:w INPUT_ARG0.0<0,1,0>:w {align1};
 cmp_end:
  	RETURN	{align1};
-

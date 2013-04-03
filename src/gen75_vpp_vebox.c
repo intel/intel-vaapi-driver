@@ -286,7 +286,6 @@ void hsw_veb_iecp_ace_table(VADriverContextP ctx, struct intel_vebox_context *pr
 void hsw_veb_iecp_tcc_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     unsigned int *p_table = (unsigned int*)(proc_ctx->iecp_state_table.ptr + 168);
-
 //    VAProcFilterParameterBuffer * tcc_param =
 //            (VAProcFilterParameterBuffer *) proc_ctx->filter_iecp_tcc;
 

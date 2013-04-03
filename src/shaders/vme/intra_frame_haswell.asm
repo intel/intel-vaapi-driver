@@ -116,7 +116,6 @@ and.z.f0.0 (1) null<1>:UW transform_8x8_ub<0,1,0>:UB 1:UW {align1};
 
 /* assign MB intra struct from the thread payload*/
 mov (1) mb_intra_struct_ub<1>:UB input_mb_intra_ub<0,1,0>:UB {align1}; 
-                           
 /* Disable DC HAAR component when calculating HARR SATD block */
 mov  (1) tmp_reg0.0<1>:UW	DC_HARR_DISABLE:UW		{align1};
 mov  (1) vme_m1.30<1>:UB	tmp_reg0.0<0,1,0>:UB  {align1};

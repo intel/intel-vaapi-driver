@@ -25,10 +25,7 @@
  *    Xiang Haihao <haihao.xiang@intel.com>
  *
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+#include "sysdeps.h"
 
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"

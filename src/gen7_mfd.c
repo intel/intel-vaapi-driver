@@ -26,15 +26,12 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+#include "sysdeps.h"
+
 #include <va/va_dec_jpeg.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
-
 #include "i965_defines.h"
 #include "i965_drv_video.h"
 #include "i965_decoder_utils.h"
@@ -288,16 +285,6 @@ gen7_mfd_bsp_buf_base_addr_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-#if 0
-static void
-gen7_mfd_aes_state(VADriverContextP ctx,
-                   struct decode_state *decode_state,
-                   int standard_select)
-{
-    /* FIXME */
-}
-#endif
-
 static void
 gen7_mfd_qm_state(VADriverContextP ctx,
                   int qm_type,
@@ -317,21 +304,6 @@ gen7_mfd_qm_state(VADriverContextP ctx,
     intel_batchbuffer_data(batch, qm_buffer, 16 * 4);
     ADVANCE_BCS_BATCH(batch);
 }
-
-#if 0
-static void
-gen7_mfd_wait(VADriverContextP ctx,
-              struct decode_state *decode_state,
-              int standard_select,
-              struct gen7_mfd_context *gen7_mfd_context)
-{
-    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 1);
-    OUT_BCS_BATCH(batch, MFX_WAIT | (1 << 8));
-    ADVANCE_BCS_BATCH(batch);
-}
-#endif
 
 static void
 gen7_mfd_avc_img_state(VADriverContextP ctx,

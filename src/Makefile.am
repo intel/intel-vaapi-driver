@@ -22,7 +22,7 @@
 
 SUBDIRS = shaders
 
-INCLUDES = \
+AM_CPPFLAGS = \
 	-DPTHREADS		\
 	$(DRM_CFLAGS)		\
 	$(LIBVA_DEPS_CFLAGS)	\
@@ -55,11 +55,11 @@ source_c = \
 	gen7_mfc.c		\
 	gen7_mfd.c		\
 	gen75_mfd.c		\
-	gen75_vme.c		\
 	gen75_mfc.c		\
-	gen75_vpp_vebox.c	\
-	gen75_vpp_gpe.c  	\
 	gen75_picture_process.c	\
+	gen75_vme.c		\
+	gen75_vpp_gpe.c  	\
+	gen75_vpp_vebox.c	\
 	i965_avc_bsd.c		\
 	i965_avc_hw_scoreboard.c\
 	i965_avc_ildb.c		\
@@ -87,9 +87,9 @@ source_h = \
 	gen6_mfd.h		\
 	gen6_vme.h		\
 	gen7_mfd.h		\
-	gen75_vpp_vebox.h	\
-	gen75_vpp_gpe.h 	\
 	gen75_picture_process.h	\
+	gen75_vpp_gpe.h 	\
+	gen75_vpp_vebox.h	\
 	i965_avc_bsd.h		\
 	i965_avc_hw_scoreboard.h\
 	i965_avc_ildb.h		\
@@ -111,9 +111,11 @@ source_h = \
 	intel_batchbuffer_dump.h\
 	intel_compiler.h	\
 	intel_driver.h          \
+	intel_media.h           \
 	intel_memman.h          \
 	object_heap.h           \
-	intel_media.h           \
+	sysdeps.h		\
+	va_backend_compat.h	\
 	$(NULL)
 
 i965_drv_video_la_LTLIBRARIES	= i965_drv_video.la
@@ -139,7 +141,7 @@ endif
 i965_output_wayland.c: $(protocol_source_h)
 @wayland_scanner_rules@
 
-DIST_SUBDIRS = wayland
+DIST_SUBDIRS = $(SUBDIRS) wayland
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in

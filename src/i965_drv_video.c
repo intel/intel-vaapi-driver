@@ -26,16 +26,8 @@
  *    Zou Nan hai <nanhai.zou@intel.com>
  *
  */
-#ifdef ANDROID
-#include "config_android.h"
-#else
-#include "config.h"
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
+
+#include "sysdeps.h"
 
 #ifdef HAVE_VA_X11
 # include "i965_output_dri.h"
@@ -2362,6 +2354,8 @@ i965_CreateImage(VADriverContextP ctx,
         image->component_order[1]  = 'G';
         image->component_order[2]  = 'B';
         break;
+    case VA_FOURCC('A','R','G','B'):
+    case VA_FOURCC('A','B','G','R'):
     case VA_FOURCC('B','G','R','A'):
     case VA_FOURCC('R','G','B','A'):
     case VA_FOURCC('B','G','R','X'):

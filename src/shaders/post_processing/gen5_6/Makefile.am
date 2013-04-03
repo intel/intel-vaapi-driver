@@ -12,16 +12,16 @@ INTEL_PP_G4B_GEN5 = \
 	nv12_dn_nv12.g4b.gen5                   \
 	nv12_dndi_nv12.g4b.gen5			\
 	nv12_load_save_nv12.g4b.gen5		\
+	nv12_load_save_pa.g4b.gen5		\
 	nv12_load_save_pl3.g4b.gen5             \
+	nv12_load_save_rgbx.g4b.gen5		\
 	nv12_scaling_nv12.g4b.gen5		\
+	pa_load_save_nv12.g4b.gen5		\
+	pa_load_save_pl3.g4b.gen5		\
 	pl3_load_save_nv12.g4b.gen5             \
+	pl3_load_save_pa.g4b.gen5		\
 	pl3_load_save_pl3.g4b.gen5              \
-	nv12_load_save_pa.g4b.gen5				\
-	pl3_load_save_pa.g4b.gen5				\
-	pa_load_save_nv12.g4b.gen5				\
-	pa_load_save_pl3.g4b.gen5				\
-	rgbx_load_save_nv12.g4b.gen5				\
-	nv12_load_save_rgbx.g4b.gen5				\
+	rgbx_load_save_nv12.g4b.gen5		\
 	$(NULL)
 
 INTEL_PP_G6B = \
@@ -29,16 +29,16 @@ INTEL_PP_G6B = \
 	nv12_dn_nv12.g6b                	\
 	nv12_dndi_nv12.g6b			\
 	nv12_load_save_nv12.g6b			\
+	nv12_load_save_pa.g6b			\
 	nv12_load_save_pl3.g6b          	\
+	nv12_load_save_rgbx.g6b			\
 	nv12_scaling_nv12.g6b			\
+	pa_load_save_nv12.g6b			\
+	pa_load_save_pl3.g6b			\
 	pl3_load_save_nv12.g6b          	\
 	pl3_load_save_pl3.g6b           	\
-	nv12_load_save_pa.g6b				\
-	pl3_load_save_pa.g6b				\
-	pa_load_save_nv12.g6b				\
-	pa_load_save_pl3.g6b				\
-	rgbx_load_save_nv12.g6b				\
-	nv12_load_save_rgbx.g6b				\
+	pl3_load_save_pa.g6b			\
+	rgbx_load_save_nv12.g6b			\
 	$(NULL)
 
 INTEL_PP_ASM = \
@@ -46,16 +46,16 @@ INTEL_PP_ASM = \
 	nv12_dn_nv12.asm                	\
 	nv12_dndi_nv12.asm			\
 	nv12_load_save_nv12.asm			\
+	nv12_load_save_pa.asm			\
 	nv12_load_save_pl3.asm          	\
+	nv12_load_save_rgbx.asm			\
 	nv12_scaling_nv12.asm			\
+	pa_load_save_nv12.asm			\
+	pa_load_save_pl3.asm			\
 	pl3_load_save_nv12.asm          	\
 	pl3_load_save_pl3.asm           	\
-	nv12_load_save_pa.asm				\
-	pl3_load_save_pa.asm				\
-	pa_load_save_nv12.asm				\
-	pa_load_save_pl3.asm				\
-	rgbx_load_save_nv12.asm				\
-	nv12_load_save_rgbx.asm				\
+	pl3_load_save_pa.asm			\
+	rgbx_load_save_nv12.asm			\
 	$(NULL)
 
 INTEL_PP_ASM += \
@@ -94,11 +94,11 @@ INTEL_PP_ASM += \
 	Common/RGB_Pack.asm				\
 	Common/RGBX_Load_16x8.asm			\
 	Common/RGBX_to_YUV_Coef.asm			\
-	Common/RGBX_Save_YUV_Fix.asm		\
-	Common/RGBX_Save_YUV_Float.asm		\
+	Common/RGBX_Save_YUV_Fix.asm			\
+	Common/RGBX_Save_YUV_Float.asm			\
 	Common/YUV_to_RGBX_Coef.asm			\
-	Common/YUVX_Save_RGBX_Fix.asm       \
-	Common/YUVX_Save_RGBX_Float.asm     \
+	Common/YUVX_Save_RGBX_Fix.asm       		\
+	Common/YUVX_Save_RGBX_Float.asm     		\
 	Common/SetupVPKernel.asm			\
 	Common/readSampler16x1.asm			\
 	Core_Kernels/AVS_SetupFirstBlock.asm		\

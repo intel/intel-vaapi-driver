@@ -22,11 +22,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "config.h"
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+#include "sysdeps.h"
+
 #include <va/va_dricommon.h>
+
 #include "i965_drv_video.h"
 #include "i965_output_dri.h"
 #include "dso_utils.h"
@@ -119,7 +118,6 @@ i965_put_surface_dri(
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx); 
     struct dri_vtable * const dri_vtable = &i965->dri_output->vtable;
-    struct dri_state * const dri_state = (struct dri_state *)ctx->drm_state;
     struct i965_render_state * const render_state = &i965->render_state;
     struct dri_drawable *dri_drawable;
     union dri_buffer *buffer;
@@ -131,7 +129,7 @@ i965_put_surface_dri(
     int i, ret;
 
     /* Currently don't support DRI1 */
-    if (dri_state->base.auth_type != VA_DRM_AUTH_DRI2)
+    if (!VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2))
         return VA_STATUS_ERROR_UNKNOWN;
 
     /* Some broken sources such as H.264 conformance case FM2_SVA_C

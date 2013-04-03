@@ -29,7 +29,7 @@
 #ifndef __I965_POST_PROCESSING_H__
 #define __I965_POST_PROCESSING_H__
 
-#define MAX_PP_SURFACES 48
+#define MAX_PP_SURFACES                 48
 
 #define I965_PP_FLAG_TOP_FIELD          1
 #define I965_PP_FLAG_BOTTOM_FIELD       2
@@ -101,6 +101,8 @@ struct pp_dn_context
     int dest_h;
 };
 
+struct i965_post_processing_context;
+ 
 struct pp_module
 {
     struct i965_kernel kernel;

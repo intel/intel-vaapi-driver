@@ -888,6 +888,7 @@ i965_subpic_render_src_surfaces_state(VADriverContextP ctx,
     unsigned int index = obj_surface->subpic_render_idx;
     struct object_subpic *obj_subpic = obj_surface->obj_subpic[index];
     struct object_image *obj_image = obj_subpic->obj_image;
+
     assert(obj_surface);
     assert(obj_surface->bo);
     subpic_region = obj_image->bo;

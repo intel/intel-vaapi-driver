@@ -449,6 +449,7 @@ gen6_mfc_avc_slice_state(VADriverContextP ctx,
 
     ADVANCE_BCS_BATCH(batch);
 }
+
 static void gen6_mfc_avc_qm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;

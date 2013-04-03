@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Intel Corporation
+ * Copyright (C) 2012 Intel Corporation. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -8,11 +8,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- *
+ * 
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- *
+ * 
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -22,31 +22,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef I965_DECODER_H
-#define I965_DECODER_H
+#ifndef VA_BACKEND_COMPAT_H
+#define VA_BACKEND_COMPAT_H
 
-#include <stdint.h>
-#include <stdlib.h>
+#include <va/va_backend.h>
 
-#include <va/va.h>
-#include <intel_bufmgr.h>
+#if VA_CHECK_VERSION(0,33,0)
+# include <va/va_drmcommon.h>
 
-#define MAX_GEN_REFERENCE_FRAMES 16
+# define VA_CHECK_DRM_AUTH_TYPE(ctx, type) \
+    (((struct drm_state *)(ctx)->drm_state)->auth_type == (type))
 
-typedef struct gen_frame_store GenFrameStore;
-struct gen_frame_store {
-    VASurfaceID surface_id;
-    int         frame_store_id;
-    struct      object_surface *obj_surface;
-};
+#else
+# include <va/va_dricommon.h>
 
-typedef struct gen_buffer GenBuffer;
-struct gen_buffer {
-    dri_bo     *bo;
-    int         valid;
-};
+# define VA_CHECK_DRM_AUTH_TYPE(ctx, type) \
+    (((struct dri_state *)(ctx)->dri_state)->driConnectedFlag == (type))
 
-struct hw_context *
-gen75_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config);
+# define drm_state              dri_state
+# define VA_DRM_AUTH_DRI1       VA_DRI1
+# define VA_DRM_AUTH_DRI2       VA_DRI2
+# define VA_DRM_AUTH_CUSTOM     VA_DUMMY
+#endif
 
-#endif /* I965_DECODER_H */
+#endif /* VA_BACKEND_COMPAT_H */

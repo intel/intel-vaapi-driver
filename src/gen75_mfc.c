@@ -1,5 +1,5 @@
 /*
- * Copyright © 2012 Intel Corporation
+ * Copyright © 2010-2012 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -91,7 +91,6 @@ gen75_mfc_pipe_mode_select(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-
     assert(standard_select == MFX_FORMAT_MPEG2 ||
            standard_select == MFX_FORMAT_AVC);
 
@@ -220,6 +219,7 @@ gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct intel_encoder_con
 	gen75_mfc_ind_obj_base_addr_state_bplus(ctx, encoder_context);
 	return;
     }
+
     BEGIN_BCS_BATCH(batch, 11);
 
     OUT_BCS_BATCH(batch, MFX_IND_OBJ_BASE_ADDR_STATE | (11 - 2));
@@ -259,13 +259,13 @@ gen75_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
     BEGIN_BCS_BATCH(batch, 16);
 
     OUT_BCS_BATCH(batch, MFX_AVC_IMG_STATE | (16 - 2));
-	/*DW1. MB setting of frame */
+    /*DW1. MB setting of frame */
     OUT_BCS_BATCH(batch,
                   ((width_in_mbs * height_in_mbs) & 0xFFFF));
     OUT_BCS_BATCH(batch, 
                   ((height_in_mbs - 1) << 16) | 
                   ((width_in_mbs - 1) << 0));
-	/* DW3 QP setting */
+    /* DW3 QP setting */
     OUT_BCS_BATCH(batch, 
                   (0 << 24) |	/* Second Chroma QP Offset */
                   (0 << 16) |	/* Chroma QP Offset */
@@ -2518,7 +2518,6 @@ gen75_mfc_context_destroy(void *context)
 
     dri_bo_unreference(mfc_context->bsd_mpc_row_store_scratch_buffer.bo);
     mfc_context->bsd_mpc_row_store_scratch_buffer.bo = NULL;
-
 
     for (i = 0; i < MAX_MFC_REFERENCE_SURFACES; i++){
         dri_bo_unreference(mfc_context->reference_surfaces[i].bo);

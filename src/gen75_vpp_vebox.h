@@ -139,7 +139,6 @@ struct intel_vebox_context
 
     unsigned int  filter_iecp_amp_num_elements;
     unsigned char format_convert_flags;
-
 };
 
 VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
