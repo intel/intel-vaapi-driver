@@ -364,7 +364,7 @@
 	// if channel swap?
 	// This means that it should be BGRX(B is the LSB) or RGBX
 	// 1 means that it is BGRX.
-	and.nz.f0.0	null<1>:w	r2.3<0;1,0>:uw 0x04:w
+	and.nz.f0.0	null<1>:w	r2.0<0;1,0>:uw 0x01:w
 	// pointer swap
 	(f0.0)	mov (1)	uwTemp0<1> a0.0:uw
 	(f0.0)	mov (1)	a0.0:uw a0.1:uw

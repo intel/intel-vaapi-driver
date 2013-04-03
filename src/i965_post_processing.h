@@ -348,16 +348,17 @@ struct gen7_pp_static_parameter
 
     struct {
         /* r2.0 */
-        unsigned int pad3;
+	/* Indicates whether the rgb is swapped for the src surface
+	 * 0: RGBX(MSB. X-B-G-R). 1: BGRX(MSB: X-R-G-B)
+	 */
+        unsigned int src_avs_rgb_swap:1;
+        unsigned int pad3:31;
 
         /* r2.1 */
         unsigned int pad2:16;
         unsigned int save_avs_rgb_swap:1; /* 0: RGB, 1: BGR */
         unsigned int avs_wa_enable:1; /* must enabled for GEN7 */
-        unsigned int src_avs_rgb_swap:1;
-	/* Indicates whether the rgb is swapped for the src surface
-	 * 0: RGBX(MSB. X-B-G-R). 1: BGRX(MSB: X-R-G-B)
-	 */
+        unsigned int ief_enable:1;
         unsigned int avs_wa_width:13;
 
         /* 2.2 */
