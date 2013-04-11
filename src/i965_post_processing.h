@@ -477,6 +477,15 @@ struct i965_post_processing_context
         unsigned int size_cs_entry;
     } urb;
 
+    struct {
+        unsigned int gpgpu_mode : 1;
+        unsigned int pad0 : 7;
+        unsigned int max_num_threads : 16;
+        unsigned int num_urb_entries : 8;
+        unsigned int urb_entry_size : 16;
+        unsigned int curbe_allocation_size : 16;
+    } vfe_gpu_state;
+
     struct pp_load_save_context pp_load_save_context;
     struct pp_scaling_context pp_scaling_context;
     struct pp_avs_context pp_avs_context;

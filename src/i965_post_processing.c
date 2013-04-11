@@ -5270,12 +5270,14 @@ gen6_pp_vfe_state(VADriverContextP ctx,
     OUT_BATCH(batch, CMD_MEDIA_VFE_STATE | (8 - 2));
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
-              (pp_context->urb.num_vfe_entries - 1) << 16 |
-              pp_context->urb.num_vfe_entries << 8);
+              (pp_context->vfe_gpu_state.max_num_threads - 1) << 16 |
+              pp_context->vfe_gpu_state.num_urb_entries << 8);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
-              (pp_context->urb.size_vfe_entry * 2) << 16 |  /* URB Entry Allocation Size, in 256 bits unit */
-              (pp_context->urb.size_cs_entry * pp_context->urb.num_cs_entries * 2)); /* CURBE Allocation Size, in 256 bits unit */
+              (pp_context->vfe_gpu_state.urb_entry_size) << 16 |  
+		/* URB Entry Allocation Size, in 256 bits unit */
+              (pp_context->vfe_gpu_state.curbe_allocation_size));
+		/* CURBE Allocation Size, in 256 bits unit */
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
@@ -5293,12 +5295,14 @@ gen8_pp_vfe_state(VADriverContextP ctx,
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
-              (pp_context->urb.num_vfe_entries - 1) << 16 |
-              pp_context->urb.num_vfe_entries << 8);
+              (pp_context->vfe_gpu_state.max_num_threads - 1) << 16 |
+              pp_context->vfe_gpu_state.num_urb_entries << 8);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
-              (pp_context->urb.size_vfe_entry * 2) << 16 |  /* URB Entry Allocation Size, in 256 bits unit */
-              (pp_context->urb.size_cs_entry * pp_context->urb.num_cs_entries * 2)); /* CURBE Allocation Size, in 256 bits unit */
+              (pp_context->vfe_gpu_state.urb_entry_size) << 16 |  
+		/* URB Entry Allocation Size, in 256 bits unit */
+              (pp_context->vfe_gpu_state.curbe_allocation_size));
+		/* CURBE Allocation Size, in 256 bits unit */
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
@@ -6281,6 +6285,8 @@ i965_post_processing_terminate(VADriverContextP ctx)
     i965->pp_context = NULL;
 }
 
+#define VPP_CURBE_ALLOCATION_SIZE	32
+
 static void
 i965_post_processing_context_init(VADriverContextP ctx,
                                   struct i965_post_processing_context *pp_context,
@@ -6289,21 +6295,25 @@ i965_post_processing_context_init(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
 
-    pp_context->urb.size = URB_SIZE((&i965->intel));
-    pp_context->urb.num_vfe_entries = 32;
-    pp_context->urb.size_vfe_entry = 1;     /* in 512 bits unit */
-    pp_context->urb.num_cs_entries = 1;
-    
-    if (IS_GEN7(i965->intel.device_id))
-        pp_context->urb.size_cs_entry = 4;      /* in 512 bits unit */
-    else
+    if (IS_IRONLAKE(i965->intel.device_id)) {
+	pp_context->urb.size = URB_SIZE((&i965->intel));
+	pp_context->urb.num_vfe_entries = 32;
+	pp_context->urb.size_vfe_entry = 1;     /* in 512 bits unit */
+	pp_context->urb.num_cs_entries = 1;
         pp_context->urb.size_cs_entry = 2;
-
-    pp_context->urb.vfe_start = 0;
-    pp_context->urb.cs_start = pp_context->urb.vfe_start + 
-        pp_context->urb.num_vfe_entries * pp_context->urb.size_vfe_entry;
-    assert(pp_context->urb.cs_start + 
-           pp_context->urb.num_cs_entries * pp_context->urb.size_cs_entry <= URB_SIZE((&i965->intel)));
+	pp_context->urb.vfe_start = 0;
+	pp_context->urb.cs_start = pp_context->urb.vfe_start + 
+            pp_context->urb.num_vfe_entries * pp_context->urb.size_vfe_entry;
+	assert(pp_context->urb.cs_start +
+	    pp_context->urb.num_cs_entries * pp_context->urb.size_cs_entry <= URB_SIZE((&i965->intel)));
+    } else {
+	pp_context->vfe_gpu_state.max_num_threads = 60;
+	pp_context->vfe_gpu_state.num_urb_entries = 59;
+	pp_context->vfe_gpu_state.gpgpu_mode = 0;
+	pp_context->vfe_gpu_state.urb_entry_size = 16 - 1;
+	pp_context->vfe_gpu_state.curbe_allocation_size = VPP_CURBE_ALLOCATION_SIZE;
+    }
+    
 
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen5));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
