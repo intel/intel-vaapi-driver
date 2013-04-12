@@ -654,6 +654,48 @@ error:
     return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 
+static VAStatus
+intel_decoder_check_vp8_parameter(VADriverContextP ctx,
+                                  struct decode_state *decode_state)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAPictureParameterBufferVP8 *pic_param = (VAPictureParameterBufferVP8 *)decode_state->pic_param->buffer;
+    struct object_surface *obj_surface;	
+    int i = 0;
+
+    if (pic_param->last_ref_frame != VA_INVALID_SURFACE) {
+        obj_surface = SURFACE(pic_param->last_ref_frame);
+
+        if (obj_surface && obj_surface->bo)
+            decode_state->reference_objects[i++] = obj_surface;
+        else
+            decode_state->reference_objects[i++] = NULL;
+    }
+
+    if (pic_param->golden_ref_frame != VA_INVALID_SURFACE) {
+        obj_surface = SURFACE(pic_param->golden_ref_frame);
+
+        if (obj_surface && obj_surface->bo)
+            decode_state->reference_objects[i++] = obj_surface;
+        else
+            decode_state->reference_objects[i++] = NULL;
+    }
+
+    if (pic_param->alt_ref_frame != VA_INVALID_SURFACE) {
+        obj_surface = SURFACE(pic_param->alt_ref_frame);
+
+        if (obj_surface && obj_surface->bo)
+            decode_state->reference_objects[i++] = obj_surface;
+        else
+            decode_state->reference_objects[i++] = NULL;
+    }
+
+    for ( ; i < 16; i++)
+        decode_state->reference_objects[i] = NULL;
+
+    return VA_STATUS_SUCCESS;
+}
+
 VAStatus
 intel_decoder_sanity_check_input(VADriverContextP ctx,
                                  VAProfile profile,
@@ -693,6 +735,10 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
 
     case VAProfileJPEGBaseline:
         vaStatus = VA_STATUS_SUCCESS;
+        break;
+
+    case VAProfileVP8Version0_3:
+        vaStatus = intel_decoder_check_vp8_parameter(ctx, decode_state);
         break;
 
     default:

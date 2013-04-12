@@ -29,6 +29,7 @@
 #include <stdlib.h>
 
 #include <va/va.h>
+#include <va/va_dec_vp8.h>
 #include <intel_bufmgr.h>
 
 #define MAX_GEN_REFERENCE_FRAMES 16
