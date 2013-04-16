@@ -5314,14 +5314,20 @@ gen6_pp_curbe_load(VADriverContextP ctx,
                    struct i965_post_processing_context *pp_context)
 {
     struct intel_batchbuffer *batch = pp_context->batch;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int param_size;
 
-    assert(pp_context->urb.size_cs_entry * pp_context->urb.num_cs_entries * 2 * 32 <= pp_context->curbe.bo->size);
+    if (IS_GEN7(i965->intel.device_id) ||
+        IS_GEN8(i965->intel.device_id))
+        param_size = sizeof(struct gen7_pp_static_parameter);
+    else
+        param_size = sizeof(struct pp_static_parameter);
 
     BEGIN_BATCH(batch, 4);
     OUT_BATCH(batch, CMD_MEDIA_CURBE_LOAD | (4 - 2));
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
-              pp_context->urb.size_cs_entry * pp_context->urb.num_cs_entries * 2 * 32);
+              param_size);
     OUT_RELOC(batch, 
               pp_context->curbe.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0,
