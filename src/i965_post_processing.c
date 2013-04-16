@@ -3500,69 +3500,180 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
 /* TODO: Add the sampler_8x8 state */
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
-    struct i965_sampler_8x8_state *sampler_8x8_state;
+    struct gen8_sampler_8x8_avs *sampler_8x8;
+    struct i965_sampler_8x8_coefficient *sampler_8x8_state;
     int i;
     int width[3], height[3], pitch[3], offset[3];
     int src_width, src_height;
+
+    memset(pp_static_parameter, 0, sizeof(struct gen7_pp_static_parameter));
 
     /* source surface */
     gen8_pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 0, 0,
                                          width, height, pitch, offset);
     src_height = height[0];
+    src_width  = width[0];
 
     /* destination surface */
     gen8_pp_set_media_rw_message_surface(ctx, pp_context, dst_surface, 24, 1,
                                          width, height, pitch, offset);
 
     /* sampler 8x8 state */
-    dri_bo_map(pp_context->sampler_state_table.bo_8x8, True);
-    assert(pp_context->sampler_state_table.bo_8x8->virtual);
-    assert(sizeof(*sampler_8x8_state) == sizeof(int) * 138);
-    sampler_8x8_state = pp_context->sampler_state_table.bo_8x8->virtual;
-    memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
+    dri_bo_map(pp_context->sampler_state_table.bo, True);
+    assert(pp_context->sampler_state_table.bo->virtual);
 
-    for (i = 0; i < 17; i++) {
+    /* Currently only one gen8 sampler_8x8 is initialized */
+    sampler_8x8 = (struct gen8_sampler_8x8_avs *)
+        pp_context->sampler_state_table.bo->virtual;
+    memset(sampler_8x8, 0, sizeof(*sampler_8x8));
+
+    sampler_8x8->dw0.gain_factor = 44;
+    sampler_8x8->dw0.weak_edge_threshold = 1;
+    sampler_8x8->dw0.strong_edge_threshold = 8;
+    /* Use the value like that on Ivy instead of default
+     * sampler_8x8->dw0.r3x_coefficient = 5;
+     */
+    sampler_8x8->dw0.r3x_coefficient = 27;
+    sampler_8x8->dw0.r3c_coefficient = 5;
+
+    sampler_8x8->dw2.global_noise_estimation = 255;
+    sampler_8x8->dw2.non_edge_weight = 1;
+    sampler_8x8->dw2.regular_weight = 2;
+    sampler_8x8->dw2.strong_edge_weight = 7;
+    /* Use the value like that on Ivy instead of default
+     * sampler_8x8->dw2.r5x_coefficient = 7;
+     * sampler_8x8->dw2.r5cx_coefficient = 7;
+     * sampler_8x8->dw2.r5c_coefficient = 7;
+     */
+    sampler_8x8->dw2.r5x_coefficient = 9;
+    sampler_8x8->dw2.r5cx_coefficient = 8;
+    sampler_8x8->dw2.r5c_coefficient = 3;
+
+    sampler_8x8->dw3.sin_alpha = 101; /* sin_alpha = 0 */
+    sampler_8x8->dw3.cos_alpha = 79; /* cos_alpha = 0 */
+    sampler_8x8->dw3.sat_max = 0x1f;
+    sampler_8x8->dw3.hue_max = 14;
+    /* The 8tap filter will determine whether the adaptive Filter is
+     * applied for all channels(dw153).
+     * If the 8tap filter is disabled, the adaptive filter should be disabled.
+     * Only when 8tap filter is enabled, it can be enabled or not
+     */
+    sampler_8x8->dw3.enable_8tap_filter = 3;
+    sampler_8x8->dw3.ief4_smooth_enable = 0;
+
+    sampler_8x8->dw4.s3u = 0;
+    sampler_8x8->dw4.diamond_margin = 4;
+    sampler_8x8->dw4.vy_std_enable = 0;
+    sampler_8x8->dw4.umid = 110;
+    sampler_8x8->dw4.vmid = 154;
+
+    sampler_8x8->dw5.diamond_dv = 0;
+    sampler_8x8->dw5.diamond_th = 35;
+    sampler_8x8->dw5.diamond_alpha = 100; /* diamond_alpha = 0 */
+    sampler_8x8->dw5.hs_margin = 3;
+    sampler_8x8->dw5.diamond_du = 2;
+
+    sampler_8x8->dw6.y_point1 = 46;
+    sampler_8x8->dw6.y_point2 = 47;
+    sampler_8x8->dw6.y_point3 = 254;
+    sampler_8x8->dw6.y_point4 = 255;
+
+    sampler_8x8->dw7.inv_margin_vyl = 3300; /* inv_margin_vyl = 0 */
+
+    sampler_8x8->dw8.inv_margin_vyu = 1600; /* inv_margin_vyu = 0 */
+    sampler_8x8->dw8.p0l = 46;
+    sampler_8x8->dw8.p1l = 216;
+
+    sampler_8x8->dw9.p2l = 236;
+    sampler_8x8->dw9.p3l = 236;
+    sampler_8x8->dw9.b0l = 133;
+    sampler_8x8->dw9.b1l = 130;
+
+    sampler_8x8->dw10.b2l = 130;
+    sampler_8x8->dw10.b3l = 130;
+    /* s0l = -5 / 256. s2.8 */
+    sampler_8x8->dw10.s0l = 1029;    /* s0l = 0 */
+    sampler_8x8->dw10.y_slope2 = 31; /* y_slop2 = 0 */
+
+    sampler_8x8->dw11.s1l = 0;
+    sampler_8x8->dw11.s2l = 0;
+
+    sampler_8x8->dw12.s3l = 0;
+    sampler_8x8->dw12.p0u = 46;
+    sampler_8x8->dw12.p1u = 66;
+    sampler_8x8->dw12.y_slope1 = 31; /* y_slope1 = 0 */
+
+    sampler_8x8->dw13.p2u = 130;
+    sampler_8x8->dw13.p3u = 236;
+    sampler_8x8->dw13.b0u = 143;
+    sampler_8x8->dw13.b1u = 163;
+
+    sampler_8x8->dw14.b2u = 200;
+    sampler_8x8->dw14.b3u = 140;
+    sampler_8x8->dw14.s0u = 256;  /* s0u = 0 */
+
+    sampler_8x8->dw15.s1u = 113; /* s1u = 0 */
+    sampler_8x8->dw15.s2u = 1203; /* s2u = 0 */
+
+    sampler_8x8_state = sampler_8x8->coefficients;
+
+     for (i = 0; i < 17; i++) {
+	float coff;
+	coff = i;
+	coff = coff / 16;
+
+        memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
         /* for Y channel, currently ignore */
-        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c0 = 0x0;
-        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c1 = 0x0;
-        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c2 = 0x0;
-        sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c3 = 0x0;
-        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c4 = 0x0;
-        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c5 = 0x0;
-        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c6 = 0x0;
-        sampler_8x8_state->coefficients[i].dw1.table_0x_filter_c7 = 0x0;
-        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c0 = 0x0;
-        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c1 = 0x0;
-        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c2 = 0x0;
-        sampler_8x8_state->coefficients[i].dw2.table_0y_filter_c3 = 0x0;
-        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c4 = 0x0;
-        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c5 = 0x0;
-        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c6 = 0x0;
-        sampler_8x8_state->coefficients[i].dw3.table_0y_filter_c7 = 0x0;
+        sampler_8x8_state->dw0.table_0x_filter_c0 = 0x0;
+        sampler_8x8_state->dw0.table_0x_filter_c1 = 0x0;
+        sampler_8x8_state->dw0.table_0x_filter_c2 = 0x0;
+        sampler_8x8_state->dw0.table_0x_filter_c3 =
+            intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->dw1.table_0x_filter_c4 =
+            intel_format_convert(coff, 1, 6, 0);
+        sampler_8x8_state->dw1.table_0x_filter_c5 = 0x0;
+        sampler_8x8_state->dw1.table_0x_filter_c6 = 0x0;
+        sampler_8x8_state->dw1.table_0x_filter_c7 = 0x0;
+        sampler_8x8_state->dw2.table_0y_filter_c0 = 0x0;
+        sampler_8x8_state->dw2.table_0y_filter_c1 = 0x0;
+        sampler_8x8_state->dw2.table_0y_filter_c2 = 0x0;
+        sampler_8x8_state->dw2.table_0y_filter_c3 =
+            intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->dw3.table_0y_filter_c4 =
+            intel_format_convert(coff, 1, 6, 0);
+        sampler_8x8_state->dw3.table_0y_filter_c5 = 0x0;
+        sampler_8x8_state->dw3.table_0y_filter_c6 = 0x0;
+        sampler_8x8_state->dw3.table_0y_filter_c7 = 0x0;
         /* for U/V channel, 0.25 */
-        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c0 = 0x0;
-        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c1 = 0x0;
-        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c2 = 0x10;
-        sampler_8x8_state->coefficients[i].dw4.table_1x_filter_c3 = 0x10;
-        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c4 = 0x10;
-        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c5 = 0x10;
-        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c6 = 0x0;
-        sampler_8x8_state->coefficients[i].dw5.table_1x_filter_c7 = 0x0;
-        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c0 = 0x0;
-        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c1 = 0x0;
-        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c2 = 0x10;
-        sampler_8x8_state->coefficients[i].dw6.table_1y_filter_c3 = 0x10;
-        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c4 = 0x10;
-        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c5 = 0x10;
-        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c6 = 0x0;
-        sampler_8x8_state->coefficients[i].dw7.table_1y_filter_c7 = 0x0;
+        sampler_8x8_state->dw4.table_1x_filter_c0 = 0x0;
+        sampler_8x8_state->dw4.table_1x_filter_c1 = 0x0;
+        sampler_8x8_state->dw4.table_1x_filter_c2 = 0x0;
+        sampler_8x8_state->dw4.table_1x_filter_c3 =
+            intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->dw5.table_1x_filter_c4 =
+            intel_format_convert(coff, 1, 6, 0);
+        sampler_8x8_state->dw5.table_1x_filter_c5 = 0x00;
+        sampler_8x8_state->dw5.table_1x_filter_c6 = 0x0;
+        sampler_8x8_state->dw5.table_1x_filter_c7 = 0x0;
+        sampler_8x8_state->dw6.table_1y_filter_c0 = 0x0;
+        sampler_8x8_state->dw6.table_1y_filter_c1 = 0x0;
+        sampler_8x8_state->dw6.table_1y_filter_c2 = 0x0;
+        sampler_8x8_state->dw6.table_1y_filter_c3 =
+            intel_format_convert(1 - coff, 1, 6, 0);
+        sampler_8x8_state->dw7.table_1y_filter_c4 =
+            intel_format_convert(coff, 1, 6,0);
+        sampler_8x8_state->dw7.table_1y_filter_c5 = 0x0;
+        sampler_8x8_state->dw7.table_1y_filter_c6 = 0x0;
+        sampler_8x8_state->dw7.table_1y_filter_c7 = 0x0;
+        sampler_8x8_state++;
     }
 
-    sampler_8x8_state->dw136.default_sharpness_level = 0;
-    sampler_8x8_state->dw137.adaptive_filter_for_all_channel = 1;
-    sampler_8x8_state->dw137.bypass_y_adaptive_filtering = 1;
-    sampler_8x8_state->dw137.bypass_x_adaptive_filtering = 1;
-    dri_bo_unmap(pp_context->sampler_state_table.bo_8x8);
+    sampler_8x8->dw152.default_sharpness_level = 0;
+    sampler_8x8->dw153.adaptive_filter_for_all_channel = 1;
+    sampler_8x8->dw153.bypass_y_adaptive_filtering = 1;
+    sampler_8x8->dw153.bypass_x_adaptive_filtering = 1;
+
+    dri_bo_unmap(pp_context->sampler_state_table.bo);
 
 
     /* private function & data */
@@ -3577,15 +3688,16 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
     pp_avs_context->src_w = src_rect->width;
     pp_avs_context->src_h = src_rect->height;
+    pp_avs_context->horiz_range = (float)src_rect->width / src_width;
 
     int dw = (pp_avs_context->src_w - 1) / 16 + 1;
     dw = MAX(dw, dst_rect->width);
 
     pp_static_parameter->grf1.pointer_to_inline_parameter = 7;
     pp_static_parameter->grf2.avs_wa_enable = 0; /* It is not required on GEN8+ */
-    pp_static_parameter->grf2.avs_wa_width = dw;
-    pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * dw);
-    pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * dw);
+    pp_static_parameter->grf2.avs_wa_width = src_width;
+    pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * src_width);
+    pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * src_width);
 
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
     pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) src_rect->height / src_height / dst_rect->height;
@@ -5025,13 +5137,13 @@ gen8_pp_initialize(
     pp_context->idrt.bo = bo;
     pp_context->idrt.num_interface_descriptors = 0;
 
-    dri_bo_unreference(pp_context->sampler_state_table.bo_8x8);
+    dri_bo_unreference(pp_context->sampler_state_table.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr, 
                       "sampler 8x8 state ",
-                      4096,
+                      4096 * 2,
                       4096);
     assert(bo);
-    pp_context->sampler_state_table.bo_8x8 = bo;
+    pp_context->sampler_state_table.bo = bo;
 
 
     dri_bo_unreference(pp_context->vfe_state.bo);

@@ -38,6 +38,8 @@
 #define XY_COLOR_BLT_WRITE_RGB                  (1 << 20)
 #define XY_COLOR_BLT_DST_TILED                  (1 << 11)
 
+#define GEN8_XY_COLOR_BLT_CMD                   (CMD_2D | (0x50 << 22) | 0x05)
+
 /* BR13 */
 #define BR13_8                                  (0x0 << 24)
 #define BR13_565                                (0x1 << 24)
