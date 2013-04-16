@@ -2011,6 +2011,11 @@ gen8_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_cont
     ss->ss2.width = width - 1;
     ss->ss2.height = height - 1;
     ss->ss3.pitch = pitch - 1;
+
+    /* Always set 1(align 4 mode) per B-spec */
+    ss->ss0.vertical_alignment = 1;
+    ss->ss0.horizontal_alignment = 1;
+
     gen8_pp_set_surface_tiling(ss, tiling);
     gen8_render_set_surface_scs(ss);
     dri_bo_emit_reloc(ss_bo,
