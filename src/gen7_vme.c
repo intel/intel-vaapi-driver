@@ -1045,8 +1045,8 @@ gen7_vme_context_destroy(void *context)
 
 Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_vme_context *vme_context = calloc(1, sizeof(struct gen6_vme_context));
+    struct i965_kernel *vme_kernel_list = NULL;
 
     vme_context->gpe_context.surface_state_binding_table.length =
               (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
@@ -1066,39 +1066,29 @@ Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     if(encoder_context->profile == VAProfileH264Baseline ||
        encoder_context->profile == VAProfileH264Main     ||
        encoder_context->profile == VAProfileH264High ){
-       vme_context->video_coding_type = VIDEO_CODING_AVC;
-       vme_context->vme_kernel_sum = AVC_VME_KERNEL_SUM; 
- 
+        vme_kernel_list = gen7_vme_kernels;
+        vme_context->video_coding_type = VIDEO_CODING_AVC;
+        vme_context->vme_kernel_sum = AVC_VME_KERNEL_SUM; 
+        encoder_context->vme_pipeline = gen7_vme_pipeline; 
     } else if (encoder_context->profile == VAProfileMPEG2Simple ||
                encoder_context->profile == VAProfileMPEG2Main ){
-       vme_context->video_coding_type = VIDEO_CODING_MPEG2;
-       vme_context->vme_kernel_sum = MPEG2_VME_KERNEL_SUM; 
+        vme_kernel_list = gen7_vme_mpeg2_kernels;
+        vme_context->video_coding_type = VIDEO_CODING_MPEG2;
+        vme_context->vme_kernel_sum = MPEG2_VME_KERNEL_SUM;
+        encoder_context->vme_pipeline = gen7_vme_mpeg2_pipeline;
     } else {
         /* Unsupported encoding profile */
         assert(0);
     }
 
-    if (IS_GEN7(i965->intel.device_id)) {
-        if (vme_context->video_coding_type == VIDEO_CODING_AVC) {
-              i965_gpe_load_kernels(ctx,
-                                    &vme_context->gpe_context,
-                                    gen7_vme_kernels,
-                                    vme_context->vme_kernel_sum);
-              encoder_context->vme_pipeline = gen7_vme_pipeline;
- 
-        } else {
-              i965_gpe_load_kernels(ctx,
-                                    &vme_context->gpe_context,
-                                    gen7_vme_mpeg2_kernels,
-                                    vme_context->vme_kernel_sum);
-              encoder_context->vme_pipeline = gen7_vme_mpeg2_pipeline;
- 
-        }
+    i965_gpe_load_kernels(ctx,
+                          &vme_context->gpe_context,
+                          vme_kernel_list,
+                          vme_context->vme_kernel_sum);
 
-        vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
-        vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
-        vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;
-    }
+    vme_context->vme_surface2_setup = gen7_gpe_surface2_setup;
+    vme_context->vme_media_rw_surface_setup = gen7_gpe_media_rw_surface_setup;
+    vme_context->vme_buffer_suface_setup = gen7_gpe_buffer_suface_setup;
 
     encoder_context->vme_context = vme_context;
     encoder_context->vme_context_destroy = gen7_vme_context_destroy;
