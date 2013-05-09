@@ -264,6 +264,8 @@ extern int intel_avc_enc_slice_type_fixup(int type);
 
 
 extern void
-intel_mfc_avc_ref_idx_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
+				struct encode_state *encode_state,
+				struct intel_encoder_context *encoder_context);
 
 #endif	/* _GEN6_MFC_BCS_H_ */

@@ -998,17 +998,105 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     dri_bo_unmap(vme_context->vme_batchbuffer.bo);
 }
 
+static uint8_t
+intel_get_ref_idx_state_1(VAPictureH264 *va_pic, unsigned int frame_store_id)
+{
+	unsigned int is_long_term =
+		!!(va_pic->flags & VA_PICTURE_H264_LONG_TERM_REFERENCE);
+	unsigned int is_top_field =
+		!!(va_pic->flags & VA_PICTURE_H264_TOP_FIELD);
+	unsigned int is_bottom_field =
+		!!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD);
+
+	return ((is_long_term                         << 6) |
+		((is_top_field ^ is_bottom_field ^ 1) << 5) |
+		(frame_store_id                       << 1) |
+		((is_top_field ^ 1) & is_bottom_field));
+}
 
 void
-intel_mfc_avc_ref_idx_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
+				struct encode_state *encode_state,
+				struct intel_encoder_context *encoder_context)
 {
 	struct intel_batchbuffer *batch = encoder_context->base.batch;
-	int i;
+	struct i965_driver_data *i965 = i965_driver_data(ctx);
+	int slice_type;
+	struct object_surface *slice_obj_surface, *obj_surface;
+	int ref_surface_id;
+	unsigned int fref_entry, bref_entry;
+	int frame_index, i;
+	VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+	VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+
+	fref_entry = 0x80808080;
+	bref_entry = 0x80808080;
+	slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+	if (slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B) {
+		slice_obj_surface = NULL;
+		ref_surface_id = slice_param->RefPicList0[0].picture_id;
+		if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+			slice_obj_surface = SURFACE(ref_surface_id);
+		}
+		if (slice_obj_surface && slice_obj_surface->bo) {
+			obj_surface = slice_obj_surface;
+		} else {
+			obj_surface = encode_state->reference_objects[0];
+		}
+		frame_index = -1;
+		for (i = 0; i < 16; i++) {
+			if (obj_surface == encode_state->reference_objects[i]) {
+				frame_index = i;
+				break;
+			}
+		}
+		if (frame_index == -1) {
+			WARN_ONCE("RefPicList0 is not found in DPB!\n");
+		} else if (slice_obj_surface && slice_obj_surface->bo) {
+			/* This is passed by Slice_param->RefPicList0 */
+			fref_entry &= ~(0xFF);
+			fref_entry += intel_get_ref_idx_state_1(&slice_param->RefPicList0[0], frame_index);
+		} else {
+			/* This is passed by the hacked mode */
+			fref_entry &= ~(0xFF);
+			fref_entry += intel_get_ref_idx_state_1(&pic_param->ReferenceFrames[frame_index], frame_index);
+		}
+	}
+
+	if (slice_type == SLICE_TYPE_B) {
+		slice_obj_surface = NULL;
+		ref_surface_id = slice_param->RefPicList1[0].picture_id;
+		if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+			slice_obj_surface = SURFACE(ref_surface_id);
+		}
+		if (slice_obj_surface && slice_obj_surface->bo) {
+			obj_surface = slice_obj_surface;
+		} else {
+			obj_surface = encode_state->reference_objects[1];
+		}
+		frame_index = -1;
+		for (i = 0; i < 16; i++) {
+			if (obj_surface == encode_state->reference_objects[i]) {
+				frame_index = i;
+				break;
+			}
+		}
+		if (frame_index == -1) {
+			WARN_ONCE("RefPicList1 is not found in DPB!\n");
+		} else if (slice_obj_surface && slice_obj_surface->bo) {
+			bref_entry &= ~(0xFF);
+			bref_entry += intel_get_ref_idx_state_1(&slice_param->RefPicList1[0], frame_index);
+		} else {
+			bref_entry &= ~(0xFF);
+			bref_entry += intel_get_ref_idx_state_1(&pic_param->ReferenceFrames[frame_index], frame_index);
+		}
+        }
 
 	BEGIN_BCS_BATCH(batch, 10);
 	OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
 	OUT_BCS_BATCH(batch, 0);                  //Select L0
-	OUT_BCS_BATCH(batch, 0x80808020);         //Only 1 reference
+	OUT_BCS_BATCH(batch, fref_entry);         //Only 1 reference
 	for(i = 0; i < 7; i++) {
 		OUT_BCS_BATCH(batch, 0x80808080);
 	}
@@ -1017,7 +1105,7 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx, struct intel_encoder_context *
 	BEGIN_BCS_BATCH(batch, 10);
 	OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
 	OUT_BCS_BATCH(batch, 1);                  //Select L1
-	OUT_BCS_BATCH(batch, 0x80808022);         //Only 1 reference
+	OUT_BCS_BATCH(batch, bref_entry);         //Only 1 reference
 	for(i = 0; i < 7; i++) {
 		OUT_BCS_BATCH(batch, 0x80808080);
 	}

@@ -816,7 +816,7 @@ static void gen75_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
     mfc_context->avc_qm_state(ctx, encoder_context);
     mfc_context->avc_fqm_state(ctx, encoder_context);
     gen75_mfc_avc_directmode_state(ctx, encoder_context); 
-    intel_mfc_avc_ref_idx_state(ctx, encoder_context);
+    intel_mfc_avc_ref_idx_state(ctx, encode_state, encoder_context);
 }
 
 
