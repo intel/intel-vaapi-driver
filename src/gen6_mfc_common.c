@@ -998,3 +998,28 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     dri_bo_unmap(vme_context->vme_batchbuffer.bo);
 }
 
+
+void
+intel_mfc_avc_ref_idx_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+	struct intel_batchbuffer *batch = encoder_context->base.batch;
+	int i;
+
+	BEGIN_BCS_BATCH(batch, 10);
+	OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
+	OUT_BCS_BATCH(batch, 0);                  //Select L0
+	OUT_BCS_BATCH(batch, 0x80808020);         //Only 1 reference
+	for(i = 0; i < 7; i++) {
+		OUT_BCS_BATCH(batch, 0x80808080);
+	}
+	ADVANCE_BCS_BATCH(batch);
+
+	BEGIN_BCS_BATCH(batch, 10);
+	OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
+	OUT_BCS_BATCH(batch, 1);                  //Select L1
+	OUT_BCS_BATCH(batch, 0x80808022);         //Only 1 reference
+	for(i = 0; i < 7; i++) {
+		OUT_BCS_BATCH(batch, 0x80808080);
+	}
+	ADVANCE_BCS_BATCH(batch);
+}
