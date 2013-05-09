@@ -438,6 +438,12 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 break;
             }
 
+	case VAConfigAttribEncMaxRefFrames:
+	    if (entrypoint == VAEntrypointEncSlice) {
+		attrib_list[i].value = (1 << 16) | (1 << 0);
+		break;
+	    }
+
         default:
             /* Do nothing */
             attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
