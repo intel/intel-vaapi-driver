@@ -718,7 +718,9 @@ i965_CreateSurfaces2(
 
             if (expected_fourcc != VA_FOURCC('N', 'V', '1', '2') &&
                 expected_fourcc != VA_FOURCC('R', 'G', 'B', 'X') &&
-                expected_fourcc != VA_FOURCC('R', 'G', 'B', 'A') )
+                expected_fourcc != VA_FOURCC('R', 'G', 'B', 'A') &&
+                expected_fourcc != VA_FOURCC('I', 'M', 'C', '1') &&
+                expected_fourcc != VA_FOURCC('I', 'M', 'C', '3'))
                 tiling = 0;
             // todo, should we disable tiling for 422 format?
 			
