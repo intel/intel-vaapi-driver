@@ -2213,7 +2213,7 @@ gen75_mfd_jpeg_decode_init(VADriverContextP ctx,
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('I','M','C','1'), subsampling);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('I','M','C','3'), subsampling);
 
     dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
