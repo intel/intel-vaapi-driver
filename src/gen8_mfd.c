@@ -2971,6 +2971,7 @@ gen8_mfd_vp8_decode_picture(VADriverContextP ctx,
     gen8_mfd_pipe_mode_select(ctx, decode_state, MFX_FORMAT_VP8, gen7_mfd_context);
     gen8_mfd_surface_state(ctx, decode_state, MFX_FORMAT_VP8, gen7_mfd_context);
     gen8_mfd_pipe_buf_addr_state(ctx, decode_state, MFX_FORMAT_VP8, gen7_mfd_context);
+    gen8_mfd_bsp_buf_base_addr_state(ctx, decode_state, MFX_FORMAT_VP8, gen7_mfd_context);
     gen8_mfd_ind_obj_base_addr_state(ctx, slice_data_bo, MFX_FORMAT_VP8, gen7_mfd_context);
     gen8_mfd_vp8_pic_state(ctx, decode_state, gen7_mfd_context);
     gen8_mfd_vp8_bsd_object(ctx, pic_param, slice_param, slice_data_bo, gen7_mfd_context);
