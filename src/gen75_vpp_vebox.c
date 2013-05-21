@@ -1084,11 +1084,13 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
              proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
              proc_ctx->filter_iecp_amp = filter;
              proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
-         } else if (filter->type == VAProcFilterColorStandard){
-             proc_ctx->filters_mask |= VPP_IECP_CSC;
-             proc_ctx->filter_iecp_csc = filter;
-         } 
+         }
     }
+
+    if (pipe->surface_color_standard != VAProcColorStandardNone &&
+        pipe->output_color_standard != VAProcColorStandardNone &&
+        pipe->surface_color_standard != pipe->output_color_standard)
+        proc_ctx->filters_mask |= VPP_IECP_CSC;
 
     hsw_veb_pre_format_convert(ctx, proc_ctx);
     hsw_veb_surface_reference(ctx, proc_ctx);

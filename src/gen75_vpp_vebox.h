@@ -135,7 +135,6 @@ struct intel_vebox_context
     void * filter_iecp_ace;
     void * filter_iecp_tcc;
     void * filter_iecp_amp;
-    void * filter_iecp_csc;
 
     unsigned int  filter_iecp_amp_num_elements;
     unsigned char format_convert_flags;
