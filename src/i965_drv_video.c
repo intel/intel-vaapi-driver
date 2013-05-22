@@ -3989,7 +3989,6 @@ VAStatus i965_QueryVideoProcFilters(
         filters[i++] = VAProcFilterNone;
         filters[i++] = VAProcFilterSharpening;
         filters[i++] = VAProcFilterColorBalance;
-        filters[i++] = VAProcFilterColorStandard;
     }
 
     *num_filters = i;
