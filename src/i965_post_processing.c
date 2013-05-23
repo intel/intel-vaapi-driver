@@ -2393,6 +2393,7 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         } else if (rgbx_format) {
 	    if (is_target)
                 width[0] = obj_surface->orig_width * 4; /* surface format is R8, so quad the width */
+            pitch[0] = obj_surface->width * 4;
 	}
 
         width[1] = obj_surface->cb_cr_width;
