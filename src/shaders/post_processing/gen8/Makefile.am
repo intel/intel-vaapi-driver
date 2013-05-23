@@ -2,6 +2,7 @@ INTEL_PP_G8B = \
 	pl2_to_pl2.g8b		\
 	pl2_to_pl3.g8b		\
 	pl3_to_pl2.g8b		\
+	pl3_to_pl3.g8b		\
 	$(NULL)
 
 INTEL_PP_G8A = \
