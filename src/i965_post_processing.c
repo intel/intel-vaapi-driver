@@ -1214,7 +1214,7 @@ static const uint32_t pp_rgbx_load_save_nv12_gen8[][4] = {
 #include "shaders/post_processing/gen7/rgbx_to_nv12.g75b"
 };
 static const uint32_t pp_nv12_load_save_rgbx_gen8[][4] = {
-#include "shaders/post_processing/gen7/pl2_to_rgbx.g75b"
+#include "shaders/post_processing/gen8/pl2_to_rgbx.g8b"
 };
 
 
