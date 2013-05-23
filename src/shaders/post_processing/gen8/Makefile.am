@@ -1,6 +1,7 @@
 INTEL_PP_G8B = \
 	pl2_to_pl2.g8b		\
 	pl2_to_pl3.g8b		\
+	pl3_to_pl2.g8b		\
 	$(NULL)
 
 INTEL_PP_G8A = \
@@ -9,9 +10,14 @@ INTEL_PP_G8A = \
 	PL2_AVS_Buf_1.g8a		\
 	PL2_AVS_Buf_2.g8a		\
 	PL2_AVS_Buf_3.g8a		\
+	PL3_AVS_Buf_0.g8a		\
+	PL3_AVS_Buf_1.g8a		\
+	PL3_AVS_Buf_2.g8a		\
+	PL3_AVS_Buf_3.g8a		\
 	Save_AVS_NV12.g8a		\
 	Save_AVS_PL3.g8a		\
 	Set_AVS_Buf_0123_PL2.g8a	\
+	Set_AVS_Buf_0123_PL3.g8a	\
 	Set_Layer_0.g8a			\
 	VP_Setup.g8a			\
 	$(NULL)

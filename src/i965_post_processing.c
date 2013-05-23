@@ -1176,7 +1176,7 @@ static const uint32_t pp_nv12_load_save_pl3_gen8[][4] = {
 };
 
 static const uint32_t pp_pl3_load_save_nv12_gen8[][4] = {
-#include "shaders/post_processing/gen7/pl3_to_pl2.g75b"
+#include "shaders/post_processing/gen8/pl3_to_pl2.g8b"
 };
 
 static const uint32_t pp_pl3_load_save_pl3_gen8[][4] = {
