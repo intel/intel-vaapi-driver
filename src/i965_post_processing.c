@@ -1211,7 +1211,7 @@ static const uint32_t pp_pa_load_save_pl3_gen8[][4] = {
 #include "shaders/post_processing/gen7/pa_to_pl3.g75b"
 };
 static const uint32_t pp_rgbx_load_save_nv12_gen8[][4] = {
-#include "shaders/post_processing/gen7/rgbx_to_nv12.g75b"
+#include "shaders/post_processing/gen8/rgbx_to_nv12.g8b"
 };
 static const uint32_t pp_nv12_load_save_rgbx_gen8[][4] = {
 #include "shaders/post_processing/gen8/pl2_to_rgbx.g8b"
@@ -1383,7 +1383,7 @@ static struct pp_module pp_modules_gen8[] = {
             NULL,
         },
     
-        gen7_pp_rgbx_avs_initialize,
+        gen8_pp_plx_avs_initialize,
     },
 
     {
