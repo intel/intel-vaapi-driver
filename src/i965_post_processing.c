@@ -4551,6 +4551,7 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     unsigned int tiling = 0, swizzle = 0;
     int pitch;
     unsigned char y, u, v, a = 0;
+    int region_width, region_height;
 
     /* Currently only support NV12 surface */
     if (!obj_surface || obj_surface->fourcc != VA_FOURCC('N', 'V', '1', '2'))
@@ -4566,8 +4567,9 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     pitch = obj_surface->width;
 
     if (tiling != I915_TILING_NONE) {
-        blt_cmd |= XY_COLOR_BLT_DST_TILED;
-        pitch >>= 2;
+        assert(tiling == I915_TILING_Y);
+        // blt_cmd |= XY_COLOR_BLT_DST_TILED;
+        // pitch >>= 2;
     }
 
     br13 = 0xf0 << 16;
@@ -4583,14 +4585,17 @@ i965_vpp_clear_surface(VADriverContextP ctx,
         BEGIN_BATCH(batch, 12);
     }
 
+    region_width = obj_surface->width;
+    region_height = obj_surface->height;
+
     OUT_BATCH(batch, blt_cmd);
     OUT_BATCH(batch, br13);
     OUT_BATCH(batch,
               0 << 16 |
               0);
     OUT_BATCH(batch,
-              obj_surface->height << 16 |
-              obj_surface->width);
+              region_height << 16 |
+              region_width);
     OUT_RELOC(batch, obj_surface->bo, 
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
               0);
@@ -4600,14 +4605,21 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     br13 |= BR13_565;
     br13 |= pitch;
 
+    region_width = obj_surface->width / 2;
+    region_height = obj_surface->height / 2;
+
+    if (tiling == I915_TILING_Y) {
+        region_height = ALIGN(obj_surface->height / 2, 32);
+    }
+
     OUT_BATCH(batch, blt_cmd);
     OUT_BATCH(batch, br13);
     OUT_BATCH(batch,
               0 << 16 |
               0);
     OUT_BATCH(batch,
-              obj_surface->height / 2 << 16 |
-              obj_surface->width / 2);
+              region_height << 16 |
+              region_width);
     OUT_RELOC(batch, obj_surface->bo, 
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
               obj_surface->width * obj_surface->y_cb_offset);
