@@ -191,6 +191,8 @@ static struct hw_codec_info g4x_hw_codec_info = {
     .max_height = 2048,
 
     .has_mpeg2_decoding = 1,
+
+    .num_filters = 0,
 };
 
 extern struct hw_context *ironlake_dec_hw_context_init(VADriverContextP, struct object_config *);
@@ -205,6 +207,8 @@ static struct hw_codec_info ironlake_hw_codec_info = {
     .has_h264_decoding = 1,
     .has_vpp = 1,
     .has_accelerated_putimage = 1,
+
+    .num_filters = 0,
 };
 
 extern struct hw_context *gen6_dec_hw_context_init(VADriverContextP, struct object_config *);
@@ -225,6 +229,12 @@ static struct hw_codec_info gen6_hw_codec_info = {
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,
     .has_tiled_surface = 1,
+
+    .num_filters = 2,
+    .filters = {
+        VAProcFilterNoiseReduction,
+        VAProcFilterDeinterlacing,
+    },
 };
 
 extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, struct object_config *);
@@ -246,6 +256,12 @@ static struct hw_codec_info gen7_hw_codec_info = {
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,
     .has_tiled_surface = 1,
+
+    .num_filters = 2,
+    .filters = {
+        VAProcFilterNoiseReduction,
+        VAProcFilterDeinterlacing,
+    },
 };
 
 extern struct hw_context *gen75_proc_context_init(VADriverContextP, struct object_config *);
@@ -266,6 +282,14 @@ static struct hw_codec_info gen75_hw_codec_info = {
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,
     .has_tiled_surface = 1,
+
+    .num_filters = 4,
+    .filters = {
+        VAProcFilterNoiseReduction,
+        VAProcFilterDeinterlacing,
+        VAProcFilterSharpening,
+        VAProcFilterColorBalance,
+    },
 };
 
 #define I965_PACKED_HEADER_BASE         0
@@ -4479,18 +4503,17 @@ VAStatus i965_QueryVideoProcFilters(
 {
     struct i965_driver_data *const i965 = i965_driver_data(ctx);
     unsigned int i = 0;
-    
-    if (HAS_VPP(i965)) {
-        filters[i++] = VAProcFilterNoiseReduction;
-        filters[i++] = VAProcFilterDeinterlacing;
-    }
 
-    if(IS_HASWELL(i965->intel.device_id)){
-        filters[i++] = VAProcFilterSharpening;
-        filters[i++] = VAProcFilterColorBalance;
-    }
+    if (!num_filters  || !filters)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    for (i = 0; i < *num_filters && i < i965->codec_info->num_filters; i++)
+        filters[i] = i965->codec_info->filters[i];
 
     *num_filters = i;
+
+    if (i < i965->codec_info->num_filters)
+        return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
 
     return VA_STATUS_SUCCESS;
 }

@@ -278,6 +278,9 @@ struct hw_codec_info
     unsigned int has_accelerated_getimage:1;
     unsigned int has_accelerated_putimage:1;
     unsigned int has_tiled_surface:1;
+    
+    unsigned int num_filters;
+    VAProcFilterType filters[VAProcFilterCount];
 };
 
 
