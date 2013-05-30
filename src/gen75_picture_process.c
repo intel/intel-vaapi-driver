@@ -172,11 +172,9 @@ gen75_proc_picture(VADriverContextP ctx,
        VAProcFilterParameterBuffer* filter =
            (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
 
-       if(filter->type == VAProcFilterNone){ 
-           gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
-       } else if(filter->type == VAProcFilterNoiseReduction   ||
-                 filter->type == VAProcFilterDeinterlacing    ||
-                 filter->type == VAProcFilterColorBalance){
+       if (filter->type == VAProcFilterNoiseReduction   ||
+           filter->type == VAProcFilterDeinterlacing    ||
+           filter->type == VAProcFilterColorBalance){
            gen75_vpp_vebox(ctx, proc_ctx);
        }else if(filter->type == VAProcFilterSharpening){
            assert(obj_src_surf->fourcc == VA_FOURCC('N','V','1','2') && 
@@ -205,8 +203,7 @@ gen75_proc_picture(VADriverContextP ctx,
 
              if (filter->type != VAProcFilterNoiseReduction &&
                  filter->type != VAProcFilterDeinterlacing  &&
-                 filter->type != VAProcFilterColorBalance   && 
-                 filter->type != VAProcFilterNone ){ 
+                 filter->type != VAProcFilterColorBalance) {
                  printf("Do not support multiply filters outside vebox pipeline \n");
                  assert(0);
              }

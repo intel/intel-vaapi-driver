@@ -4486,7 +4486,6 @@ VAStatus i965_QueryVideoProcFilters(
     }
 
     if(IS_HASWELL(i965->intel.device_id)){
-        filters[i++] = VAProcFilterNone;
         filters[i++] = VAProcFilterSharpening;
         filters[i++] = VAProcFilterColorBalance;
     }
