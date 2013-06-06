@@ -47,6 +47,7 @@
 #define I965_MAX_IMAGE_FORMATS                  10
 #define I965_MAX_SUBPIC_FORMATS                 6
 #define I965_MAX_SUBPIC_SUM                     4
+#define I965_MAX_SURFACE_ATTRIBUTES             16
 
 #define INTEL_STR_DRIVER_VENDOR                 "Intel"
 #define INTEL_STR_DRIVER_NAME                   "i965"
