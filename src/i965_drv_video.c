@@ -650,6 +650,244 @@ i965_destroy_surface(struct object_heap *heap, struct object_base *obj)
 }
 
 static VAStatus
+i965_surface_native_memory(VADriverContextP ctx,
+                           struct object_surface *obj_surface,
+                           int format,
+                           int expected_fourcc)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int tiling = HAS_TILED_SURFACE(i965);
+
+    if (!expected_fourcc)
+        return VA_STATUS_SUCCESS;
+
+    // todo, should we disable tiling for 422 format?
+    if (expected_fourcc != VA_FOURCC('N', 'V', '1', '2') &&
+        expected_fourcc != VA_FOURCC('R', 'G', 'B', 'X') &&
+        expected_fourcc != VA_FOURCC('R', 'G', 'B', 'A') &&
+        expected_fourcc != VA_FOURCC('I', 'M', 'C', '1') &&
+        expected_fourcc != VA_FOURCC('I', 'M', 'C', '3'))
+        tiling = 0;
+		
+    switch (format) {
+    case VA_RT_FORMAT_YUV420:
+        obj_surface->subsampling = SUBSAMPLE_YUV420;
+        break;
+
+    case VA_RT_FORMAT_YUV422:
+        obj_surface->subsampling = SUBSAMPLE_YUV422H;
+        break;
+
+    case VA_RT_FORMAT_YUV444:
+        obj_surface->subsampling = SUBSAMPLE_YUV444;
+        break;
+
+    case VA_RT_FORMAT_YUV411:
+        obj_surface->subsampling = SUBSAMPLE_YUV411;
+        break;
+
+    case VA_RT_FORMAT_YUV400:
+        obj_surface->subsampling = SUBSAMPLE_YUV400;
+        break;
+
+    case VA_RT_FORMAT_RGB32:
+        obj_surface->subsampling = SUBSAMPLE_RGBX;
+        break;
+
+    default:
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    }
+
+    i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, obj_surface->subsampling);
+
+    return VA_STATUS_SUCCESS;
+}
+    
+static VAStatus
+i965_suface_external_memory(VADriverContextP ctx,
+                            struct object_surface *obj_surface,
+                            int external_memory_type,
+                            VASurfaceAttribExternalBuffers *memory_attibute,
+                            int index)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    if (!memory_attibute ||
+        !memory_attibute->buffers ||
+        index > memory_attibute->num_buffers)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    assert(obj_surface->orig_width == memory_attibute->width);
+    assert(obj_surface->orig_height == memory_attibute->height);
+    assert(memory_attibute->num_planes >= 1);
+
+    obj_surface->fourcc = memory_attibute->pixel_format;
+    obj_surface->width = memory_attibute->pitches[0];
+    obj_surface->size = memory_attibute->data_size;
+
+    if (memory_attibute->num_planes == 1)
+        obj_surface->height = memory_attibute->data_size / obj_surface->width;
+    else 
+        obj_surface->height = memory_attibute->offsets[1] / obj_surface->width;
+
+    obj_surface->x_cb_offset = 0; /* X offset is always 0 */
+    obj_surface->x_cr_offset = 0;
+
+    switch (obj_surface->fourcc) {
+    case VA_FOURCC('N', 'V', '1', '2'):
+        assert(memory_attibute->num_planes == 2);
+        assert(memory_attibute->pitches[0] == memory_attibute->pitches[1]);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV420;
+        obj_surface->y_cb_offset = obj_surface->height;
+        obj_surface->y_cr_offset = obj_surface->height;
+        obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+        obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
+
+        break;
+
+    case VA_FOURCC('Y', 'V', '1', '2'):
+    case VA_FOURCC('I', 'M', 'C', '1'):
+        assert(memory_attibute->num_planes == 3);
+        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV420;
+        obj_surface->y_cr_offset = obj_surface->height;
+        obj_surface->y_cb_offset = memory_attibute->offsets[2] / obj_surface->width;
+        obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+        obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
+        
+        break;
+
+    case VA_FOURCC('I', '4', '2', '0'):
+    case VA_FOURCC('I', 'Y', 'U', 'V'):
+    case VA_FOURCC('I', 'M', 'C', '3'):
+        assert(memory_attibute->num_planes == 3);
+        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV420;
+        obj_surface->y_cb_offset = obj_surface->height;
+        obj_surface->y_cr_offset = memory_attibute->offsets[2] / obj_surface->width;
+        obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+        obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
+
+        break;
+
+    case VA_FOURCC('Y', 'U', 'Y', '2'):
+        assert(memory_attibute->num_planes == 1);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV420;
+        obj_surface->y_cb_offset = 0;
+        obj_surface->y_cr_offset = 0;
+        obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+        obj_surface->cb_cr_height = obj_surface->orig_height;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[0];
+
+        break;
+
+    case VA_FOURCC('R', 'G', 'B', 'A'):
+    case VA_FOURCC('R', 'G', 'B', 'X'):
+    case VA_FOURCC('B', 'G', 'R', 'A'):
+    case VA_FOURCC('B', 'G', 'R', 'X'):
+        assert(memory_attibute->num_planes == 1);
+
+        obj_surface->subsampling = SUBSAMPLE_RGBX;
+        obj_surface->y_cb_offset = 0;
+        obj_surface->y_cr_offset = 0;
+        obj_surface->cb_cr_width = 0;
+        obj_surface->cb_cr_height = 0;
+        obj_surface->cb_cr_pitch = 0;
+
+        break;
+
+    case VA_FOURCC('Y', '8', '0', '0'): /* monochrome surface */
+        assert(memory_attibute->num_planes == 1);
+        
+        obj_surface->subsampling = SUBSAMPLE_YUV400;
+        obj_surface->y_cb_offset = 0;
+        obj_surface->y_cr_offset = 0;
+        obj_surface->cb_cr_width = 0;
+        obj_surface->cb_cr_height = 0;
+        obj_surface->cb_cr_pitch = 0;
+
+        break;
+
+    case VA_FOURCC('4', '1', '1', 'P'):
+        assert(memory_attibute->num_planes == 3);
+        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV411;
+        obj_surface->y_cb_offset = 0;
+        obj_surface->y_cr_offset = 0;
+        obj_surface->cb_cr_width = obj_surface->orig_width / 4;
+        obj_surface->cb_cr_height = obj_surface->orig_height;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
+
+        break;
+
+    case VA_FOURCC('4', '2', '2', 'H'):
+        assert(memory_attibute->num_planes == 3);
+        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV422H;
+        obj_surface->y_cb_offset = obj_surface->height;
+        obj_surface->y_cr_offset = memory_attibute->offsets[2] / obj_surface->width;
+        obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+        obj_surface->cb_cr_height = obj_surface->orig_height;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
+
+        break;
+
+    case VA_FOURCC('4', '2', '2', 'V'):
+        assert(memory_attibute->num_planes == 3);
+        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV422H;
+        obj_surface->y_cb_offset = obj_surface->height;
+        obj_surface->y_cr_offset = memory_attibute->offsets[2] / obj_surface->width;
+        obj_surface->cb_cr_width = obj_surface->orig_width;
+        obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
+
+        break;
+
+    case VA_FOURCC('4', '4', '4', 'P'):
+        assert(memory_attibute->num_planes == 3);
+        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV444;
+        obj_surface->y_cb_offset = obj_surface->height;
+        obj_surface->y_cr_offset = memory_attibute->offsets[2] / obj_surface->width;
+        obj_surface->cb_cr_width = obj_surface->orig_width;
+        obj_surface->cb_cr_height = obj_surface->orig_height;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
+
+        break;
+
+    default:
+
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    }
+
+    if (external_memory_type == I965_SURFACE_MEM_GEM_FLINK)
+        obj_surface->bo = drm_intel_bo_gem_create_from_name(i965->intel.bufmgr,
+                                                            "gem flinked vaapi surface",
+                                                            memory_attibute->buffers[index]);
+    else if (external_memory_type == I965_SURFACE_MEM_DRM_PRIME)
+        obj_surface->bo = drm_intel_bo_gem_create_from_prime(i965->intel.bufmgr,
+                                                             memory_attibute->buffers[index],
+                                                             obj_surface->size);
+
+    if (!obj_surface->bo)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
 i965_CreateSurfaces2(
     VADriverContextP    ctx,
     unsigned int        format,
@@ -665,13 +903,31 @@ i965_CreateSurfaces2(
     int i,j;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int expected_fourcc = 0;
+    int memory_type = I965_SURFACE_MEM_NATIVE; /* native */
+    VASurfaceAttribExternalBuffers *memory_attibute = NULL;
 
     for (i = 0; i < num_attribs && attrib_list; i++) {
         if ((attrib_list[i].type == VASurfaceAttribPixelFormat) &&
             (attrib_list[i].flags & VA_SURFACE_ATTRIB_SETTABLE)) {
             assert(attrib_list[i].value.type == VAGenericValueTypeInteger);
             expected_fourcc = attrib_list[i].value.value.i;
-            break;
+        }
+
+        if ((attrib_list[i].type == VASurfaceAttribMemoryType) &&
+            (attrib_list[i].flags & VA_SURFACE_ATTRIB_SETTABLE)) {
+            
+            assert(attrib_list[i].value.type == VAGenericValueTypeInteger);
+
+            if (attrib_list[i].value.value.i == VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM)
+                memory_type = I965_SURFACE_MEM_GEM_FLINK; /* flinked GEM handle */
+            else if (attrib_list[i].value.value.i == VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME)
+                memory_type = I965_SURFACE_MEM_DRM_PRIME; /* drm prime fd */
+        }
+
+        if ((attrib_list[i].type == VASurfaceAttribExternalBufferDescriptor) &&
+            (attrib_list[i].flags == VA_SURFACE_ATTRIB_SETTABLE)) {
+            assert(attrib_list[i].value.type == VAGenericValueTypePointer);
+            memory_attibute = (VASurfaceAttribExternalBuffers *)attrib_list[i].value.value.p;
         }
     }
 
@@ -679,6 +935,9 @@ i965_CreateSurfaces2(
      * for post-processing (including color conversion) */
     if (VA_RT_FORMAT_YUV420 != format &&
         VA_RT_FORMAT_YUV422 != format &&
+        VA_RT_FORMAT_YUV444 != format &&
+        VA_RT_FORMAT_YUV411 != format &&
+        VA_RT_FORMAT_YUV400 != format &&
         VA_RT_FORMAT_RGB32  != format) {
         return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
     }
@@ -713,31 +972,22 @@ i965_CreateSurfaces2(
         obj_surface->free_private_data = NULL;
         obj_surface->subsampling = SUBSAMPLE_YUV420;
 
-        if (expected_fourcc) {
-            int tiling = HAS_TILED_SURFACE(i965);
+        switch (memory_type) {
+        case I965_SURFACE_MEM_NATIVE:
+            i965_surface_native_memory(ctx,
+                                       obj_surface,
+                                       format,
+                                       expected_fourcc);
+            break;
 
-            if (expected_fourcc != VA_FOURCC('N', 'V', '1', '2') &&
-                expected_fourcc != VA_FOURCC('R', 'G', 'B', 'X') &&
-                expected_fourcc != VA_FOURCC('R', 'G', 'B', 'A') &&
-                expected_fourcc != VA_FOURCC('I', 'M', 'C', '1') &&
-                expected_fourcc != VA_FOURCC('I', 'M', 'C', '3'))
-                tiling = 0;
-            // todo, should we disable tiling for 422 format?
-			
-            if (VA_RT_FORMAT_YUV420 == format) {
-                obj_surface->subsampling = SUBSAMPLE_YUV420;
-            }
-            else if (VA_RT_FORMAT_YUV422 == format) {
-                obj_surface->subsampling = SUBSAMPLE_YUV422H;
-            }
-            else if (VA_RT_FORMAT_RGB32 == format) {
-                obj_surface->subsampling = SUBSAMPLE_RGBX;
-            }
-             else {
-                assert(0);
-            }
-
-            i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, obj_surface->subsampling);
+        case I965_SURFACE_MEM_GEM_FLINK:
+        case I965_SURFACE_MEM_DRM_PRIME:
+            i965_suface_external_memory(ctx,
+                                        obj_surface,
+                                        memory_type,
+                                        memory_attibute,
+                                        i);
+            break;
         }
     }
 
