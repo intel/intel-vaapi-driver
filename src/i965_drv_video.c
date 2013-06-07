@@ -4526,62 +4526,99 @@ VAStatus i965_QueryVideoProcFilterCaps(
     unsigned int       *num_filter_caps
     )
 {
-    struct i965_driver_data *const i965 = i965_driver_data(ctx);
     unsigned int i = 0;
 
-    if (type == VAProcFilterNoiseReduction) {
-        VAProcFilterCap *cap = filter_caps;
+    if (!filter_caps || !num_filter_caps)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-        cap->range.min_value = 0.0;
-        cap->range.max_value = 1.0;
-        cap->range.default_value = 0.5;
-        cap->range.step = 0.03125; /* 1.0 / 32 */
-        i++;
-    } else if (type == VAProcFilterDeinterlacing) {
-        VAProcFilterCapDeinterlacing *cap = filter_caps;
+    switch (type) {
+    case VAProcFilterNoiseReduction:
+    case VAProcFilterSharpening:
+        {
+            VAProcFilterCap *cap = filter_caps;
+
+            if (*num_filter_caps < 1) {
+                *num_filter_caps = 1;
+                return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+            }
+            
+            cap->range.min_value = 0.0;
+            cap->range.max_value = 1.0;
+            cap->range.default_value = 0.5;
+            cap->range.step = 0.03125; /* 1.0 / 32 */
+            i++;
+        }
+
+        break;
+
+    case VAProcFilterDeinterlacing:
+        {
+            VAProcFilterCapDeinterlacing *cap = filter_caps;
+
+            if (*num_filter_caps < VAProcDeinterlacingCount) {
+                *num_filter_caps = VAProcDeinterlacingCount;
+                return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+            }
         
-        cap->type = VAProcDeinterlacingBob;
-        i++;
-        cap++;
-    }
+            cap->type = VAProcDeinterlacingBob;
+            i++;
+            cap++;
 
-    if(IS_HASWELL(i965->intel.device_id)){
-       if(type == VAProcFilterColorBalance){
-         VAProcFilterCapColorBalance *cap = filter_caps;
-         cap->type = VAProcColorBalanceHue;
-         cap->range.min_value = -180.0;
-         cap->range.max_value = 180.0;
-         cap->range.default_value = 0.0;
-         cap->range.step = 1.0; 
-         i++;
-         cap ++; 
- 
-         cap->type = VAProcColorBalanceSaturation;
-         cap->range.min_value = 0.0;
-         cap->range.max_value = 10.0;
-         cap->range.default_value = 0.0;
-         cap->range.step = 0.1; 
-         i++;
-         cap ++; 
- 
-         cap->type = VAProcColorBalanceBrightness;
-         cap->range.min_value = -100.0;
-         cap->range.max_value = 100.0;
-         cap->range.default_value = 0.0;
-         cap->range.step = 1.0; 
-         i++;
-         cap ++; 
- 
-         cap->type = VAProcColorBalanceContrast;
-         cap->range.min_value = 0.0;
-         cap->range.max_value = 10.0;
-         cap->range.default_value = 0.0;
-         cap->range.step = 0.1; 
-         i++;
-         cap ++; 
-      }
-    }
+            cap->type = VAProcDeinterlacingMotionAdaptive;
+            i++;
+            cap++;
+        }
 
+        break;
+
+    case VAProcFilterColorBalance:
+        {
+            VAProcFilterCapColorBalance *cap = filter_caps;
+
+            if (*num_filter_caps < VAProcColorBalanceCount) {
+                *num_filter_caps = VAProcColorBalanceCount;
+                return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+            }
+
+            cap->type = VAProcColorBalanceHue;
+            cap->range.min_value = -180.0;
+            cap->range.max_value = 180.0;
+            cap->range.default_value = 0.0;
+            cap->range.step = 1.0; 
+            i++;
+            cap++; 
+ 
+            cap->type = VAProcColorBalanceSaturation;
+            cap->range.min_value = 0.0;
+            cap->range.max_value = 10.0;
+            cap->range.default_value = 0.0;
+            cap->range.step = 0.1; 
+            i++;
+            cap++; 
+ 
+            cap->type = VAProcColorBalanceBrightness;
+            cap->range.min_value = -100.0;
+            cap->range.max_value = 100.0;
+            cap->range.default_value = 0.0;
+            cap->range.step = 1.0; 
+            i++;
+            cap++; 
+ 
+            cap->type = VAProcColorBalanceContrast;
+            cap->range.min_value = 0.0;
+            cap->range.max_value = 10.0;
+            cap->range.default_value = 0.0;
+            cap->range.step = 0.1; 
+            i++;
+            cap++; 
+        }
+
+        break;
+
+    default:
+        
+        break;
+    }
 
     *num_filter_caps = i;
 
