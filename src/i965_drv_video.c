@@ -4441,6 +4441,14 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
         }
     }
 
+    attribs[i].type = VASurfaceAttribMemoryType;
+    attribs[i].value.type = VAGenericValueTypeInteger;
+    attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+    attribs[i].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_VA |
+        VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM |
+        VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME;
+    i++;
+
     attribs[i].type = VASurfaceAttribExternalBufferDescriptor;
     attribs[i].value.type = VAGenericValueTypePointer;
     attribs[i].flags = VA_SURFACE_ATTRIB_SETTABLE;
@@ -4453,6 +4461,7 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
         return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
     }
 
+    *num_attribs = i;
     memcpy(attrib_list, attribs, i * sizeof(*attribs));
     free(attribs);
 
