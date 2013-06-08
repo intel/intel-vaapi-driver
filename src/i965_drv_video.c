@@ -2051,8 +2051,6 @@ i965_BeginPicture(VADriverContextP ctx,
                                              struct object_buffer *obj_buffer) \
     {                                                                   \
         struct category##_state *category = &obj_context->codec_state.category; \
-        assert(obj_buffer->buffer_store->bo == NULL);                   \
-        assert(obj_buffer->buffer_store->buffer);                       \
         i965_release_buffer_store(&category->member);                   \
         i965_reference_buffer_store(&category->member, obj_buffer->buffer_store); \
         return VA_STATUS_SUCCESS;                                       \
