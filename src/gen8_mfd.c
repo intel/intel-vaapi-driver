@@ -2732,13 +2732,14 @@ gen8_mfd_vp8_decode_init(VADriverContextP ctx,
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
-    gen7_mfd_context->post_deblocking_output.bo = NULL;
-    gen7_mfd_context->post_deblocking_output.valid = 0;
+    gen7_mfd_context->post_deblocking_output.bo = obj_surface->bo;
+    dri_bo_reference(gen7_mfd_context->post_deblocking_output.bo);
+    gen7_mfd_context->post_deblocking_output.valid = !pic_param->pic_fields.bits.loop_filter_disable;
 
     dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
     dri_bo_reference(gen7_mfd_context->pre_deblocking_output.bo);
-    gen7_mfd_context->pre_deblocking_output.valid = 1;
+    gen7_mfd_context->pre_deblocking_output.valid = pic_param->pic_fields.bits.loop_filter_disable;
 
     /* The same as AVC */
     dri_bo_unreference(gen7_mfd_context->intra_row_store_scratch_buffer.bo);
