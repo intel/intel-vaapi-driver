@@ -2790,7 +2790,9 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
     VAIQMatrixBufferVP8 *iq_matrix = (VAIQMatrixBufferVP8 *)decode_state->iq_matrix->buffer;
     VASliceParameterBufferVP8 *slice_param = (VASliceParameterBufferVP8 *)decode_state->slice_params[0]->buffer; /* one slice per frame */
     dri_bo *probs_bo = decode_state->probability_data->bo;
-    int i, j;
+    int i, j,log2num;
+
+    log2num = (int)log2(slice_param->num_of_partitions - 1);
 
     BEGIN_BCS_BATCH(batch, 38);
     OUT_BCS_BATCH(batch, MFX_VP8_PIC_STATE | (38 - 2));
@@ -2798,7 +2800,7 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
                   (ALIGN(pic_param->frame_height, 16) / 16 - 1) << 16 |
                   (ALIGN(pic_param->frame_width, 16) / 16 - 1) << 0);
     OUT_BCS_BATCH(batch,
-                  slice_param->num_of_partitions << 24 |
+                  log2num << 24 |
                   pic_param->pic_fields.bits.sharpness_level << 16 |
                   pic_param->pic_fields.bits.sign_bias_alternate << 13 |
                   pic_param->pic_fields.bits.sign_bias_golden << 12 |
@@ -2961,6 +2963,8 @@ gen8_mfd_vp8_decode_picture(VADriverContextP ctx,
     assert(decode_state->slice_params[0]->num_elements == 1);
     assert(decode_state->slice_params && decode_state->slice_params[0]->buffer);
     assert(decode_state->slice_datas[0]->bo);
+
+    assert(decode_state->probability_data);
 
     slice_param = (VASliceParameterBufferVP8 *)decode_state->slice_params[0]->buffer;
     slice_data_bo = decode_state->slice_datas[0]->bo;
