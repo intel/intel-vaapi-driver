@@ -3121,13 +3121,15 @@ i965_render_init(VADriverContextP ctx)
                       4096, 64);
     assert(render_state->curbe.bo);
 
-    if (IS_IVB_GT1(i965->intel.device_id) ||
-        IS_HSW_GT1(i965->intel.device_id)) {
-        render_state->max_wm_threads = 48;
-    } else if (IS_IVB_GT2(i965->intel.device_id) ||
-               IS_HSW_GT2(i965->intel.device_id)) {
-        render_state->max_wm_threads = 172;
+    if (IS_HSW_GT1(i965->intel.device_id)) {
+        render_state->max_wm_threads = 102;
+    } else if (IS_HSW_GT2(i965->intel.device_id)) {
+        render_state->max_wm_threads = 204;
     } else if (IS_HSW_GT3(i965->intel.device_id)) {
+        render_state->max_wm_threads = 408;
+    } else if (IS_IVB_GT1(i965->intel.device_id)) {
+        render_state->max_wm_threads = 48;
+    } else if (IS_IVB_GT2(i965->intel.device_id)) {
         render_state->max_wm_threads = 172;
     } else if (IS_SNB_GT1(i965->intel.device_id)) {
         render_state->max_wm_threads = 40;
