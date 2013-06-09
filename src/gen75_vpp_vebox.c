@@ -377,10 +377,6 @@ void hsw_veb_iecp_csc_table(VADriverContextP ctx, struct intel_vebox_context *pr
         return;
     }
 
-    VAProcColorStandardType   in_color_std  = proc_ctx->pipeline_param->surface_color_standard;
-    VAProcColorStandardType   out_color_std = proc_ctx->pipeline_param->output_color_standard;
-    assert(in_color_std == out_color_std);  
-    
     if(proc_ctx->fourcc_input == VA_FOURCC('R','G','B','A') &&
        (proc_ctx->fourcc_output == VA_FOURCC('N','V','1','2') ||
         proc_ctx->fourcc_output == VA_FOURCC('Y','V','1','2') ||
@@ -494,8 +490,7 @@ void hsw_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
         dri_bo_unmap(dndi_bo);
     }
 
-    if(proc_ctx->filters_mask & 0x0000ff00 ||
-       proc_ctx->fourcc_input != proc_ctx->fourcc_output) {
+    if(proc_ctx->filters_mask & 0x0000ff00) {
         dri_bo *iecp_bo = proc_ctx->iecp_state_table.bo;
         dri_bo_map(iecp_bo, 1);
         proc_ctx->iecp_state_table.ptr = iecp_bo->virtual;
@@ -914,12 +909,12 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
      if(obj_surf_input->fourcc ==  VA_FOURCC('Y','V','1','2') ||
         obj_surf_input->fourcc ==  VA_FOURCC('I','4','2','0') ||
         obj_surf_input->fourcc ==  VA_FOURCC('I','M','C','1') ||
-        obj_surf_input->fourcc ==  VA_FOURCC('I','M','C','3')){
+        obj_surf_input->fourcc ==  VA_FOURCC('I','M','C','3') ||
+        obj_surf_input->fourcc ==  VA_FOURCC('R','G','B','A')){
 
          proc_ctx->format_convert_flags |= PRE_FORMAT_CONVERT;
 
-      } else if(obj_surf_input->fourcc ==  VA_FOURCC('R','G','B','A') ||
-                obj_surf_input->fourcc ==  VA_FOURCC('A','Y','U','V') ||
+      } else if(obj_surf_input->fourcc ==  VA_FOURCC('A','Y','U','V') ||
                 obj_surf_input->fourcc ==  VA_FOURCC('Y','U','Y','2') ||
                 obj_surf_input->fourcc ==  VA_FOURCC('N','V','1','2')){
                 // nothing to do here
@@ -953,11 +948,11 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
      if(obj_surf_output->fourcc ==  VA_FOURCC('Y','V','1','2') ||
         obj_surf_output->fourcc ==  VA_FOURCC('I','4','2','0') ||
         obj_surf_output->fourcc ==  VA_FOURCC('I','M','C','1') ||
-        obj_surf_output->fourcc ==  VA_FOURCC('I','M','C','3')) {  
+        obj_surf_output->fourcc ==  VA_FOURCC('I','M','C','3') ||
+        obj_surf_output->fourcc ==  VA_FOURCC('R','G','B','A')) {
 
         proc_ctx->format_convert_flags |= POST_FORMAT_CONVERT;
-    } else if(obj_surf_output->fourcc ==  VA_FOURCC('R','G','B','A') ||
-              obj_surf_output->fourcc ==  VA_FOURCC('A','Y','U','V') ||
+    } else if(obj_surf_output->fourcc ==  VA_FOURCC('A','Y','U','V') ||
               obj_surf_output->fourcc ==  VA_FOURCC('Y','U','Y','2') ||
               obj_surf_output->fourcc ==  VA_FOURCC('N','V','1','2')){
               /* Nothing to do here */
@@ -1026,11 +1021,11 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
          * so nothing will be done here */
     } else if ((proc_ctx->format_convert_flags & POST_FORMAT_CONVERT) &&
                !(proc_ctx->format_convert_flags & POST_SCALING_CONVERT)){
-       /* convert and copy NV12 to YV12/IMC3/IMC2 output*/
+       /* convert and copy NV12 to YV12/IMC3/IMC2/RGBA output*/
         vpp_surface_convert(ctx,proc_ctx->surface_output_object, obj_surface);
 
     } else if(proc_ctx->format_convert_flags & POST_SCALING_CONVERT) {
-       /* scaling, convert and copy NV12 to YV12/IMC3/IMC2/ output*/
+       /* scaling, convert and copy NV12 to YV12/IMC3/IMC2/RGBA output*/
         assert(obj_surface->fourcc == VA_FOURCC('N','V','1','2'));
      
         /* first step :surface scaling */
@@ -1044,7 +1039,8 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
            obj_surface->fourcc ==  VA_FOURCC('I','4','2','0') ||
            obj_surface->fourcc ==  VA_FOURCC('Y','U','Y','2') ||
            obj_surface->fourcc ==  VA_FOURCC('I','M','C','1') ||
-           obj_surface->fourcc ==  VA_FOURCC('I','M','C','3')) {  
+           obj_surface->fourcc ==  VA_FOURCC('I','M','C','3') ||
+           obj_surface->fourcc ==  VA_FOURCC('R','G','B','A')) {
            vpp_surface_convert(ctx, proc_ctx->surface_output_object, proc_ctx->surface_output_scaled_object);
        }else {
            assert(0); 
@@ -1086,11 +1082,6 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
              proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
          }
     }
-
-    if (pipe->surface_color_standard != VAProcColorStandardNone &&
-        pipe->output_color_standard != VAProcColorStandardNone &&
-        pipe->surface_color_standard != pipe->output_color_standard)
-        proc_ctx->filters_mask |= VPP_IECP_CSC;
 
     hsw_veb_pre_format_convert(ctx, proc_ctx);
     hsw_veb_surface_reference(ctx, proc_ctx);
