@@ -2712,6 +2712,38 @@ gen8_mfd_jpeg_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_flush(batch);
 }
 
+static const int vp8_dc_qlookup[128] =
+{
+      4,   5,   6,   7,   8,   9,  10,  10,  11,  12,  13,  14,  15,  16,  17,  17,
+     18,  19,  20,  20,  21,  21,  22,  22,  23,  23,  24,  25,  25,  26,  27,  28,
+     29,  30,  31,  32,  33,  34,  35,  36,  37,  37,  38,  39,  40,  41,  42,  43,
+     44,  45,  46,  46,  47,  48,  49,  50,  51,  52,  53,  54,  55,  56,  57,  58,
+     59,  60,  61,  62,  63,  64,  65,  66,  67,  68,  69,  70,  71,  72,  73,  74,
+     75,  76,  76,  77,  78,  79,  80,  81,  82,  83,  84,  85,  86,  87,  88,  89,
+     91,  93,  95,  96,  98, 100, 101, 102, 104, 106, 108, 110, 112, 114, 116, 118,
+    122, 124, 126, 128, 130, 132, 134, 136, 138, 140, 143, 145, 148, 151, 154, 157,
+};
+
+static const int vp8_ac_qlookup[128] =
+{
+      4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,
+     20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,
+     36,  37,  38,  39,  40,  41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  51,
+     52,  53,  54,  55,  56,  57,  58,  60,  62,  64,  66,  68,  70,  72,  74,  76,
+     78,  80,  82,  84,  86,  88,  90,  92,  94,  96,  98, 100, 102, 104, 106, 108,
+    110, 112, 114, 116, 119, 122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152,
+    155, 158, 161, 164, 167, 170, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209,
+    213, 217, 221, 225, 229, 234, 239, 245, 249, 254, 259, 264, 269, 274, 279, 284,
+};
+
+static inline unsigned int vp8_clip_quantization_index(unsigned int index)
+{
+    if(index > 127)
+        return 127;
+    else if(index <0)
+        return 0;
+}
+
 static void
 gen8_mfd_vp8_decode_init(VADriverContextP ctx,
                           struct decode_state *decode_state,
@@ -2792,6 +2824,7 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
     VASliceParameterBufferVP8 *slice_param = (VASliceParameterBufferVP8 *)decode_state->slice_params[0]->buffer; /* one slice per frame */
     dri_bo *probs_bo = decode_state->probability_data->bo;
     int i, j,log2num;
+    unsigned int quantization_value[4][6];
 
     log2num = (int)log2(slice_param->num_of_partitions - 1);
 
@@ -2824,15 +2857,26 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
 
     /* Quantizer Value for 4 segmetns, DW4-DW15 */
     for (i = 0; i < 4; i++) {
+		quantization_value[i][0] = vp8_ac_qlookup[vp8_clip_quantization_index(iq_matrix->quantization_index[i][0])];/*yac*/
+		quantization_value[i][1] = vp8_dc_qlookup[vp8_clip_quantization_index(iq_matrix->quantization_index[i][1])];/*ydc*/
+		quantization_value[i][2] = 2*vp8_dc_qlookup[vp8_clip_quantization_index(iq_matrix->quantization_index[i][2])];/*y2dc*/
+		/* 101581>>16 is equivalent to 155/100 */
+		quantization_value[i][3] = (101581*vp8_ac_qlookup[vp8_clip_quantization_index(iq_matrix->quantization_index[i][3])]) >> 16;/*y2ac*/
+		quantization_value[i][4] = vp8_dc_qlookup[vp8_clip_quantization_index(iq_matrix->quantization_index[i][4])];/*uvdc*/
+		quantization_value[i][5] = vp8_ac_qlookup[vp8_clip_quantization_index(iq_matrix->quantization_index[i][5])];/*uvac*/
+
+		quantization_value[i][3] = (quantization_value[i][3] > 8 ? quantization_value[i][3] : 8);
+		quantization_value[i][4] = (quantization_value[i][4] < 132 ? quantization_value[i][4] : 132);
+
+		OUT_BCS_BATCH(batch,
+                      quantization_value[i][0] << 16 | /* Y1AC */
+                      quantization_value[i][1] <<  0); /* Y1DC */
         OUT_BCS_BATCH(batch,
-                      iq_matrix->quantization_index[i][0] << 16 | /* Y1AC */
-                      iq_matrix->quantization_index[i][1] <<  0); /* Y1DC */
+                      quantization_value[i][5] << 16 | /* UVAC */
+                      quantization_value[i][4] <<  0); /* UVDC */
         OUT_BCS_BATCH(batch,
-                      iq_matrix->quantization_index[i][5] << 16 | /* UVAC */
-                      iq_matrix->quantization_index[i][4] <<  0); /* UVDC */
-        OUT_BCS_BATCH(batch,
-                      iq_matrix->quantization_index[i][3] << 16 | /* Y2AC */
-                      iq_matrix->quantization_index[i][2] <<  0); /* Y2DC */
+                      quantization_value[i][3] << 16 | /* Y2AC */
+                      quantization_value[i][2] <<  0); /* Y2DC */
     }
 
     /* CoeffProbability table for non-key frame, DW16-DW18 */
