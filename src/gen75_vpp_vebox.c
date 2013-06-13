@@ -773,15 +773,6 @@ void hsw_veb_resource_prepare(VADriverContextP ctx,
     proc_ctx->fourcc_output = output_fourcc;
    
     /* create pipeline surfaces */
-    VASurfaceID surfaces[FRAME_STORE_SUM];
-    va_status =   i965_CreateSurfaces(ctx,
-                                   proc_ctx ->width_input,
-                                   proc_ctx ->height_input,
-                                   VA_RT_FORMAT_YUV420,
-                                   FRAME_STORE_SUM,
-                                   surfaces);
-    assert(va_status == VA_STATUS_SUCCESS);
-
     for(i = 0; i < FRAME_STORE_SUM; i ++) {
         if(proc_ctx->frame_store[i].obj_surface){
             continue; //refer external surface for vebox pipeline
