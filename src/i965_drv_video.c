@@ -686,43 +686,12 @@ i965_surface_native_memory(VADriverContextP ctx,
         return VA_STATUS_SUCCESS;
 
     // todo, should we disable tiling for 422 format?
-    if (expected_fourcc != VA_FOURCC('N', 'V', '1', '2') &&
-        expected_fourcc != VA_FOURCC('R', 'G', 'B', 'X') &&
-        expected_fourcc != VA_FOURCC('R', 'G', 'B', 'A') &&
-        expected_fourcc != VA_FOURCC('I', 'M', 'C', '1') &&
-        expected_fourcc != VA_FOURCC('I', 'M', 'C', '3'))
+    if (expected_fourcc == VA_FOURCC('I', '4', '2', '0') ||
+        expected_fourcc == VA_FOURCC('I', 'Y', 'U', 'V') ||
+        expected_fourcc == VA_FOURCC('Y', 'V', '1', '2'))
         tiling = 0;
 		
-    switch (format) {
-    case VA_RT_FORMAT_YUV420:
-        obj_surface->subsampling = SUBSAMPLE_YUV420;
-        break;
-
-    case VA_RT_FORMAT_YUV422:
-        obj_surface->subsampling = SUBSAMPLE_YUV422H;
-        break;
-
-    case VA_RT_FORMAT_YUV444:
-        obj_surface->subsampling = SUBSAMPLE_YUV444;
-        break;
-
-    case VA_RT_FORMAT_YUV411:
-        obj_surface->subsampling = SUBSAMPLE_YUV411;
-        break;
-
-    case VA_RT_FORMAT_YUV400:
-        obj_surface->subsampling = SUBSAMPLE_YUV400;
-        break;
-
-    case VA_RT_FORMAT_RGB32:
-        obj_surface->subsampling = SUBSAMPLE_RGBX;
-        break;
-
-    default:
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-    }
-
-    i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, obj_surface->subsampling);
+    i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, get_sampling_from_fourcc(expected_fourcc));
 
     return VA_STATUS_SUCCESS;
 }
@@ -801,9 +770,10 @@ i965_suface_external_memory(VADriverContextP ctx,
         break;
 
     case VA_FOURCC('Y', 'U', 'Y', '2'):
+    case VA_FOURCC('U', 'Y', 'V', 'Y'):
         assert(memory_attibute->num_planes == 1);
 
-        obj_surface->subsampling = SUBSAMPLE_YUV420;
+        obj_surface->subsampling = SUBSAMPLE_YUV422H;
         obj_surface->y_cb_offset = 0;
         obj_surface->y_cr_offset = 0;
         obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -2741,118 +2711,143 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
     obj_surface->x_cr_offset = 0;
 
     if (tiled) {
-        assert(fourcc == VA_FOURCC('N', 'V', '1', '2') ||
-               fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
-               fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
-               fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
-               fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
-               fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
-               fourcc == VA_FOURCC('B', 'G', 'R', 'X') || 
-               fourcc == VA_FOURCC('Y', 'U', 'Y', '2'));
+        assert(fourcc != VA_FOURCC('I', '4', '2', '0') &&
+               fourcc != VA_FOURCC('I', 'Y', 'U', 'V') &&
+               fourcc != VA_FOURCC('Y', 'V', '1', '2'));
 
         obj_surface->width = ALIGN(obj_surface->orig_width, 128);
         obj_surface->height = ALIGN(obj_surface->orig_height, 32);
         region_height = obj_surface->height;
 
-        if (fourcc == VA_FOURCC('N', 'V', '1', '2') ||
-            fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
-            fourcc == VA_FOURCC('I', 'M', 'C', '3')) {
-            obj_surface->cb_cr_pitch = obj_surface->width;
-            region_width = obj_surface->width;
-        }
-        else if (fourcc == VA_FOURCC('Y','U', 'Y', '2')) {
-            obj_surface->cb_cr_pitch = obj_surface->width * 2;
-            region_width = obj_surface->width * 2;
-        }
-        else if (fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
-                 fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
-                 fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
-                 fourcc == VA_FOURCC('B', 'G', 'R', 'X')) {
-            region_width = obj_surface->width * 4;
-        }
-        else {
-            assert(0);
-        }
-               
-
-        if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+        switch (fourcc) {
+        case VA_FOURCC('N', 'V', '1', '2'):
             assert(subsampling == SUBSAMPLE_YUV420);
-            obj_surface->y_cb_offset = obj_surface->height;
-            obj_surface->y_cr_offset = obj_surface->height;
+            obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
             obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->height;
+            region_width = obj_surface->width;
             region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32);
-        } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
-                   fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
-                   fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
-                   fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
-                   fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
-                   fourcc == VA_FOURCC('B', 'G', 'R', 'X') || 
-                   fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
-            switch (subsampling) {
-            case SUBSAMPLE_YUV400:
-                obj_surface->cb_cr_width = 0;
-                obj_surface->cb_cr_height = 0;
-                break;
+            
+            break;
 
-            case SUBSAMPLE_YUV420:
-                obj_surface->cb_cr_width = obj_surface->orig_width / 2;
-                obj_surface->cb_cr_height = obj_surface->orig_height / 2;
-                break;
-
-            case SUBSAMPLE_YUV422H:
-                obj_surface->cb_cr_width = obj_surface->orig_width / 2;
-                obj_surface->cb_cr_height = obj_surface->orig_height;
-                break;
-
-            case SUBSAMPLE_YUV422V:
-                obj_surface->cb_cr_width = obj_surface->orig_width;
-                obj_surface->cb_cr_height = obj_surface->orig_height / 2;
-                break;
-
-            case SUBSAMPLE_YUV444:
-                obj_surface->cb_cr_width = obj_surface->orig_width;
-                obj_surface->cb_cr_height = obj_surface->orig_height;
-                break;
-
-            case SUBSAMPLE_YUV411:
-                obj_surface->cb_cr_width = obj_surface->orig_width / 4;
-                obj_surface->cb_cr_height = obj_surface->orig_height;
-                break;
-            case SUBSAMPLE_RGBX:
-                break;
-            default:
-                assert(0);
-                break;
-            }
-
+        case VA_FOURCC('I', 'M', 'C', '1'):
+            assert(subsampling == SUBSAMPLE_YUV420);
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            obj_surface->y_cr_offset = obj_surface->height;
+            obj_surface->y_cb_offset = obj_surface->y_cr_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            region_width = obj_surface->width;
             region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
 
-            if (fourcc == VA_FOURCC('I', 'M', 'C', '1')) {
-                obj_surface->y_cr_offset = obj_surface->height;
-                obj_surface->y_cb_offset = obj_surface->y_cr_offset + ALIGN(obj_surface->cb_cr_height, 32);
-            } else if (fourcc == VA_FOURCC('I', 'M', 'C', '3')){
-                obj_surface->y_cb_offset = obj_surface->height;
-                obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
-            }
-            else if (fourcc == VA_FOURCC('Y','U', 'Y', '2')) {
-                obj_surface->y_cb_offset = 0; 
-                obj_surface->y_cr_offset = 0; 
-                region_height = obj_surface->height;
-            }
-            else if (fourcc == VA_FOURCC('R', 'G', 'B', 'A') || 
-                     fourcc == VA_FOURCC('R', 'G', 'B', 'X') || 
-                     fourcc == VA_FOURCC('B', 'G', 'R', 'A') || 
-                     fourcc == VA_FOURCC('B', 'G', 'R', 'X')) {
-                region_height = obj_surface->height;
-            }
+            break;
+
+        case VA_FOURCC('I', 'M', 'C', '3'):
+            assert(subsampling == SUBSAMPLE_YUV420);
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            region_width = obj_surface->width;
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
+            
+            break;
+
+        case VA_FOURCC('4', '2', '2', 'H'):
+            assert(subsampling == SUBSAMPLE_YUV422H);
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height;
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            region_width = obj_surface->width;
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
+
+            break;
+
+        case VA_FOURCC('4', '2', '2', 'V'):
+            assert(subsampling == SUBSAMPLE_YUV422V);
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            obj_surface->cb_cr_width = obj_surface->orig_width;
+            obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            region_width = obj_surface->width;
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
+
+            break;
+
+        case VA_FOURCC('4', '1', '1', 'P'):
+            assert(subsampling == SUBSAMPLE_YUV411);
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            obj_surface->cb_cr_width = obj_surface->orig_width / 4;
+            obj_surface->cb_cr_height = obj_surface->orig_height;
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            region_width = obj_surface->width;
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
+
+            break;
+
+        case VA_FOURCC('4', '4', '4', 'P'):
+            assert(subsampling == SUBSAMPLE_YUV444);
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            obj_surface->cb_cr_width = obj_surface->orig_width;
+            obj_surface->cb_cr_height = obj_surface->orig_height;
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            region_width = obj_surface->width;
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
+
+            break;
+
+        case VA_FOURCC('Y', '8', '0', '0'):
+            assert(subsampling == SUBSAMPLE_YUV400);
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            obj_surface->cb_cr_width = 0;
+            obj_surface->cb_cr_height = 0;
+            obj_surface->y_cb_offset = obj_surface->height;
+            obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            region_width = obj_surface->width;
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
+
+            break;
+
+        case VA_FOURCC('Y', 'U', 'Y', '2'):
+        case VA_FOURCC('U', 'Y', 'V', 'Y'):
+            assert(subsampling == SUBSAMPLE_YUV422H);
+            obj_surface->cb_cr_pitch = obj_surface->width * 2;
+            obj_surface->y_cb_offset = 0; 
+            obj_surface->y_cr_offset = 0; 
+            obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            region_width = obj_surface->width * 2;
+            region_height = obj_surface->height;
+            
+            break;
+
+        case VA_FOURCC('R', 'G', 'B', 'A'):
+        case VA_FOURCC('R', 'G', 'B', 'X'):
+        case VA_FOURCC('B', 'G', 'R', 'A'):
+        case VA_FOURCC('B', 'G', 'R', 'X'):
+            assert(subsampling == SUBSAMPLE_RGBX);
+
+            region_width = obj_surface->width * 4;
+            region_height = obj_surface->height;
+            break;
+
+        default:
+            /* Never get here */
+            assert(0);
+            break;
         }
     } else {
-        assert(fourcc != VA_FOURCC('I', 'M', 'C', '1') &&
-               fourcc != VA_FOURCC('I', 'M', 'C', '3'));
         assert(subsampling == SUBSAMPLE_YUV420 || 
                subsampling == SUBSAMPLE_YUV422H || 
-               subsampling == SUBSAMPLE_YUV422V || 
+               subsampling == SUBSAMPLE_YUV422V ||
                subsampling == SUBSAMPLE_RGBX);
 
         region_width = obj_surface->width;
@@ -2884,7 +2879,8 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             region_height = obj_surface->height + obj_surface->height / 2;
             break;
 
-        case VA_FOURCC('Y','U', 'Y', '2'):
+        case VA_FOURCC('Y', 'U', 'Y', '2'):
+        case VA_FOURCC('U', 'Y', 'V', 'Y'):
             obj_surface->y_cb_offset = 0;
             obj_surface->y_cr_offset = 0;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -2902,6 +2898,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             break;
 
         default:
+            /* Never get here */
             assert(0);
             break;
         }
@@ -3149,16 +3146,35 @@ static int
 get_sampling_from_fourcc(unsigned int fourcc)
 {
     int surface_sampling = -1;
+
     switch (fourcc) {
     case VA_FOURCC('N', 'V', '1', '2'):
     case VA_FOURCC('Y', 'V', '1', '2'):
     case VA_FOURCC('I', '4', '2', '0'):
+    case VA_FOURCC('I', 'Y', 'U', 'V'):
     case VA_FOURCC('I', 'M', 'C', '1'):
     case VA_FOURCC('I', 'M', 'C', '3'):
         surface_sampling = SUBSAMPLE_YUV420;
         break;
     case VA_FOURCC('Y', 'U', 'Y', '2'):
+    case VA_FOURCC('U', 'Y', 'V', 'Y'):
+    case VA_FOURCC('4', '2', '2', 'H'):
         surface_sampling = SUBSAMPLE_YUV422H;
+        break;
+    case VA_FOURCC('4', '2', '2', 'V'):
+        surface_sampling = SUBSAMPLE_YUV422V;
+        break;
+        
+    case VA_FOURCC('4', '4', '4', 'P'):
+        surface_sampling = SUBSAMPLE_YUV444;
+        break;
+
+    case VA_FOURCC('4', '1', '1', 'P'):
+        surface_sampling = SUBSAMPLE_YUV411;
+        break;
+
+    case VA_FOURCC('Y', '8', '0', '0'):
+        surface_sampling = SUBSAMPLE_YUV400;
         break;
     case VA_FOURCC('R','G','B','A'):
     case VA_FOURCC('R','G','B','X'):
@@ -3167,8 +3183,12 @@ get_sampling_from_fourcc(unsigned int fourcc)
     surface_sampling = SUBSAMPLE_RGBX; 
         break;
     default:
+        /* Never get here */
+        assert(0);
         break;
+
     }
+
     return surface_sampling;
 }
 

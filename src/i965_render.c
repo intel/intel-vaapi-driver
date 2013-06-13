@@ -1063,8 +1063,8 @@ i965_render_upload_constants(VADriverContextP ctx,
     constant_buffer = render_state->curbe.bo->virtual;
 
     if (obj_surface->subsampling == SUBSAMPLE_YUV400) {
-        assert(obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '1') ||
-               obj_surface->fourcc == VA_FOURCC('I', 'M', 'C', '3'));
+        assert(obj_surface->fourcc == VA_FOURCC('Y', '8', '0', '0'));
+
         *constant_buffer = 2;
     } else {
         if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'))
