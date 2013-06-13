@@ -524,10 +524,23 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
     unsigned int is_dn_enabled   = (proc_ctx->filters_mask & 0x01)? 1: 0;
     unsigned int is_di_enabled   = (proc_ctx->filters_mask & 0x02)? 1: 0;
     unsigned int is_iecp_enabled = (proc_ctx->filters_mask & 0xff00)?1:0;
-
+    unsigned int is_first_frame  = !!(proc_ctx->is_first_frame &&
+                                      (is_di_enabled ||
+                                       is_dn_enabled));
+    
     if(proc_ctx->fourcc_input != proc_ctx->fourcc_output ||
        (is_dn_enabled == 0 && is_di_enabled == 0)){
        is_iecp_enabled = 1;
+    }
+
+    if (is_di_enabled) {
+        VAProcFilterParameterBufferDeinterlacing *di_param =
+            (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
+
+        assert(di_param);
+        
+        if (di_param->algorithm == VAProcDeinterlacingBob)
+            is_first_frame = 1;
     }
 
     BEGIN_VEB_BATCH(batch, 6);
@@ -537,9 +550,9 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
                   0 << 11 |       // reserved.
                   0 << 10 |       // pipe sync disable
                   2 << 8  |       // DI output frame
-                  0 << 7  |       // 444->422 downsample method
-                  0 << 6  |       // 422->420 downsample method
-                  !!(proc_ctx->is_first_frame && (is_di_enabled || is_dn_enabled)) << 5  |   // DN/DI first frame
+                  1 << 7  |       // 444->422 downsample method
+                  1 << 6  |       // 422->420 downsample method
+                  is_first_frame  << 5  |   // DN/DI first frame
                   is_di_enabled   << 4  |             // DI enable
                   is_dn_enabled   << 3  |             // DN enable
                   is_iecp_enabled << 2  |             // global IECP enabled
