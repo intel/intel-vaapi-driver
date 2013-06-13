@@ -131,6 +131,18 @@ VAStatus vpp_surface_scaling(VADriverContextP ctx,
 void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     unsigned int* p_table ;
+    int progressive_dn = 1;
+    int dndi_top_first = 0;
+
+    if (proc_ctx->filters_mask & VPP_DNDI_DI) {
+        VAProcFilterParameterBufferDeinterlacing *di_param =
+            (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
+        assert(di_param);
+
+        progressive_dn = 0;
+        dndi_top_first = !(di_param->flags & VA_DEINTERLACING_BOTTOM_FIELD_FIRST);
+    }
+
     /*
     VAProcFilterParameterBufferDeinterlacing *di_param =
             (VAProcFilterParameterBufferDeinterlacing *) proc_ctx->filter_di;
@@ -141,60 +153,60 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
     p_table = (unsigned int *)proc_ctx->dndi_state_table.ptr;
 
     *p_table ++ = 0;               // reserved  . w0
-    *p_table ++ = ( 0   << 24 |    // denoise STAD threshold . w1
-                    128 << 16 |    // dnmh_history_max
+    *p_table ++ = ( 140 << 24 |    // denoise STAD threshold . w1
+                    192 << 16 |    // dnmh_history_max
                     0   << 12 |    // reserved
-                    8   << 8  |    // dnmh_delta[3:0]
-                    0 );           // denoise ASD threshold
+                    7   << 8  |    // dnmh_delta[3:0]
+                    38 );          // denoise ASD threshold
 
     *p_table ++ = ( 0  << 30 |    // reserved . w2
-                    16 << 24 |    // temporal diff th
+                    0  << 24 |    // temporal diff th
                     0  << 22 |    // reserved.
-                    8  << 16 |    // low temporal diff th
-                    0  << 13 |    // STMM C2
-                    0  << 8  |    // denoise moving pixel th
-                    64 );         // denoise th for sum of complexity measure
+                    0  << 16 |    // low temporal diff th
+                    2  << 13 |    // STMM C2
+                    1  << 8  |    // denoise moving pixel th
+                    38 );         // denoise th for sum of complexity measure
 
     *p_table ++ = ( 0 << 30  |   // reserved . w3
-                    4 << 24  |   // good neighbor th[5:0]
+                    12<< 24  |   // good neighbor th[5:0]
                     9 << 20  |   // CAT slope minus 1
                     5 << 16  |   // SAD Tight in
                     0 << 14  |   // smooth mv th
                     0 << 12  |   // reserved
                     1 << 8   |   // bne_edge_th[3:0]
-                    15 );        // block noise estimate noise th
+                    20 );        // block noise estimate noise th
 
     *p_table ++ = ( 0  << 31  |  // STMM blending constant select. w4
                     64 << 24  |  // STMM trc1
-                    0  << 16  |  // STMM trc2
+                    125<< 16  |  // STMM trc2
                     0  << 14  |  // reserved
-                    2  << 8   |  // VECM_mul
-                    128 );       // maximum STMM
+                    30 << 8   |  // VECM_mul
+                    150 );       // maximum STMM
 
-    *p_table ++ = ( 0  << 24  |  // minumum STMM  . W5
+    *p_table ++ = ( 118<< 24  |  // minumum STMM  . W5
                     0  << 22  |  // STMM shift down
-                    0  << 20  |  // STMM shift up
-                    7  << 16  |  // STMM output shift
-                    128 << 8  |  // SDI threshold
-                    8 );         // SDI delta
+                    1  << 20  |  // STMM shift up
+                    5  << 16  |  // STMM output shift
+                    100 << 8  |  // SDI threshold
+                    5 );         // SDI delta
 
-    *p_table ++ = ( 0 << 24  |   // SDI fallback mode 1 T1 constant . W6
-                    0 << 16  |   // SDI fallback mode 1 T2 constant
-                    0 << 8   |   // SDI fallback mode 2 constant(angle2x1)
-                    0 );         // FMD temporal difference threshold
+    *p_table ++ = ( 50  << 24 |  // SDI fallback mode 1 T1 constant . W6
+                    100 << 16 |  // SDI fallback mode 1 T2 constant
+                    37  << 8  |  // SDI fallback mode 2 constant(angle2x1)
+                    175 );       // FMD temporal difference threshold
 
-    *p_table ++ = ( 32 << 24  |  // FMD #1 vertical difference th . w7
-                    32 << 16  |  // FMD #2 vertical difference th
-                    1  << 14  |  // CAT th1
-                    32 << 8   |  // FMD tear threshold
+    *p_table ++ = ( 16 << 24  |  // FMD #1 vertical difference th . w7
+                    100<< 16  |  // FMD #2 vertical difference th
+                    0  << 14  |  // CAT th1
+                    2  << 8   |  // FMD tear threshold
                     0  << 7   |  // MCDI Enable, use motion compensated deinterlace algorithm
-                    0  << 6   |  // progressive DN
+                    progressive_dn  << 6   |  // progressive DN
                     0  << 4   |  // reserved
-                    0  << 3   |  // DN/DI Top First
+                    dndi_top_first  << 3   |  // DN/DI Top First
                     0 );         // reserved
 
     *p_table ++ = ( 0  << 29  |  // reserved . W8
-                    0  << 23  |  // dnmh_history_init[5:0]
+                    32 << 23  |  // dnmh_history_init[5:0]
                     10 << 19  |  // neighborPixel th
                     0  << 18  |  // reserved
                     0  << 16  |  // FMD for 2nd field of previous frame
@@ -203,12 +215,12 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
                     10 << 4   |  // SAD THB
                     5 );         // SAD THA
 
-    *p_table ++ = ( 0 << 24  |  // reserved
-                    0 << 16  |  // chr_dnmh_stad_th
-                    0 << 13  |  // reserved
-                    0 << 12  |  // chrome denoise enable
-                    0 << 6   |  // chr temp diff th
-                    0 );        // chr temp diff low
+    *p_table ++ = ( 0  << 24  |  // reserved
+                    140<< 16  |  // chr_dnmh_stad_th
+                    0  << 13  |  // reserved
+                    1  << 12  |  // chrome denoise enable
+                    13 << 6   |  // chr temp diff th
+                    7 );         // chr temp diff low
 
 }
 
