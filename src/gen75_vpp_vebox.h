@@ -126,7 +126,7 @@ struct intel_vebox_context
     VEBBuffer vertex_state_table;
 
     unsigned int  filters_mask;
-    unsigned char is_first_frame;
+    int frame_order;
 
     VAProcPipelineParameterBuffer * pipeline_param;
     void * filter_dn;

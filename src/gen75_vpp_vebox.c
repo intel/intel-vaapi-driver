@@ -524,7 +524,7 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
     unsigned int is_dn_enabled   = (proc_ctx->filters_mask & 0x01)? 1: 0;
     unsigned int is_di_enabled   = (proc_ctx->filters_mask & 0x02)? 1: 0;
     unsigned int is_iecp_enabled = (proc_ctx->filters_mask & 0xff00)?1:0;
-    unsigned int is_first_frame  = !!(proc_ctx->is_first_frame &&
+    unsigned int is_first_frame  = !!((proc_ctx->frame_order == -1) &&
                                       (is_di_enabled ||
                                        is_dn_enabled));
     
@@ -1102,7 +1102,7 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
     hsw_veb_pre_format_convert(ctx, proc_ctx);
     hsw_veb_surface_reference(ctx, proc_ctx);
 
-    if(proc_ctx->is_first_frame){
+    if (proc_ctx->frame_order == -1) {
         hsw_veb_resource_prepare(ctx, proc_ctx);
     }
 
@@ -1121,8 +1121,7 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
     hsw_veb_surface_unreference(ctx, proc_ctx);
 
  
-    if(proc_ctx->is_first_frame)
-       proc_ctx->is_first_frame = 0; 
+    proc_ctx->frame_order = (proc_ctx->frame_order + 1) % 2;
      
     return VA_STATUS_SUCCESS;
 
@@ -1203,7 +1202,7 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
     }
   
     proc_context->filters_mask          = 0;
-    proc_context->is_first_frame        = 1;
+    proc_context->frame_order           = -1; /* the first frame */
     proc_context->surface_output_object = NULL;
     proc_context->surface_input_object  = NULL;
     proc_context->surface_input_vebox   = VA_INVALID_ID;
