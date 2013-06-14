@@ -527,7 +527,8 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
     unsigned int is_first_frame  = !!((proc_ctx->frame_order == -1) &&
                                       (is_di_enabled ||
                                        is_dn_enabled));
-    
+    unsigned int di_output_frames_flag = 2; /* Output Current Frame Only */
+
     if(proc_ctx->fourcc_input != proc_ctx->fourcc_output ||
        (is_dn_enabled == 0 && is_di_enabled == 0)){
        is_iecp_enabled = 1;
@@ -541,6 +542,10 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
         
         if (di_param->algorithm == VAProcDeinterlacingBob)
             is_first_frame = 1;
+
+        if (di_param->algorithm == VAProcDeinterlacingMotionAdaptive &&
+            proc_ctx->frame_order != -1)
+            di_output_frames_flag = 0; /* Output both Current Frame and Previous Frame */
     }
 
     BEGIN_VEB_BATCH(batch, 6);
@@ -549,7 +554,7 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
                   0 << 26 |       // state surface control bits
                   0 << 11 |       // reserved.
                   0 << 10 |       // pipe sync disable
-                  2 << 8  |       // DI output frame
+                  di_output_frames_flag << 8  |       // DI output frame
                   1 << 7  |       // 444->422 downsample method
                   1 << 6  |       // 422->420 downsample method
                   is_first_frame  << 5  |   // DN/DI first frame
