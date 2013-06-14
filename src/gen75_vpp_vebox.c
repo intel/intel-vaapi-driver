@@ -843,6 +843,7 @@ void hsw_veb_surface_reference(VADriverContextP ctx,
                               struct intel_vebox_context *proc_ctx)
 {
     struct object_surface * obj_surf; 
+    VEBFrameStore tmp_store;
 
     if (proc_ctx->surface_input_vebox_object != NULL) {
         obj_surf = proc_ctx->surface_input_vebox_object;
@@ -859,6 +860,19 @@ void hsw_veb_surface_reference(VADriverContextP ctx,
         obj_surf = proc_ctx->surface_output_vebox_object;
     } else {
         obj_surf = proc_ctx->surface_output_object;
+    } 
+
+    /* update STMM surface */
+    if (proc_ctx->frame_order != -1) {
+        tmp_store = proc_ctx->frame_store[FRAME_IN_STMM];
+        proc_ctx->frame_store[FRAME_IN_STMM] = proc_ctx->frame_store[FRAME_OUT_STMM];
+        proc_ctx->frame_store[FRAME_OUT_STMM] = tmp_store;
+    }
+
+    /* udate the previous input surface */
+    if (proc_ctx->filters_mask == VPP_DNDI_DN) {
+        if (proc_ctx->frame_order != -1)
+            proc_ctx->frame_store[FRAME_IN_PREVIOUS] = proc_ctx->frame_store[FRAME_OUT_CURRENT_DN];
     } 
 
      /* update the output surface */ 
