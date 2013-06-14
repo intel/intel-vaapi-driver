@@ -54,6 +54,7 @@
 #define PRE_FORMAT_CONVERT      0x01
 #define POST_FORMAT_CONVERT     0x02
 #define POST_SCALING_CONVERT    0x04
+#define POST_COPY_CONVERT       0x08
 
 enum {
     FRAME_IN_CURRENT = 0,
@@ -127,6 +128,7 @@ struct intel_vebox_context
 
     unsigned int  filters_mask;
     int frame_order;
+    int current_output;
 
     VAProcPipelineParameterBuffer * pipeline_param;
     void * filter_dn;

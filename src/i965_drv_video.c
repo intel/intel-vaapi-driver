@@ -282,7 +282,7 @@ static struct hw_codec_info gen75_hw_codec_info = {
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,
     .has_tiled_surface = 1,
-
+    .has_di_motion_adptive = 1,
     .num_filters = 4,
     .filters = {
         VAProcFilterNoiseReduction,
@@ -4547,6 +4547,7 @@ VAStatus i965_QueryVideoProcFilterCaps(
     )
 {
     unsigned int i = 0;
+    struct i965_driver_data *const i965 = i965_driver_data(ctx);
 
     if (!filter_caps || !num_filter_caps)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
@@ -4584,9 +4585,12 @@ VAStatus i965_QueryVideoProcFilterCaps(
             i++;
             cap++;
 
-            cap->type = VAProcDeinterlacingMotionAdaptive;
-            i++;
-            cap++;
+
+            if (i965->codec_info->has_di_motion_adptive) {
+                cap->type = VAProcDeinterlacingMotionAdaptive;
+                i++;
+                cap++;
+            }
         }
 
         break;
@@ -4689,8 +4693,11 @@ VAStatus i965_QueryVideoProcPipelineCaps(
         } else if (base->type == VAProcFilterDeinterlacing) {
             VAProcFilterParameterBufferDeinterlacing *deint = (VAProcFilterParameterBufferDeinterlacing *)base;
 
-            assert(deint->algorithm == VAProcDeinterlacingWeave ||
-                   deint->algorithm == VAProcDeinterlacingBob);
+            assert(deint->algorithm == VAProcDeinterlacingBob ||
+                   deint->algorithm == VAProcDeinterlacingMotionAdaptive);
+            
+            if (deint->algorithm == VAProcDeinterlacingMotionAdaptive)
+                pipeline_cap->num_forward_references++;
         }
     }
 
