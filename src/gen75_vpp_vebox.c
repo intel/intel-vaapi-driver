@@ -978,7 +978,7 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
     struct object_surface* obj_surf_input_vebox;
     struct object_surface* obj_surf_output_vebox;
 
-    proc_context->format_convert_flags = 0;
+    proc_ctx->format_convert_flags = 0;
 
     proc_ctx->width_input   = obj_surf_input->orig_width;
     proc_ctx->height_input  = obj_surf_input->orig_height;
@@ -1101,7 +1101,7 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
 {
     struct object_surface *obj_surface = NULL;
     
-    obj_surface = proc_ctx->frame_store[proc_context->current_output].obj_surface;
+    obj_surface = proc_ctx->frame_store[proc_ctx->current_output].obj_surface;
 
     if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
         /* copy the saved frame in the second call */
