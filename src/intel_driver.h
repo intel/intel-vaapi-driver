@@ -248,6 +248,10 @@ struct intel_region
 #define PCI_CHIP_BAYTRAIL_M_4           0x0157
 #define PCI_CHIP_BAYTRAIL_D             0x0155
 
+#define PCI_CHIP_BROADWELL_MS_GT1       0x1602
+#define PCI_CHIP_BROADWELL_MS_GT2       0x1612
+#define PCI_CHIP_BROADWELL_MS_GT2PLUS   0x1622
+
 #define PCI_CHIP_BROADWELL_M_GT1_1      0x1606
 #define PCI_CHIP_BROADWELL_M_GT2_1      0x1616
 #define PCI_CHIP_BROADWELL_M_GT2PLUS_1  0x1626
@@ -392,19 +396,22 @@ struct intel_region
                                  devid == PCI_CHIP_BROADWELL_M_GT1_2 || \
                                  devid == PCI_CHIP_BROADWELL_M_GT1_3 || \
                                  devid == PCI_CHIP_BROADWELL_D_GT1_1 || \
-                                 devid == PCI_CHIP_BROADWELL_D_GT1_2)
+                                 devid == PCI_CHIP_BROADWELL_D_GT1_2 || \
+                                 devid == PCI_CHIP_BROADWELL_MS_GT1)
 
 #define IS_BDW_GT2(devid)       (devid == PCI_CHIP_BROADWELL_M_GT2_1 || \
                                  devid == PCI_CHIP_BROADWELL_M_GT2_2 || \
                                  devid == PCI_CHIP_BROADWELL_M_GT2_3 || \
                                  devid == PCI_CHIP_BROADWELL_D_GT2_1 || \
-                                 devid == PCI_CHIP_BROADWELL_D_GT2_2)
+                                 devid == PCI_CHIP_BROADWELL_D_GT2_2 || \
+                                 devid == PCI_CHIP_BROADWELL_MS_GT2)
 
 #define IS_BDW_GT2PLUS(devid)   (devid == PCI_CHIP_BROADWELL_M_GT2PLUS_1 || \
                                  devid == PCI_CHIP_BROADWELL_M_GT2PLUS_2 || \
                                  devid == PCI_CHIP_BROADWELL_M_GT2PLUS_3 || \
                                  devid == PCI_CHIP_BROADWELL_D_GT2PLUS_1 || \
-                                 devid == PCI_CHIP_BROADWELL_D_GT2PLUS_2)
+                                 devid == PCI_CHIP_BROADWELL_D_GT2PLUS_2 || \
+                                 devid == PCI_CHIP_BROADWELL_MS_GT2PLUS)
 
 #define IS_GEN8(devid)          (IS_BDW_GT1(devid) ||   \
                                  IS_BDW_GT2(devid) ||   \
