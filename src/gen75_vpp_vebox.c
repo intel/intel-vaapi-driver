@@ -608,9 +608,9 @@ void hsw_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *pro
                   is_output);      // surface indentification.
 
     OUT_VEB_BATCH(batch,
-                  (proc_ctx->height_input - 1) << 18 |  // height . w3
-                  (proc_ctx->width_input) << 4  |       // width
-                  0);                                   // reserve
+                  (obj_surf->height - 1) << 18 |  // height . w3
+                  (obj_surf->width -1 )  << 4  |  // width
+                  0);                             // reserve
 
     OUT_VEB_BATCH(batch,
                   surface_format      << 28  |  // surface format, YCbCr420. w4
