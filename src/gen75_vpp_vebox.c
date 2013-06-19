@@ -641,7 +641,7 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     struct intel_batchbuffer *batch = proc_ctx->batch;
     unsigned char frame_ctrl_bits = 0;
     unsigned int startingX = 0;
-    unsigned int endingX = proc_ctx->width_input;
+    unsigned int endingX = (proc_ctx->width_input + 63 ) / 64 * 64;
 
     /* s1:update the previous and current input */
 /*    tempFrame = proc_ctx->frame_store[FRAME_IN_PREVIOUS];
@@ -666,7 +666,7 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     OUT_VEB_BATCH(batch, VEB_DNDI_IECP_STATE | (10 - 2));
     OUT_VEB_BATCH(batch,
                   startingX << 16 |
-                  endingX);
+                  endingX-1);
     OUT_RELOC(batch,
               proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);
