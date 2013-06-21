@@ -4,7 +4,9 @@ INTEL_PP_G8B = \
 	pl3_to_pl2.g8b		\
 	pl3_to_pl3.g8b		\
 	pl2_to_rgbx.g8b		\
-	rgbx_to_nv12.g8b		\
+	rgbx_to_nv12.g8b	\
+	pl2_to_pa.g8b		\
+	pl3_to_pa.g8b		\
 	$(NULL)
 
 INTEL_PP_G8A = \
@@ -24,6 +26,7 @@ INTEL_PP_G8A = \
 	Save_AVS_NV12.g8a		\
 	Save_AVS_PL3.g8a		\
 	Save_AVS_RGBX.g8a		\        
+	Save_AVS_PA.g8a			\        
 	Set_AVS_Buf_0123_PL2.g8a	\
 	Set_AVS_Buf_0123_PL3.g8a	\
 	Set_AVS_Buf_0123_BGRA.g8a	\
