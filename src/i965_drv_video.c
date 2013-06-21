@@ -4682,7 +4682,7 @@ VAStatus i965_QueryVideoProcPipelineCaps(
 
         if (!obj_buffer ||
             !obj_buffer->buffer_store ||
-            !obj_buffer->buffer_store->bo)
+            !obj_buffer->buffer_store->buffer)
             return VA_STATUS_ERROR_INVALID_BUFFER;
 
         VAProcFilterParameterBufferBase *base = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
