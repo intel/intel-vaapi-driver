@@ -636,31 +636,6 @@ gen8_mfc_avc_directmode_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-static void
-gen8_mfc_avc_ref_idx_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
-{
-    struct intel_batchbuffer *batch = encoder_context->base.batch;
-    int i;
-
-    BEGIN_BCS_BATCH(batch, 10);
-    OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8); 
-    OUT_BCS_BATCH(batch, 0);                  //Select L0
-    OUT_BCS_BATCH(batch, 0x80808020);         //Only 1 reference
-    for(i = 0; i < 7; i++) {
-        OUT_BCS_BATCH(batch, 0x80808080);
-    }   
-    ADVANCE_BCS_BATCH(batch);
-
-    BEGIN_BCS_BATCH(batch, 10);
-    OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8); 
-    OUT_BCS_BATCH(batch, 1);                  //Select L1
-    OUT_BCS_BATCH(batch, 0x80808022);         //Only 1 reference
-    for(i = 0; i < 7; i++) {
-        OUT_BCS_BATCH(batch, 0x80808080);
-    }   
-    ADVANCE_BCS_BATCH(batch);
-}
-
 
 static void
 gen8_mfc_bsp_buf_base_addr_state(VADriverContextP ctx,
@@ -707,7 +682,7 @@ static void gen8_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
     mfc_context->avc_qm_state(ctx, encoder_context);
     mfc_context->avc_fqm_state(ctx, encoder_context);
     gen8_mfc_avc_directmode_state(ctx, encoder_context); 
-    gen8_mfc_avc_ref_idx_state(ctx, encoder_context);
+    intel_mfc_avc_ref_idx_state(ctx, encode_state, encoder_context);
 }
 
 
