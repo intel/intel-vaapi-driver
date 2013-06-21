@@ -343,7 +343,16 @@ static struct hw_codec_info gen8_hw_codec_info = {
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,
     .has_tiled_surface = 1,
+    .has_di_motion_adptive = 1,
     .has_vp8_decoding = 1,
+
+    .num_filters = 4,
+    .filters = {
+        VAProcFilterNoiseReduction,
+        VAProcFilterDeinterlacing,
+        VAProcFilterSharpening, /* need to rebuild the shader for BDW */
+        VAProcFilterColorBalance,
+    },
 };
 
 #define I965_PACKED_HEADER_BASE         0
