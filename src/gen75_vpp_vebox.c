@@ -696,7 +696,7 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     OUT_VEB_BATCH(batch, VEB_DNDI_IECP_STATE | (10 - 2));
     OUT_VEB_BATCH(batch,
                   startingX << 16 |
-                  endingX-1);
+                  (endingX-1));
     OUT_RELOC(batch,
               proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);
