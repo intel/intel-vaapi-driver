@@ -240,6 +240,7 @@ gen8_vme_surface_setup(VADriverContextP ctx,
                         struct intel_encoder_context *encoder_context)
 {
     struct object_surface *obj_surface;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
 
     /*Setup surfaces state*/
     /* current picture for encoding */
@@ -249,17 +250,45 @@ gen8_vme_surface_setup(VADriverContextP ctx,
     gen8_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);
 
     if (!is_intra) {
-        /* reference 0 */
-        obj_surface = encode_state->reference_objects[0];
+	VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+	int slice_type;
+	struct object_surface *slice_obj_surface;
+	int ref_surface_id;
 
-        if (obj_surface && obj_surface->bo)
-            gen8_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
+	slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
-        /* reference 1 */
-        obj_surface = encode_state->reference_objects[1];
+	if (slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B) {
+		slice_obj_surface = NULL;
+		ref_surface_id = slice_param->RefPicList0[0].picture_id;
+		if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+			slice_obj_surface = SURFACE(ref_surface_id);
+		}
+		if (slice_obj_surface && slice_obj_surface->bo) {
+			obj_surface = slice_obj_surface;
+		} else {
+			obj_surface = encode_state->reference_objects[0];
+		}
+		/* reference 0 */
+        	if (obj_surface && obj_surface->bo)
+			gen8_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
+	}
+	if (slice_type == SLICE_TYPE_B) {
+		/* reference 1 */
+		slice_obj_surface = NULL;
+		ref_surface_id = slice_param->RefPicList1[0].picture_id;
+		if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+			slice_obj_surface = SURFACE(ref_surface_id);
+		}
+		if (slice_obj_surface && slice_obj_surface->bo) {
+			obj_surface = slice_obj_surface;
+		} else {
+			obj_surface = encode_state->reference_objects[0];
+		}
 
-        if (obj_surface && obj_surface->bo)
-            gen8_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
+		obj_surface = encode_state->reference_objects[1];
+		if (obj_surface && obj_surface->bo)
+			gen8_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
+	}
     }
 
     /* VME output */
