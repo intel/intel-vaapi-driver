@@ -346,8 +346,4 @@ struct intel_region
 #define IS_GEN7(devid)          (IS_IVYBRIDGE(devid) || \
                                  IS_HASWELL(devid))
 
-#ifndef I915_EXEC_VEBOX
-#define I915_EXEC_VEBOX         4
-#endif
-
 #endif /* _INTEL_DRIVER_H_ */
