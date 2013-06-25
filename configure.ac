@@ -14,7 +14,7 @@ m4_define([va_api_version], [0.34])
 m4_define([libva_package_version], [1.2.0])
 
 # libdrm minimum version requirement
-m4_define([libdrm_version], [2.4.23])
+m4_define([libdrm_version], [2.4.45])
 
 AC_PREREQ([2.57])
 AC_INIT([intel_driver], [intel_driver_version], [haihao.xiang@intel.com],
