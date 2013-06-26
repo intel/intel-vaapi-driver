@@ -1,5 +1,31 @@
-libva-intel-driver NEWS -- summary of changes.  2013-03-19
-Copyright (C) 2009-2011 Intel Corporation
+libva-intel-driver NEWS -- summary of changes.  2013-06-26
+Copyright (C) 2009-2013 Intel Corporation
+
+Version 1.2.0 - 26.Jun.2013
+* The new H.264 encoding API on SNB/IVB/HSW
+  - Profile: BP/MP/HP
+  - Entropy Coding: CAVLC/CABAC
+  - Rate Control: CQP, CBR
+  - Progressive frame
+  - Multi Slice encoding
+  - Configurable GOP Structure
+* MPEG-2 encoding on IVB/HSW
+  - Profile: SP/MP
+  - Progressive frame
+  - Configurable GOP Structure  
+* Video process on ILK/SNB/IVB/HSW
+  - CSC/scaling on ILK
+  - CSC/scaling/NoiseReduction/Deinterlacing{Bob} on SNB/IVB
+  - CSC/scaling/NoiseReduction/Deinterlacing{Bob,MotionAdaptive}/Sharpening/ColorBalance on HSW
+* Implement vaQuerySurfaceAttributes()
+* Implement the new version of vaCreateSurfaces()
+  - Create VA surface with specified fourcc
+  - Create VA surface from external buffer
+    . flinked GEM buffer
+    . prime/dma buffer
+* Optimize H.264 encoding on IVB/HSW
+* More reserved PCI IDs for HSW
+* A lot of bug fixes
 
 Version 1.0.20 - 19.Mar.2013
 * Add support for wayland 1.0 protocol (Rob Bradford)
