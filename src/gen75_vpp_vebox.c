@@ -23,6 +23,7 @@
  *
  * Authors:
  *   Li Xiaowei <xiaowei.a.li@intel.com>
+ *   Li Zhong <zhong.li@intel.com>
  */
 
 #include <stdio.h>
@@ -1308,5 +1309,213 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
     proc_context->format_convert_flags  = 0;
 
     return proc_context;
+}
+
+void bdw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    struct intel_batchbuffer *batch = proc_ctx->batch;
+    unsigned int is_dn_enabled   = (proc_ctx->filters_mask & 0x01)? 1: 0;
+    unsigned int is_di_enabled   = (proc_ctx->filters_mask & 0x02)? 1: 0;
+    unsigned int is_iecp_enabled = (proc_ctx->filters_mask & 0xff00)?1:0;
+    unsigned int is_first_frame  = !!((proc_ctx->frame_order == -1) &&
+                                      (is_di_enabled ||
+                                       is_dn_enabled));
+    unsigned int di_output_frames_flag = 2; /* Output Current Frame Only */
+
+    if(proc_ctx->fourcc_input != proc_ctx->fourcc_output ||
+       (is_dn_enabled == 0 && is_di_enabled == 0)){
+       is_iecp_enabled = 1;
+    }
+
+    if (is_di_enabled) {
+        VAProcFilterParameterBufferDeinterlacing *di_param =
+            (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
+
+        assert(di_param);
+        
+        if (di_param->algorithm == VAProcDeinterlacingBob)
+            is_first_frame = 1;
+
+        if (di_param->algorithm == VAProcDeinterlacingMotionAdaptive &&
+            proc_ctx->frame_order != -1)
+            di_output_frames_flag = 0; /* Output both Current Frame and Previous Frame */
+    }
+
+    BEGIN_VEB_BATCH(batch, 0xc);
+    OUT_VEB_BATCH(batch, VEB_STATE | (0xc - 2));
+    OUT_VEB_BATCH(batch,
+                  0 << 25 |       // state surface control bits
+                  0 << 23 |       // reserved.
+                  0 << 22 |       // gamut expansion position
+                  0 << 15 |       // reserved.
+                  0 << 14 |       // single slice vebox enable
+                  0 << 13 |       // hot pixel filter enable
+                  0 << 12 |       // alpha plane enable
+                  0 << 11 |       // vignette enable
+                  0 << 10 |       // demosaic enable
+                  di_output_frames_flag << 8  |       // DI output frame
+                  0 << 7  |       // 444->422 downsample method
+                  0 << 6  |       // 422->420 downsample method
+                  is_first_frame  << 5  |   // DN/DI first frame
+                  is_di_enabled   << 4  |             // DI enable
+                  is_dn_enabled   << 3  |             // DN enable
+                  is_iecp_enabled << 2  |             // global IECP enabled
+                  0 << 1  |       // ColorGamutCompressionEnable
+                  0 ) ;           // ColorGamutExpansionEnable.
+
+    OUT_RELOC(batch,
+              proc_ctx->dndi_state_table.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_RELOC(batch,
+              proc_ctx->iecp_state_table.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_RELOC(batch,
+              proc_ctx->gamut_state_table.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_RELOC(batch,
+              proc_ctx->vertex_state_table.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, 0);/*caputre pipe state pointer*/
+    OUT_VEB_BATCH(batch, 0);
+
+    ADVANCE_VEB_BATCH(batch);
+}
+
+void bdw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    struct intel_batchbuffer *batch = proc_ctx->batch;
+    unsigned char frame_ctrl_bits = 0;
+    unsigned int startingX = 0;
+    unsigned int endingX = (proc_ctx->width_input + 63 ) / 64 * 64;
+
+    BEGIN_VEB_BATCH(batch, 0x14);
+    OUT_VEB_BATCH(batch, VEB_DNDI_IECP_STATE | (0x14 - 2));//DWord 0
+    OUT_VEB_BATCH(batch,
+                  startingX << 16 |
+                  endingX -1);//DWord 1
+
+    OUT_RELOC(batch,
+              proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface->bo,
+              I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 2
+    OUT_VEB_BATCH(batch,0);//DWord 3
+
+    OUT_RELOC(batch,
+              proc_ctx->frame_store[FRAME_IN_PREVIOUS].obj_surface->bo,
+              I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 4
+    OUT_VEB_BATCH(batch,0);//DWord 5
+
+    OUT_RELOC(batch,
+              proc_ctx->frame_store[FRAME_IN_STMM].obj_surface->bo,
+              I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 6
+    OUT_VEB_BATCH(batch,0);//DWord 7
+
+    OUT_RELOC(batch,
+              proc_ctx->frame_store[FRAME_OUT_STMM].obj_surface->bo,
+              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 8
+    OUT_VEB_BATCH(batch,0);//DWord 9
+
+    OUT_RELOC(batch,
+              proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface->bo,
+              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 10
+    OUT_VEB_BATCH(batch,0);//DWord 11
+
+    OUT_RELOC(batch,
+              proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface->bo,
+              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 12
+    OUT_VEB_BATCH(batch,0);//DWord 13
+
+    OUT_RELOC(batch,
+              proc_ctx->frame_store[FRAME_OUT_PREVIOUS].obj_surface->bo,
+              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 14
+    OUT_VEB_BATCH(batch,0);//DWord 15
+
+    OUT_RELOC(batch,
+              proc_ctx->frame_store[FRAME_OUT_STATISTIC].obj_surface->bo,
+              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 16
+    OUT_VEB_BATCH(batch,0);//DWord 17
+
+    OUT_VEB_BATCH(batch,0);//DWord 18
+    OUT_VEB_BATCH(batch,0);//DWord 19
+
+    ADVANCE_VEB_BATCH(batch);
+}
+
+VAStatus gen8_vebox_process_picture(VADriverContextP ctx,
+                         struct intel_vebox_context *proc_ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+ 
+    VAProcPipelineParameterBuffer *pipe = proc_ctx->pipeline_param;
+    VAProcFilterParameterBuffer* filter = NULL;
+    struct object_buffer *obj_buf = NULL;
+    unsigned int i;
+
+    for (i = 0; i < pipe->num_filters; i ++) {
+         obj_buf = BUFFER(pipe->filters[i]);
+         
+         assert(obj_buf && obj_buf->buffer_store);
+
+         if (!obj_buf || !obj_buf->buffer_store)
+             goto error;
+
+         filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+            
+         if (filter->type == VAProcFilterNoiseReduction) {
+             proc_ctx->filters_mask |= VPP_DNDI_DN;
+             proc_ctx->filter_dn = filter;
+         } else if (filter->type == VAProcFilterDeinterlacing) {
+             proc_ctx->filters_mask |= VPP_DNDI_DI;
+             proc_ctx->filter_di = filter;
+         } else if (filter->type == VAProcFilterColorBalance) {
+             proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
+             proc_ctx->filter_iecp_amp = filter;
+             proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
+         }
+    }
+
+    hsw_veb_pre_format_convert(ctx, proc_ctx);
+    hsw_veb_surface_reference(ctx, proc_ctx);
+
+    if (proc_ctx->frame_order == -1) {
+        hsw_veb_resource_prepare(ctx, proc_ctx);
+    }
+
+    if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
+        assert(proc_ctx->frame_order == 1);
+        /* directly copy the saved frame in the second call */
+    } else {
+        intel_batchbuffer_start_atomic_veb(proc_ctx->batch, 0x1000);
+        intel_batchbuffer_emit_mi_flush(proc_ctx->batch);
+        hsw_veb_surface_state(ctx, proc_ctx, INPUT_SURFACE); 
+        hsw_veb_surface_state(ctx, proc_ctx, OUTPUT_SURFACE); 
+        hsw_veb_state_table_setup(ctx, proc_ctx);
+
+        bdw_veb_state_command(ctx, proc_ctx);		
+        bdw_veb_dndi_iecp_command(ctx, proc_ctx);
+        intel_batchbuffer_end_atomic(proc_ctx->batch);
+        intel_batchbuffer_flush(proc_ctx->batch);
+    }
+
+    hsw_veb_post_format_convert(ctx, proc_ctx);
+    // hsw_veb_surface_unreference(ctx, proc_ctx);
+
+    proc_ctx->frame_order = (proc_ctx->frame_order + 1) % 2;
+     
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 

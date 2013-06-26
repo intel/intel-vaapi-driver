@@ -75,6 +75,7 @@ gen75_vpp_vebox(VADriverContextP ctx,
 {
      VAStatus va_status = VA_STATUS_SUCCESS;
      VAProcPipelineParameterBuffer* pipeline_param = proc_ctx->pipeline_param; 
+     struct i965_driver_data *i965 = i965_driver_data(ctx); 
  
      /* vpp features based on VEBox fixed function */
      if(proc_ctx->vpp_vebox_ctx == NULL) {
@@ -85,7 +86,10 @@ gen75_vpp_vebox(VADriverContextP ctx,
      proc_ctx->vpp_vebox_ctx->surface_input_object = proc_ctx->surface_pipeline_input_object;
      proc_ctx->vpp_vebox_ctx->surface_output_object  = proc_ctx->surface_render_output_object;
 
-     va_status = gen75_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
+     if (IS_HASWELL(i965->intel.device_id))
+         va_status = gen75_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
+     else if (IS_GEN8(i965->intel.device_id))
+         va_status = gen8_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
  
      return va_status;
 } 
