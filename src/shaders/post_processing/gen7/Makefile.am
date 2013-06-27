@@ -95,8 +95,11 @@ $(INTEL_PP_GEN7_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G4A)
 CLEANFILES = $(INTEL_PP_GEN7_ASM)
 
 EXTRA_DIST = \
+	$(INTEL_PP_ASM)		\
+	$(INTEL_PP_G4A)		\
+	$(INTEL_PP_G75B)	\
 	$(INTEL_PP_G7B)		\
-	$(INTEL_PP_G75B)
+	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in

@@ -60,15 +60,18 @@ CLEANFILES = $(INTEL_GEN6_ASM) $(INTEL_GEN7_ASM) $(INTEL_GEN75_ASM)
 EXTRA_DIST = \
 	$(INTEL_G6A)		\
 	$(INTEL_G6B)		\
-	$(INTEL_G7A)		\
-	$(INTEL_G7B)		\
 	$(INTEL_G75A)		\
 	$(INTEL_G75B)		\
+	$(INTEL_G7A)		\
+	$(INTEL_G7B)		\
+	$(INTEL_GEN6_ASM)	\
 	$(INTEL_GEN6_INC)	\
-	$(INTEL_GEN7_INC)	\
+	$(INTEL_GEN75_ASM)	\
 	$(INTEL_GEN75_INC)	\
-	$(VME_CORE)		\
+	$(INTEL_GEN7_ASM)	\
+	$(INTEL_GEN7_INC)	\
 	$(VME75_CORE)		\
+	$(VME_CORE)		\
 	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
