@@ -232,8 +232,8 @@ static struct hw_codec_info gen6_hw_codec_info = {
 
     .num_filters = 2,
     .filters = {
-        VAProcFilterNoiseReduction,
-        VAProcFilterDeinterlacing,
+        { VAProcFilterNoiseReduction, I965_RING_NULL },
+        { VAProcFilterDeinterlacing, I965_RING_NULL },
     },
 };
 
@@ -259,8 +259,8 @@ static struct hw_codec_info gen7_hw_codec_info = {
 
     .num_filters = 2,
     .filters = {
-        VAProcFilterNoiseReduction,
-        VAProcFilterDeinterlacing,
+        { VAProcFilterNoiseReduction, I965_RING_NULL },
+        { VAProcFilterDeinterlacing, I965_RING_NULL },
     },
 };
 
@@ -285,10 +285,10 @@ static struct hw_codec_info gen75_hw_codec_info = {
     .has_di_motion_adptive = 1,
     .num_filters = 4,
     .filters = {
-        VAProcFilterNoiseReduction,
-        VAProcFilterDeinterlacing,
-        VAProcFilterSharpening,
-        VAProcFilterColorBalance,
+        { VAProcFilterNoiseReduction, I965_RING_VEBOX },
+        { VAProcFilterDeinterlacing, I965_RING_VEBOX },
+        { VAProcFilterSharpening, I965_RING_NULL },
+        { VAProcFilterColorBalance, I965_RING_VEBOX},
     },
 };
 
@@ -4511,6 +4511,35 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
 
     return vaStatus;
 }
+
+static int
+i965_os_has_ring_support(VADriverContextP ctx,
+                         int ring)
+{
+    struct i965_driver_data *const i965 = i965_driver_data(ctx);
+
+    switch (ring) {
+    case I965_RING_BSD:
+        return i965->intel.has_bsd;
+        
+    case I965_RING_BLT:
+        return i965->intel.has_blt;
+        
+    case I965_RING_VEBOX:
+        return i965->intel.has_vebox;
+
+    case I965_RING_NULL:
+        return 1; /* Always support */
+
+    default:
+        /* should never get here */
+        assert(0);
+        break;
+    }
+
+    return 0;
+}
+                                
 /* 
  * Query video processing pipeline 
  */
@@ -4522,18 +4551,21 @@ VAStatus i965_QueryVideoProcFilters(
     )
 {
     struct i965_driver_data *const i965 = i965_driver_data(ctx);
-    unsigned int i = 0;
+    unsigned int i = 0, num = 0;
 
     if (!num_filters  || !filters)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    for (i = 0; i < *num_filters && i < i965->codec_info->num_filters; i++)
-        filters[i] = i965->codec_info->filters[i];
+    for (i = 0; i < i965->codec_info->num_filters; i++) {
+        if (i965_os_has_ring_support(ctx, i965->codec_info->filters[i].ring)) {
+            if (num == *num_filters)
+                return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+         
+            filters[num++] = i965->codec_info->filters[i].type;
+        }
+    }
 
-    *num_filters = i;
-
-    if (i < i965->codec_info->num_filters)
-        return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+    *num_filters = num;
 
     return VA_STATUS_SUCCESS;
 }

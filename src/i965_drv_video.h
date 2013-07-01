@@ -258,6 +258,17 @@ struct object_subpic
     unsigned int flags;
 };
 
+#define I965_RING_NULL  0
+#define I965_RING_BSD   1
+#define I965_RING_BLT   2
+#define I965_RING_VEBOX 3
+
+struct i965_filter
+{
+    VAProcFilterType type;
+    int ring;
+};
+
 struct hw_codec_info
 {
     struct hw_context *(*dec_hw_context_init)(VADriverContextP, struct object_config *);
@@ -282,7 +293,7 @@ struct hw_codec_info
     unsigned int has_di_motion_compensated:1;
 
     unsigned int num_filters;
-    VAProcFilterType filters[VAProcFilterCount];
+    struct i965_filter filters[VAProcFilterCount];
 };
 
 
