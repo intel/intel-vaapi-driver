@@ -72,7 +72,7 @@ intel_driver_init(VADriverContextP ctx)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct drm_state * const drm_state = (struct drm_state *)ctx->drm_state;
-    int has_exec2, has_bsd, has_blt;
+    int has_exec2, has_bsd, has_blt, has_vebox;
 
     assert(drm_state);
     assert(VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI1) ||
@@ -97,6 +97,8 @@ intel_driver_init(VADriverContextP ctx)
         intel->has_bsd = has_bsd;
     if (intel_driver_get_param(intel, I915_PARAM_HAS_BLT, &has_blt))
         intel->has_blt = has_blt;
+    if (intel_driver_get_param(intel, I915_PARAM_HAS_VEBOX, &has_vebox))
+        intel->has_vebox = !!has_vebox;
    
     intel_driver_get_revid(intel, &intel->revision);
     intel_memman_init(intel);
