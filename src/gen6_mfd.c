@@ -606,11 +606,32 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
 static void
 gen6_mfd_avc_phantom_slice_state(VADriverContextP ctx,
                                  VAPictureParameterBufferH264 *pic_param,
+                                 VASliceParameterBufferH264 *next_slice_param,
                                  struct gen6_mfd_context *gen6_mfd_context)
 {
     struct intel_batchbuffer *batch = gen6_mfd_context->base.batch;
     int width_in_mbs = pic_param->picture_width_in_mbs_minus1 + 1;
     int height_in_mbs = pic_param->picture_height_in_mbs_minus1 + 1; /* frame height */
+    int slice_hor_pos, slice_ver_pos, slice_start_mb_num, next_slice_hor_pos, next_slice_ver_pos;
+    int mbaff_picture = (!pic_param->pic_fields.bits.field_pic_flag &&
+                         pic_param->seq_fields.bits.mb_adaptive_frame_field_flag);
+
+    if (next_slice_param) {
+        int first_mb_in_next_slice;
+
+        slice_hor_pos = 0;
+        slice_ver_pos = 0;
+        slice_start_mb_num = 0;
+        first_mb_in_next_slice = next_slice_param->first_mb_in_slice << mbaff_picture;
+        next_slice_hor_pos = first_mb_in_next_slice % width_in_mbs;
+        next_slice_ver_pos = first_mb_in_next_slice / width_in_mbs;
+    } else {
+        slice_hor_pos = 0;
+        slice_ver_pos = height_in_mbs;
+        slice_start_mb_num = width_in_mbs * height_in_mbs / (1 + !!pic_param->pic_fields.bits.field_pic_flag);
+        next_slice_hor_pos = 0;
+        next_slice_ver_pos = 0;
+    }
 
     BEGIN_BCS_BATCH(batch, 11); /* FIXME: is it 10??? */
     OUT_BCS_BATCH(batch, MFX_AVC_SLICE_STATE | (11 - 2));
@@ -618,9 +639,12 @@ gen6_mfd_avc_phantom_slice_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch,
-                  height_in_mbs << 24 |
-                  width_in_mbs * height_in_mbs / (1 + !!pic_param->pic_fields.bits.field_pic_flag));
-    OUT_BCS_BATCH(batch, 0);
+                  slice_ver_pos << 24 |
+                  slice_hor_pos << 16 |
+                  slice_start_mb_num << 0);
+    OUT_BCS_BATCH(batch,
+                  next_slice_ver_pos << 16 |
+                  next_slice_hor_pos << 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
@@ -749,10 +773,28 @@ gen6_mfd_avc_phantom_slice_bsd_object(VADriverContextP ctx,
 static void
 gen6_mfd_avc_phantom_slice(VADriverContextP ctx,
                            VAPictureParameterBufferH264 *pic_param,
+                           VASliceParameterBufferH264 *next_slice_param,
                            struct gen6_mfd_context *gen6_mfd_context)
 {
-    gen6_mfd_avc_phantom_slice_state(ctx, pic_param, gen6_mfd_context);
+    gen6_mfd_avc_phantom_slice_state(ctx, pic_param, next_slice_param, gen6_mfd_context);
     gen6_mfd_avc_phantom_slice_bsd_object(ctx, pic_param, gen6_mfd_context);
+}
+
+static void
+gen6_mfd_avc_phantom_slice_first(VADriverContextP ctx,
+                                 VAPictureParameterBufferH264 *pic_param,
+                                 VASliceParameterBufferH264 *next_slice_param,
+                                 struct gen6_mfd_context *gen6_mfd_context)
+{
+    gen6_mfd_avc_phantom_slice(ctx, pic_param, next_slice_param, gen6_mfd_context);
+}
+
+static void
+gen6_mfd_avc_phantom_slice_last(VADriverContextP ctx,
+                                VAPictureParameterBufferH264 *pic_param,
+                                struct gen6_mfd_context *gen6_mfd_context)
+{
+    gen6_mfd_avc_phantom_slice(ctx, pic_param, NULL, gen6_mfd_context);
 }
 
 static void
@@ -896,6 +938,10 @@ gen6_mfd_avc_decode_picture(VADriverContextP ctx,
         else
             next_slice_group_param = (VASliceParameterBufferH264 *)decode_state->slice_params[j + 1]->buffer;
 
+            if (j == 0 &&
+                slice_param->first_mb_in_slice)
+                gen6_mfd_avc_phantom_slice_first(ctx, pic_param, slice_param, gen6_mfd_context);
+
         for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
             assert(slice_param->slice_data_flag == VA_SLICE_DATA_FLAG_ALL);
             assert((slice_param->slice_type == SLICE_TYPE_I) ||
@@ -918,7 +964,7 @@ gen6_mfd_avc_decode_picture(VADriverContextP ctx,
         }
     }
     
-    gen6_mfd_avc_phantom_slice(ctx, pic_param, gen6_mfd_context);
+    gen6_mfd_avc_phantom_slice_last(ctx, pic_param, gen6_mfd_context);
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
 }
