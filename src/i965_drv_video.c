@@ -4291,6 +4291,9 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
 
     attribs = malloc(I965_MAX_SURFACE_ATTRIBUTES *sizeof(*attribs));
     
+    if (attribs == NULL)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
     if (IS_G4X(i965->intel.device_id)) {
         if (obj_config->profile == VAProfileMPEG2Simple ||
             obj_config->profile == VAProfileMPEG2Main) {
