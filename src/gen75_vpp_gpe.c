@@ -595,7 +595,6 @@ gen75_gpe_context_init(VADriverContextP ctx)
     gpe_ctx->vfe_state.urb_entry_size = 59 - 1;
     gpe_ctx->vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
  
-    vpp_gpe_ctx->vpp_surface2_setup             = gen7_gpe_surface2_setup;
     vpp_gpe_ctx->vpp_media_rw_surface_setup     = gen7_gpe_media_rw_surface_setup;
     vpp_gpe_ctx->vpp_buffer_surface_setup       = gen7_gpe_buffer_suface_setup;
     vpp_gpe_ctx->vpp_media_chroma_surface_setup = gen75_gpe_media_chroma_surface_setup;

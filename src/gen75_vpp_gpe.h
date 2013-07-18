@@ -91,19 +91,10 @@ struct vpp_gpe_context{
     unsigned  int forward_surf_sum;
     unsigned  int backward_surf_sum;
 
-    unsigned int x_step;
-    unsigned int y_step;
-  
     unsigned int in_frame_w;
     unsigned int in_frame_h;
     unsigned int is_first_frame;
 
-    void (*vpp_surface2_setup)(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               struct object_surface *obj_surface,
-                               unsigned long binding_table_offset,
-                               unsigned long surface_state_offset);
-	
     void (*vpp_media_rw_surface_setup)(VADriverContextP ctx,
                                        struct i965_gpe_context *gpe_context,
                                        struct object_surface *obj_surface,
