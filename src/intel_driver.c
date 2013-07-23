@@ -72,7 +72,7 @@ intel_driver_init(VADriverContextP ctx)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct drm_state * const drm_state = (struct drm_state *)ctx->drm_state;
-    int has_exec2, has_bsd, has_blt, has_vebox;
+    int has_exec2 = 0, has_bsd = 0, has_blt = 0, has_vebox = 0;
 
     assert(drm_state);
     assert(VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI1) ||
