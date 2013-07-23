@@ -4587,6 +4587,17 @@ VAStatus i965_QueryVideoProcFilterCaps(
     if (!filter_caps || !num_filter_caps)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
+    for (i = 0; i < i965->codec_info->num_filters; i++) {
+        if (type == i965->codec_info->filters[i].type &&
+            i965_os_has_ring_support(ctx, i965->codec_info->filters[i].ring))
+            break;
+    }
+
+    if (i == i965->codec_info->num_filters)
+        return VA_STATUS_ERROR_UNSUPPORTED_FILTER;
+
+    i = 0;
+
     switch (type) {
     case VAProcFilterNoiseReduction:
     case VAProcFilterSharpening:
