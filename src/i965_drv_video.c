@@ -4941,6 +4941,9 @@ i965_Terminate(VADriverContextP ctx)
                 i965_sub_ops[i - 1].display_type == (ctx->display_type & VA_DISPLAY_MAJOR_MASK)) {
                 i965_sub_ops[i - 1].terminate(ctx);
             }
+
+        free(i965);
+        ctx->pDriverData = NULL;        
     }
 
     return VA_STATUS_SUCCESS;
