@@ -3127,7 +3127,7 @@ i965_render_init(VADriverContextP ctx)
         render_state->max_wm_threads = 204;
     } else if (IS_HSW_GT3(i965->intel.device_id)) {
         render_state->max_wm_threads = 408;
-    } else if (IS_IVB_GT1(i965->intel.device_id)) {
+    } else if (IS_IVB_GT1(i965->intel.device_id) || IS_BAYTRAIL(i965->intel.device_id)) {
         render_state->max_wm_threads = 48;
     } else if (IS_IVB_GT2(i965->intel.device_id)) {
         render_state->max_wm_threads = 172;
