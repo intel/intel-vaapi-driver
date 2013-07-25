@@ -4561,8 +4561,11 @@ VAStatus i965_QueryVideoProcFilters(
 
     for (i = 0; i < i965->codec_info->num_filters; i++) {
         if (i965_os_has_ring_support(ctx, i965->codec_info->filters[i].ring)) {
-            if (num == *num_filters)
+            if (num == *num_filters) {
+                *num_filters = i965->codec_info->num_filters;
+
                 return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+            }
          
             filters[num++] = i965->codec_info->filters[i].type;
         }
