@@ -113,6 +113,7 @@ static const uint32_t pp_pa_load_save_pl3_gen5[][4] = {
 };
 
 static const uint32_t pp_pa_load_save_pa_gen5[][4] = {
+#include "shaders/post_processing/gen5_6/pa_load_save_pa.g4b.gen5"
 };
 
 static const uint32_t pp_rgbx_load_save_nv12_gen5[][4] = {
@@ -413,6 +414,7 @@ static const uint32_t pp_pa_load_save_pl3_gen6[][4] = {
 };
 
 static const uint32_t pp_pa_load_save_pa_gen6[][4] = {
+#include "shaders/post_processing/gen5_6/pa_load_save_pa.g6b"
 };
 
 static const uint32_t pp_rgbx_load_save_nv12_gen6[][4] = {

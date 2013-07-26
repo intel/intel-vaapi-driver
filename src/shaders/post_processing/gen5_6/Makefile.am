@@ -16,6 +16,7 @@ INTEL_PP_G4B_GEN5 = \
 	nv12_load_save_pl3.g4b.gen5             \
 	nv12_load_save_rgbx.g4b.gen5		\
 	nv12_scaling_nv12.g4b.gen5		\
+	pa_load_save_pa.g4b.gen5		\
 	pa_load_save_nv12.g4b.gen5		\
 	pa_load_save_pl3.g4b.gen5		\
 	pl3_load_save_nv12.g4b.gen5             \
@@ -33,6 +34,7 @@ INTEL_PP_G6B = \
 	nv12_load_save_pl3.g6b          	\
 	nv12_load_save_rgbx.g6b			\
 	nv12_scaling_nv12.g6b			\
+	pa_load_save_pa.g6b			\
 	pa_load_save_nv12.g6b			\
 	pa_load_save_pl3.g6b			\
 	pl3_load_save_nv12.g6b          	\
@@ -50,6 +52,7 @@ INTEL_PP_ASM = \
 	nv12_load_save_pl3.asm          	\
 	nv12_load_save_rgbx.asm			\
 	nv12_scaling_nv12.asm			\
+	pa_load_save_pa.asm			\
 	pa_load_save_nv12.asm			\
 	pa_load_save_pl3.asm			\
 	pl3_load_save_nv12.asm          	\
@@ -178,7 +181,7 @@ endif
 
 all-local: $(TARGETS)
 
-SUFFIXES = .g4a .g4b .g6a .g6b .g5s .g6s .asm
+SUFFIXES = .g4a .g4b .g4b.gen5 .g6a .g6b .g5s .g6s .asm
 
 if HAVE_GEN4ASM
 .g4a.g4b:
