@@ -1761,13 +1761,13 @@ i965_MapBuffer(VADriverContextP ctx,
 
                 coded_buffer_segment->base.buf = buffer = (unsigned char *)(obj_buffer->buffer_store->bo->virtual) + I965_CODEDBUFFER_HEADER_SIZE;
 
-                if (coded_buffer_segment->codec == CODED_H264) {
+                if (coded_buffer_segment->codec == CODEC_H264) {
                     delimiter0 = H264_DELIMITER0;
                     delimiter1 = H264_DELIMITER1;
                     delimiter2 = H264_DELIMITER2;
                     delimiter3 = H264_DELIMITER3;
                     delimiter4 = H264_DELIMITER4;
-                } else if (coded_buffer_segment->codec == CODED_MPEG2) {
+                } else if (coded_buffer_segment->codec == CODEC_MPEG2) {
                     delimiter0 = MPEG2_DELIMITER0;
                     delimiter1 = MPEG2_DELIMITER1;
                     delimiter2 = MPEG2_DELIMITER2;

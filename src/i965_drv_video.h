@@ -366,8 +366,8 @@ int
 va_enc_packed_type_to_idx(int packed_type);
 
 /* reserve 2 byte for internal using */
-#define CODED_H264      0
-#define CODED_MPEG2     1
+#define CODEC_H264      0
+#define CODEC_MPEG2     1
 
 #define H264_DELIMITER0 0x00
 #define H264_DELIMITER1 0x00
