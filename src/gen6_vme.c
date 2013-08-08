@@ -649,9 +649,7 @@ Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 {
     struct gen6_vme_context *vme_context = NULL; 
 
-    if (encoder_context->profile != VAProfileH264Baseline &&
-        encoder_context->profile != VAProfileH264Main     &&
-        encoder_context->profile != VAProfileH264High) {
+    if (encoder_context->codec != CODEC_H264) {
         /* Never get here */
         assert(0);
         return False;

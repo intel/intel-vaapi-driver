@@ -1092,21 +1092,18 @@ Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
     gen7_vme_scoreboard_init(ctx, vme_context);
 
-    if(encoder_context->profile == VAProfileH264Baseline ||
-       encoder_context->profile == VAProfileH264Main     ||
-       encoder_context->profile == VAProfileH264High ){
+    if (encoder_context->codec == CODEC_H264) {
         vme_kernel_list = gen7_vme_kernels;
         vme_context->video_coding_type = VIDEO_CODING_AVC;
         vme_context->vme_kernel_sum = AVC_VME_KERNEL_SUM; 
         encoder_context->vme_pipeline = gen7_vme_pipeline; 
-    } else if (encoder_context->profile == VAProfileMPEG2Simple ||
-               encoder_context->profile == VAProfileMPEG2Main ){
+    } else if (encoder_context->codec == CODEC_MPEG2) {
         vme_kernel_list = gen7_vme_mpeg2_kernels;
         vme_context->video_coding_type = VIDEO_CODING_MPEG2;
         vme_context->vme_kernel_sum = MPEG2_VME_KERNEL_SUM;
         encoder_context->vme_pipeline = gen7_vme_mpeg2_pipeline;
     } else {
-        /* Unsupported encoding profile */
+        /* Unsupported codec */
         assert(0);
     }
 

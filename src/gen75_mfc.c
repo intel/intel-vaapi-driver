@@ -2439,7 +2439,7 @@ intel_mfc_mpeg2_prepare(VADriverContextP ctx,
     dri_bo_map(bo, 1);
     coded_buffer_segment = (struct i965_coded_buffer_segment *)bo->virtual;
     coded_buffer_segment->mapped = 0;
-    coded_buffer_segment->codec = CODEC_MPEG2;
+    coded_buffer_segment->codec = encoder_context->codec;
     dri_bo_unmap(bo);
 
     return vaStatus;

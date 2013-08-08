@@ -345,7 +345,24 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
     encoder_context->is_tmp_id = 0;
     encoder_context->rate_control_mode = VA_RC_NONE;
-    encoder_context->profile = obj_config->profile;
+
+    switch (obj_config->profile) {
+    case VAProfileMPEG2Simple:
+    case VAProfileMPEG2Main:
+        encoder_context->codec = CODEC_MPEG2;
+        break;
+        
+    case VAProfileH264Baseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        encoder_context->codec = CODEC_H264;
+        break;
+
+    default:
+        /* Never get here */
+        assert(0);
+        break;
+    }
 
     for (i = 0; i < obj_config->num_attribs; i++) {
         if (obj_config->attrib_list[i].type == VAConfigAttribRateControl) {

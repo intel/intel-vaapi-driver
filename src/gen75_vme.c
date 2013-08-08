@@ -374,17 +374,14 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
 
     vme_state_message = (unsigned int *)vme_context->vme_state_message;
 
-    if (encoder_context->profile == VAProfileH264Baseline ||
-        encoder_context->profile == VAProfileH264Main ||
-        encoder_context->profile == VAProfileH264High) {
+    if (encoder_context->codec == CODEC_H264) {
         if (vme_context->h264_level >= 30) {
             mv_num = 16;
         
             if (vme_context->h264_level >= 31)
                 mv_num = 8;
         } 
-    } else if (encoder_context->profile == VAProfileMPEG2Simple ||
-               encoder_context->profile == VAProfileMPEG2Main) {
+    } else if (encoder_context->codec == CODEC_MPEG2) {
         mv_num = 2;
     }
 
@@ -501,10 +498,8 @@ static VAStatus gen75_vme_vme_state_setup(VADriverContextP ctx,
 	vme_state_message[i] = 0;
     }
 
-    switch (encoder_context->profile) {
-    case VAProfileH264Baseline:
-    case VAProfileH264Main:
-    case VAProfileH264High:
+    switch (encoder_context->codec) {
+    case CODEC_H264:
         gen75_vme_state_setup_fixup(ctx, encode_state, encoder_context, vme_state_message);
 
         break;
@@ -1009,17 +1004,14 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
     struct i965_kernel *vme_kernel_list = NULL;
 	int i965_kernel_num;
 
-    switch (encoder_context->profile) {
-    case VAProfileH264Baseline:
-    case VAProfileH264Main:
-    case VAProfileH264High:
+    switch (encoder_context->codec) {
+    case CODEC_H264:
         vme_kernel_list = gen75_vme_kernels;
         encoder_context->vme_pipeline = gen75_vme_pipeline;
        	i965_kernel_num = sizeof(gen75_vme_kernels) / sizeof(struct i965_kernel); 
         break;
 
-    case VAProfileMPEG2Simple:
-    case VAProfileMPEG2Main:
+    case CODEC_MPEG2:
         vme_kernel_list = gen75_vme_mpeg2_kernels;
         encoder_context->vme_pipeline = gen75_vme_mpeg2_pipeline;
        	i965_kernel_num = sizeof(gen75_vme_mpeg2_kernels) / sizeof(struct i965_kernel); 
