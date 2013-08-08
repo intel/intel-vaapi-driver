@@ -516,9 +516,21 @@ gen6_mfc_init(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     dri_bo *bo;
     int i;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
-    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+    int width_in_mbs = 0;
+    int height_in_mbs = 0;
+
+    if (encoder_context->codec == CODEC_H264) {
+        VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+        width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+        height_in_mbs = pSequenceParameter->picture_height_in_mbs;
+    } else {
+        VAEncSequenceParameterBufferMPEG2 *pSequenceParameter = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+
+        assert(encoder_context->codec == CODEC_MPEG2);
+
+        width_in_mbs = ALIGN(pSequenceParameter->picture_width, 16) / 16;
+        height_in_mbs = ALIGN(pSequenceParameter->picture_height, 16) / 16;
+    }
 
     /*Encode common setup for MFC*/
     dri_bo_unreference(mfc_context->post_deblocking_output.bo);
