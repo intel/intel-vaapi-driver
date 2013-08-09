@@ -4973,6 +4973,10 @@ i965_image_processing(VADriverContextP ctx,
         case VA_FOURCC('I', '4', '2', '0'):
         case VA_FOURCC('I', 'M', 'C', '1'):
         case VA_FOURCC('I', 'M', 'C', '3'):
+        case VA_FOURCC('4', '2', '2', 'H'):
+        case VA_FOURCC('4', '2', '2', 'V'):
+        case VA_FOURCC('4', '1', '1', 'P'):
+        case VA_FOURCC('4', '4', '4', 'P'):
             status = i965_image_pl3_processing(ctx,
                                                src_surface,
                                                src_rect,
