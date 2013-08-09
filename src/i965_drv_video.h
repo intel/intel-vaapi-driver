@@ -313,6 +313,7 @@ struct i965_driver_data
     _I965Mutex render_mutex;
     _I965Mutex pp_mutex;
     struct intel_batchbuffer *batch;
+    struct intel_batchbuffer *pp_batch;
     struct i965_render_state render_state;
     void *pp_context;
     char va_vendor[256];

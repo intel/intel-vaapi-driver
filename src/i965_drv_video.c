@@ -4795,6 +4795,7 @@ i965_driver_data_init(VADriverContextP ctx)
         goto err_subpic_heap;
 
     i965->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, 0);
+    i965->pp_batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, 0);
     _i965InitMutex(&i965->render_mutex);
     _i965InitMutex(&i965->pp_mutex);
 
@@ -4825,6 +4826,9 @@ i965_driver_data_terminate(VADriverContextP ctx)
 
     if (i965->batch)
         intel_batchbuffer_free(i965->batch);
+
+    if (i965->pp_batch)
+        intel_batchbuffer_free(i965->pp_batch);
 
     i965_destroy_heap(&i965->subpic_heap, i965_destroy_subpic);
     i965_destroy_heap(&i965->image_heap, i965_destroy_image);

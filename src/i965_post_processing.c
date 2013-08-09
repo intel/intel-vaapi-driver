@@ -5147,7 +5147,7 @@ i965_post_processing_init(VADriverContextP ctx)
     if (HAS_PP(i965)) {
         if (pp_context == NULL) {
             pp_context = calloc(1, sizeof(*pp_context));
-            i965_post_processing_context_init(ctx, pp_context, i965->batch);
+            i965_post_processing_context_init(ctx, pp_context, i965->pp_batch);
             i965->pp_context = pp_context;
         }
     }
