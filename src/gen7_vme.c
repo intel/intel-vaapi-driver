@@ -466,6 +466,9 @@ static VAStatus gen7_vme_mpeg2_state_setup(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     unsigned int *vme_state_message;
     int i;
+    unsigned int *mb_cost_table;
+
+    mb_cost_table = (unsigned int *)vme_context->vme_state_message;
 	
     //building VME state message
     dri_bo_map(vme_context->vme_state.bo, 1);
@@ -487,12 +490,12 @@ static VAStatus gen7_vme_mpeg2_state_setup(VADriverContextP ctx,
     vme_state_message[12] = 0x00;
     vme_state_message[13] = 0x00;
 
-    vme_state_message[14] = 0x4a4a;
-    vme_state_message[15] = 0x0;
-    vme_state_message[16] = 0x4a4a4a4a;
-    vme_state_message[17] = 0x4a4a4a4a;
-    vme_state_message[18] = 0x21110100;
-    vme_state_message[19] = 0x61514131;
+    vme_state_message[14] = (mb_cost_table[2] & 0xFFFF);
+    vme_state_message[15] = 0;
+    vme_state_message[16] = mb_cost_table[0];
+    vme_state_message[17] = 0;
+    vme_state_message[18] = mb_cost_table[3];
+    vme_state_message[19] = mb_cost_table[4];
 
     for(i = 20; i < 32; i++) {
         vme_state_message[i] = 0;
@@ -916,7 +919,29 @@ gen7_vme_mpeg2_pipeline_programing(VADriverContextP ctx,
     int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
     int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
 
-    gen7_vme_mpeg2_fill_vme_batchbuffer(ctx, 
+    bool allow_hwscore = true;
+    int s;
+
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+	int j;
+        VAEncSliceParameterBufferMPEG2 *slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[s]->buffer;
+
+        for (j = 0; j < encode_state->slice_params_ext[s]->num_elements; j++) {
+	    if (slice_param->macroblock_address % width_in_mbs) {
+		allow_hwscore = false;
+		break;
+	    }
+	}
+    }
+
+    if (allow_hwscore) 
+	gen7_vme_mpeg2_walker_fill_vme_batchbuffer(ctx,
+                                         encode_state,
+                                         width_in_mbs, height_in_mbs,
+                                         MPEG2_VME_INTER_SHADER,
+                                         encoder_context);
+    else
+    	gen7_vme_mpeg2_fill_vme_batchbuffer(ctx, 
                                          encode_state,
                                          width_in_mbs, height_in_mbs,
                                          MPEG2_VME_INTER_SHADER,
