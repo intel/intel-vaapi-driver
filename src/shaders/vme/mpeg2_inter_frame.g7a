@@ -1,3 +1,0 @@
-#include "vme.inc"
-#include "vme7_mpeg2.inc"
-#include "inter_frame.asm"
