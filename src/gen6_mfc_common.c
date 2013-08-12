@@ -1123,6 +1123,9 @@ void intel_vme_mpeg2_state_setup(VADriverContextP ctx,
 	int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
 	int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
 	uint32_t mv_x, mv_y;
+	VAEncSliceParameterBufferMPEG2 *slice_param = NULL;
+	VAEncPictureParameterBufferMPEG2 *pic_param = NULL;
+	slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
 
 	if (vme_context->mpeg2_level == MPEG2_LEVEL_LOW) {
 		mv_x = 512;
@@ -1139,6 +1142,45 @@ void intel_vme_mpeg2_state_setup(VADriverContextP ctx,
 		mv_y = 64;
 	}
 
+    	pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+	if (pic_param->picture_type != VAEncPictureTypeIntra) {
+		int qp, m_cost, j, mv_count;
+		float   lambda, m_costf;
+		slice_param = (VAEncSliceParameterBufferMPEG2 *)
+				encode_state->slice_params_ext[0]->buffer;
+		qp = slice_param->quantiser_scale_code;
+		lambda = intel_lambda_qp(qp);
+		/* No Intra prediction. So it is zero */
+		vme_state_message[MODE_INTRA_8X8] = 0;
+		vme_state_message[MODE_INTRA_4X4] = 0;
+		vme_state_message[MODE_INTER_MV0] = 0;
+		for (j = 1; j < 3; j++) {
+			m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+			m_cost = (int)m_costf;
+			vme_state_message[MODE_INTER_MV0 + j] = intel_format_lutvalue(m_cost, 0x6f);
+   		}
+    		mv_count = 3;
+    		for (j = 4; j <= 64; j *= 2) {
+			m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+			m_cost = (int)m_costf;
+			vme_state_message[MODE_INTER_MV0 + mv_count] =
+					intel_format_lutvalue(m_cost, 0x6f);
+			mv_count++;
+		}
+		m_cost = lambda;
+		/* It can only perform the 16x16 search. So mode cost can be ignored for
+		 * the other mode. for example: 16x8/8x8
+		 */
+		vme_state_message[MODE_INTRA_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+		vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+			
+		vme_state_message[MODE_INTER_16X8] = 0;
+		vme_state_message[MODE_INTER_8X8] = 0;
+		vme_state_message[MODE_INTER_8X4] = 0;
+		vme_state_message[MODE_INTER_4X4] = 0;
+		vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
+
+	}
 	vme_state_message[MPEG2_MV_RANGE] = (mv_y << 16) | (mv_x);
 
 	vme_state_message[MPEG2_PIC_WIDTH_HEIGHT] = (height_in_mbs << 16) |
