@@ -113,7 +113,7 @@ static const uint32_t gen75_vme_mpeg2_intra_frame[][4] = {
 };
 
 static const uint32_t gen75_vme_mpeg2_inter_frame[][4] = {
-#include "shaders/vme/mpeg2_inter_frame_haswell.g75b"
+#include "shaders/vme/mpeg2_inter_haswell.g75b"
 };
 
 static const uint32_t gen75_vme_mpeg2_batchbuffer[][4] = {
@@ -952,6 +952,7 @@ gen75_vme_mpeg2_prepare(VADriverContextP ctx,
     gen75_vme_mpeg2_surface_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
     gen75_vme_interface_setup(ctx, encode_state, encoder_context);
     gen75_vme_vme_state_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+    intel_vme_mpeg2_state_setup(ctx, encode_state, encoder_context);
     gen75_vme_constant_setup(ctx, encode_state, encoder_context);
 
     /*Programing media pipeline*/

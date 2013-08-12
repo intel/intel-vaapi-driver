@@ -16,3 +16,6 @@
  */
 
 define(`INTER_PART_MASK',               `0x7e000000')
+define(`mpeg2_ref',		`r83')
+define(`pic_ref',		`r82')
+define(`INTRA16_DC_PRED',      `0xBB')

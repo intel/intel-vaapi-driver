@@ -87,6 +87,9 @@ struct gen6_vme_context
     unsigned int vme_kernel_sum;
 };
 
+#define MPEG2_PIC_WIDTH_HEIGHT	30
+
+
 Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 extern void intel_vme_update_mbmv_cost(VADriverContextP ctx,
@@ -136,5 +139,10 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 
 extern void 
 gen7_vme_scoreboard_init(VADriverContextP ctx, struct gen6_vme_context *vme_context);
+
+extern void
+intel_vme_mpeg2_state_setup(VADriverContextP ctx,
+                                       struct encode_state *encode_state,
+                                       struct intel_encoder_context *encoder_context);
 
 #endif /* _GEN6_VME_H_ */

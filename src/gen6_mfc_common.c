@@ -1111,3 +1111,18 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
 	}
 	ADVANCE_BCS_BATCH(batch);
 }
+
+
+void intel_vme_mpeg2_state_setup(VADriverContextP ctx,
+                                       struct encode_state *encode_state,
+                                       struct intel_encoder_context *encoder_context)
+{
+	struct gen6_vme_context *vme_context = encoder_context->vme_context;
+	uint32_t *vme_state_message = (uint32_t *)(vme_context->vme_state_message);
+	VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+	int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
+	int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+
+	vme_state_message[MPEG2_PIC_WIDTH_HEIGHT] = (height_in_mbs << 16) |
+					width_in_mbs;
+}
