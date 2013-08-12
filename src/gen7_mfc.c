@@ -381,9 +381,11 @@ gen7_mfc_mpeg2_pic_state(VADriverContextP ctx,
     VAEncPictureParameterBufferMPEG2 *pic_param;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
+    VAEncSliceParameterBufferMPEG2 *slice_param = NULL;
 
     assert(encode_state->pic_param_ext && encode_state->pic_param_ext->buffer);
     pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+    slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
 
     BEGIN_BCS_BATCH(batch, 13);
     OUT_BCS_BATCH(batch, MFX_MPEG2_PIC_STATE | (13 - 2));
@@ -408,7 +410,12 @@ gen7_mfc_mpeg2_pic_state(VADriverContextP ctx,
                   1 << 31 |     /* slice concealment */
                   (height_in_mbs - 1) << 16 |
                   (width_in_mbs - 1));
-    OUT_BCS_BATCH(batch, 0);
+
+    if (slice_param && slice_param->quantiser_scale_code >= 14) 
+	OUT_BCS_BATCH(batch, (3 << 1) | (1 << 4) | (5 << 8) | (1 << 12));
+    else
+	OUT_BCS_BATCH(batch, 0);
+
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch,
                   0xFFF << 16 | /* InterMBMaxSize */
