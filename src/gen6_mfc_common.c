@@ -1122,6 +1122,24 @@ void intel_vme_mpeg2_state_setup(VADriverContextP ctx,
 	VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
 	int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
 	int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+	uint32_t mv_x, mv_y;
+
+	if (vme_context->mpeg2_level == MPEG2_LEVEL_LOW) {
+		mv_x = 512;
+		mv_y = 64;
+	} else if (vme_context->mpeg2_level == MPEG2_LEVEL_MAIN) {
+		mv_x = 1024;
+		mv_y = 128;
+	} else if (vme_context->mpeg2_level == MPEG2_LEVEL_HIGH) {
+		mv_x = 2048;
+		mv_y = 128;
+	} else {
+		WARN_ONCE("Incorrect Mpeg2 level setting!\n");
+		mv_x = 512;
+		mv_y = 64;
+	}
+
+	vme_state_message[MPEG2_MV_RANGE] = (mv_y << 16) | (mv_x);
 
 	vme_state_message[MPEG2_PIC_WIDTH_HEIGHT] = (height_in_mbs << 16) |
 					width_in_mbs;

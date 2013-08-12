@@ -670,6 +670,21 @@ add  (2) TEMP_VAR0.0<1>:w	INPUT_ARG0.8<2,2,1>:w	INPUT_ARG0.0<2,2,1>:w	{align1};
 /* The right/bottom coordinate of reference window */
 add  (1) TEMP_VAR0.16<1>:w	TEMP_VAR0.0<0,1,0>:w	48:w			{align1};
 add  (1) TEMP_VAR0.18<1>:w	TEMP_VAR0.2<0,1,0>:w	40:w			{align1};
+
+/* Firstly the MV range is checked */
+mul  (2) TEMP_VAR1.16<1>:w	INPUT_ARG1.16<2,2,1>:w	-1:w	{align1};
+add  (2) TEMP_VAR1.0<1>:w	INPUT_ARG0.8<2,2,1>:w	TEMP_VAR1.16<2,2,1>:w	{align1};
+add  (2) TEMP_VAR1.4<1>:w	INPUT_ARG0.8<2,2,1>:w	INPUT_ARG1.16<2,2,1>:w	{align1};
+
+cmp.l.f0.0 (1)	null:w	TEMP_VAR0.0<0,1,0>:w	TEMP_VAR1.0<0,1,0>:w	{align1};
+(f0.0)	mov	(1) TEMP_VAR0.0<1>:w	TEMP_VAR1.0<0,1,0>:w	{align1};
+cmp.g.f0.0 (1)	null:w	TEMP_VAR0.16<0,1,0>:w	TEMP_VAR1.4<0,1,0>:w	{align1};
+(f0.0)	add	(1) TEMP_VAR0.0<1>:w	TEMP_VAR1.4<0,1,0>:w	-48:w	{align1};
+cmp.l.f0.0 (1)	null:w	TEMP_VAR0.2<0,1,0>:w	TEMP_VAR1.2<0,1,0>:w	{align1};
+(f0.0)	mov	(1) TEMP_VAR0.2<1>:w	TEMP_VAR1.2<0,1,0>:w	{align1};
+cmp.g.f0.0 (1)	null:w	TEMP_VAR0.18<0,1,0>:w	TEMP_VAR1.6<0,1,0>:w	{align1};
+(f0.0)	add	(1) TEMP_VAR0.2<1>:w	TEMP_VAR1.6<0,1,0>:w	-40:w	{align1};
+
 x_left_cmp:
 	cmp.l.f0.0 (1)		null:w		TEMP_VAR0.0<0,1,0>:w	0:w	{align1};
 	(-f0.0)	jmpi	(1)	x_right_cmp;

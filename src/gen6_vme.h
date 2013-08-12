@@ -85,9 +85,15 @@ struct gen6_vme_context
     unsigned int h264_level;
     unsigned int video_coding_type;
     unsigned int vme_kernel_sum;
+    unsigned int mpeg2_level;
 };
 
 #define MPEG2_PIC_WIDTH_HEIGHT	30
+#define	MPEG2_MV_RANGE		29
+#define	MPEG2_LEVEL_MASK	0x0f
+#define	MPEG2_LEVEL_LOW		0x0a
+#define	MPEG2_LEVEL_MAIN	0x08
+#define	MPEG2_LEVEL_HIGH	0x04
 
 
 Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
