@@ -126,7 +126,7 @@ static struct i965_kernel gen7_vme_kernels[] = {
 };
 
 static const uint32_t gen7_vme_mpeg2_inter_frame[][4] = {
-#include "shaders/vme/mpeg2_inter_frame.g7b"
+#include "shaders/vme/mpeg2_inter_ivb.g7b"
 };
 
 static const uint32_t gen7_vme_mpeg2_batchbuffer[][4] = {
@@ -855,20 +855,30 @@ gen7_vme_mpeg2_fill_vme_batchbuffer(VADriverContextP ctx,
         for (j = 0; j < encode_state->slice_params_ext[s]->num_elements; j++) {
             int slice_mb_begin = slice_param->macroblock_address;
             int slice_mb_number = slice_param->num_macroblocks;
+            unsigned int mb_intra_ub;
 
             for (i = 0; i < slice_mb_number;) {
-                int mb_count = i + slice_mb_begin;
+                int mb_count = i + slice_mb_begin;    
 
                 mb_x = mb_count % mb_width;
                 mb_y = mb_count / mb_width;
+                mb_intra_ub = 0;
 
-                if( i == 0) {
-                    number_mb_cmds = mb_width;
-                } else if ((i + 128) <= slice_mb_number) {
-                    number_mb_cmds = 128;
-                } else {
-                    number_mb_cmds = slice_mb_number - i;
+                if (mb_x != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
                 }
+
+                if (mb_y != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+
+                    if (mb_x != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+
+                    if (mb_x != (mb_width -1))
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                }
+
+		
 
                 *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
                 *command_ptr++ = kernel;
@@ -876,12 +886,12 @@ gen7_vme_mpeg2_fill_vme_batchbuffer(VADriverContextP ctx,
                 *command_ptr++ = 0;
                 *command_ptr++ = 0;
                 *command_ptr++ = 0;
- 
+   
                 /*inline data */
                 *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
-                *command_ptr++ = ( (number_mb_cmds << 16) | transform_8x8_mode_flag | ((i == 0) << 1));
+                *command_ptr++ = ( (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
 
-                i += number_mb_cmds;
+                i += 1;
             }
 
             slice_param++;
@@ -932,8 +942,17 @@ gen7_vme_mpeg2_prepare(VADriverContextP ctx,
                         struct intel_encoder_context *encoder_context)
 {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
 
-   /*Setup all the memory object*/
+    if ((!vme_context->mpeg2_level) ||
+		(vme_context->mpeg2_level != (seq_param->sequence_extension.bits.profile_and_level_indication & MPEG2_LEVEL_MASK))) {
+	vme_context->mpeg2_level = seq_param->sequence_extension.bits.profile_and_level_indication & MPEG2_LEVEL_MASK;
+    }
+
+    /*Setup all the memory object*/
+
+    intel_vme_mpeg2_state_setup(ctx, encode_state, encoder_context);
     gen7_vme_mpeg2_surface_setup(ctx, encode_state, 0, encoder_context);
     gen7_vme_interface_setup(ctx, encode_state, encoder_context);
     gen7_vme_constant_setup(ctx, encode_state, encoder_context);
