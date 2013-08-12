@@ -2240,7 +2240,26 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
                                                  0xff,
                                                  slice_batch);
             } else {
-                gen75_mfc_mpeg2_pak_object_inter(ctx,
+		int inter_rdo, intra_rdo;
+		inter_rdo = msg[AVC_INTER_RDO_OFFSET] & AVC_RDO_MASK;
+		intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
+
+		if (intra_rdo < inter_rdo) 
+                	gen75_mfc_mpeg2_pak_object_intra(ctx,
+                                                 encoder_context,
+                                                 h_pos, v_pos,
+                                                 first_mb_in_slice,
+                                                 last_mb_in_slice,
+                                                 first_mb_in_slice_group,
+                                                 last_mb_in_slice_group,
+                                                 0x1a,
+                                                 slice_param->quantiser_scale_code,
+                                                 0x3f,
+                                                 0,
+                                                 0xff,
+                                                 slice_batch);
+		else
+			gen75_mfc_mpeg2_pak_object_inter(ctx,
                                                  encode_state,
                                                  encoder_context,
                                                  msg,
