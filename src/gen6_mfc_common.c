@@ -1186,3 +1186,127 @@ void intel_vme_mpeg2_state_setup(VADriverContextP ctx,
 	vme_state_message[MPEG2_PIC_WIDTH_HEIGHT] = (height_in_mbs << 16) |
 					width_in_mbs;
 }
+
+void
+gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
+                              struct encode_state *encode_state,
+                              int mb_width, int mb_height,
+                              int kernel,
+                              struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    unsigned int *command_ptr;
+
+#define		MPEG2_SCOREBOARD		(1 << 21)
+
+    dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
+    command_ptr = vme_context->vme_batchbuffer.bo->virtual;
+
+    {
+	unsigned int mb_intra_ub, score_dep;
+	int x_outer, y_outer, x_inner, y_inner;
+	int xtemp_outer = 0;
+	int first_mb = 0;
+	int num_mb = mb_width * mb_height;
+
+	x_outer = 0;
+	y_outer = 0;
+	
+				 
+	for (; x_outer < (mb_width -2 ) && !loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+	    x_inner = x_outer;
+	    y_inner = y_outer;
+	    for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+		mb_intra_ub = 0;
+		score_dep = 0;
+		if (x_inner != 0) {
+		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+		    score_dep |= MB_SCOREBOARD_A; 
+		}
+		if (y_inner != 0) {
+		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+		    score_dep |= MB_SCOREBOARD_B;
+
+		    if (x_inner != 0)
+			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+
+		    if (x_inner != (mb_width -1)) {
+			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+			score_dep |= MB_SCOREBOARD_C;
+		    }
+		}
+							
+            	*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+		*command_ptr++ = kernel;
+		*command_ptr++ = MPEG2_SCOREBOARD;
+		/* Indirect data */
+		*command_ptr++ = 0;
+		/* the (X, Y) term of scoreboard */
+		*command_ptr++ = ((y_inner << 16) | x_inner);
+		*command_ptr++ = score_dep;
+		/*inline data */
+		*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+		*command_ptr++ = ((1 << 18) | (1 << 16) | (mb_intra_ub << 8));
+		x_inner -= 2;
+		y_inner += 1;
+	    }
+	    x_outer += 1;
+	}
+
+	xtemp_outer = mb_width - 2;
+	if (xtemp_outer < 0)
+		xtemp_outer = 0;
+	x_outer = xtemp_outer;
+	y_outer = 0;
+	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) { 
+	    y_inner = y_outer;
+	    x_inner = x_outer;
+	    for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+	    	mb_intra_ub = 0;
+		score_dep = 0;
+		if (x_inner != 0) {
+		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+		    score_dep |= MB_SCOREBOARD_A; 
+		}
+		if (y_inner != 0) {
+		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+		    score_dep |= MB_SCOREBOARD_B;
+
+		    if (x_inner != 0)
+			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+
+		    if (x_inner != (mb_width -1)) {
+			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+			score_dep |= MB_SCOREBOARD_C;
+		    }
+		}
+
+            	*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+		*command_ptr++ = kernel;
+		*command_ptr++ = MPEG2_SCOREBOARD;
+		/* Indirect data */
+		*command_ptr++ = 0;
+		/* the (X, Y) term of scoreboard */
+		*command_ptr++ = ((y_inner << 16) | x_inner);
+		*command_ptr++ = score_dep;
+		/*inline data */
+		*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+		*command_ptr++ = ((1 << 18) | (1 << 16) | (mb_intra_ub << 8));
+
+		x_inner -= 2;
+		y_inner += 1;
+	    }
+	    x_outer++;
+	    if (x_outer >= mb_width) {
+		y_outer += 1;
+		x_outer = xtemp_outer;
+	    }		
+	}
+    }
+
+    *command_ptr++ = 0;
+    *command_ptr++ = MI_BATCH_BUFFER_END;
+
+    dri_bo_unmap(vme_context->vme_batchbuffer.bo);
+    return;
+}

@@ -151,4 +151,11 @@ intel_vme_mpeg2_state_setup(VADriverContextP ctx,
                                        struct encode_state *encode_state,
                                        struct intel_encoder_context *encoder_context);
 
+extern void
+gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
+                              struct encode_state *encode_state,
+                              int mb_width, int mb_height,
+                              int kernel,
+                              struct intel_encoder_context *encoder_context);
+
 #endif /* _GEN6_VME_H_ */

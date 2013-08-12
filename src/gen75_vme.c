@@ -916,14 +916,47 @@ gen75_vme_mpeg2_pipeline_programing(VADriverContextP ctx,
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
+    VAEncPictureParameterBufferMPEG2 *pic_param = NULL;
     VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
     int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
     int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+    bool allow_hwscore = true;
+    int s;
+    int kernel_shader;
 
-    gen75_vme_mpeg2_fill_vme_batchbuffer(ctx, 
+    pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+	int j;
+        VAEncSliceParameterBufferMPEG2 *slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[s]->buffer;
+
+        for (j = 0; j < encode_state->slice_params_ext[s]->num_elements; j++) {
+	    if (slice_param->macroblock_address % width_in_mbs) {
+		allow_hwscore = false;
+		break;
+	    }
+	}
+    }
+
+    pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+    if (pic_param->picture_type == VAEncPictureTypeIntra) {
+	allow_hwscore = false;
+	kernel_shader = VME_INTRA_SHADER;
+    } else {
+	kernel_shader = VME_INTER_SHADER;
+    }
+
+    if (allow_hwscore) 
+	gen7_vme_mpeg2_walker_fill_vme_batchbuffer(ctx,
                                          encode_state,
                                          width_in_mbs, height_in_mbs,
-                                         is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
+                                         kernel_shader,
+                                         encoder_context);
+    else
+	gen75_vme_mpeg2_fill_vme_batchbuffer(ctx, 
+                                         encode_state,
+                                         width_in_mbs, height_in_mbs,
+                                         kernel_shader,
                                          0,
                                          encoder_context);
 
