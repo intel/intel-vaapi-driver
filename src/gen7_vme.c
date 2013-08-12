@@ -359,23 +359,34 @@ static VAStatus gen7_vme_constant_setup(VADriverContextP ctx,
                                         struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    // unsigned char *constant_buffer;
+    unsigned char *constant_buffer;
     unsigned int *vme_state_message;
-    int mv_num = 32;
-    if (vme_context->h264_level >= 30) {
-	mv_num = 16;
-	if (vme_context->h264_level >= 31)
-		mv_num = 8;
-    } 
+    int mv_num;
+
+    vme_state_message = (unsigned int *)vme_context->vme_state_message;
+    mv_num = 32;
+
+    if (encoder_context->codec == CODEC_H264) {
+        if (vme_context->h264_level >= 30) {
+            mv_num = 16;
+        
+            if (vme_context->h264_level >= 31)
+                mv_num = 8;
+        }
+    } else if (encoder_context->codec == CODEC_MPEG2) { 
+        mv_num = 2;
+    }
+
+
+    vme_state_message[31] = mv_num;
 
     dri_bo_map(vme_context->gpe_context.curbe.bo, 1);
     assert(vme_context->gpe_context.curbe.bo->virtual);
-    // constant_buffer = vme_context->curbe.bo->virtual;
-    vme_state_message = (unsigned int *)vme_context->gpe_context.curbe.bo->virtual;
-    vme_state_message[31] = mv_num;
-	
-    /*TODO copy buffer into CURB*/
+    constant_buffer = vme_context->gpe_context.curbe.bo->virtual;
 
+    /* Pass the required constant info into the constant buffer */
+    memcpy(constant_buffer, (char *)vme_context->vme_state_message, 128);
+	
     dri_bo_unmap( vme_context->gpe_context.curbe.bo);
 
     return VA_STATUS_SUCCESS;
@@ -519,7 +530,7 @@ static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
-static VAStatus gen7_vme_vme_state_setup(VADriverContextP ctx,
+static VAStatus gen7_vme_mpeg2_state_setup(VADriverContextP ctx,
                                          struct encode_state *encode_state,
                                          int is_intra,
                                          struct intel_encoder_context *encoder_context)
@@ -559,8 +570,6 @@ static VAStatus gen7_vme_vme_state_setup(VADriverContextP ctx,
         vme_state_message[i] = 0;
     }
     //vme_state_message[16] = 0x42424242;			//cost function LUT set 0 for Intra
-
-    gen7_vme_state_setup_fixup(ctx, encode_state, encoder_context, vme_state_message);
 
     dri_bo_unmap( vme_context->vme_state.bo);
     return VA_STATUS_SUCCESS;
@@ -999,8 +1008,8 @@ gen7_vme_mpeg2_prepare(VADriverContextP ctx,
    /*Setup all the memory object*/
     gen7_vme_mpeg2_surface_setup(ctx, encode_state, 0, encoder_context);
     gen7_vme_interface_setup(ctx, encode_state, encoder_context);
-    gen7_vme_vme_state_setup(ctx, encode_state, 0, encoder_context);
     gen7_vme_constant_setup(ctx, encode_state, encoder_context);
+    gen7_vme_mpeg2_state_setup(ctx, encode_state, 0, encoder_context);
 
     /*Programing media pipeline*/
     gen7_vme_mpeg2_pipeline_programing(ctx, encode_state, 0, encoder_context);
