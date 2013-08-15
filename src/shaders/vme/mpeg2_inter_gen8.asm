@@ -334,6 +334,8 @@ mov	(1)	mb_mvp_ref.2<1>:w		RET_ARG<0,1,0>:w	{align1};
 
 __mb_hwdep_end:
 
+mov     (2)     mv_cc_ref.0<1>:w	mba_result.4<2,2,1>:w	{align1};
+
 /* Calibrate the ref window for MPEG2 */
 mov  (1) vme_m0.0<1>:W		-16:W			{align1};
 mov  (1) vme_m0.2<1>:W		-12:W			{align1};
@@ -470,8 +472,8 @@ mov  (8) vme_msg_1.0<1>:UD      vme_m1.0<8,8,1>:UD {align1};
 
 /* Setup the Cost center */
 /* currently four 8x8 share the same cost center */
-mov  (4) vme_m3.0<2>:ud		0x0:ud	{align1};
-mov  (4) vme_m3.4<2>:ud		0x0:ud	{align1};
+mov  (4) vme_m3.0<2>:ud		mv_cc_ref.0<0,1,0>:ud	{align1};
+mov  (4) vme_m3.4<2>:ud		mv_cc_ref.0<0,1,0>:ud	{align1};
 
 mov (8) vme_msg_3<1>:UD		vme_m3.0<8,8,1>:UD {align1};
 mov (8) vme_msg_2<1>:UD		vme_m2.0<8,8,1>:UD {align1};
