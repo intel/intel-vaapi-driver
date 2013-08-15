@@ -100,7 +100,7 @@ static const uint32_t gen8_vme_mpeg2_intra_frame[][4] = {
 };
 
 static const uint32_t gen8_vme_mpeg2_inter_frame[][4] = {
-#include "shaders/vme/mpeg2_inter_frame_gen8.g8b"
+#include "shaders/vme/mpeg2_inter_gen8.g8b"
 };
 
 static struct i965_kernel gen8_vme_mpeg2_kernels[] = {
@@ -827,7 +827,6 @@ gen8_vme_mpeg2_fill_vme_batchbuffer(VADriverContextP ctx,
             int slice_mb_begin = slice_param->macroblock_address;
             int slice_mb_number = slice_param->num_macroblocks;
             unsigned int mb_intra_ub;
-            int slice_mb_x = slice_param->macroblock_address % mb_width;
 
             for (i = 0; i < slice_mb_number;) {
                 int mb_count = i + slice_mb_begin;    
@@ -848,21 +847,6 @@ gen8_vme_mpeg2_fill_vme_batchbuffer(VADriverContextP ctx,
 
                     if (mb_x != (mb_width -1))
                         mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-                }
-
-                if (i < mb_width) {
-                    if (i == 0)
-                        mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_AE);
-
-                    mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_BCD_MASK);
-
-                    if ((i == (mb_width - 1)) && slice_mb_x) {
-                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-                    }
-                }
-		
-                if ((i == mb_width) && slice_mb_x) {
-                    mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
                 }
 
                 *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
@@ -928,11 +912,20 @@ gen8_vme_mpeg2_prepare(VADriverContextP ctx,
 {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSliceParameterBufferMPEG2 *slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+
+    if ((!vme_context->mpeg2_level) ||
+		(vme_context->mpeg2_level != (seq_param->sequence_extension.bits.profile_and_level_indication & MPEG2_LEVEL_MASK))) {
+	vme_context->mpeg2_level = seq_param->sequence_extension.bits.profile_and_level_indication & MPEG2_LEVEL_MASK;
+    }
+
 	
     /*Setup all the memory object*/
     gen8_vme_mpeg2_surface_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
     gen8_vme_interface_setup(ctx, encode_state, encoder_context);
-    gen8_vme_vme_state_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+    //gen8_vme_vme_state_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
+    intel_vme_mpeg2_state_setup(ctx, encode_state, encoder_context);
     gen8_vme_constant_setup(ctx, encode_state, encoder_context);
 
     /*Programing media pipeline*/
