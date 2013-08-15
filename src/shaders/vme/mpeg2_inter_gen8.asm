@@ -548,6 +548,11 @@ send (8)
         rlen vme_wb_length
         {align1};
 
+and.z.f0.0 (1)		null:uw	mb_hwdep<0,1,0>:uw		0x04:uw   {align1};
+(-f0.0) jmpi (1) vme_run_again;
+nop;
+vme_mv_output:
+
 add  (1) obw_m0.8<1>:UD         obw_m0.8<0,1,0>:UD 0x02:UD {align1};
 mov  (8) msg_reg0.0<1>:UD       obw_m0<8,8,1>:UD {align1};
 /* write FME info */
@@ -719,6 +724,145 @@ y_bottom_end:
 mul	(2)	TEMP_VAR1.0<1>:w	INPUT_ARG0.8<2,2,1>:w	-1:w	{align1};
 add	(2)	RET_ARG<1>:w		TEMP_VAR0.0<2,2,1>:w	TEMP_VAR1.0<2,2,1>:w	{align1};	
  	RETURN	{align1};
+nop;
+nop;
+
+vme_run_again:
+
+asr	(2)	mb_ref_win.0<1>:w	mb_mvp_ref.0<2,2,1>:w	2:w	{align1};
+mov	(2)	tmp_reg0.0<1>:w		mb_ref_win.0<2,2,1>:w		{align1};
+add	(2)	mb_ref_win.8<1>:w	mb_ref_win.0<2,2,1>:w	3:w	{align1};
+and	(2)	mb_ref_win.16<1>:uw	mb_ref_win.8<2,2,1>:uw	0xFFFC:uw {align1};
+
+cmp.l.f0.0	(1) null:w	tmp_reg0.0<0,1,0>:w	0:w	{align1};
+(f0.0)	mul	(1) tmp_reg0.0<1>:w	tmp_reg0.0<0,1,0>:w	-1:w	{align1};
+cmp.l.f0.0	(1) null:w	tmp_reg0.2<0,1,0>:w	0:w	{align1};
+(f0.0)	mul	(1) tmp_reg0.2<1>:w	tmp_reg0.2<0,1,0>:w	-1:w	{align1};
+
+cmp.ge.f0.0	(1) null:w	tmp_reg0.0<0,1,0>:w	4:w	{align1};
+(f0.0)	jmpi (1)	vme_start;
+cmp.ge.f0.0	(1) null:w	tmp_reg0.2<0,1,0>:w	4:w	{align1};
+(f0.0)	jmpi (1)	vme_start;
+
+jmpi (1) vme_done;
+
+vme_start:
+	mov (8)	tmp_vme_wb0.0<1>:ud	vme_wb0.0<8,8,1>:ud	{align1};
+	mov (8)	tmp_vme_wb1.0<1>:ud	vme_wb1.0<8,8,1>:ud	{align1};
+
+/* Calibrate the ref window for MPEG2 */
+mov  (1) vme_m0.0<1>:W		-16:W			{align1};
+mov  (1) vme_m0.2<1>:W		-12:W			{align1};
+mov  (1) INPUT_ARG0.8<1>:ud	vme_m0.8<0,1,0>:ud	{align1};
+add  (2) INPUT_ARG0.0<1>:w	vme_m0.0<2,2,1>:w	mb_ref_win.16<2,2,1>:w	{align1};
+mov  (8) INPUT_ARG1.0<1>:ud	pic_ref.0<8,8,1>:ud	{align1};
+
+SAVE_RET	{align1};
+jmpi	(1)	ref_boundary_check;
+mov  (2) vme_m0.0<1>:w		RET_ARG<2,2,1>:w	{align1};
+
+/* IME search */
+mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR:UD {align1};    /* 16x16 Source, harr */
+mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};         /* Reference Width&Height, 48x40 */
+
+mov  (1) vme_m0.4<1>:UD		vme_m0.0<0,1,0>:UD	{align1};
+
+mov  (8) vme_msg_0.0<1>:UD      vme_m0.0<8,8,1>:UD {align1};
+
+mov  (8) vme_m1.0<1>:ud		0x0:UD	{align1};
+
+mov  (1) vme_m1.0<1>:UD         ADAPTIVE_SEARCH_ENABLE:ud {align1} ;
+/* the Max MV number is passed by constant buffer */
+mov  (1) vme_m1.4<1>:UB         r4.28<0,1,0>:UB {align1};          
+mov  (1) vme_m1.8<1>:UD         START_CENTER + SEARCH_PATH_LEN:UD {align1};
+mov  (8) vme_msg_1.0<1>:UD      vme_m1.0<8,8,1>:UD {align1};
+
+/* Setup the Cost center */
+/* currently four 8x8 share the same cost center */
+mov  (4) vme_m3.0<2>:ud		mv_cc_ref.0<0,1,0>:ud	{align1};
+mov  (4) vme_m3.4<2>:ud		mv_cc_ref.0<0,1,0>:ud	{align1};
+
+mov (8) vme_msg_3<1>:UD		vme_m3.0<8,8,1>:UD {align1};
+mov (8) vme_msg_2<1>:UD		vme_m2.0<8,8,1>:UD {align1};
+
+/* M4/M5 search path */
+mov  (1) vme_msg_4.0<1>:UD	0x01010101:UD {align1};
+mov  (1) vme_msg_4.4<1>:UD	0x10010101:UD {align1};
+mov  (1) vme_msg_4.8<1>:UD	0x0F0F0F0F:UD {align1};
+mov  (1) vme_msg_4.12<1>:UD	0x100F0F0F:UD {align1};
+mov  (1) vme_msg_4.16<1>:UD	0x01010101:UD {align1};
+mov  (1) vme_msg_4.20<1>:UD	0x10010101:UD {align1};
+mov  (1) vme_msg_4.24<1>:UD	0x0F0F0F0F:UD {align1};
+mov  (1) vme_msg_4.28<1>:UD	0x100F0F0F:UD {align1};
+
+mov  (1) vme_msg_5.0<1>:UD	0x01010101:UD {align1};
+mov  (1) vme_msg_5.4<1>:UD	0x10010101:UD {align1};
+mov  (1) vme_msg_5.8<1>:UD	0x0F0F0F0F:UD {align1};
+mov  (1) vme_msg_5.12<1>:UD	0x000F0F0F:UD {align1};
+
+mov  (4) vme_msg_5.16<1>:UD	0x0:UD {align1};
+
+send (8)
+        vme_msg_ind
+        vme_wb<1>:UD
+        null
+        vme(
+                BIND_IDX_VME,
+                0,
+                0,
+                VME_IME_MESSAGE_TYPE
+        )
+        mlen ime_vme_msg_length
+        rlen vme_wb_length {align1};
+
+/* Set Macroblock-shape/mode for FBR */
+
+mov  (1) vme_m2.20<1>:UD	0x0:UD {align1};
+mov  (1) vme_m2.21<1>:UB	vme_wb.25<0,1,0>:UB	{align1};
+mov  (1) vme_m2.22<1>:UB	vme_wb.26<0,1,0>:UB	{align1};
+
+and  (1) tmp_reg0.0<1>:UW	vme_wb.0<0,1,0>:UW	0x03:UW {align1};
+mov  (1) vme_m2.20<1>:UB	tmp_reg0.0<0,1,0>:UB    {align1};
+
+/* Send FBR message into CRE */
+
+mov  (8) vme_msg_4.0<1>:UD       vme_wb1.0<8,8,1>:UD {align1};
+mov  (8) vme_msg_5.0<1>:ud       vme_wb2.0<8,8,1>:ud {align1};
+mov  (8) vme_msg_6.0<1>:ud       vme_wb3.0<8,8,1>:ud {align1};
+mov  (8) vme_msg_7.0<1>:ud       vme_wb4.0<8,8,1>:ud {align1};                
+
+mov  (1) vme_m0.12<1>:UD	INTER_SAD_HAAR + SUB_PEL_MODE_HALF + FBR_BME_DISABLE:UD {align1};    /* 16x16 Source, 1/2 pixel, harr, BME disable */
+/* Bilinear filter */
+mov  (1) tmp_reg0.0<1>:uw	0x04:uw	{align1};
+add  (1) vme_m1.30<1>:ub	vme_m1.30<0,1,0>:ub	tmp_reg0.0<0,1,0>:ub	{align1};
+
+mov  (8) vme_msg_0.0<1>:UD	vme_m0.0<8,8,1>:UD  {align1};
+mov  (8) vme_msg_1.0<1>:UD	vme_m1.0<8,8,1>:UD  {align1};
+
+mov  (8) vme_msg_2.0<1>:UD		vme_m2.0<8,8,1>:UD	{align1};
+mov  (8) vme_msg_3.0<1>:UD		vme_m3.0<8,8,1>:UD	{align1};
+
+/* after verification it will be passed by using payload */
+send (8)
+        vme_msg_ind
+        vme_wb<1>:UD
+        null
+        cre(
+                BIND_IDX_VME,
+                VME_FBR_MESSAGE_TYPE
+        )
+        mlen fbr_vme_msg_length
+        rlen vme_wb_length
+        {align1};
+
+cmp.l.f0.0 (1)	null:uw	vme_wb0.8<0,1,0>:uw	tmp_vme_wb0.8<0,1,0>:uw	{align1};
+(f0.0)	jmpi (1) vme_done;
+mov	(8)	vme_wb0.0<1>:ud	tmp_vme_wb0.0<8,8,1>:ud	{align1};
+mov	(8)	vme_wb1.0<1>:ud	tmp_vme_wb1.0<8,8,1>:ud	{align1};
+
+vme_done:
+       jmpi (1) vme_mv_output;
+nop;
 nop;
 nop;
 
