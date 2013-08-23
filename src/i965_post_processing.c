@@ -4800,6 +4800,63 @@ i965_image_pl2_processing(VADriverContextP ctx,
                           const VARectangle *dst_rect);
 
 static VAStatus
+i965_image_plx_nv12_plx_processing(VADriverContextP ctx,
+                                   VAStatus (*i965_image_plx_nv12_processing)(
+                                       VADriverContextP,
+                                       const struct i965_surface *,
+                                       const VARectangle *,
+                                       struct i965_surface *,
+                                       const VARectangle *),
+                                   const struct i965_surface *src_surface,
+                                   const VARectangle *src_rect,
+                                   struct i965_surface *dst_surface,
+                                   const VARectangle *dst_rect)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAStatus status;
+    VASurfaceID tmp_surface_id = VA_INVALID_SURFACE;
+    struct object_surface *obj_surface = NULL;
+    struct i965_surface tmp_surface;
+    int width, height;
+
+    pp_get_surface_size(ctx, dst_surface, &width, &height);
+    status = i965_CreateSurfaces(ctx,
+                                 width,
+                                 height,
+                                 VA_RT_FORMAT_YUV420,
+                                 1,
+                                 &tmp_surface_id);
+    assert(status == VA_STATUS_SUCCESS);
+    obj_surface = SURFACE(tmp_surface_id);
+    assert(obj_surface);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+
+    tmp_surface.base = (struct object_base *)obj_surface;
+    tmp_surface.type = I965_SURFACE_TYPE_SURFACE;
+    tmp_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+    status = i965_image_plx_nv12_processing(ctx,
+                                            src_surface,
+                                            src_rect,
+                                            &tmp_surface,
+                                            dst_rect);
+
+    if (status == VA_STATUS_SUCCESS)
+        status = i965_image_pl2_processing(ctx,
+                                           &tmp_surface,
+                                           dst_rect,
+                                           dst_surface,
+                                           dst_rect);
+
+    i965_DestroySurfaces(ctx,
+                         &tmp_surface_id,
+                         1);
+
+    return status;
+}
+
+
+static VAStatus
 i965_image_pl1_rgbx_processing(VADriverContextP ctx,
                                const struct i965_surface *src_surface,
                                const VARectangle *src_rect,
@@ -4822,46 +4879,12 @@ i965_image_pl1_rgbx_processing(VADriverContextP ctx,
 
         return VA_STATUS_SUCCESS;
     } else {
-        VAStatus status;
-        VASurfaceID out_surface_id = VA_INVALID_SURFACE;
-        struct object_surface *obj_surface = NULL;
-        struct i965_surface tmp_surface;
-        int width, height;
-
-        pp_get_surface_size(ctx, dst_surface, &width, &height);
-        status = i965_CreateSurfaces(ctx,
-                                     width,
-                                     height,
-                                     VA_RT_FORMAT_YUV420,
-                                     1,
-                                     &out_surface_id);
-        assert(status == VA_STATUS_SUCCESS);
-        obj_surface = SURFACE(out_surface_id);
-        assert(obj_surface);
-        i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
-
-        tmp_surface.base = (struct object_base *)obj_surface;
-        tmp_surface.type = I965_SURFACE_TYPE_SURFACE;
-        tmp_surface.flags = I965_SURFACE_FLAG_FRAME;
-
-        status = i965_image_pl1_rgbx_processing(ctx,
-                                                src_surface,
-                                                src_rect,
-                                                &tmp_surface,
-                                                dst_rect);
-
-        if (status == VA_STATUS_SUCCESS)
-            status = i965_image_pl2_processing(ctx,
-                                               &tmp_surface,
-                                               dst_rect,
-                                               dst_surface,
-                                               dst_rect);
-
-        i965_DestroySurfaces(ctx,
-                             &out_surface_id,
-                             1);
-
-        return status;
+        return i965_image_plx_nv12_plx_processing(ctx,
+                                                  i965_image_pl1_rgbx_processing,
+                                                  src_surface,
+                                                  src_rect,
+                                                  dst_surface,
+                                                  dst_rect);
     }
 }
 
@@ -4885,6 +4908,7 @@ i965_image_pl3_processing(VADriverContextP ctx,
                                                  dst_rect,
                                                  PP_PL3_LOAD_SAVE_N12,
                                                  NULL);
+        intel_batchbuffer_flush(pp_context->batch);
     } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') || 
                fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
                fourcc == VA_FOURCC('Y', 'V', '1', '2') || 
@@ -4896,6 +4920,7 @@ i965_image_pl3_processing(VADriverContextP ctx,
                                                  dst_rect,
                                                  PP_PL3_LOAD_SAVE_PL3,
                                                  NULL);
+        intel_batchbuffer_flush(pp_context->batch);
     } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') ||
                fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
@@ -4905,12 +4930,16 @@ i965_image_pl3_processing(VADriverContextP ctx,
                                                  dst_rect,
                                                  PP_PL3_LOAD_SAVE_PA,
                                                  NULL);
+        intel_batchbuffer_flush(pp_context->batch);
     }
     else {
-        assert(0);
+        vaStatus = i965_image_plx_nv12_plx_processing(ctx,
+                                                      i965_image_pl3_processing,
+                                                      src_surface,
+                                                      src_rect,
+                                                      dst_surface,
+                                                      dst_rect);
     }
-
-    intel_batchbuffer_flush(pp_context->batch);
 
     return vaStatus;
 }
@@ -5004,7 +5033,12 @@ i965_image_pl1_processing(VADriverContextP ctx,
                                       NULL);
 
     } else {
-        return VA_STATUS_ERROR_UNKNOWN;
+        return i965_image_plx_nv12_plx_processing(ctx,
+                                                  i965_image_pl1_processing,
+                                                  src_surface,
+                                                  src_rect,
+                                                  dst_surface,
+                                                  dst_rect);
     }
 
     intel_batchbuffer_flush(pp_context->batch);
