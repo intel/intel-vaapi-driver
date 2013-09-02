@@ -298,6 +298,7 @@ build_avc_slice_header(VAEncSequenceParameterBufferH264 *sps_param,
 {
     avc_bitstream bs;
     int is_idr = !!pic_param->pic_fields.bits.idr_pic_flag;
+    int is_ref = !!pic_param->pic_fields.bits.reference_pic_flag;
 
     avc_bitstream_start(&bs);
     nal_start_code_prefix(&bs);
@@ -305,10 +306,12 @@ build_avc_slice_header(VAEncSequenceParameterBufferH264 *sps_param,
     if (IS_I_SLICE(slice_param->slice_type)) {
         nal_header(&bs, NAL_REF_IDC_HIGH, is_idr ? NAL_IDR : NAL_NON_IDR);
     } else if (IS_P_SLICE(slice_param->slice_type)) {
-        nal_header(&bs, NAL_REF_IDC_MEDIUM, is_idr ? NAL_IDR : NAL_NON_IDR);
+        assert(!is_idr);
+        nal_header(&bs, NAL_REF_IDC_MEDIUM, NAL_NON_IDR);
     } else {
         assert(IS_B_SLICE(slice_param->slice_type));
-        nal_header(&bs, NAL_REF_IDC_NONE, is_idr ? NAL_IDR : NAL_NON_IDR);
+        assert(!is_idr);
+        nal_header(&bs, is_ref ? NAL_REF_IDC_LOW : NAL_REF_IDC_NONE, NAL_NON_IDR);
     }
 
     slice_header(&bs, sps_param, pic_param, slice_param);
