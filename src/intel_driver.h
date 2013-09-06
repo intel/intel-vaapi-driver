@@ -45,6 +45,7 @@
 #define BR13_8888                               (0x3 << 24)
 
 #define CMD_PIPE_CONTROL                        (CMD_3D | (3 << 27) | (2 << 24) | (0 << 16))
+#define CMD_PIPE_CONTROL_CS_STALL               (1 << 20)
 #define CMD_PIPE_CONTROL_NOWRITE                (0 << 14)
 #define CMD_PIPE_CONTROL_WRITE_QWORD            (1 << 14)
 #define CMD_PIPE_CONTROL_WRITE_DEPTH            (2 << 14)
@@ -57,6 +58,7 @@
 #define CMD_PIPE_CONTROL_DC_FLUSH               (1 << 5)
 #define CMD_PIPE_CONTROL_GLOBAL_GTT             (1 << 2)
 #define CMD_PIPE_CONTROL_LOCAL_PGTT             (0 << 2)
+#define CMD_PIPE_CONTROL_STALL_AT_SCOREBOARD    (1 << 1)
 #define CMD_PIPE_CONTROL_DEPTH_CACHE_FLUSH      (1 << 0)
 
 

@@ -24,6 +24,9 @@ struct intel_batchbuffer
     int (*run)(drm_intel_bo *bo, int used,
                drm_clip_rect_t *cliprects, int num_cliprects,
                int DR4, unsigned int ring_flag);
+
+    /* Used for Sandybdrige workaround */
+    dri_bo *wa_render_bo;
 };
 
 struct intel_batchbuffer *intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size);
