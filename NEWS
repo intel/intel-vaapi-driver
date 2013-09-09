@@ -1,5 +1,11 @@
-libva-intel-driver NEWS -- summary of changes.  2013-06-26
+libva-intel-driver NEWS -- summary of changes.  2013-09-DD
 Copyright (C) 2009-2013 Intel Corporation
+
+Version 1.2.1 - DD.Sep.2013
+* Add PCI IDs for Bay Trail
+* Performance improvement for MPEG-2 Encoding on IVB/HSW
+* Add basic processing support for packed YUV to packed YUV on ILK+
+* Bug fixes
 
 Version 1.2.0 - 26.Jun.2013
 * The new H.264 encoding API on SNB/IVB/HSW
