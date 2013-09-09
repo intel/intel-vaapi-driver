@@ -267,7 +267,7 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
     VAStatus vaStatus;
 
     switch (profile) {
-    case VAProfileH264Baseline:
+    case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
         vaStatus = intel_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
@@ -352,7 +352,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         encoder_context->codec = CODEC_MPEG2;
         break;
         
-    case VAProfileH264Baseline:
+    case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
         encoder_context->codec = CODEC_H264;
