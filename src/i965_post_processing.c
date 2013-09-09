@@ -4868,7 +4868,8 @@ i965_image_pl1_rgbx_processing(VADriverContextP ctx,
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus;
 
-    if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+    switch (fourcc) {
+    case VA_FOURCC('N', 'V', '1', '2'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4877,13 +4878,16 @@ i965_image_pl1_rgbx_processing(VADriverContextP ctx,
                                                  PP_RGBX_LOAD_SAVE_NV12,
                                                  NULL);
         intel_batchbuffer_flush(pp_context->batch);
-    } else {
+        break;
+
+    default:
         vaStatus = i965_image_plx_nv12_plx_processing(ctx,
                                                       i965_image_pl1_rgbx_processing,
                                                       src_surface,
                                                       src_rect,
                                                       dst_surface,
                                                       dst_rect);
+        break;
     }
 
     return vaStatus;
@@ -4901,7 +4905,8 @@ i965_image_pl3_processing(VADriverContextP ctx,
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+    switch (fourcc) {
+    case VA_FOURCC('N', 'V', '1', '2'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4910,10 +4915,12 @@ i965_image_pl3_processing(VADriverContextP ctx,
                                                  PP_PL3_LOAD_SAVE_N12,
                                                  NULL);
         intel_batchbuffer_flush(pp_context->batch);
-    } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') || 
-               fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
-               fourcc == VA_FOURCC('Y', 'V', '1', '2') || 
-               fourcc == VA_FOURCC('I', '4', '2', '0')) {
+        break;
+
+    case VA_FOURCC('I', 'M', 'C', '1'):
+    case VA_FOURCC('I', 'M', 'C', '3'):
+    case VA_FOURCC('Y', 'V', '1', '2'):
+    case VA_FOURCC('I', '4', '2', '0'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4922,8 +4929,10 @@ i965_image_pl3_processing(VADriverContextP ctx,
                                                  PP_PL3_LOAD_SAVE_PL3,
                                                  NULL);
         intel_batchbuffer_flush(pp_context->batch);
-    } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') ||
-               fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        break;
+
+    case VA_FOURCC('Y', 'U', 'Y', '2'):
+    case VA_FOURCC('U', 'Y', 'V', 'Y'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4932,14 +4941,16 @@ i965_image_pl3_processing(VADriverContextP ctx,
                                                  PP_PL3_LOAD_SAVE_PA,
                                                  NULL);
         intel_batchbuffer_flush(pp_context->batch);
-    }
-    else {
+        break;
+
+    default:
         vaStatus = i965_image_plx_nv12_plx_processing(ctx,
                                                       i965_image_pl3_processing,
                                                       src_surface,
                                                       src_rect,
                                                       dst_surface,
                                                       dst_rect);
+        break;
     }
 
     return vaStatus;
@@ -4957,7 +4968,8 @@ i965_image_pl2_processing(VADriverContextP ctx,
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+    switch (fourcc) {
+    case VA_FOURCC('N', 'V', '1', '2'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4965,10 +4977,12 @@ i965_image_pl2_processing(VADriverContextP ctx,
                                                  dst_rect,
                                                  PP_NV12_LOAD_SAVE_N12,
                                                  NULL);
-    } else if (fourcc == VA_FOURCC('I', 'M', 'C', '1') || 
-               fourcc == VA_FOURCC('I', 'M', 'C', '3') || 
-               fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
-               fourcc == VA_FOURCC('I', '4', '2', '0') ) {
+        break;
+
+    case VA_FOURCC('I', 'M', 'C', '1'):
+    case VA_FOURCC('I', 'M', 'C', '3'):
+    case VA_FOURCC('Y', 'V', '1', '2'):
+    case VA_FOURCC('I', '4', '2', '0'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4976,19 +4990,23 @@ i965_image_pl2_processing(VADriverContextP ctx,
                                                  dst_rect,
                                                  PP_NV12_LOAD_SAVE_PL3,
                                                  NULL);
-    } else if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') ||
-               fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+        break;
+
+    case VA_FOURCC('Y', 'U', 'Y', '2'):
+    case VA_FOURCC('U', 'Y', 'V', 'Y'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
                                                  dst_surface,
                                                  dst_rect,
                                                  PP_NV12_LOAD_SAVE_PA,
-                                                     NULL);
-    } else if (fourcc == VA_FOURCC('B', 'G', 'R', 'X') || 
-               fourcc == VA_FOURCC('B', 'G', 'R', 'A') ||
-               fourcc == VA_FOURCC('R', 'G', 'B', 'X') ||
-               fourcc == VA_FOURCC('R', 'G', 'B', 'A') ) {
+                                                 NULL);
+        break;
+
+    case VA_FOURCC('B', 'G', 'R', 'X'):
+    case VA_FOURCC('B', 'G', 'R', 'A'):
+    case VA_FOURCC('R', 'G', 'B', 'X'):
+    case VA_FOURCC('R', 'G', 'B', 'A'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -4996,7 +5014,9 @@ i965_image_pl2_processing(VADriverContextP ctx,
                                                  dst_rect,
                                                  PP_NV12_LOAD_SAVE_RGBX,
                                                  NULL);
-    } else {
+        break;
+
+    default:
         return VA_STATUS_ERROR_UNIMPLEMENTED;
     }
 
@@ -5017,7 +5037,8 @@ i965_image_pl1_processing(VADriverContextP ctx,
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus;
 
-    if (fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+    switch (fourcc) {
+    case VA_FOURCC('N', 'V', '1', '2'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -5026,7 +5047,9 @@ i965_image_pl1_processing(VADriverContextP ctx,
                                                  PP_PA_LOAD_SAVE_NV12,
                                                  NULL);
         intel_batchbuffer_flush(pp_context->batch);
-    } else if (fourcc == VA_FOURCC_YV12) {
+        break;
+
+    case VA_FOURCC('Y', 'V', '1', '2'):
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
                                                  src_surface,
                                                  src_rect,
@@ -5035,13 +5058,16 @@ i965_image_pl1_processing(VADriverContextP ctx,
                                                  PP_PA_LOAD_SAVE_PL3,
                                                  NULL);
         intel_batchbuffer_flush(pp_context->batch);
-    } else {
+        break;
+
+    default:
         vaStatus = i965_image_plx_nv12_plx_processing(ctx,
                                                       i965_image_pl1_processing,
                                                       src_surface,
                                                       src_rect,
                                                       dst_surface,
                                                       dst_rect);
+        break;
     }
 
     return vaStatus;
@@ -5085,7 +5111,7 @@ i965_image_processing(VADriverContextP ctx,
                                                dst_surface,
                                                dst_rect);
             break;
-        case  VA_FOURCC('Y', 'U', 'Y', '2'):
+        case VA_FOURCC('Y', 'U', 'Y', '2'):
         case VA_FOURCC('U', 'Y', 'V', 'Y'):
             status = i965_image_pl1_processing(ctx,
                                                src_surface,
