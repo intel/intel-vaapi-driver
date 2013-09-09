@@ -4,6 +4,7 @@ INTEL_PP_G7B = \
 	nv12_dn_nv12.g7b	\
 	pa_to_pl2.g7b		\
 	pa_to_pl3.g7b		\
+	pa_to_pa.g7b		\
 	pl2_to_pa.g7b		\
 	pl2_to_pl2.g7b		\
 	pl2_to_pl3.g7b		\
