@@ -3588,14 +3588,16 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     int w, h;
     int orig_w, orig_h;
     int dndi_top_first = 1;
+    VAProcFilterParameterBufferDeinterlacing *di_filter_param = (VAProcFilterParameterBufferDeinterlacing *)filter_param;
 
-    if (src_surface->flags == I965_SURFACE_FLAG_FRAME)
+    if (di_filter_param->flags == I965_SURFACE_FLAG_FRAME)
         return VA_STATUS_ERROR_FLAG_NOT_SUPPORTED;
 
-    if (src_surface->flags == I965_SURFACE_FLAG_TOP_FIELD_FIRST)
+    if (di_filter_param->flags == I965_SURFACE_FLAG_TOP_FIELD_FIRST) {
         dndi_top_first = 1;
-    else
+    } else {
         dndi_top_first = 0;
+    }
 
     /* surface */
     obj_surface = (struct object_surface *)src_surface->base;
