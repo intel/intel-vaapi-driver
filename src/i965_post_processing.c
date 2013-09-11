@@ -3193,14 +3193,16 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
     int w, h;
     int orig_w, orig_h;
     int dndi_top_first = 1;
+    VAProcFilterParameterBufferDeinterlacing *di_filter_param = (VAProcFilterParameterBufferDeinterlacing *)filter_param;
 
-    if (src_surface->flags == I965_SURFACE_FLAG_FRAME)
+    if (di_filter_param->flags == I965_SURFACE_FLAG_FRAME)
         return VA_STATUS_ERROR_FLAG_NOT_SUPPORTED;
 
-    if (src_surface->flags == I965_SURFACE_FLAG_TOP_FIELD_FIRST)
+    if (di_filter_param->flags == I965_SURFACE_FLAG_TOP_FIELD_FIRST) {
         dndi_top_first = 1;
-    else
+    } else {
         dndi_top_first = 0;
+    }
 
     /* surface */
     obj_surface = (struct object_surface *)src_surface->base;
@@ -3263,39 +3265,39 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
 
     /* sample dndi index 1 */
     index = 0;
-    sampler_dndi[index].dw0.denoise_asd_threshold = 0;
-    sampler_dndi[index].dw0.denoise_history_delta = 8;          // 0-15, default is 8
-    sampler_dndi[index].dw0.denoise_maximum_history = 128;      // 128-240
-    sampler_dndi[index].dw0.denoise_stad_threshold = 0;
+    sampler_dndi[index].dw0.denoise_asd_threshold = 38;
+    sampler_dndi[index].dw0.denoise_history_delta = 7;          // 0-15, default is 8
+    sampler_dndi[index].dw0.denoise_maximum_history = 192;      // 128-240
+    sampler_dndi[index].dw0.denoise_stad_threshold = 140;
 
-    sampler_dndi[index].dw1.denoise_threshold_for_sum_of_complexity_measure = 64;
-    sampler_dndi[index].dw1.denoise_moving_pixel_threshold = 4;
+    sampler_dndi[index].dw1.denoise_threshold_for_sum_of_complexity_measure = 38;
+    sampler_dndi[index].dw1.denoise_moving_pixel_threshold = 1;
     sampler_dndi[index].dw1.stmm_c2 = 1;
-    sampler_dndi[index].dw1.low_temporal_difference_threshold = 8;
-    sampler_dndi[index].dw1.temporal_difference_threshold = 16;
+    sampler_dndi[index].dw1.low_temporal_difference_threshold = 0;
+    sampler_dndi[index].dw1.temporal_difference_threshold = 0;
 
-    sampler_dndi[index].dw2.block_noise_estimate_noise_threshold = 15;   // 0-31
-    sampler_dndi[index].dw2.block_noise_estimate_edge_threshold = 7;    // 0-15
+    sampler_dndi[index].dw2.block_noise_estimate_noise_threshold = 20;   // 0-31
+    sampler_dndi[index].dw2.block_noise_estimate_edge_threshold = 1;    // 0-15
     sampler_dndi[index].dw2.denoise_edge_threshold = 7;                 // 0-15
-    sampler_dndi[index].dw2.good_neighbor_threshold = 4;                // 0-63
+    sampler_dndi[index].dw2.good_neighbor_threshold = 12;                // 0-63
 
-    sampler_dndi[index].dw3.maximum_stmm = 128;
-    sampler_dndi[index].dw3.multipler_for_vecm = 2;
-    sampler_dndi[index].dw3.blending_constant_across_time_for_small_values_of_stmm = 0;
+    sampler_dndi[index].dw3.maximum_stmm = 150;
+    sampler_dndi[index].dw3.multipler_for_vecm = 30;
+    sampler_dndi[index].dw3.blending_constant_across_time_for_small_values_of_stmm = 125;
     sampler_dndi[index].dw3.blending_constant_across_time_for_large_values_of_stmm = 64;
     sampler_dndi[index].dw3.stmm_blending_constant_select = 0;
 
-    sampler_dndi[index].dw4.sdi_delta = 8;
-    sampler_dndi[index].dw4.sdi_threshold = 128;
-    sampler_dndi[index].dw4.stmm_output_shift = 7;                      // stmm_max - stmm_min = 2 ^ stmm_output_shift
-    sampler_dndi[index].dw4.stmm_shift_up = 0;
+    sampler_dndi[index].dw4.sdi_delta = 5;
+    sampler_dndi[index].dw4.sdi_threshold = 100;
+    sampler_dndi[index].dw4.stmm_output_shift = 5;                      // stmm_max - stmm_min = 2 ^ stmm_output_shift
+    sampler_dndi[index].dw4.stmm_shift_up = 1;
     sampler_dndi[index].dw4.stmm_shift_down = 0;
-    sampler_dndi[index].dw4.minimum_stmm = 0;
+    sampler_dndi[index].dw4.minimum_stmm = 118;
 
-    sampler_dndi[index].dw5.fmd_temporal_difference_threshold = 8;
-    sampler_dndi[index].dw5.sdi_fallback_mode_2_constant = 32;
-    sampler_dndi[index].dw5.sdi_fallback_mode_1_t2_constant = 64;
-    sampler_dndi[index].dw5.sdi_fallback_mode_1_t1_constant = 32;
+    sampler_dndi[index].dw5.fmd_temporal_difference_threshold = 175;
+    sampler_dndi[index].dw5.sdi_fallback_mode_2_constant = 37;
+    sampler_dndi[index].dw5.sdi_fallback_mode_1_t2_constant = 100;
+    sampler_dndi[index].dw5.sdi_fallback_mode_1_t1_constant = 50;
 
     sampler_dndi[index].dw6.dn_enable = 1;
     sampler_dndi[index].dw6.di_enable = 1;
@@ -3304,14 +3306,14 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
     sampler_dndi[index].dw6.dndi_stream_id = 0;
     sampler_dndi[index].dw6.dndi_first_frame = 1;
     sampler_dndi[index].dw6.progressive_dn = 0;
-    sampler_dndi[index].dw6.fmd_tear_threshold = 63;
-    sampler_dndi[index].dw6.fmd2_vertical_difference_threshold = 32;
-    sampler_dndi[index].dw6.fmd1_vertical_difference_threshold = 32;
+    sampler_dndi[index].dw6.fmd_tear_threshold = 2;
+    sampler_dndi[index].dw6.fmd2_vertical_difference_threshold = 100;
+    sampler_dndi[index].dw6.fmd1_vertical_difference_threshold = 16;
 
     sampler_dndi[index].dw7.fmd_for_1st_field_of_current_frame = 0;
     sampler_dndi[index].dw7.fmd_for_2nd_field_of_previous_frame = 0;
     sampler_dndi[index].dw7.vdi_walker_enable = 0;
-    sampler_dndi[index].dw7.column_width_minus1 = 0;
+    sampler_dndi[index].dw7.column_width_minus1 = w / 16;
 
     dri_bo_unmap(pp_context->sampler_state_table.bo);
 
