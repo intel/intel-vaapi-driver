@@ -1436,8 +1436,8 @@ ironlake_pp_object_walker(VADriverContextP ctx,
     int x, x_steps, y, y_steps;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
 
-    x_steps = pp_context->pp_x_steps(&pp_context->private_context);
-    y_steps = pp_context->pp_y_steps(&pp_context->private_context);
+    x_steps = pp_context->pp_x_steps(pp_context->private_context);
+    y_steps = pp_context->pp_y_steps(pp_context->private_context);
 
     for (y = 0; y < y_steps; y++) {
         for (x = 0; x < x_steps; x++) {
@@ -2012,6 +2012,7 @@ pp_null_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp
     /* private function & data */
     pp_context->pp_x_steps = pp_null_x_steps;
     pp_context->pp_y_steps = pp_null_y_steps;
+    pp_context->private_context = NULL;
     pp_context->pp_set_block_parameter = pp_null_set_block_parameter;
 
     dst_surface->flags = src_surface->flags;
@@ -2037,7 +2038,7 @@ static int
 pp_load_save_set_block_parameter(struct i965_post_processing_context *pp_context, int x, int y)
 {
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
-    struct pp_load_save_context *pp_load_save_context = (struct pp_load_save_context *)&pp_context->private_context;
+    struct pp_load_save_context *pp_load_save_context = (struct pp_load_save_context *)pp_context->private_context;
 
     pp_inline_parameter->grf5.destination_block_horizontal_origin = x * 16 + pp_load_save_context->dest_x;
     pp_inline_parameter->grf5.destination_block_vertical_origin = y * 8 + pp_load_save_context->dest_y;
@@ -2086,7 +2087,7 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
                                 const VARectangle *dst_rect,
                                 void *filter_param)
 {
-    struct pp_load_save_context *pp_load_save_context = (struct pp_load_save_context *)&pp_context->private_context;
+    struct pp_load_save_context *pp_load_save_context = (struct pp_load_save_context *)&pp_context->pp_load_save_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     int width[3], height[3], pitch[3], offset[3];
@@ -2102,6 +2103,7 @@ pp_plx_load_save_plx_initialize(VADriverContextP ctx, struct i965_post_processin
     /* private function & data */
     pp_context->pp_x_steps = pp_load_save_x_steps;
     pp_context->pp_y_steps = pp_load_save_y_steps;
+    pp_context->private_context = &pp_context->pp_load_save_context;
     pp_context->pp_set_block_parameter = pp_load_save_set_block_parameter;
 
     int dst_left_edge_extend = dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;;
@@ -2142,7 +2144,7 @@ pp_scaling_y_steps(void *private_context)
 static int
 pp_scaling_set_block_parameter(struct i965_post_processing_context *pp_context, int x, int y)
 {
-    struct pp_scaling_context *pp_scaling_context = (struct pp_scaling_context *)&pp_context->private_context;
+    struct pp_scaling_context *pp_scaling_context = (struct pp_scaling_context *)pp_context->private_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     float src_x_steping = pp_inline_parameter->grf5.normalized_video_x_scaling_step;
@@ -2164,7 +2166,7 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
                            const VARectangle *dst_rect,
                            void *filter_param)
 {
-    struct pp_scaling_context *pp_scaling_context = (struct pp_scaling_context *)&pp_context->private_context;
+    struct pp_scaling_context *pp_scaling_context = (struct pp_scaling_context *)&pp_context->pp_scaling_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct object_surface *obj_surface;
@@ -2234,6 +2236,7 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     /* private function & data */
     pp_context->pp_x_steps = pp_scaling_x_steps;
     pp_context->pp_y_steps = pp_scaling_y_steps;
+    pp_context->private_context = &pp_context->pp_scaling_context;
     pp_context->pp_set_block_parameter = pp_scaling_set_block_parameter;
 
     int dst_left_edge_extend = dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;
@@ -2273,7 +2276,7 @@ pp_avs_y_steps(void *private_context)
 static int
 pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context, int x, int y)
 {
-    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)pp_context->private_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     float src_x_steping, src_y_steping, video_step_delta;
@@ -2380,7 +2383,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
                        void *filter_param,
                        int nlas)
 {
-    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->pp_avs_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct object_surface *obj_surface;
@@ -2623,6 +2626,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     /* private function & data */
     pp_context->pp_x_steps = pp_avs_x_steps;
     pp_context->pp_y_steps = pp_avs_y_steps;
+    pp_context->private_context = &pp_context->pp_avs_context;
     pp_context->pp_set_block_parameter = pp_avs_set_block_parameter;
 
     int dst_left_edge_extend = dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;
@@ -2702,7 +2706,7 @@ gen7_pp_avs_y_steps(void *private_context)
 static int
 gen7_pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context, int x, int y)
 {
-    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)pp_context->private_context;
     struct gen7_pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
 
     pp_inline_parameter->grf7.destination_block_horizontal_origin = x * 16 + pp_avs_context->dest_x;
@@ -2739,7 +2743,7 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
                            const VARectangle *dst_rect,
                            void *filter_param)
 {
-    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->pp_avs_context;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct gen7_sampler_8x8 *sampler_8x8;
@@ -2905,6 +2909,7 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     /* private function & data */
     pp_context->pp_x_steps = gen7_pp_avs_x_steps;
     pp_context->pp_y_steps = gen7_pp_avs_y_steps;
+    pp_context->private_context = &pp_context->pp_avs_context;
     pp_context->pp_set_block_parameter = gen7_pp_avs_set_block_parameter;
 
     pp_avs_context->dest_x = dst_rect->x;
@@ -2950,7 +2955,7 @@ gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
                            const VARectangle *dst_rect,
                            void *filter_param)
 {
-    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->pp_avs_context;
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct gen7_sampler_8x8 *sampler_8x8;
     struct i965_sampler_8x8_state *sampler_8x8_state;
@@ -3118,6 +3123,7 @@ gen7_pp_rgbx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_co
     /* private function & data */
     pp_context->pp_x_steps = gen7_pp_avs_x_steps;
     pp_context->pp_y_steps = gen7_pp_avs_y_steps;
+    pp_context->private_context = &pp_context->pp_avs_context;
     pp_context->pp_set_block_parameter = gen7_pp_avs_set_block_parameter;
 
     pp_avs_context->dest_x = dst_rect->x;
@@ -3184,7 +3190,7 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
                         void *filter_param)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->private_context;
+    struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->pp_dndi_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct object_surface *obj_surface;
@@ -3320,6 +3326,7 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
     /* private function & data */
     pp_context->pp_x_steps = pp_dndi_x_steps;
     pp_context->pp_y_steps = pp_dndi_y_steps;
+    pp_context->private_context = &pp_context->pp_dndi_context;
     pp_context->pp_set_block_parameter = pp_dndi_set_block_parameter;
 
     pp_static_parameter->grf1.statistics_surface_picth = w / 2;
@@ -3374,7 +3381,7 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
                       void *filter_param)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct pp_dn_context *pp_dn_context = (struct pp_dn_context *)&pp_context->private_context;
+    struct pp_dn_context *pp_dn_context = (struct pp_dn_context *)&pp_context->pp_dn_context;
     struct object_surface *obj_surface;
     struct i965_sampler_dndi *sampler_dndi;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
@@ -3526,6 +3533,7 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
     /* private function & data */
     pp_context->pp_x_steps = pp_dn_x_steps;
     pp_context->pp_y_steps = pp_dn_y_steps;
+    pp_context->private_context = &pp_context->pp_dn_context;
     pp_context->pp_set_block_parameter = pp_dn_set_block_parameter;
 
     pp_static_parameter->grf1.statistics_surface_picth = w / 2;
@@ -3582,7 +3590,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
                              void *filter_param)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->private_context;
+    struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->pp_dndi_context;
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct object_surface *obj_surface;
     struct gen7_sampler_dndi *sampler_dndi;
@@ -3754,6 +3762,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     /* private function & data */
     pp_context->pp_x_steps = gen7_pp_dndi_x_steps;
     pp_context->pp_y_steps = gen7_pp_dndi_y_steps;
+    pp_context->private_context = &pp_context->pp_dndi_context;
     pp_context->pp_set_block_parameter = gen7_pp_dndi_set_block_parameter;
 
     pp_static_parameter->grf1.di_statistics_surface_pitch_div2 = w / 2;
@@ -3812,7 +3821,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
                            void *filter_param)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct pp_dn_context *pp_dn_context = (struct pp_dn_context *)&pp_context->private_context;
+    struct pp_dn_context *pp_dn_context = (struct pp_dn_context *)&pp_context->pp_dn_context;
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct object_surface *obj_surface;
     struct gen7_sampler_dndi *sampler_dn;
@@ -3982,6 +3991,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     /* private function & data */
     pp_context->pp_x_steps = gen7_pp_dn_x_steps;
     pp_context->pp_y_steps = gen7_pp_dn_y_steps;
+    pp_context->private_context = &pp_context->pp_dn_context;
     pp_context->pp_set_block_parameter = gen7_pp_dn_set_block_parameter;
 
     pp_static_parameter->grf1.di_statistics_surface_pitch_div2 = w / 2;
@@ -4467,8 +4477,8 @@ gen6_pp_object_walker(VADriverContextP ctx,
     else
         param_size = sizeof(struct pp_inline_parameter);
 
-    x_steps = pp_context->pp_x_steps(&pp_context->private_context);
-    y_steps = pp_context->pp_y_steps(&pp_context->private_context);
+    x_steps = pp_context->pp_x_steps(pp_context->private_context);
+    y_steps = pp_context->pp_y_steps(pp_context->private_context);
     command_length_in_dws = 6 + (param_size >> 2);
     command_buffer = dri_bo_alloc(i965->intel.bufmgr,
                                   "command objects buffer",

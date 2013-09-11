@@ -476,13 +476,12 @@ struct i965_post_processing_context
         dri_bo *bo;
     } stmm;
 
-    union {
-        struct pp_load_save_context pp_load_save_context;
-        struct pp_scaling_context pp_scaling_context;
-        struct pp_avs_context pp_avs_context;
-        struct pp_dndi_context pp_dndi_context;
-        struct pp_dn_context pp_dn_context;
-    } private_context;
+    struct pp_load_save_context pp_load_save_context;
+    struct pp_scaling_context pp_scaling_context;
+    struct pp_avs_context pp_avs_context;
+    struct pp_dndi_context pp_dndi_context;
+    struct pp_dn_context pp_dn_context;
+    void *private_context; /* pointer to the current private context */
 
     int (*pp_x_steps)(void *private_context);
     int (*pp_y_steps)(void *private_context);
