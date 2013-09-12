@@ -250,6 +250,10 @@ va_GetSurfaceBufferWl(
     case VA_FOURCC('I','4','2','0'):
     case VA_FOURCC('I','M','C','1'):
     case VA_FOURCC('I','M','C','3'):
+    case VA_FOURCC('4','2','2','H'):
+    case VA_FOURCC('4','2','2','V'):
+    case VA_FOURCC('4','1','1','P'):
+    case VA_FOURCC('4','4','4','P'):
         switch (obj_surface->subsampling) {
         case SUBSAMPLE_YUV411:
             drm_format = WL_DRM_FORMAT_YUV411;
