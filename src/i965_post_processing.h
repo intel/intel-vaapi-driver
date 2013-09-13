@@ -96,6 +96,8 @@ struct pp_dndi_context
     int dest_h;
     dri_bo *stmm_bo;
     int frame_order; /* -1 for the first frame */
+    VASurfaceID current_out_surface;
+    struct object_surface *current_out_obj_surface;
 };
 
 struct pp_dn_context
@@ -481,6 +483,7 @@ struct i965_post_processing_context
     struct pp_dndi_context pp_dndi_context;
     struct pp_dn_context pp_dn_context;
     void *private_context; /* pointer to the current private context */
+    void *pipeline_param;  /* pointer to the pipeline parameter */
 
     int (*pp_x_steps)(void *private_context);
     int (*pp_y_steps)(void *private_context);

@@ -60,6 +60,20 @@
 #define GPU_ASM_BLOCK_HEIGHT        8
 #define GPU_ASM_X_OFFSET_ALIGNMENT  4
 
+#define VA_STATUS_SUCCESS_1                     0xFFFFFFFE
+
+extern VAStatus
+i965_DestroySurfaces(VADriverContextP ctx,
+                     VASurfaceID *surface_list,
+                     int num_surfaces);
+extern VAStatus
+i965_CreateSurfaces(VADriverContextP ctx,
+                    int width,
+                    int height,
+                    int format,
+                    int num_surfaces,
+                    VASurfaceID *surfaces);
+
 static const uint32_t pp_null_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/null.g4b.gen5"
 };
@@ -3581,6 +3595,12 @@ gen7_pp_dndi_set_block_parameter(struct i965_post_processing_context *pp_context
     return 0;
 }
 
+
+extern VAStatus
+vpp_surface_convert(VADriverContextP ctx,
+                    struct object_surface *src_obj_surf,
+                    struct object_surface *dst_obj_surf);
+
 static VAStatus
 gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                              const struct i965_surface *src_surface,
@@ -3592,13 +3612,14 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct pp_dndi_context *pp_dndi_context = (struct pp_dndi_context *)&pp_context->pp_dndi_context;
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
-    struct object_surface *obj_surface;
+    struct object_surface *previous_in_obj_surface, *current_in_obj_surface, *previous_out_obj_surface, *current_out_obj_surface;
     struct gen7_sampler_dndi *sampler_dndi;
     int index;
     int w, h;
     int orig_w, orig_h;
     int dndi_top_first = 1;
     VAProcFilterParameterBufferDeinterlacing *di_filter_param = (VAProcFilterParameterBufferDeinterlacing *)filter_param;
+    int is_first_frame = (pp_dndi_context->frame_order == -1);
 
     if (di_filter_param->flags == I965_SURFACE_FLAG_FRAME)
         return VA_STATUS_ERROR_FLAG_NOT_SUPPORTED;
@@ -3610,12 +3631,70 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     }
 
     /* surface */
-    obj_surface = (struct object_surface *)src_surface->base;
-    orig_w = obj_surface->orig_width;
-    orig_h = obj_surface->orig_height;
-    w = obj_surface->width;
-    h = obj_surface->height;
+    current_in_obj_surface = (struct object_surface *)src_surface->base;
 
+    if (di_filter_param->algorithm == VAProcDeinterlacingBob) {
+        previous_in_obj_surface = current_in_obj_surface;
+        is_first_frame = 1;
+    } else if (di_filter_param->algorithm == VAProcDeinterlacingMotionAdaptive) {
+        if (pp_dndi_context->frame_order == 0) {
+            VAProcPipelineParameterBuffer *pipeline_param = pp_context->pipeline_param;
+            assert(pipeline_param->num_forward_references == 1);
+            assert(pipeline_param->forward_references[0] != VA_INVALID_ID);
+
+            previous_in_obj_surface = SURFACE(pipeline_param->forward_references[0]);
+            assert(previous_in_obj_surface && previous_in_obj_surface->bo);
+
+            is_first_frame = 0;
+        } else if (pp_dndi_context->frame_order == 1) {
+            vpp_surface_convert(ctx,
+                                pp_dndi_context->current_out_obj_surface,
+                                (struct object_surface *)dst_surface->base);
+            pp_dndi_context->frame_order = (pp_dndi_context->frame_order + 1) % 2;
+            is_first_frame = 0;
+
+            return VA_STATUS_SUCCESS_1;
+        } else {
+            previous_in_obj_surface = current_in_obj_surface;
+            is_first_frame = 1;
+        }
+    } else {
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    }
+
+    /* source (temporal reference) YUV surface index 4 */
+    orig_w = previous_in_obj_surface->orig_width;
+    orig_h = previous_in_obj_surface->orig_height;
+    w = previous_in_obj_surface->width;
+    h = previous_in_obj_surface->height;
+    gen7_pp_set_surface2_state(ctx, pp_context,
+                               previous_in_obj_surface->bo, 0,
+                               orig_w, orig_h, w,
+                               0, h,
+                               SURFACE_FORMAT_PLANAR_420_8, 1,
+                               4);
+
+    /* source surface */
+    orig_w = current_in_obj_surface->orig_width;
+    orig_h = current_in_obj_surface->orig_height;
+    w = current_in_obj_surface->width;
+    h = current_in_obj_surface->height;
+
+    /* source UV surface index 1 */
+    gen7_pp_set_surface_state(ctx, pp_context,
+                              current_in_obj_surface->bo, w * h,
+                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              1, 0);
+
+    /* source YUV surface index 3 */
+    gen7_pp_set_surface2_state(ctx, pp_context,
+                               current_in_obj_surface->bo, 0,
+                               orig_w, orig_h, w,
+                               0, h,
+                               SURFACE_FORMAT_PLANAR_420_8, 1,
+                               3);
+
+    /* STMM / History Statistics input surface, index 5 */
     if (pp_dndi_context->stmm_bo == NULL) {
         pp_dndi_context->stmm_bo = dri_bo_alloc(i965->intel.bufmgr,
                                                 "STMM surface",
@@ -3624,62 +3703,72 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
         assert(pp_dndi_context->stmm_bo);
     }
 
-    /* source UV surface index 1 */
-    gen7_pp_set_surface_state(ctx, pp_context,
-                              obj_surface->bo, w * h,
-                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
-                              1, 0);
-
-    /* source YUV surface index 3 */
-    gen7_pp_set_surface2_state(ctx, pp_context,
-                               obj_surface->bo, 0,
-                               orig_w, orig_h, w,
-                               0, h,
-                               SURFACE_FORMAT_PLANAR_420_8, 1,
-                               3);
-
-    /* source (temporal reference) YUV surface index 4 */
-    gen7_pp_set_surface2_state(ctx, pp_context,
-                               obj_surface->bo, 0,
-                               orig_w, orig_h, w,
-                               0, h,
-                               SURFACE_FORMAT_PLANAR_420_8, 1,
-                               4);
-
-    /* STMM / History Statistics input surface, index 5 */
     gen7_pp_set_surface_state(ctx, pp_context,
                               pp_dndi_context->stmm_bo, 0,
                               orig_w, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
                               5, 1);
 
     /* destination surface */
-    obj_surface = (struct object_surface *)dst_surface->base;
-    orig_w = obj_surface->orig_width;
-    orig_h = obj_surface->orig_height;
-    w = obj_surface->width;
-    h = obj_surface->height;
+    previous_out_obj_surface = (struct object_surface *)dst_surface->base;
+    orig_w = previous_out_obj_surface->orig_width;
+    orig_h = previous_out_obj_surface->orig_height;
+    w = previous_out_obj_surface->width;
+    h = previous_out_obj_surface->height;
+
+    if (is_first_frame) {
+        current_out_obj_surface = previous_out_obj_surface;
+    } else {
+        VAStatus va_status;
+
+        if (pp_dndi_context->current_out_surface == VA_INVALID_SURFACE) {
+            unsigned int tiling = 0, swizzle = 0;
+            dri_bo_get_tiling(previous_out_obj_surface->bo, &tiling, &swizzle);
+
+            va_status = i965_CreateSurfaces(ctx,
+                                            orig_w,
+                                            orig_h,
+                                            VA_RT_FORMAT_YUV420,
+                                            1,
+                                            &pp_dndi_context->current_out_surface);
+            assert(va_status == VA_STATUS_SUCCESS);
+            pp_dndi_context->current_out_obj_surface = SURFACE(pp_dndi_context->current_out_surface);
+            assert(pp_dndi_context->current_out_obj_surface);
+            i965_check_alloc_surface_bo(ctx,
+                                        pp_dndi_context->current_out_obj_surface,
+                                        tiling != I915_TILING_NONE,
+                                        VA_FOURCC('N','V','1','2'),
+                                        SUBSAMPLE_YUV420);
+        }
+
+        current_out_obj_surface = pp_dndi_context->current_out_obj_surface;
+    }
 
     /* destination(Previous frame) Y surface index 27 */
     gen7_pp_set_surface_state(ctx, pp_context,
-                              obj_surface->bo, 0,
+                              previous_out_obj_surface->bo, 0,
                               orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
                               27, 1);
 
     /* destination(Previous frame) UV surface index 28 */
     gen7_pp_set_surface_state(ctx, pp_context,
-                              obj_surface->bo, w * h,
+                              previous_out_obj_surface->bo, w * h,
                               orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
                               28, 1);
 
     /* destination(Current frame) Y surface index 30 */
     gen7_pp_set_surface_state(ctx, pp_context,
-                              obj_surface->bo, 0,
+                              current_out_obj_surface->bo, 0,
                               orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
                               30, 1);
 
     /* destination(Current frame) UV surface index 31 */
+    orig_w = current_out_obj_surface->orig_width;
+    orig_h = current_out_obj_surface->orig_height;
+    w = current_out_obj_surface->width;
+    h = current_out_obj_surface->height;
+
     gen7_pp_set_surface_state(ctx, pp_context,
-                              obj_surface->bo, w * h,
+                              current_out_obj_surface->bo, w * h,
                               orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
                               31, 1);
 
@@ -3740,7 +3829,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     sampler_dndi[index].dw6.di_partial = 0;
     sampler_dndi[index].dw6.dndi_top_first = dndi_top_first;
     sampler_dndi[index].dw6.dndi_stream_id = 1;
-    sampler_dndi[index].dw6.dndi_first_frame = 1;
+    sampler_dndi[index].dw6.dndi_first_frame = is_first_frame;
     sampler_dndi[index].dw6.progressive_dn = 0;
     sampler_dndi[index].dw6.mcdi_enable = 0;
     sampler_dndi[index].dw6.fmd_tear_threshold = 2;
@@ -4577,6 +4666,9 @@ gen6_post_processing(
         gen6_pp_pipeline_setup(ctx, pp_context);
     }
 
+    if (va_status == VA_STATUS_SUCCESS_1)
+        va_status = VA_STATUS_SUCCESS;
+
     return va_status;
 }
 
@@ -4603,18 +4695,6 @@ i965_post_processing_internal(
     
     return va_status;
 }
-
-VAStatus 
-i965_DestroySurfaces(VADriverContextP ctx,
-                     VASurfaceID *surface_list,
-                     int num_surfaces);
-VAStatus 
-i965_CreateSurfaces(VADriverContextP ctx,
-                    int width,
-                    int height,
-                    int format,
-                    int num_surfaces,
-                    VASurfaceID *surfaces);
 
 static void
 rgb_to_yuv(unsigned int argb,
@@ -5352,6 +5432,8 @@ i965_post_processing_context_init(VADriverContextP ctx,
         pp_context->pp_inline_parameter = calloc(sizeof(struct pp_inline_parameter), 1);
     }
 
+    pp_context->pp_dndi_context.current_out_surface = VA_INVALID_SURFACE;
+    pp_context->pp_dndi_context.current_out_obj_surface = NULL;
     pp_context->pp_dndi_context.frame_order = -1;
     pp_context->batch = batch;
 }
@@ -5386,6 +5468,8 @@ static const int proc_frame_to_pp_frame[3] = {
     I965_SURFACE_FLAG_TOP_FIELD_FIRST,
     I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST
 };
+
+#define VA_STATUS_SUCCESS_1                     0xFFFFFFFE
 
 VAStatus 
 i965_proc_picture(VADriverContextP ctx, 
@@ -5490,6 +5574,8 @@ i965_proc_picture(VADriverContextP ctx,
         dst_rect.height = in_height;
     }
 
+    proc_context->pp_context.pipeline_param = pipeline_param;
+
     for (i = 0; i < pipeline_param->num_filters; i++) {
         struct object_buffer *obj_buffer = BUFFER(pipeline_param->filters[i]);
         VAProcFilterParameterBufferBase *filter_param = NULL;
@@ -5537,6 +5623,7 @@ i965_proc_picture(VADriverContextP ctx,
         }
     }
 
+    proc_context->pp_context.pipeline_param = NULL;
     obj_surface = SURFACE(proc_state->current_render_target);
     assert(obj_surface);
     
