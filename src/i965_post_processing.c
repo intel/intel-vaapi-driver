@@ -3782,6 +3782,8 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
 
     dst_surface->flags = I965_SURFACE_FLAG_FRAME;
 
+    pp_dndi_context->frame_order = (pp_dndi_context->frame_order + 1) % 2;
+
     return VA_STATUS_SUCCESS;
 }
 
@@ -5350,6 +5352,7 @@ i965_post_processing_context_init(VADriverContextP ctx,
         pp_context->pp_inline_parameter = calloc(sizeof(struct pp_inline_parameter), 1);
     }
 
+    pp_context->pp_dndi_context.frame_order = -1;
     pp_context->batch = batch;
 }
 

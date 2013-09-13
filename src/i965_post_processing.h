@@ -95,6 +95,7 @@ struct pp_dndi_context
     int dest_w;
     int dest_h;
     dri_bo *stmm_bo;
+    int frame_order; /* -1 for the first frame */
 };
 
 struct pp_dn_context
