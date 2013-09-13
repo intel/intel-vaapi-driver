@@ -3639,13 +3639,18 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     } else if (di_filter_param->algorithm == VAProcDeinterlacingMotionAdaptive) {
         if (pp_dndi_context->frame_order == 0) {
             VAProcPipelineParameterBuffer *pipeline_param = pp_context->pipeline_param;
-            assert(pipeline_param->num_forward_references == 1);
-            assert(pipeline_param->forward_references[0] != VA_INVALID_ID);
+            if (!pipeline_param ||
+                !pipeline_param->num_forward_references ||
+                pipeline_param->forward_references[0] == VA_INVALID_ID) {
+                WARN_ONCE("A forward temporal reference is needed for Motion adaptive deinterlacing !!!\n");
 
-            previous_in_obj_surface = SURFACE(pipeline_param->forward_references[0]);
-            assert(previous_in_obj_surface && previous_in_obj_surface->bo);
+                return VA_STATUS_ERROR_INVALID_PARAMETER;
+            } else {
+                previous_in_obj_surface = SURFACE(pipeline_param->forward_references[0]);
+                assert(previous_in_obj_surface && previous_in_obj_surface->bo);
 
-            is_first_frame = 0;
+                is_first_frame = 0;
+            }
         } else if (pp_dndi_context->frame_order == 1) {
             vpp_surface_convert(ctx,
                                 pp_dndi_context->current_out_obj_surface,
