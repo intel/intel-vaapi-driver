@@ -4689,7 +4689,7 @@ VAStatus i965_QueryVideoProcFilterCaps(
             cap->type = VAProcColorBalanceSaturation;
             cap->range.min_value = 0.0;
             cap->range.max_value = 10.0;
-            cap->range.default_value = 0.0;
+            cap->range.default_value = 1.0;
             cap->range.step = 0.1; 
             i++;
             cap++; 
@@ -4705,7 +4705,7 @@ VAStatus i965_QueryVideoProcFilterCaps(
             cap->type = VAProcColorBalanceContrast;
             cap->range.min_value = 0.0;
             cap->range.max_value = 10.0;
-            cap->range.default_value = 0.0;
+            cap->range.default_value = 1.0;
             cap->range.step = 0.1; 
             i++;
             cap++; 
