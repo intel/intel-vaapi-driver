@@ -844,8 +844,9 @@ void hsw_veb_resource_prepare(VADriverContextP ctx,
 
 }
 
-void hsw_veb_surface_reference(VADriverContextP ctx,
-                              struct intel_vebox_context *proc_ctx)
+static VAStatus
+hsw_veb_surface_reference(VADriverContextP ctx,
+                          struct intel_vebox_context *proc_ctx)
 {
     struct object_surface * obj_surf; 
     VEBFrameStore tmp_store;
@@ -880,9 +881,14 @@ void hsw_veb_surface_reference(VADriverContextP ctx,
                     VAProcPipelineParameterBuffer *pipe = proc_ctx->pipeline_param;
                     struct object_surface *obj_surf = NULL;
                     struct i965_driver_data * const i965 = i965_driver_data(ctx);
-                
-                    assert(pipe->num_forward_references == 1);
-                    assert(pipe->forward_references[0] != VA_INVALID_ID);
+
+                    if (!pipe ||
+                        !pipe->num_forward_references ||
+                        pipe->forward_references[0] == VA_INVALID_ID) {
+                        WARN_ONCE("A forward temporal reference is needed for Motion adaptive deinterlacing !!!\n");
+
+                        return VA_STATUS_ERROR_INVALID_PARAMETER;
+                    }
 
                     obj_surf = SURFACE(pipe->forward_references[0]);
                     assert(obj_surf && obj_surf->bo);
@@ -946,6 +952,8 @@ void hsw_veb_surface_reference(VADriverContextP ctx,
         proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface = obj_surf;
         proc_ctx->current_output = FRAME_OUT_CURRENT;
     }
+
+    return VA_STATUS_SUCCESS;
 }
 
 void hsw_veb_surface_unreference(VADriverContextP ctx,
