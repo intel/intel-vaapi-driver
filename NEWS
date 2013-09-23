@@ -1,11 +1,17 @@
-libva-intel-driver NEWS -- summary of changes.  2013-09-DD
+libva-intel-driver NEWS -- summary of changes.  2013-09-23
 Copyright (C) 2009-2013 Intel Corporation
 
-Version 1.2.1 - DD.Sep.2013
+Version 1.2.1 - 23.Sep.2013
 * Add PCI IDs for Bay Trail
 * Performance improvement for MPEG-2 Encoding on IVB/HSW
 * Add basic processing support for packed YUV to packed YUV on ILK+
-* Bug fixes
+* Check the underlying OS support for VEBOX on HSW
+* Quality improvement for BobDI on SNB/IVB
+* Add support for Motion Adaptive Deinterlacing on IVB
+* vaDeriveImage() works for UYVY formats
+* Fix thread safety issue
+* Fix GPU hang issue when decoding some videos on SNB
+* Fix output filter count from QueryVideoProcFilters()
 
 Version 1.2.0 - 26.Jun.2013
 * The new H.264 encoding API on SNB/IVB/HSW
