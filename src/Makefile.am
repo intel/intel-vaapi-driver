@@ -138,6 +138,7 @@ driver_cflags			+= $(WAYLAND_CFLAGS)
 endif
 
 # Wayland protocol
+protocol_source_h = wayland-drm-client-protocol.h
 i965_output_wayland.c: $(protocol_source_h)
 @wayland_scanner_rules@
 

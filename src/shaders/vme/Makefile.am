@@ -68,6 +68,7 @@ EXTRA_DIST = \
 	$(INTEL_GEN75_INC)	\
 	$(INTEL_GEN7_INC)	\
 	$(VME75_CORE)		\
+	$(VME7_CORE)		\
 	$(VME_CORE)		\
 	$(NULL)
 
