@@ -284,6 +284,8 @@ static struct hw_codec_info gen75_hw_codec_info = {
     .has_accelerated_putimage = 1,
     .has_tiled_surface = 1,
     .has_di_motion_adptive = 1,
+    .has_di_motion_compensated = 1,
+
     .num_filters = 4,
     .filters = {
         { VAProcFilterNoiseReduction, I965_RING_VEBOX },
@@ -4638,7 +4640,13 @@ VAStatus i965_QueryVideoProcFilterCaps(
                 i++;
                 cap++;
             }
-        }
+
+            if (i965->codec_info->has_di_motion_compensated) {
+                cap->type = VAProcDeinterlacingMotionCompensated;
+                i++;
+                cap++;
+            }
+       }
 
         break;
 
@@ -4741,9 +4749,11 @@ VAStatus i965_QueryVideoProcPipelineCaps(
             VAProcFilterParameterBufferDeinterlacing *deint = (VAProcFilterParameterBufferDeinterlacing *)base;
 
             assert(deint->algorithm == VAProcDeinterlacingBob ||
-                   deint->algorithm == VAProcDeinterlacingMotionAdaptive);
+                   deint->algorithm == VAProcDeinterlacingMotionAdaptive ||
+                   deint->algorithm == VAProcDeinterlacingMotionCompensated);
             
-            if (deint->algorithm == VAProcDeinterlacingMotionAdaptive)
+            if (deint->algorithm == VAProcDeinterlacingMotionAdaptive ||
+                deint->algorithm == VAProcDeinterlacingMotionCompensated);
                 pipeline_cap->num_forward_references++;
         }
     }

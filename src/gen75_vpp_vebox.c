@@ -133,6 +133,7 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
     unsigned int* p_table ;
     int progressive_dn = 1;
     int dndi_top_first = 0;
+    int motion_compensated_enable = 0;
 
     if (proc_ctx->filters_mask & VPP_DNDI_DI) {
         VAProcFilterParameterBufferDeinterlacing *di_param =
@@ -141,6 +142,7 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
 
         progressive_dn = 0;
         dndi_top_first = !(di_param->flags & VA_DEINTERLACING_BOTTOM_FIELD_FIRST);
+        motion_compensated_enable = (di_param->algorithm == VAProcDeinterlacingMotionCompensated);
     }
 
     /*
@@ -199,7 +201,7 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
                     100<< 16  |  // FMD #2 vertical difference th
                     0  << 14  |  // CAT th1
                     2  << 8   |  // FMD tear threshold
-                    0  << 7   |  // MCDI Enable, use motion compensated deinterlace algorithm
+                    motion_compensated_enable  << 7   |  // MCDI Enable, use motion compensated deinterlace algorithm
                     progressive_dn  << 6   |  // progressive DN
                     0  << 4   |  // reserved
                     dndi_top_first  << 3   |  // DN/DI Top First
@@ -543,7 +545,8 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
         if (di_param->algorithm == VAProcDeinterlacingBob)
             is_first_frame = 1;
 
-        if (di_param->algorithm == VAProcDeinterlacingMotionAdaptive &&
+        if ((di_param->algorithm == VAProcDeinterlacingMotionAdaptive ||
+            di_param->algorithm == VAProcDeinterlacingMotionCompensated) &&
             proc_ctx->frame_order != -1)
             di_output_frames_flag = 0; /* Output both Current Frame and Previous Frame */
     }
@@ -871,7 +874,8 @@ hsw_veb_surface_reference(VADriverContextP ctx,
                 (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
 
             if (di_param && 
-                di_param->algorithm == VAProcDeinterlacingMotionAdaptive) {
+                (di_param->algorithm == VAProcDeinterlacingMotionAdaptive ||
+                di_param->algorithm == VAProcDeinterlacingMotionCompensated)) {
                 if ((proc_ctx->filters_mask & VPP_DNDI_DN) &&
                     proc_ctx->frame_order == 0) { /* DNDI */
                     tmp_store = proc_ctx->frame_store[FRAME_OUT_CURRENT_DN];
@@ -885,7 +889,7 @@ hsw_veb_surface_reference(VADriverContextP ctx,
                     if (!pipe ||
                         !pipe->num_forward_references ||
                         pipe->forward_references[0] == VA_INVALID_ID) {
-                        WARN_ONCE("A forward temporal reference is needed for Motion adaptive deinterlacing !!!\n");
+                        WARN_ONCE("A forward temporal reference is needed for Motion adaptive/compensated deinterlacing !!!\n");
 
                         return VA_STATUS_ERROR_INVALID_PARAMETER;
                     }
@@ -925,7 +929,8 @@ hsw_veb_surface_reference(VADriverContextP ctx,
             (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
 
         if (di_param && 
-            di_param->algorithm == VAProcDeinterlacingMotionAdaptive) {
+            (di_param->algorithm == VAProcDeinterlacingMotionAdaptive ||
+            di_param->algorithm == VAProcDeinterlacingMotionCompensated)) {
             if (proc_ctx->frame_order == -1) {
                 proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = VA_INVALID_ID;
                 proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
