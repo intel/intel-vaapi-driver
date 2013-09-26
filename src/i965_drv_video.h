@@ -59,6 +59,11 @@
 #define I965_SURFACE_FLAG_TOP_FIELD_FIRST       0x00000001
 #define I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST   0x00000002
 
+#define DEFAULT_BRIGHTNESS      0
+#define DEFAULT_CONTRAST        10
+#define DEFAULT_HUE             0
+#define DEFAULT_SATURATION      10
+
 struct i965_surface
 {
     struct object_base *base;
@@ -321,6 +326,10 @@ struct i965_driver_data
     VADisplayAttribute *display_attributes;
     unsigned int num_display_attributes;
     VADisplayAttribute *rotation_attrib;
+    VADisplayAttribute *brightness_attrib;
+    VADisplayAttribute *contrast_attrib;
+    VADisplayAttribute *hue_attrib;
+    VADisplayAttribute *saturation_attrib;
     VAContextID current_context_id;
 
     /* VA/DRI (X11) specific data */

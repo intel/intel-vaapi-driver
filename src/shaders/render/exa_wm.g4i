@@ -142,6 +142,25 @@ define(`mask_sample_a',		`g28')
 define(`mask_sample_a_01',	`g28')
 define(`mask_sample_a_23',	`g29')
 
+/* Color Balance to these registers */
+define(`color_balance_base',    `g32')
+
+define(`color_balance_r',       `g32')
+define(`color_balance_r_01',    `g32')
+define(`color_balance_r_23',    `g33')
+
+define(`color_balance_g',       `g34')
+define(`color_balance_g_01',    `g34')
+define(`color_balance_g_23',    `g35')
+
+define(`color_balance_b',       `g36')
+define(`color_balance_b_01',    `g37')
+define(`color_balance_b_23',    `g37')
+
+define(`color_balance_a',       `g38')
+define(`color_balance_a_01',    `g39')
+define(`color_balance_a_23',    `g39')
+
 /* data port SIMD16 send registers */
 
 define(`data_port_msg_0',	`m0')

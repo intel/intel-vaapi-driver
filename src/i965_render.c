@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include <va/va_drmcommon.h>
 
@@ -64,6 +65,7 @@ static const uint32_t ps_kernel_static[][4] =
 #include "shaders/render/exa_wm_xy.g4b"
 #include "shaders/render/exa_wm_src_affine.g4b"
 #include "shaders/render/exa_wm_src_sample_planar.g4b"
+#include "shaders/render/exa_wm_yuv_color_balance.g4b"
 #include "shaders/render/exa_wm_yuv_rgb.g4b"
 #include "shaders/render/exa_wm_write.g4b"
 };
@@ -86,6 +88,7 @@ static const uint32_t ps_kernel_static_gen5[][4] =
 #include "shaders/render/exa_wm_xy.g4b.gen5"
 #include "shaders/render/exa_wm_src_affine.g4b.gen5"
 #include "shaders/render/exa_wm_src_sample_planar.g4b.gen5"
+#include "shaders/render/exa_wm_yuv_color_balance.g4b.gen5"
 #include "shaders/render/exa_wm_yuv_rgb.g4b.gen5"
 #include "shaders/render/exa_wm_write.g4b.gen5"
 };
@@ -105,6 +108,7 @@ static const uint32_t sf_kernel_static_gen6[][4] =
 static const uint32_t ps_kernel_static_gen6[][4] = {
 #include "shaders/render/exa_wm_src_affine.g6b"
 #include "shaders/render/exa_wm_src_sample_planar.g6b"
+#include "shaders/render/exa_wm_yuv_color_balance.g6b"
 #include "shaders/render/exa_wm_yuv_rgb.g6b"
 #include "shaders/render/exa_wm_write.g6b"
 };
@@ -123,6 +127,7 @@ static const uint32_t sf_kernel_static_gen7[][4] =
 static const uint32_t ps_kernel_static_gen7[][4] = {
 #include "shaders/render/exa_wm_src_affine.g7b"
 #include "shaders/render/exa_wm_src_sample_planar.g7b"
+#include "shaders/render/exa_wm_yuv_color_balance.g7b"
 #include "shaders/render/exa_wm_yuv_rgb.g7b"
 #include "shaders/render/exa_wm_write.g7b"
 };
@@ -137,6 +142,7 @@ static const uint32_t ps_subpic_kernel_static_gen7[][4] = {
 static const uint32_t ps_kernel_static_gen7_haswell[][4] = {
 #include "shaders/render/exa_wm_src_affine.g7b"
 #include "shaders/render/exa_wm_src_sample_planar.g7b.haswell"
+#include "shaders/render/exa_wm_yuv_color_balance.g7b.haswell"
 #include "shaders/render/exa_wm_yuv_rgb.g7b"
 #include "shaders/render/exa_wm_write.g7b"
 };
@@ -1050,6 +1056,8 @@ i965_render_upload_vertex(
     i965_fill_vertex_buffer(ctx, tex_coords, vid_coords);
 }
 
+#define PI  3.1415926
+
 static void
 i965_render_upload_constants(VADriverContextP ctx,
                              struct object_surface *obj_surface)
@@ -1057,6 +1065,11 @@ i965_render_upload_constants(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
     unsigned short *constant_buffer;
+    float *color_balance_base;
+    float contrast = (float)i965->contrast_attrib->value / DEFAULT_CONTRAST;
+    float brightness = (float)i965->brightness_attrib->value / 255; /* YUV is float in the shader */
+    float hue = (float)i965->hue_attrib->value / 180 * PI;
+    float saturation = (float)i965->saturation_attrib->value / DEFAULT_SATURATION;
 
     dri_bo_map(render_state->curbe.bo, 1);
     assert(render_state->curbe.bo->virtual);
@@ -1065,13 +1078,27 @@ i965_render_upload_constants(VADriverContextP ctx,
     if (obj_surface->subsampling == SUBSAMPLE_YUV400) {
         assert(obj_surface->fourcc == VA_FOURCC('Y', '8', '0', '0'));
 
-        *constant_buffer = 2;
+        constant_buffer[0] = 2;
     } else {
         if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'))
-            *constant_buffer = 1;
+            constant_buffer[0] = 1;
         else
-            *constant_buffer = 0;
+            constant_buffer[0] = 0;
     }
+
+    if (i965->contrast_attrib->value == DEFAULT_CONTRAST &&
+        i965->brightness_attrib->value == DEFAULT_BRIGHTNESS &&
+        i965->hue_attrib->value == DEFAULT_HUE &&
+        i965->saturation_attrib->value == DEFAULT_SATURATION)
+        constant_buffer[1] = 1; /* skip color balance transformation */
+    else
+        constant_buffer[1] = 0;
+
+    color_balance_base = (float *)constant_buffer + 4;
+    *color_balance_base++ = contrast;
+    *color_balance_base++ = brightness;
+    *color_balance_base++ = cos(hue) * contrast * saturation;
+    *color_balance_base++ = sin(hue) * contrast * saturation;
 
     dri_bo_unmap(render_state->curbe.bo);
 }

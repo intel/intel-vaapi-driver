@@ -1,7 +1,8 @@
 
 INTEL_G4I =			\
 	exa_wm.g4i		\
-	exa_wm_affine.g4i
+	exa_wm_affine.g4i	\
+	exa_wm_yuv_color_balance.gxa
 
 INTEL_G4A =				\
 	exa_sf.g4a			\
@@ -9,6 +10,7 @@ INTEL_G4A =				\
 	exa_wm_src_affine.g4a		\
 	exa_wm_src_sample_argb.g4a	\
 	exa_wm_src_sample_planar.g4a	\
+	exa_wm_yuv_color_balance.g4a	\
 	exa_wm_yuv_rgb.g4a		\
 	exa_wm_write.g4a
 
@@ -20,6 +22,7 @@ INTEL_G4B =				\
 	exa_wm_src_affine.g4b		\
 	exa_wm_src_sample_argb.g4b	\
 	exa_wm_src_sample_planar.g4b	\
+	exa_wm_yuv_color_balance.g4b	\
 	exa_wm_yuv_rgb.g4b		\
 	exa_wm_write.g4b
 
@@ -29,14 +32,18 @@ INTEL_G4B_GEN5 =				\
 	exa_wm_src_affine.g4b.gen5		\
 	exa_wm_src_sample_argb.g4b.gen5	\
 	exa_wm_src_sample_planar.g4b.gen5	\
+	exa_wm_yuv_color_balance.g4b.gen5	\
 	exa_wm_yuv_rgb.g4b.gen5			\
 	exa_wm_write.g4b.gen5
+
+INTEL_G6I = $(INTEL_G4I)
 
 INTEL_G6A =				\
 	exa_wm_src_affine.g6a 		\
 	exa_wm_src_sample_argb.g6a 	\
 	exa_wm_src_sample_planar.g6a 	\
 	exa_wm_write.g6a 		\
+	exa_wm_yuv_color_balance.g6a	\
 	exa_wm_yuv_rgb.g6a
 
 INTEL_G6S = $(INTEL_G6A:%.g6a=%.g6s)
@@ -46,13 +53,17 @@ INTEL_G6B =				\
 	exa_wm_src_sample_argb.g6b 	\
 	exa_wm_src_sample_planar.g6b 	\
 	exa_wm_write.g6b 		\
+	exa_wm_yuv_color_balance.g6b	\
 	exa_wm_yuv_rgb.g6b
+
+INTEL_G7I = $(INTEL_G4I)
 
 INTEL_G7A =				\
 	exa_wm_src_affine.g7a 		\
 	exa_wm_src_sample_argb.g7a 	\
 	exa_wm_src_sample_planar.g7a 	\
 	exa_wm_write.g7a 		\
+	exa_wm_yuv_color_balance.g7a	\
 	exa_wm_yuv_rgb.g7a
 
 INTEL_G7S = $(INTEL_G7A:%.g7a=%.g7s)
@@ -62,11 +73,13 @@ INTEL_G7B =				\
 	exa_wm_src_sample_argb.g7b 	\
 	exa_wm_src_sample_planar.g7b 	\
 	exa_wm_write.g7b 		\
+	exa_wm_yuv_color_balance.g7b	\
 	exa_wm_yuv_rgb.g7b
 
 # XXX: only regenerate binary for EU code containing JMPI instructions
 INTEL_G7B_HASWELL = \
 	exa_wm_src_sample_planar.g7b.haswell	\
+	exa_wm_yuv_color_balance.g7b.haswell	\
 	$(NULL)
 
 TARGETS  =
@@ -80,7 +93,7 @@ endif
 
 all-local: $(TARGETS)
 
-SUFFIXES = .g4a .g4s .g4b .g6a .g6s .g6b .g7a .g7s .g7b .g7b.haswell
+SUFFIXES = .g4a .g4s .g4b .g4b.gen5 .g6a .g6s .g6b .g7a .g7s .g7b .g7b.haswell
 
 if HAVE_GEN4ASM
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)

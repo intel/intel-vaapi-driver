@@ -97,6 +97,30 @@ enum {
 /* List of supported display attributes */
 static const VADisplayAttribute i965_display_attributes[] = {
     {
+        VADisplayAttribBrightness,
+        -100, 100, DEFAULT_BRIGHTNESS,
+        VA_DISPLAY_ATTRIB_GETTABLE | VA_DISPLAY_ATTRIB_SETTABLE
+    },
+
+    {
+        VADisplayAttribContrast,
+        0, 100, DEFAULT_CONTRAST,
+        VA_DISPLAY_ATTRIB_GETTABLE | VA_DISPLAY_ATTRIB_SETTABLE
+    },
+
+    {
+        VADisplayAttribHue,
+        -180, 180, DEFAULT_HUE,
+        VA_DISPLAY_ATTRIB_GETTABLE | VA_DISPLAY_ATTRIB_SETTABLE
+    },
+
+    {
+        VADisplayAttribSaturation,
+        0, 100, DEFAULT_SATURATION,
+        VA_DISPLAY_ATTRIB_GETTABLE | VA_DISPLAY_ATTRIB_SETTABLE
+    },
+
+    {
         VADisplayAttribRotation,
         0, 3, VA_ROTATION_NONE,
         VA_DISPLAY_ATTRIB_GETTABLE|VA_DISPLAY_ATTRIB_SETTABLE
@@ -2431,7 +2455,16 @@ i965_display_attributes_init(VADriverContextP ctx)
     );
 
     i965->rotation_attrib = get_display_attribute(ctx, VADisplayAttribRotation);
-    if (!i965->rotation_attrib) {
+    i965->brightness_attrib = get_display_attribute(ctx, VADisplayAttribBrightness);
+    i965->contrast_attrib = get_display_attribute(ctx, VADisplayAttribContrast);
+    i965->hue_attrib = get_display_attribute(ctx, VADisplayAttribHue);
+    i965->saturation_attrib = get_display_attribute(ctx, VADisplayAttribSaturation);
+
+    if (!i965->rotation_attrib ||
+        !i965->brightness_attrib ||
+        !i965->contrast_attrib ||
+        !i965->hue_attrib ||
+        !i965->saturation_attrib) {
         goto error;
     }
     return true;
