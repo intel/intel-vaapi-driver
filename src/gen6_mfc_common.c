@@ -1019,14 +1019,12 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
                             struct encode_state *encode_state,
                             struct intel_encoder_context *encoder_context)
 {
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int slice_type;
-    struct object_surface *slice_obj_surface, *obj_surface;
-    int ref_surface_id;
+    struct object_surface *obj_surface;
     unsigned int fref_entry, bref_entry;
     int frame_index, i;
-    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
 
     fref_entry = 0x80808080;
@@ -1034,62 +1032,39 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
     slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
     if (slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B) {
-        slice_obj_surface = NULL;
-        ref_surface_id = slice_param->RefPicList0[0].picture_id;
-        if (ref_surface_id != VA_INVALID_SURFACE) {
-            slice_obj_surface = SURFACE(ref_surface_id);
-        }
-        if (slice_obj_surface && slice_obj_surface->bo) {
-            obj_surface = slice_obj_surface;
-        } else {
-            obj_surface = encode_state->reference_objects[0];
-        }
+        obj_surface = vme_context->used_reference_objects[0];
         frame_index = -1;
         for (i = 0; i < 16; i++) {
-            if (obj_surface == encode_state->reference_objects[i]) {
+            if (obj_surface &&
+                obj_surface == encode_state->reference_objects[i]) {
                 frame_index = i;
                 break;
             }
         }
         if (frame_index == -1) {
             WARN_ONCE("RefPicList0 is not found in DPB!\n");
-        } else if (slice_obj_surface && slice_obj_surface->bo) {
-            /* This is passed by Slice_param->RefPicList0 */
-            fref_entry &= ~(0xFF);
-            fref_entry += intel_get_ref_idx_state_1(&slice_param->RefPicList0[0], frame_index);
         } else {
             /* This is passed by the hacked mode */
             fref_entry &= ~(0xFF);
-            fref_entry += intel_get_ref_idx_state_1(&pic_param->ReferenceFrames[frame_index], frame_index);
+            fref_entry += intel_get_ref_idx_state_1(vme_context->used_references[0], frame_index);
         }
     }
 
     if (slice_type == SLICE_TYPE_B) {
-        slice_obj_surface = NULL;
-        ref_surface_id = slice_param->RefPicList1[0].picture_id;
-        if (ref_surface_id != VA_INVALID_SURFACE) {
-            slice_obj_surface = SURFACE(ref_surface_id);
-        }
-        if (slice_obj_surface && slice_obj_surface->bo) {
-            obj_surface = slice_obj_surface;
-        } else {
-            obj_surface = encode_state->reference_objects[1];
-        }
+        obj_surface = vme_context->used_reference_objects[1];
         frame_index = -1;
         for (i = 0; i < 16; i++) {
-            if (obj_surface == encode_state->reference_objects[i]) {
+            if (obj_surface &&
+                obj_surface == encode_state->reference_objects[i]) {
                 frame_index = i;
                 break;
             }
         }
         if (frame_index == -1) {
             WARN_ONCE("RefPicList1 is not found in DPB!\n");
-        } else if (slice_obj_surface && slice_obj_surface->bo) {
-            bref_entry &= ~(0xFF);
-            bref_entry += intel_get_ref_idx_state_1(&slice_param->RefPicList1[0], frame_index);
         } else {
             bref_entry &= ~(0xFF);
-            bref_entry += intel_get_ref_idx_state_1(&pic_param->ReferenceFrames[frame_index], frame_index);
+            bref_entry += intel_get_ref_idx_state_1(vme_context->used_references[1], frame_index);
         }
     }
 
@@ -1323,25 +1298,36 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
                                   struct object_surface *obj_surface,
                                   struct intel_encoder_context *encoder_context))
 {
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     struct object_surface *obj_surface = NULL;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VASurfaceID ref_surface_id;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
 
     if (list_index == 0) {
         ref_surface_id = slice_param->RefPicList0[0].picture_id;
+        vme_context->used_references[0] = &slice_param->RefPicList0[0];
     } else {
         ref_surface_id = slice_param->RefPicList1[0].picture_id;
+        vme_context->used_references[1] = &slice_param->RefPicList1[0];
     }
 
     if (ref_surface_id != VA_INVALID_SURFACE)
         obj_surface = SURFACE(ref_surface_id);
 
     if (!obj_surface ||
-        !obj_surface->bo)
+        !obj_surface->bo) {
         obj_surface = encode_state->reference_objects[list_index];
+        vme_context->used_references[list_index] = &pic_param->ReferenceFrames[list_index];
+    }
 
     if (obj_surface &&
-        obj_surface->bo)
+        obj_surface->bo) {
+        vme_context->used_reference_objects[list_index] = obj_surface;
         vme_source_surface_state(ctx, surface_index, obj_surface, encoder_context);
+    } else {
+        vme_context->used_reference_objects[list_index] = NULL;
+        vme_context->used_references[list_index] = NULL;
+    }
 }

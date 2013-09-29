@@ -86,6 +86,9 @@ struct gen6_vme_context
     unsigned int video_coding_type;
     unsigned int vme_kernel_sum;
     unsigned int mpeg2_level;
+
+    struct object_surface *used_reference_objects[2];
+    void *used_references[2];
 };
 
 #define MPEG2_PIC_WIDTH_HEIGHT	30
