@@ -291,10 +291,9 @@ gen7_vme_surface_setup(VADriverContextP ctx,
             if (slice_obj_surface && slice_obj_surface->bo) {
                 obj_surface = slice_obj_surface;
             } else {
-                obj_surface = encode_state->reference_objects[0];
+                obj_surface = encode_state->reference_objects[1];
             }
 
-            obj_surface = encode_state->reference_objects[1];
             if (obj_surface && obj_surface->bo)
                 gen7_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
 	}
