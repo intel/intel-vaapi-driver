@@ -708,6 +708,7 @@ gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, in
                               unsigned char target_mb_size,unsigned char max_mb_size, int slice_type,
                               struct intel_batchbuffer *batch)
 {
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     int len_in_dwords = 11;
 
     if (batch == NULL)
@@ -737,8 +738,8 @@ gen6_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, in
 
     /*Stuff for Inter MB*/
     OUT_BCS_BATCH(batch, msg[1]);        
-    OUT_BCS_BATCH(batch, 0x0);    
-    OUT_BCS_BATCH(batch, 0x0);        
+    OUT_BCS_BATCH(batch, vme_context->ref_index_in_mb[0]);
+    OUT_BCS_BATCH(batch, vme_context->ref_index_in_mb[1]);
 
     /*MaxSizeInWord and TargetSzieInWord*/
     OUT_BCS_BATCH(batch, (max_mb_size << 24) |
@@ -1004,11 +1005,12 @@ gen6_mfc_batchbuffer_emit_object_command(struct intel_batchbuffer *batch,
                                          int mb_x,
                                          int mb_y,
                                          int width_in_mbs,
-                                         int qp)
+                                         int qp,
+                                         unsigned int ref_index[2])
 {
-    BEGIN_BATCH(batch, 12);
+    BEGIN_BATCH(batch, 14);
     
-    OUT_BATCH(batch, CMD_MEDIA_OBJECT | (12 - 2));
+    OUT_BATCH(batch, CMD_MEDIA_OBJECT | (14 - 2));
     OUT_BATCH(batch, index);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
@@ -1032,6 +1034,8 @@ gen6_mfc_batchbuffer_emit_object_command(struct intel_batchbuffer *batch,
     OUT_BATCH(batch,
               qp << 16 |
               width_in_mbs);
+    OUT_BATCH(batch, ref_index[0]);
+    OUT_BATCH(batch, ref_index[1]);
 
     ADVANCE_BATCH(batch);
 }
@@ -1049,6 +1053,7 @@ gen6_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
     int total_mbs = slice_param->num_macroblocks;
     int number_mb_cmds = 128;
@@ -1080,7 +1085,8 @@ gen6_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
                                                  mb_x,
                                                  mb_y,
                                                  width_in_mbs,
-                                                 qp);
+                                                 qp,
+                                                 vme_context->ref_index_in_mb);
 
         if (first_object) {
             head_offset += head_size;
@@ -1118,7 +1124,8 @@ gen6_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
                                                  mb_x,
                                                  mb_y,
                                                  width_in_mbs,
-                                                 qp);
+                                                 qp,
+                                                 vme_context->ref_index_in_mb);
     }
 }
                           

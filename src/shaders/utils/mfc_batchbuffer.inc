@@ -139,6 +139,8 @@ define(`mb_y',                  `inline_reg0.17') /* :ub, */
 define(`mb_xy',                 `inline_reg0.16') /* :uw, */      
 define(`width_in_mb',           `inline_reg0.20') /* :uw, the picture width in macroblocks */
 define(`qp',                    `inline_reg0.22') /* :ub, */
+define(`ref_idx0',              `inline_reg0.24') /* :ud */
+define(`ref_idx1',              `inline_reg0.28') /* :ud */
 
 /*
  * GRF 8~15 -- temporary registers

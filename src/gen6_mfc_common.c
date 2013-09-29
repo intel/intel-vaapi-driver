@@ -1336,6 +1336,7 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
     int max_num_references;
     VAPictureH264 *curr_pic;
     VAPictureH264 *ref_list;
+    int ref_idx;
 
     if (list_index == 0) {
         max_num_references = pic_param->num_ref_idx_l0_active_minus1 + 1;
@@ -1362,9 +1363,9 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
             obj_surface = encode_state->reference_objects[list_index];
             vme_context->used_references[list_index] = &pic_param->ReferenceFrames[list_index];
         }
-    } else {
-        int ref_idx;
 
+        ref_idx = 0;
+    } else {
         curr_pic = &pic_param->CurrPic;
 
         /* select the reference frame in temporal space */
@@ -1380,10 +1381,16 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
 
     if (obj_surface &&
         obj_surface->bo) {
+        assert(ref_idx >= 0);
         vme_context->used_reference_objects[list_index] = obj_surface;
         vme_source_surface_state(ctx, surface_index, obj_surface, encoder_context);
+        vme_context->ref_index_in_mb[list_index] = (ref_idx << 24 |
+                                                    ref_idx << 16 |
+                                                    ref_idx <<  8 |
+                                                    ref_idx);
     } else {
         vme_context->used_reference_objects[list_index] = NULL;
         vme_context->used_references[list_index] = NULL;
+        vme_context->ref_index_in_mb[list_index] = 0;
     }
 }

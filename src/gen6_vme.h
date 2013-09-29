@@ -89,6 +89,7 @@ struct gen6_vme_context
 
     struct object_surface *used_reference_objects[2];
     void *used_references[2];
+    unsigned int ref_index_in_mb[2];
 };
 
 #define MPEG2_PIC_WIDTH_HEIGHT	30

@@ -103,6 +103,12 @@ __FILL_INTER_PAK_COMMAND:
         /* DW7 */
         mov             (1)     pak_object7_ud<1>:ud            ob_read_wb0.4<0,1,0>:ud {align1} ;
 
+        /* DW8 */
+        mov             (1)     pak_object8_ud<1>:ud            ref_idx0<0,1,0>:ud {align1} ;
+
+        /* DW9 */
+        mov             (1)     pak_object9_ud<1>:ud            ref_idx1<0,1,0>:ud {align1} ;
+
         jmpi            (1)     __OUTPUT_PAK_COMMAND ;
 
 __FILL_INTRA_PAK_COMMAND:
