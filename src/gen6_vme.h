@@ -158,4 +158,16 @@ gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                                            int kernel,
                                            struct intel_encoder_context *encoder_context);
 
+void
+intel_avc_vme_reference_state(VADriverContextP ctx,
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context,
+                              int list_index,
+                              int surface_index,
+                              void (* vme_source_surface_state)(
+                                  VADriverContextP ctx,
+                                  int index,
+                                  struct object_surface *obj_surface,
+                                  struct intel_encoder_context *encoder_context));
+
 #endif /* _GEN6_VME_H_ */

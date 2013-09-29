@@ -1310,3 +1310,38 @@ gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     dri_bo_unmap(vme_context->vme_batchbuffer.bo);
     return;
 }
+
+void
+intel_avc_vme_reference_state(VADriverContextP ctx,
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context,
+                              int list_index,
+                              int surface_index,
+                              void (* vme_source_surface_state)(
+                                  VADriverContextP ctx,
+                                  int index,
+                                  struct object_surface *obj_surface,
+                                  struct intel_encoder_context *encoder_context))
+{
+    struct object_surface *obj_surface = NULL;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VASurfaceID ref_surface_id;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+
+    if (list_index == 0) {
+        ref_surface_id = slice_param->RefPicList0[0].picture_id;
+    } else {
+        ref_surface_id = slice_param->RefPicList1[0].picture_id;
+    }
+
+    if (ref_surface_id != VA_INVALID_SURFACE)
+        obj_surface = SURFACE(ref_surface_id);
+
+    if (!obj_surface ||
+        !obj_surface->bo)
+        obj_surface = encode_state->reference_objects[list_index];
+
+    if (obj_surface &&
+        obj_surface->bo)
+        vme_source_surface_state(ctx, surface_index, obj_surface, encoder_context);
+}
