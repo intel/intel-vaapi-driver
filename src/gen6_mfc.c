@@ -609,8 +609,8 @@ gen6_mfc_init(VADriverContextP ctx,
 }
 
 static void gen6_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
-                                      struct encode_state *encode_state,
-                                      struct intel_encoder_context *encoder_context)
+                                                      struct encode_state *encode_state,
+                                                      struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 

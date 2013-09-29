@@ -43,10 +43,10 @@
 #include "gen6_vme.h"
 #include "intel_media.h"
 
-#define BRC_CLIP(x, min, max) \
-{ \
-    x = ((x > (max)) ? (max) : ((x < (min)) ? (min) : x)); \
-}
+#define BRC_CLIP(x, min, max)                                   \
+    {                                                           \
+        x = ((x > (max)) ? (max) : ((x < (min)) ? (min) : x));  \
+    }
 
 #define BRC_P_B_QP_DIFF 4
 #define BRC_I_P_QP_DIFF 2
@@ -86,7 +86,7 @@ int intel_avc_enc_slice_type_fixup(int slice_type)
 
 static void
 intel_mfc_bit_rate_control_context_init(struct encode_state *encode_state, 
-                                       struct gen6_mfc_context *mfc_context)
+                                        struct gen6_mfc_context *mfc_context)
 {
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
@@ -130,7 +130,7 @@ intel_mfc_bit_rate_control_context_init(struct encode_state *encode_state,
 }
 
 static void intel_mfc_brc_init(struct encode_state *encode_state,
-                  struct intel_encoder_context* encoder_context)
+                               struct intel_encoder_context* encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
@@ -166,7 +166,7 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
     mfc_context->hrd.buffer_size = (double)pParameterHRD->buffer_size;
     mfc_context->hrd.current_buffer_fullness =
         (double)(pParameterHRD->initial_buffer_fullness < mfc_context->hrd.buffer_size)?
-            pParameterHRD->initial_buffer_fullness: mfc_context->hrd.buffer_size/2.;
+        pParameterHRD->initial_buffer_fullness: mfc_context->hrd.buffer_size/2.;
     mfc_context->hrd.target_buffer_fullness = (double)mfc_context->hrd.buffer_size/2.;
     mfc_context->hrd.buffer_capacity = (double)mfc_context->hrd.buffer_size/qp1_size;
     mfc_context->hrd.violation_noted = 0;
@@ -188,8 +188,8 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 }
 
 int intel_mfc_update_hrd(struct encode_state *encode_state,
-                               struct gen6_mfc_context *mfc_context,
-                               int frame_bits)
+                         struct gen6_mfc_context *mfc_context,
+                         int frame_bits)
 {
     double prev_bf = mfc_context->hrd.current_buffer_fullness;
 
@@ -213,8 +213,8 @@ int intel_mfc_update_hrd(struct encode_state *encode_state,
 }
 
 int intel_mfc_brc_postpack(struct encode_state *encode_state,
-                                 struct gen6_mfc_context *mfc_context,
-                                 int frame_bits)
+                           struct gen6_mfc_context *mfc_context,
+                           int frame_bits)
 {
     gen6_brc_status sts = BRC_NO_HRD_VIOLATION;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; 
@@ -243,7 +243,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
         frame_size_alpha = (double)mfc_context->brc.gop_nums[slicetype];
     if (frame_size_alpha > 30) frame_size_alpha = 30;
     frame_size_next = target_frame_size + (double)(target_frame_size - frame_bits) /
-                                          (double)(frame_size_alpha + 1.);
+        (double)(frame_size_alpha + 1.);
 
     /* frame_size_next: avoiding negative number and too small value */
     if ((double)frame_size_next < (double)(target_frame_size * 0.25))
@@ -333,7 +333,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
 }
 
 static void intel_mfc_hrd_context_init(struct encode_state *encode_state,
-                          struct intel_encoder_context *encoder_context)
+                                       struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
@@ -357,14 +357,14 @@ static void intel_mfc_hrd_context_init(struct encode_state *encode_state,
 
 void 
 intel_mfc_hrd_context_update(struct encode_state *encode_state, 
-                          struct gen6_mfc_context *mfc_context) 
+                             struct gen6_mfc_context *mfc_context)
 {
     mfc_context->vui_hrd.i_frame_number++;
 }
 
 int intel_mfc_interlace_check(VADriverContextP ctx,
-                   struct encode_state *encode_state,
-                   struct intel_encoder_context *encoder_context) 
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSliceParameterBufferH264 *pSliceParameter;
@@ -385,7 +385,7 @@ int intel_mfc_interlace_check(VADriverContextP ctx,
 }
 
 void intel_mfc_brc_prepare(struct encode_state *encode_state,
-                          struct intel_encoder_context *encoder_context)
+                           struct intel_encoder_context *encoder_context)
 {
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -404,9 +404,9 @@ void intel_mfc_brc_prepare(struct encode_state *encode_state,
 }
 
 void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
-                                                    struct encode_state *encode_state,
-                                                    struct intel_encoder_context *encoder_context,
-                                                    struct intel_batchbuffer *slice_batch)
+                                              struct encode_state *encode_state,
+                                              struct intel_encoder_context *encoder_context,
+                                              struct intel_batchbuffer *slice_batch)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
@@ -484,13 +484,13 @@ void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
         unsigned char *sei_data = NULL;
     
         int length_in_bits = build_avc_sei_buffer_timing(
-			mfc_context->vui_hrd.i_initial_cpb_removal_delay_length,
-			mfc_context->vui_hrd.i_initial_cpb_removal_delay,
-			0,
-			mfc_context->vui_hrd.i_cpb_removal_delay_length,                                                       mfc_context->vui_hrd.i_cpb_removal_delay * mfc_context->vui_hrd.i_frame_number,
-			mfc_context->vui_hrd.i_dpb_output_delay_length,
-			0,
-			&sei_data);
+            mfc_context->vui_hrd.i_initial_cpb_removal_delay_length,
+            mfc_context->vui_hrd.i_initial_cpb_removal_delay,
+            0,
+            mfc_context->vui_hrd.i_cpb_removal_delay_length,                                                       mfc_context->vui_hrd.i_cpb_removal_delay * mfc_context->vui_hrd.i_frame_number,
+            mfc_context->vui_hrd.i_dpb_output_delay_length,
+            0,
+            &sei_data);
         mfc_context->insert_object(ctx,
                                    encoder_context,
                                    (unsigned int *)sei_data,
@@ -506,8 +506,8 @@ void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
 }
 
 VAStatus intel_mfc_avc_prepare(VADriverContextP ctx, 
-                                     struct encode_state *encode_state,
-                                     struct intel_encoder_context *encoder_context)
+                               struct encode_state *encode_state,
+                               struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -662,44 +662,44 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
  */
 int intel_format_lutvalue(int value, int max)
 {
-	int ret;
-	int logvalue, temp1, temp2;
+    int ret;
+    int logvalue, temp1, temp2;
 
-	if (value <= 0)
-		return 0;
+    if (value <= 0)
+        return 0;
 
-	logvalue = (int)(log2f((float)value));
-	if (logvalue < 4) {
-		ret = value;
-	} else {
-		int error, temp_value, base, j, temp_err;
-		error = value;
-		j = logvalue - 4 + 1;
-		ret = -1;
-		for(; j <= logvalue; j++) {
-			if (j == 0) {
-				base = value >> j;
-			} else {
-				base = (value + (1 << (j - 1)) - 1) >> j; 
-			}
-			if (base >= 16)
-				continue;
+    logvalue = (int)(log2f((float)value));
+    if (logvalue < 4) {
+        ret = value;
+    } else {
+        int error, temp_value, base, j, temp_err;
+        error = value;
+        j = logvalue - 4 + 1;
+        ret = -1;
+        for(; j <= logvalue; j++) {
+            if (j == 0) {
+                base = value >> j;
+            } else {
+                base = (value + (1 << (j - 1)) - 1) >> j;
+            }
+            if (base >= 16)
+                continue;
 
-			temp_value = base << j;
-			temp_err = abs(value - temp_value);
-			if (temp_err < error) {
-				error = temp_err;
-				ret = (j << 4) | base;
-				if (temp_err == 0)
-					break;
-			}
-		}	
-	}
-	temp1 = (ret & 0xf) << ((ret & 0xf0) >> 4);
-	temp2 = (max & 0xf) << ((max & 0xf0) >> 4);
-	if (temp1 > temp2)
-		ret = max;
-	return ret;
+            temp_value = base << j;
+            temp_err = abs(value - temp_value);
+            if (temp_err < error) {
+                error = temp_err;
+                ret = (j << 4) | base;
+                if (temp_err == 0)
+                    break;
+            }
+        }
+    }
+    temp1 = (ret & 0xf) << ((ret & 0xf0) >> 4);
+    temp2 = (max & 0xf) << ((max & 0xf0) >> 4);
+    if (temp1 > temp2)
+        ret = max;
+    return ret;
 	
 }
 
@@ -709,19 +709,19 @@ int intel_format_lutvalue(int value, int max)
 
 static float intel_lambda_qp(int qp)
 {
-	float value, lambdaf;
-	value = qp;
-	value = value / 6 - 2;
-	if (value < 0)
-		value = 0;
-	lambdaf = roundf(powf(2, value));
-	return lambdaf;	
+    float value, lambdaf;
+    value = qp;
+    value = value / 6 - 2;
+    if (value < 0)
+        value = 0;
+    lambdaf = roundf(powf(2, value));
+    return lambdaf;
 }
 
 
 void intel_vme_update_mbmv_cost(VADriverContextP ctx,
-                                       struct encode_state *encode_state,
-                                       struct intel_encoder_context *encoder_context)
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
@@ -756,30 +756,30 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
     	m_cost = 0;
 	vme_state_message[MODE_INTER_MV0] = intel_format_lutvalue(m_cost, 0x6f);
 	for (j = 1; j < 3; j++) {
-		m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
-		m_cost = (int)m_costf;
-		vme_state_message[MODE_INTER_MV0 + j] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+            m_cost = (int)m_costf;
+            vme_state_message[MODE_INTER_MV0 + j] = intel_format_lutvalue(m_cost, 0x6f);
    	}
     	mv_count = 3;
     	for (j = 4; j <= 64; j *= 2) {
-		m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
-		m_cost = (int)m_costf;
-		vme_state_message[MODE_INTER_MV0 + mv_count] = intel_format_lutvalue(m_cost, 0x6f);
-		mv_count++;
+            m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+            m_cost = (int)m_costf;
+            vme_state_message[MODE_INTER_MV0 + mv_count] = intel_format_lutvalue(m_cost, 0x6f);
+            mv_count++;
 	}
 
 	if (qp <= 25) {
-		vme_state_message[MODE_INTRA_16X16] = 0x4a;
-		vme_state_message[MODE_INTRA_8X8] = 0x4a;
-		vme_state_message[MODE_INTRA_4X4] = 0x4a;
-		vme_state_message[MODE_INTRA_NONPRED] = 0x4a;
-		vme_state_message[MODE_INTER_16X16] = 0x4a;
-		vme_state_message[MODE_INTER_16X8] = 0x4a;
-		vme_state_message[MODE_INTER_8X8] = 0x4a;
-		vme_state_message[MODE_INTER_8X4] = 0x4a;
-		vme_state_message[MODE_INTER_4X4] = 0x4a;
-		vme_state_message[MODE_INTER_BWD] = 0x2a;
-		return;	
+            vme_state_message[MODE_INTRA_16X16] = 0x4a;
+            vme_state_message[MODE_INTRA_8X8] = 0x4a;
+            vme_state_message[MODE_INTRA_4X4] = 0x4a;
+            vme_state_message[MODE_INTRA_NONPRED] = 0x4a;
+            vme_state_message[MODE_INTER_16X16] = 0x4a;
+            vme_state_message[MODE_INTER_16X8] = 0x4a;
+            vme_state_message[MODE_INTER_8X8] = 0x4a;
+            vme_state_message[MODE_INTER_8X4] = 0x4a;
+            vme_state_message[MODE_INTER_4X4] = 0x4a;
+            vme_state_message[MODE_INTER_BWD] = 0x2a;
+            return;
 	}
 	m_costf = lambda * 10;
 	vme_state_message[MODE_INTRA_16X16] = intel_format_lutvalue(m_cost, 0x8f);
@@ -791,42 +791,42 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
 	m_cost = m_costf;
 	vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
     	if (slice_type == SLICE_TYPE_P) {
-		m_costf = lambda * 2.5;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
-		m_costf = lambda * 4;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
-		m_costf = lambda * 1.5;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
-		m_costf = lambda * 3;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_8X4] = intel_format_lutvalue(m_cost, 0x6f);
-		m_costf = lambda * 5;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
-		/* BWD is not used in P-frame */
-		vme_state_message[MODE_INTER_BWD] = 0;
+            m_costf = lambda * 2.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+            m_costf = lambda * 4;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
+            m_costf = lambda * 1.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 3;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_8X4] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
+            /* BWD is not used in P-frame */
+            vme_state_message[MODE_INTER_BWD] = 0;
 	} else {
-		m_costf = lambda * 2.5;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
-		m_costf = lambda * 5.5;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
-		m_costf = lambda * 3.5;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
-		m_costf = lambda * 5.0;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_8X4] = intel_format_lutvalue(m_cost, 0x6f);
-		m_costf = lambda * 6.5;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
-		m_costf = lambda * 1.5;
-		m_cost = m_costf;
-		vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 2.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+            m_costf = lambda * 5.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
+            m_costf = lambda * 3.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 5.0;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_8X4] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 6.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 1.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
 	}
     }
 }
@@ -841,8 +841,8 @@ gen7_vme_scoreboard_init(VADriverContextP ctx, struct gen6_vme_context *vme_cont
     vme_context->gpe_context.vfe_desc5.scoreboard0.enable = 1;
     vme_context->gpe_context.vfe_desc5.scoreboard0.type = SCOREBOARD_STALLING;
     vme_context->gpe_context.vfe_desc5.scoreboard0.mask = (MB_SCOREBOARD_A |
-								MB_SCOREBOARD_B |
-								MB_SCOREBOARD_C);
+                                                           MB_SCOREBOARD_B |
+                                                           MB_SCOREBOARD_C);
 
     /* In VME prediction the current mb depends on the neighbour 
      * A/B/C macroblock. So the left/up/up-right dependency should
@@ -862,25 +862,25 @@ gen7_vme_scoreboard_init(VADriverContextP ctx, struct gen6_vme_context *vme_cont
 /* check whether the mb of (x_index, y_index) is out of bound */
 static inline int loop_in_bounds(int x_index, int y_index, int first_mb, int num_mb, int mb_width, int mb_height)
 {
-	int mb_index;
-	if (x_index < 0 || x_index >= mb_width)
-		return -1;
-	if (y_index < 0 || y_index >= mb_height)
-		return -1;
+    int mb_index;
+    if (x_index < 0 || x_index >= mb_width)
+        return -1;
+    if (y_index < 0 || y_index >= mb_height)
+        return -1;
 	
-	mb_index = y_index * mb_width + x_index;
-	if (mb_index < first_mb || mb_index > (first_mb + num_mb))
-		return -1;
-	return 0;
+    mb_index = y_index * mb_width + x_index;
+    if (mb_index < first_mb || mb_index > (first_mb + num_mb))
+        return -1;
+    return 0;
 }
 
 void
 gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
-                              struct encode_state *encode_state,
-                              int mb_width, int mb_height,
-                              int kernel,
-                              int transform_8x8_mode_flag,
-                              struct intel_encoder_context *encoder_context)
+                                     struct encode_state *encode_state,
+                                     int mb_width, int mb_height,
+                                     int kernel,
+                                     int transform_8x8_mode_flag,
+                                     struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     int mb_row;
@@ -922,7 +922,7 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 		    if (x_inner != (mb_width -1)) {
 			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
 			score_dep |= MB_SCOREBOARD_C;
-		     }
+                    }
 		}
 							
             	*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
@@ -944,7 +944,7 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 
 	xtemp_outer = mb_width - 2;
 	if (xtemp_outer < 0)
-		xtemp_outer = 0;
+            xtemp_outer = 0;
 	x_outer = xtemp_outer;
 	y_outer = first_mb / mb_width;
 	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) { 
@@ -966,7 +966,7 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 		    if (x_inner != (mb_width -1)) {
 			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
 			score_dep |= MB_SCOREBOARD_C;
-		     }
+                    }
 		}
 
             	*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
@@ -1001,198 +1001,198 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 static uint8_t
 intel_get_ref_idx_state_1(VAPictureH264 *va_pic, unsigned int frame_store_id)
 {
-	unsigned int is_long_term =
-		!!(va_pic->flags & VA_PICTURE_H264_LONG_TERM_REFERENCE);
-	unsigned int is_top_field =
-		!!(va_pic->flags & VA_PICTURE_H264_TOP_FIELD);
-	unsigned int is_bottom_field =
-		!!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD);
+    unsigned int is_long_term =
+        !!(va_pic->flags & VA_PICTURE_H264_LONG_TERM_REFERENCE);
+    unsigned int is_top_field =
+        !!(va_pic->flags & VA_PICTURE_H264_TOP_FIELD);
+    unsigned int is_bottom_field =
+        !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD);
 
-	return ((is_long_term                         << 6) |
-		((is_top_field ^ is_bottom_field ^ 1) << 5) |
-		(frame_store_id                       << 1) |
-		((is_top_field ^ 1) & is_bottom_field));
+    return ((is_long_term                         << 6) |
+            ((is_top_field ^ is_bottom_field ^ 1) << 5) |
+            (frame_store_id                       << 1) |
+            ((is_top_field ^ 1) & is_bottom_field));
 }
 
 void
 intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
-				struct encode_state *encode_state,
-				struct intel_encoder_context *encoder_context)
+                            struct encode_state *encode_state,
+                            struct intel_encoder_context *encoder_context)
 {
-	struct intel_batchbuffer *batch = encoder_context->base.batch;
-	struct i965_driver_data *i965 = i965_driver_data(ctx);
-	int slice_type;
-	struct object_surface *slice_obj_surface, *obj_surface;
-	int ref_surface_id;
-	unsigned int fref_entry, bref_entry;
-	int frame_index, i;
-	VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
-	VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int slice_type;
+    struct object_surface *slice_obj_surface, *obj_surface;
+    int ref_surface_id;
+    unsigned int fref_entry, bref_entry;
+    int frame_index, i;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
 
-	fref_entry = 0x80808080;
-	bref_entry = 0x80808080;
-	slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+    fref_entry = 0x80808080;
+    bref_entry = 0x80808080;
+    slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
-	if (slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B) {
-		slice_obj_surface = NULL;
-		ref_surface_id = slice_param->RefPicList0[0].picture_id;
-		if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
-			slice_obj_surface = SURFACE(ref_surface_id);
-		}
-		if (slice_obj_surface && slice_obj_surface->bo) {
-			obj_surface = slice_obj_surface;
-		} else {
-			obj_surface = encode_state->reference_objects[0];
-		}
-		frame_index = -1;
-		for (i = 0; i < 16; i++) {
-			if (obj_surface == encode_state->reference_objects[i]) {
-				frame_index = i;
-				break;
-			}
-		}
-		if (frame_index == -1) {
-			WARN_ONCE("RefPicList0 is not found in DPB!\n");
-		} else if (slice_obj_surface && slice_obj_surface->bo) {
-			/* This is passed by Slice_param->RefPicList0 */
-			fref_entry &= ~(0xFF);
-			fref_entry += intel_get_ref_idx_state_1(&slice_param->RefPicList0[0], frame_index);
-		} else {
-			/* This is passed by the hacked mode */
-			fref_entry &= ~(0xFF);
-			fref_entry += intel_get_ref_idx_state_1(&pic_param->ReferenceFrames[frame_index], frame_index);
-		}
-	}
-
-	if (slice_type == SLICE_TYPE_B) {
-		slice_obj_surface = NULL;
-		ref_surface_id = slice_param->RefPicList1[0].picture_id;
-		if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
-			slice_obj_surface = SURFACE(ref_surface_id);
-		}
-		if (slice_obj_surface && slice_obj_surface->bo) {
-			obj_surface = slice_obj_surface;
-		} else {
-			obj_surface = encode_state->reference_objects[1];
-		}
-		frame_index = -1;
-		for (i = 0; i < 16; i++) {
-			if (obj_surface == encode_state->reference_objects[i]) {
-				frame_index = i;
-				break;
-			}
-		}
-		if (frame_index == -1) {
-			WARN_ONCE("RefPicList1 is not found in DPB!\n");
-		} else if (slice_obj_surface && slice_obj_surface->bo) {
-			bref_entry &= ~(0xFF);
-			bref_entry += intel_get_ref_idx_state_1(&slice_param->RefPicList1[0], frame_index);
-		} else {
-			bref_entry &= ~(0xFF);
-			bref_entry += intel_get_ref_idx_state_1(&pic_param->ReferenceFrames[frame_index], frame_index);
-		}
+    if (slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B) {
+        slice_obj_surface = NULL;
+        ref_surface_id = slice_param->RefPicList0[0].picture_id;
+        if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+            slice_obj_surface = SURFACE(ref_surface_id);
         }
+        if (slice_obj_surface && slice_obj_surface->bo) {
+            obj_surface = slice_obj_surface;
+        } else {
+            obj_surface = encode_state->reference_objects[0];
+        }
+        frame_index = -1;
+        for (i = 0; i < 16; i++) {
+            if (obj_surface == encode_state->reference_objects[i]) {
+                frame_index = i;
+                break;
+            }
+        }
+        if (frame_index == -1) {
+            WARN_ONCE("RefPicList0 is not found in DPB!\n");
+        } else if (slice_obj_surface && slice_obj_surface->bo) {
+            /* This is passed by Slice_param->RefPicList0 */
+            fref_entry &= ~(0xFF);
+            fref_entry += intel_get_ref_idx_state_1(&slice_param->RefPicList0[0], frame_index);
+        } else {
+            /* This is passed by the hacked mode */
+            fref_entry &= ~(0xFF);
+            fref_entry += intel_get_ref_idx_state_1(&pic_param->ReferenceFrames[frame_index], frame_index);
+        }
+    }
 
-	BEGIN_BCS_BATCH(batch, 10);
-	OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
-	OUT_BCS_BATCH(batch, 0);                  //Select L0
-	OUT_BCS_BATCH(batch, fref_entry);         //Only 1 reference
-	for(i = 0; i < 7; i++) {
-		OUT_BCS_BATCH(batch, 0x80808080);
-	}
-	ADVANCE_BCS_BATCH(batch);
+    if (slice_type == SLICE_TYPE_B) {
+        slice_obj_surface = NULL;
+        ref_surface_id = slice_param->RefPicList1[0].picture_id;
+        if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+            slice_obj_surface = SURFACE(ref_surface_id);
+        }
+        if (slice_obj_surface && slice_obj_surface->bo) {
+            obj_surface = slice_obj_surface;
+        } else {
+            obj_surface = encode_state->reference_objects[1];
+        }
+        frame_index = -1;
+        for (i = 0; i < 16; i++) {
+            if (obj_surface == encode_state->reference_objects[i]) {
+                frame_index = i;
+                break;
+            }
+        }
+        if (frame_index == -1) {
+            WARN_ONCE("RefPicList1 is not found in DPB!\n");
+        } else if (slice_obj_surface && slice_obj_surface->bo) {
+            bref_entry &= ~(0xFF);
+            bref_entry += intel_get_ref_idx_state_1(&slice_param->RefPicList1[0], frame_index);
+        } else {
+            bref_entry &= ~(0xFF);
+            bref_entry += intel_get_ref_idx_state_1(&pic_param->ReferenceFrames[frame_index], frame_index);
+        }
+    }
 
-	BEGIN_BCS_BATCH(batch, 10);
-	OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
-	OUT_BCS_BATCH(batch, 1);                  //Select L1
-	OUT_BCS_BATCH(batch, bref_entry);         //Only 1 reference
-	for(i = 0; i < 7; i++) {
-		OUT_BCS_BATCH(batch, 0x80808080);
-	}
-	ADVANCE_BCS_BATCH(batch);
+    BEGIN_BCS_BATCH(batch, 10);
+    OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
+    OUT_BCS_BATCH(batch, 0);                  //Select L0
+    OUT_BCS_BATCH(batch, fref_entry);         //Only 1 reference
+    for(i = 0; i < 7; i++) {
+        OUT_BCS_BATCH(batch, 0x80808080);
+    }
+    ADVANCE_BCS_BATCH(batch);
+
+    BEGIN_BCS_BATCH(batch, 10);
+    OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
+    OUT_BCS_BATCH(batch, 1);                  //Select L1
+    OUT_BCS_BATCH(batch, bref_entry);         //Only 1 reference
+    for(i = 0; i < 7; i++) {
+        OUT_BCS_BATCH(batch, 0x80808080);
+    }
+    ADVANCE_BCS_BATCH(batch);
 }
 
 
 void intel_vme_mpeg2_state_setup(VADriverContextP ctx,
-                                       struct encode_state *encode_state,
-                                       struct intel_encoder_context *encoder_context)
+                                 struct encode_state *encode_state,
+                                 struct intel_encoder_context *encoder_context)
 {
-	struct gen6_vme_context *vme_context = encoder_context->vme_context;
-	uint32_t *vme_state_message = (uint32_t *)(vme_context->vme_state_message);
-	VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
-	int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
-	int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
-	uint32_t mv_x, mv_y;
-	VAEncSliceParameterBufferMPEG2 *slice_param = NULL;
-	VAEncPictureParameterBufferMPEG2 *pic_param = NULL;
-	slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    uint32_t *vme_state_message = (uint32_t *)(vme_context->vme_state_message);
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
+    int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
+    uint32_t mv_x, mv_y;
+    VAEncSliceParameterBufferMPEG2 *slice_param = NULL;
+    VAEncPictureParameterBufferMPEG2 *pic_param = NULL;
+    slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
 
-	if (vme_context->mpeg2_level == MPEG2_LEVEL_LOW) {
-		mv_x = 512;
-		mv_y = 64;
-	} else if (vme_context->mpeg2_level == MPEG2_LEVEL_MAIN) {
-		mv_x = 1024;
-		mv_y = 128;
-	} else if (vme_context->mpeg2_level == MPEG2_LEVEL_HIGH) {
-		mv_x = 2048;
-		mv_y = 128;
-	} else {
-		WARN_ONCE("Incorrect Mpeg2 level setting!\n");
-		mv_x = 512;
-		mv_y = 64;
-	}
+    if (vme_context->mpeg2_level == MPEG2_LEVEL_LOW) {
+        mv_x = 512;
+        mv_y = 64;
+    } else if (vme_context->mpeg2_level == MPEG2_LEVEL_MAIN) {
+        mv_x = 1024;
+        mv_y = 128;
+    } else if (vme_context->mpeg2_level == MPEG2_LEVEL_HIGH) {
+        mv_x = 2048;
+        mv_y = 128;
+    } else {
+        WARN_ONCE("Incorrect Mpeg2 level setting!\n");
+        mv_x = 512;
+        mv_y = 64;
+    }
 
-    	pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
-	if (pic_param->picture_type != VAEncPictureTypeIntra) {
-		int qp, m_cost, j, mv_count;
-		float   lambda, m_costf;
-		slice_param = (VAEncSliceParameterBufferMPEG2 *)
-				encode_state->slice_params_ext[0]->buffer;
-		qp = slice_param->quantiser_scale_code;
-		lambda = intel_lambda_qp(qp);
-		/* No Intra prediction. So it is zero */
-		vme_state_message[MODE_INTRA_8X8] = 0;
-		vme_state_message[MODE_INTRA_4X4] = 0;
-		vme_state_message[MODE_INTER_MV0] = 0;
-		for (j = 1; j < 3; j++) {
-			m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
-			m_cost = (int)m_costf;
-			vme_state_message[MODE_INTER_MV0 + j] = intel_format_lutvalue(m_cost, 0x6f);
-   		}
-    		mv_count = 3;
-    		for (j = 4; j <= 64; j *= 2) {
-			m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
-			m_cost = (int)m_costf;
-			vme_state_message[MODE_INTER_MV0 + mv_count] =
-					intel_format_lutvalue(m_cost, 0x6f);
-			mv_count++;
-		}
-		m_cost = lambda;
-		/* It can only perform the 16x16 search. So mode cost can be ignored for
-		 * the other mode. for example: 16x8/8x8
-		 */
-		vme_state_message[MODE_INTRA_16X16] = intel_format_lutvalue(m_cost, 0x8f);
-		vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+    pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+    if (pic_param->picture_type != VAEncPictureTypeIntra) {
+        int qp, m_cost, j, mv_count;
+        float   lambda, m_costf;
+        slice_param = (VAEncSliceParameterBufferMPEG2 *)
+            encode_state->slice_params_ext[0]->buffer;
+        qp = slice_param->quantiser_scale_code;
+        lambda = intel_lambda_qp(qp);
+        /* No Intra prediction. So it is zero */
+        vme_state_message[MODE_INTRA_8X8] = 0;
+        vme_state_message[MODE_INTRA_4X4] = 0;
+        vme_state_message[MODE_INTER_MV0] = 0;
+        for (j = 1; j < 3; j++) {
+            m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+            m_cost = (int)m_costf;
+            vme_state_message[MODE_INTER_MV0 + j] = intel_format_lutvalue(m_cost, 0x6f);
+        }
+        mv_count = 3;
+        for (j = 4; j <= 64; j *= 2) {
+            m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+            m_cost = (int)m_costf;
+            vme_state_message[MODE_INTER_MV0 + mv_count] =
+                intel_format_lutvalue(m_cost, 0x6f);
+            mv_count++;
+        }
+        m_cost = lambda;
+        /* It can only perform the 16x16 search. So mode cost can be ignored for
+         * the other mode. for example: 16x8/8x8
+         */
+        vme_state_message[MODE_INTRA_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+        vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
 			
-		vme_state_message[MODE_INTER_16X8] = 0;
-		vme_state_message[MODE_INTER_8X8] = 0;
-		vme_state_message[MODE_INTER_8X4] = 0;
-		vme_state_message[MODE_INTER_4X4] = 0;
-		vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
+        vme_state_message[MODE_INTER_16X8] = 0;
+        vme_state_message[MODE_INTER_8X8] = 0;
+        vme_state_message[MODE_INTER_8X4] = 0;
+        vme_state_message[MODE_INTER_4X4] = 0;
+        vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
 
-	}
-	vme_state_message[MPEG2_MV_RANGE] = (mv_y << 16) | (mv_x);
+    }
+    vme_state_message[MPEG2_MV_RANGE] = (mv_y << 16) | (mv_x);
 
-	vme_state_message[MPEG2_PIC_WIDTH_HEIGHT] = (height_in_mbs << 16) |
-					width_in_mbs;
+    vme_state_message[MPEG2_PIC_WIDTH_HEIGHT] = (height_in_mbs << 16) |
+        width_in_mbs;
 }
 
 void
 gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
-                              struct encode_state *encode_state,
-                              int mb_width, int mb_height,
-                              int kernel,
-                              struct intel_encoder_context *encoder_context)
+                                           struct encode_state *encode_state,
+                                           int mb_width, int mb_height,
+                                           int kernel,
+                                           struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     unsigned int *command_ptr;
@@ -1255,7 +1255,7 @@ gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx,
 
 	xtemp_outer = mb_width - 2;
 	if (xtemp_outer < 0)
-		xtemp_outer = 0;
+            xtemp_outer = 0;
 	x_outer = xtemp_outer;
 	y_outer = 0;
 	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) { 

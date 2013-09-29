@@ -221,36 +221,36 @@ gen6_vme_surface_setup(VADriverContextP ctx,
 	slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
 	if (slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B) {
-		slice_obj_surface = NULL;
-		ref_surface_id = slice_param->RefPicList0[0].picture_id;
-		if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
-			slice_obj_surface = SURFACE(ref_surface_id);
-		}
-		if (slice_obj_surface && slice_obj_surface->bo) {
-			obj_surface = slice_obj_surface;
-		} else {
-			obj_surface = encode_state->reference_objects[0];
-		}
-		/* reference 0 */
-        	if (obj_surface && obj_surface->bo)
-	            gen6_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
+            slice_obj_surface = NULL;
+            ref_surface_id = slice_param->RefPicList0[0].picture_id;
+            if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+                slice_obj_surface = SURFACE(ref_surface_id);
+            }
+            if (slice_obj_surface && slice_obj_surface->bo) {
+                obj_surface = slice_obj_surface;
+            } else {
+                obj_surface = encode_state->reference_objects[0];
+            }
+            /* reference 0 */
+            if (obj_surface && obj_surface->bo)
+                gen6_vme_source_surface_state(ctx, 1, obj_surface, encoder_context);
 	}
 	if (slice_type == SLICE_TYPE_B) {
-		/* reference 1 */
-		slice_obj_surface = NULL;
-		ref_surface_id = slice_param->RefPicList1[0].picture_id;
-		if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
-			slice_obj_surface = SURFACE(ref_surface_id);
-		}
-		if (slice_obj_surface && slice_obj_surface->bo) {
-			obj_surface = slice_obj_surface;
-		} else {
-			obj_surface = encode_state->reference_objects[0];
-		}
+            /* reference 1 */
+            slice_obj_surface = NULL;
+            ref_surface_id = slice_param->RefPicList1[0].picture_id;
+            if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+                slice_obj_surface = SURFACE(ref_surface_id);
+            }
+            if (slice_obj_surface && slice_obj_surface->bo) {
+                obj_surface = slice_obj_surface;
+            } else {
+                obj_surface = encode_state->reference_objects[0];
+            }
 
-		obj_surface = encode_state->reference_objects[1];
-		if (obj_surface && obj_surface->bo)
-			gen6_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
+            obj_surface = encode_state->reference_objects[1];
+            if (obj_surface && obj_surface->bo)
+                gen6_vme_source_surface_state(ctx, 2, obj_surface, encoder_context);
 	}
     }
 
@@ -319,7 +319,7 @@ static VAStatus gen6_vme_constant_setup(VADriverContextP ctx,
     if (vme_context->h264_level >= 30) {
 	mv_num = 16;
 	if (vme_context->h264_level >= 31)
-		mv_num = 8;
+            mv_num = 8;
     } 
 
     dri_bo_map(vme_context->gpe_context.curbe.bo, 1);
@@ -579,7 +579,7 @@ static VAStatus gen6_vme_prepare(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
 
     if (!vme_context->h264_level ||
-		(vme_context->h264_level != pSequenceParameter->level_idc)) {
+        (vme_context->h264_level != pSequenceParameter->level_idc)) {
 	vme_context->h264_level = pSequenceParameter->level_idc;	
     }	
     /*Setup all the memory object*/
@@ -657,7 +657,7 @@ Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
     vme_context = calloc(1, sizeof(struct gen6_vme_context));
     vme_context->gpe_context.surface_state_binding_table.length =
-              (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
+        (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
     vme_context->gpe_context.idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
     vme_context->gpe_context.idrt.entry_size = sizeof(struct gen6_interface_descriptor_data);

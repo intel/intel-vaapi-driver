@@ -86,8 +86,8 @@ static struct i965_kernel gen75_mfc_kernels[] = {
 
 static void
 gen75_mfc_pipe_mode_select(VADriverContextP ctx,
-                          int standard_select,
-                          struct intel_encoder_context *encoder_context)
+                           int standard_select,
+                           struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -152,7 +152,7 @@ gen75_mfc_surface_state(VADriverContextP ctx, struct intel_encoder_context *enco
 
 static void
 gen75_mfc_ind_obj_base_addr_state_bplus(VADriverContextP ctx,
-				struct intel_encoder_context *encoder_context)
+                                        struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -161,11 +161,11 @@ gen75_mfc_ind_obj_base_addr_state_bplus(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 26);
 
     OUT_BCS_BATCH(batch, MFX_IND_OBJ_BASE_ADDR_STATE | (26 - 2));
-	/* the DW1-3 is for the MFX indirect bistream offset */
+    /* the DW1-3 is for the MFX indirect bistream offset */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
-	/* the DW4-5 is the MFX upper bound */
+    /* the DW4-5 is the MFX upper bound */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
@@ -176,14 +176,14 @@ gen75_mfc_ind_obj_base_addr_state_bplus(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0x80000000); /* must set, up to 2G */
     OUT_BCS_BATCH(batch, 0);
 
-     /* the DW11-15 is for MFX IT-COFF. Not used on encoder */
+    /* the DW11-15 is for MFX IT-COFF. Not used on encoder */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
-     /* the DW16-20 is for MFX indirect DBLK. Not used on encoder */	
+    /* the DW16-20 is for MFX indirect DBLK. Not used on encoder */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
@@ -247,7 +247,7 @@ gen75_mfc_ind_obj_base_addr_state(VADriverContextP ctx, struct intel_encoder_con
 
 static void
 gen75_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,  
-                       struct intel_encoder_context *encoder_context)
+                        struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -291,22 +291,22 @@ gen75_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
                   (1 << 2)  |   /* Frame MB only flag */
                   (0 << 1)  |   /* MBAFF mode is in active */
                   (0 << 0));    /* Field picture flag */
-	/* DW5 Trellis quantization */
+    /* DW5 Trellis quantization */
     OUT_BCS_BATCH(batch, 0);    /* Mainly about MB rate control and debug, just ignoring */
     OUT_BCS_BATCH(batch,        /* Inter and Intra Conformance Max size limit */
                   (0xBB8 << 16) |       /* InterMbMaxSz */
                   (0xEE8) );            /* IntraMbMaxSz */
     OUT_BCS_BATCH(batch, 0);            /* Reserved */
-	/* DW8. QP delta */
+    /* DW8. QP delta */
     OUT_BCS_BATCH(batch, 0);            /* Slice QP Delta for bitrate control */
     OUT_BCS_BATCH(batch, 0);            /* Slice QP Delta for bitrate control */
-	/* DW10. Bit setting for MB */	
+    /* DW10. Bit setting for MB */
     OUT_BCS_BATCH(batch, 0x8C000000);
     OUT_BCS_BATCH(batch, 0x00010000);
-	/* DW12. */
+    /* DW12. */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0x02010100);
-	/* DW14. For short format */
+    /* DW14. For short format */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
@@ -315,10 +315,10 @@ gen75_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
 
 static void
 gen75_mfc_qm_state(VADriverContextP ctx,
-                  int qm_type,
-                  unsigned int *qm,
-                  int qm_length,
-                  struct intel_encoder_context *encoder_context)
+                   int qm_type,
+                   unsigned int *qm,
+                   int qm_length,
+                   struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     unsigned int qm_buffer[16];
@@ -352,10 +352,10 @@ gen75_mfc_avc_qm_state(VADriverContextP ctx, struct intel_encoder_context *encod
 
 static void
 gen75_mfc_fqm_state(VADriverContextP ctx,
-                   int fqm_type,
-                   unsigned int *fqm,
-                   int fqm_length,
-                   struct intel_encoder_context *encoder_context)
+                    int fqm_type,
+                    unsigned int *fqm,
+                    int fqm_length,
+                    struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     unsigned int fqm_buffer[32];
@@ -393,9 +393,9 @@ gen75_mfc_avc_fqm_state(VADriverContextP ctx, struct intel_encoder_context *enco
 
 static void
 gen75_mfc_avc_insert_object(VADriverContextP ctx, struct intel_encoder_context *encoder_context,
-                           unsigned int *insert_data, int lenght_in_dws, int data_bits_in_last_dw,
-                           int skip_emul_byte_count, int is_last_header, int is_end_of_slice, int emulation_flag,
-                           struct intel_batchbuffer *batch)
+                            unsigned int *insert_data, int lenght_in_dws, int data_bits_in_last_dw,
+                            int skip_emul_byte_count, int is_last_header, int is_end_of_slice, int emulation_flag,
+                            struct intel_batchbuffer *batch)
 {
     if (batch == NULL)
         batch = encoder_context->base.batch;
@@ -418,8 +418,8 @@ gen75_mfc_avc_insert_object(VADriverContextP ctx, struct intel_encoder_context *
 
 
 static void gen75_mfc_init(VADriverContextP ctx,
-			struct encode_state *encode_state,
-			struct intel_encoder_context *encoder_context)
+                           struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -519,7 +519,7 @@ static void gen75_mfc_init(VADriverContextP ctx,
 
 static void
 gen75_mfc_pipe_buf_addr_state_bplus(VADriverContextP ctx,
-				struct intel_encoder_context *encoder_context)
+                                    struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -537,9 +537,9 @@ gen75_mfc_pipe_buf_addr_state_bplus(VADriverContextP ctx,
     else
         OUT_BCS_BATCH(batch, 0);											/* pre output addr   */
 
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-     /* the DW4-6 is for the post_deblocking */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    /* the DW4-6 is for the post_deblocking */
 
     if (mfc_context->post_deblocking_output.bo)
         OUT_BCS_RELOC(batch, mfc_context->post_deblocking_output.bo,
@@ -547,37 +547,37 @@ gen75_mfc_pipe_buf_addr_state_bplus(VADriverContextP ctx,
                       0);											/* post output addr  */	
     else
         OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
-     /* the DW7-9 is for the uncompressed_picture */
+    /* the DW7-9 is for the uncompressed_picture */
     OUT_BCS_RELOC(batch, mfc_context->uncompressed_picture_source.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0); /* uncompressed data */
 
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
-     /* the DW10-12 is for the mb status */
+    /* the DW10-12 is for the mb status */
     OUT_BCS_RELOC(batch, mfc_context->macroblock_status_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0); /* StreamOut data*/
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
-     /* the DW13-15 is for the intra_row_store_scratch */
+    /* the DW13-15 is for the intra_row_store_scratch */
     OUT_BCS_RELOC(batch, mfc_context->intra_row_store_scratch_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);	
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
-     /* the DW16-18 is for the deblocking filter */
+    /* the DW16-18 is for the deblocking filter */
     OUT_BCS_RELOC(batch, mfc_context->deblocking_filter_row_store_scratch_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
     /* the DW 19-50 is for Reference pictures*/
     for (i = 0; i < ARRAY_ELEMS(mfc_context->reference_surfaces); i++) {
@@ -590,25 +590,25 @@ gen75_mfc_pipe_buf_addr_state_bplus(VADriverContextP ctx,
         }
 	OUT_BCS_BATCH(batch, 0);
     }
-        OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
-	/* The DW 52-54 is for the MB status buffer */
+    /* The DW 52-54 is for the MB status buffer */
     OUT_BCS_RELOC(batch, mfc_context->macroblock_status_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);											/* Macroblock status buffer*/
 	
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
-	/* the DW 55-57 is the ILDB buffer */
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
+    /* the DW 55-57 is the ILDB buffer */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
-	/* the DW 58-60 is the second ILDB buffer */
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
+    /* the DW 58-60 is the second ILDB buffer */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -669,14 +669,14 @@ gen75_mfc_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_context
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);											/* Macroblock status buffer*/
 
-        OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
     ADVANCE_BCS_BATCH(batch);
 }
 
 static void
 gen75_mfc_avc_directmode_state_bplus(VADriverContextP ctx,
-				struct intel_encoder_context *encoder_context)
+                                     struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -700,15 +700,15 @@ gen75_mfc_avc_directmode_state_bplus(VADriverContextP ctx,
             OUT_BCS_BATCH(batch, 0);
         }
     }
-	OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
-	/* the DW34-36 is the MV for the current reference */
-        OUT_BCS_RELOC(batch, mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 2].bo,
-                          I915_GEM_DOMAIN_INSTRUCTION, 0,
-                          0);
+    /* the DW34-36 is the MV for the current reference */
+    OUT_BCS_RELOC(batch, mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 2].bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, 0,
+                  0);
 
-	OUT_BCS_BATCH(batch, 0);
-	OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
     /* POL list */
     for(i = 0; i < 32; i++) {
@@ -761,7 +761,7 @@ gen75_mfc_avc_directmode_state(VADriverContextP ctx, struct intel_encoder_contex
 
 static void
 gen75_mfc_bsp_buf_base_addr_state_bplus(VADriverContextP ctx,
-				struct intel_encoder_context *encoder_context)
+                                        struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -775,12 +775,12 @@ gen75_mfc_bsp_buf_base_addr_state_bplus(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 	
-	/* the DW4-6 is for MPR Row Store Scratch Buffer Base Address */
+    /* the DW4-6 is for MPR Row Store Scratch Buffer Base Address */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
-	/* the DW7-9 is for Bitplane Read Buffer Base Address */
+    /* the DW7-9 is for Bitplane Read Buffer Base Address */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
@@ -814,8 +814,8 @@ gen75_mfc_bsp_buf_base_addr_state(VADriverContextP ctx, struct intel_encoder_con
 
 
 static void gen75_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
-                                      struct encode_state *encode_state,
-                                      struct intel_encoder_context *encoder_context)
+                                                       struct encode_state *encode_state,
+                                                       struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
@@ -833,8 +833,8 @@ static void gen75_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
 
 
 static VAStatus gen75_mfc_run(VADriverContextP ctx, 
-                             struct encode_state *encode_state,
-                             struct intel_encoder_context *encoder_context)
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
@@ -846,9 +846,9 @@ static VAStatus gen75_mfc_run(VADriverContextP ctx,
 
 static VAStatus
 gen75_mfc_stop(VADriverContextP ctx, 
-              struct encode_state *encode_state,
-              struct intel_encoder_context *encoder_context,
-              int *encoded_bits_size)
+               struct encode_state *encode_state,
+               struct intel_encoder_context *encoder_context,
+               int *encoded_bits_size)
 {
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
     VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
@@ -865,13 +865,13 @@ gen75_mfc_stop(VADriverContextP ctx,
 
 static void
 gen75_mfc_avc_slice_state(VADriverContextP ctx,
-                         VAEncPictureParameterBufferH264 *pic_param,
-                         VAEncSliceParameterBufferH264 *slice_param,
-                         struct encode_state *encode_state,
-                         struct intel_encoder_context *encoder_context,
-                         int rate_control_enable,
-                         int qp,
-                         struct intel_batchbuffer *batch)
+                          VAEncPictureParameterBufferH264 *pic_param,
+                          VAEncSliceParameterBufferH264 *slice_param,
+                          struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context,
+                          int rate_control_enable,
+                          int qp,
+                          struct intel_batchbuffer *batch)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
@@ -985,10 +985,10 @@ gen75_mfc_avc_slice_state(VADriverContextP ctx,
 
 static int
 gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb,
-				int qp,unsigned int *msg,
-                              struct intel_encoder_context *encoder_context,
-                              unsigned char target_mb_size, unsigned char max_mb_size,
-                              struct intel_batchbuffer *batch)
+                               int qp,unsigned int *msg,
+                               struct intel_encoder_context *encoder_context,
+                               unsigned char target_mb_size, unsigned char max_mb_size,
+                               struct intel_batchbuffer *batch)
 {
     int len_in_dwords = 12;
     unsigned int intra_msg;
@@ -1035,13 +1035,13 @@ gen75_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb,
 
 static int
 gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, int qp,
-                              unsigned int *msg, unsigned int offset,
-                              struct intel_encoder_context *encoder_context,
-                              unsigned char target_mb_size,unsigned char max_mb_size, int slice_type,
-                              struct intel_batchbuffer *batch)
+                               unsigned int *msg, unsigned int offset,
+                               struct intel_encoder_context *encoder_context,
+                               unsigned char target_mb_size,unsigned char max_mb_size, int slice_type,
+                               struct intel_batchbuffer *batch)
 {
     int len_in_dwords = 12;
-	unsigned int inter_msg = 0;
+    unsigned int inter_msg = 0;
     if (batch == NULL)
         batch = encoder_context->base.batch;
     {
@@ -1053,30 +1053,30 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
          * command.
          */
 	if ((msg[0] & INTER_MODE_MASK) == INTER_8X16) {
-		/* MV[0] and MV[2] are replicated */
-		mv_ptr[4] = mv_ptr[0];
-		mv_ptr[5] = mv_ptr[1];
-		mv_ptr[2] = mv_ptr[8];
-		mv_ptr[3] = mv_ptr[9];
-		mv_ptr[6] = mv_ptr[8]; 
-		mv_ptr[7] = mv_ptr[9]; 
+            /* MV[0] and MV[2] are replicated */
+            mv_ptr[4] = mv_ptr[0];
+            mv_ptr[5] = mv_ptr[1];
+            mv_ptr[2] = mv_ptr[8];
+            mv_ptr[3] = mv_ptr[9];
+            mv_ptr[6] = mv_ptr[8];
+            mv_ptr[7] = mv_ptr[9];
 	} else if ((msg[0] & INTER_MODE_MASK) == INTER_16X8) {
-		/* MV[0] and MV[1] are replicated */
-		mv_ptr[2] = mv_ptr[0];	
-		mv_ptr[3] = mv_ptr[1];
-		mv_ptr[4] = mv_ptr[16];	
-		mv_ptr[5] = mv_ptr[17];	
-		mv_ptr[6] = mv_ptr[24];
-		mv_ptr[7] = mv_ptr[25];
+            /* MV[0] and MV[1] are replicated */
+            mv_ptr[2] = mv_ptr[0];
+            mv_ptr[3] = mv_ptr[1];
+            mv_ptr[4] = mv_ptr[16];
+            mv_ptr[5] = mv_ptr[17];
+            mv_ptr[6] = mv_ptr[24];
+            mv_ptr[7] = mv_ptr[25];
 	} else if (((msg[0] & INTER_MODE_MASK) == INTER_8X8) &&
-			!(msg[1] & SUBMB_SHAPE_MASK)) {
-		/* Don't touch MV[0] or MV[1] */
-		mv_ptr[2] = mv_ptr[8];
-		mv_ptr[3] = mv_ptr[9];
-		mv_ptr[4] = mv_ptr[16];
-		mv_ptr[5] = mv_ptr[17];
-		mv_ptr[6] = mv_ptr[24];
-		mv_ptr[7] = mv_ptr[25];
+                   !(msg[1] & SUBMB_SHAPE_MASK)) {
+            /* Don't touch MV[0] or MV[1] */
+            mv_ptr[2] = mv_ptr[8];
+            mv_ptr[3] = mv_ptr[9];
+            mv_ptr[4] = mv_ptr[16];
+            mv_ptr[5] = mv_ptr[17];
+            mv_ptr[6] = mv_ptr[24];
+            mv_ptr[7] = mv_ptr[25];
 	}
     }
 
@@ -1084,21 +1084,21 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
 
     OUT_BCS_BATCH(batch, MFC_AVC_PAK_OBJECT | (len_in_dwords - 2));
 
-	inter_msg = 32;
- 	/* MV quantity */
-	if ((msg[0] & INTER_MODE_MASK) == INTER_8X8) {
-		if (msg[1] & SUBMB_SHAPE_MASK)
-			inter_msg = 128;
-	}
+    inter_msg = 32;
+    /* MV quantity */
+    if ((msg[0] & INTER_MODE_MASK) == INTER_8X8) {
+        if (msg[1] & SUBMB_SHAPE_MASK)
+            inter_msg = 128;
+    }
     OUT_BCS_BATCH(batch, inter_msg);         /* 32 MV*/
     OUT_BCS_BATCH(batch, offset);
-	inter_msg = msg[0] & (0x1F00FFFF);
-	inter_msg |= INTER_MV8;
-	inter_msg |= ((1 << 19) | (1 << 18) | (1 << 17));
-	if (((msg[0] & INTER_MODE_MASK) == INTER_8X8) &&
-	     		(msg[1] & SUBMB_SHAPE_MASK)) {
-		inter_msg |= INTER_MV32;
-	}
+    inter_msg = msg[0] & (0x1F00FFFF);
+    inter_msg |= INTER_MV8;
+    inter_msg |= ((1 << 19) | (1 << 18) | (1 << 17));
+    if (((msg[0] & INTER_MODE_MASK) == INTER_8X8) &&
+        (msg[1] & SUBMB_SHAPE_MASK)) {
+        inter_msg |= INTER_MV32;
+    }
 
     OUT_BCS_BATCH(batch, inter_msg);
 
@@ -1114,7 +1114,7 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
     OUT_BCS_BATCH(batch, (end_mb << 26) | qp);	/* Last MB */
 #endif
 
-	inter_msg = msg[1] >> 8;
+    inter_msg = msg[1] >> 8;
     /*Stuff for Inter MB*/
     OUT_BCS_BATCH(batch, inter_msg);        
     OUT_BCS_BATCH(batch, 0x0);    
@@ -1139,10 +1139,10 @@ gen75_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, i
 
 static void 
 gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
-                                       struct encode_state *encode_state,
-                                       struct intel_encoder_context *encoder_context,
-                                       int slice_index,
-                                       struct intel_batchbuffer *slice_batch)
+                                        struct encode_state *encode_state,
+                                        struct intel_encoder_context *encoder_context,
+                                        int slice_index,
+                                        struct intel_batchbuffer *slice_batch)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
@@ -1175,10 +1175,10 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     assert(qp >= 0 && qp < 52);
 
     gen75_mfc_avc_slice_state(ctx, 
-                             pPicParameter,
-                             pSliceParameter,
-                             encode_state, encoder_context,
-                             (rate_control_mode == VA_RC_CBR), qp, slice_batch);
+                              pPicParameter,
+                              pSliceParameter,
+                              encode_state, encoder_context,
+                              (rate_control_mode == VA_RC_CBR), qp, slice_batch);
 
     if ( slice_index == 0) 
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
@@ -1242,8 +1242,8 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
 
 static dri_bo *
 gen75_mfc_avc_software_batchbuffer(VADriverContextP ctx,
-                                  struct encode_state *encode_state,
-                                  struct intel_encoder_context *encoder_context)
+                                   struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch;
@@ -1278,8 +1278,8 @@ gen75_mfc_avc_software_batchbuffer(VADriverContextP ctx,
 
 static void
 gen75_mfc_batchbuffer_surfaces_input(VADriverContextP ctx,
-                                    struct encode_state *encode_state,
-                                    struct intel_encoder_context *encoder_context)
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context)
 
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
@@ -1301,8 +1301,8 @@ gen75_mfc_batchbuffer_surfaces_input(VADriverContextP ctx,
 
 static void
 gen75_mfc_batchbuffer_surfaces_output(VADriverContextP ctx,
-                                     struct encode_state *encode_state,
-                                     struct intel_encoder_context *encoder_context)
+                                      struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context)
 
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -1326,8 +1326,8 @@ gen75_mfc_batchbuffer_surfaces_output(VADriverContextP ctx,
 
 static void
 gen75_mfc_batchbuffer_surfaces_setup(VADriverContextP ctx, 
-                                    struct encode_state *encode_state,
-                                    struct intel_encoder_context *encoder_context)
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context)
 {
     gen75_mfc_batchbuffer_surfaces_input(ctx, encode_state, encoder_context);
     gen75_mfc_batchbuffer_surfaces_output(ctx, encode_state, encoder_context);
@@ -1335,8 +1335,8 @@ gen75_mfc_batchbuffer_surfaces_setup(VADriverContextP ctx,
 
 static void
 gen75_mfc_batchbuffer_idrt_setup(VADriverContextP ctx, 
-                                struct encode_state *encode_state,
-                                struct intel_encoder_context *encoder_context)
+                                 struct encode_state *encode_state,
+                                 struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct gen6_interface_descriptor_data *desc;   
@@ -1378,8 +1378,8 @@ gen75_mfc_batchbuffer_idrt_setup(VADriverContextP ctx,
 
 static void
 gen75_mfc_batchbuffer_constant_setup(VADriverContextP ctx, 
-                                    struct encode_state *encode_state,
-                                    struct intel_encoder_context *encoder_context)
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     
@@ -1388,19 +1388,19 @@ gen75_mfc_batchbuffer_constant_setup(VADriverContextP ctx,
 
 static void
 gen75_mfc_batchbuffer_emit_object_command(struct intel_batchbuffer *batch,
-                                         int index,
-                                         int head_offset,
-                                         int batchbuffer_offset,
-                                         int head_size,
-                                         int tail_size,
-                                         int number_mb_cmds,
-                                         int first_object,
-                                         int last_object,
-                                         int last_slice,
-                                         int mb_x,
-                                         int mb_y,
-                                         int width_in_mbs,
-                                         int qp)
+                                          int index,
+                                          int head_offset,
+                                          int batchbuffer_offset,
+                                          int head_size,
+                                          int tail_size,
+                                          int number_mb_cmds,
+                                          int first_object,
+                                          int last_object,
+                                          int last_slice,
+                                          int mb_x,
+                                          int mb_y,
+                                          int width_in_mbs,
+                                          int qp)
 {
     BEGIN_BATCH(batch, 12);
     
@@ -1434,14 +1434,14 @@ gen75_mfc_batchbuffer_emit_object_command(struct intel_batchbuffer *batch,
 
 static void
 gen75_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
-                                       struct intel_encoder_context *encoder_context,
-                                       VAEncSliceParameterBufferH264 *slice_param,
-                                       int head_offset,
-                                       unsigned short head_size,
-                                       unsigned short tail_size,
-                                       int batchbuffer_offset,
-                                       int qp,
-                                       int last_slice)
+                                        struct intel_encoder_context *encoder_context,
+                                        VAEncSliceParameterBufferH264 *slice_param,
+                                        int head_offset,
+                                        unsigned short head_size,
+                                        unsigned short tail_size,
+                                        int batchbuffer_offset,
+                                        int qp,
+                                        int last_slice)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
@@ -1464,19 +1464,19 @@ gen75_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
         starting_mb += number_mb_cmds;
 
         gen75_mfc_batchbuffer_emit_object_command(batch,
-                                                 index,
-                                                 head_offset,
-                                                 batchbuffer_offset,
-                                                 head_size,
-                                                 tail_size,
-                                                 number_mb_cmds,
-                                                 first_object,
-                                                 last_object,
-                                                 last_slice,
-                                                 mb_x,
-                                                 mb_y,
-                                                 width_in_mbs,
-                                                 qp);
+                                                  index,
+                                                  head_offset,
+                                                  batchbuffer_offset,
+                                                  head_size,
+                                                  tail_size,
+                                                  number_mb_cmds,
+                                                  first_object,
+                                                  last_object,
+                                                  last_slice,
+                                                  mb_x,
+                                                  mb_y,
+                                                  width_in_mbs,
+                                                  qp);
 
         if (first_object) {
             head_offset += head_size;
@@ -1502,19 +1502,19 @@ gen75_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
         starting_mb += number_mb_cmds;
 
         gen75_mfc_batchbuffer_emit_object_command(batch,
-                                                 index,
-                                                 head_offset,
-                                                 batchbuffer_offset,
-                                                 head_size,
-                                                 tail_size,
-                                                 number_mb_cmds,
-                                                 first_object,
-                                                 last_object,
-                                                 last_slice,
-                                                 mb_x,
-                                                 mb_y,
-                                                 width_in_mbs,
-                                                 qp);
+                                                  index,
+                                                  head_offset,
+                                                  batchbuffer_offset,
+                                                  head_size,
+                                                  tail_size,
+                                                  number_mb_cmds,
+                                                  first_object,
+                                                  last_object,
+                                                  last_slice,
+                                                  mb_x,
+                                                  mb_y,
+                                                  width_in_mbs,
+                                                  qp);
     }
 }
                           
@@ -1523,10 +1523,10 @@ gen75_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
  */         
 static int
 gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
-                               struct encode_state *encode_state,
-                               struct intel_encoder_context *encoder_context,
-                               int slice_index,
-                               int batchbuffer_offset)
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context,
+                                int slice_index,
+                                int batchbuffer_offset)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *slice_batch = mfc_context->aux_batchbuffer;
@@ -1559,13 +1559,13 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
     head_offset = old_used / 16;
     gen75_mfc_avc_slice_state(ctx,
-                             pPicParameter,
-                             pSliceParameter,
-                             encode_state,
-                             encoder_context,
-                             (rate_control_mode == VA_RC_CBR),
-                             qp,
-                             slice_batch);
+                              pPicParameter,
+                              pSliceParameter,
+                              encode_state,
+                              encoder_context,
+                              (rate_control_mode == VA_RC_CBR),
+                              qp,
+                              slice_batch);
 
     if (slice_index == 0)
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
@@ -1621,22 +1621,22 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
    
     gen75_mfc_avc_batchbuffer_slice_command(ctx,
-                                           encoder_context,
-                                           pSliceParameter,
-                                           head_offset,
-                                           head_size,
-                                           tail_size,
-                                           batchbuffer_offset,
-                                           qp,
-                                           last_slice);
+                                            encoder_context,
+                                            pSliceParameter,
+                                            head_offset,
+                                            head_size,
+                                            tail_size,
+                                            batchbuffer_offset,
+                                            qp,
+                                            last_slice);
 
     return head_size + tail_size + pSliceParameter->num_macroblocks * CMD_LEN_IN_OWORD;
 }
 
 static void
 gen75_mfc_avc_batchbuffer_pipeline(VADriverContextP ctx,
-                                  struct encode_state *encode_state,
-                                  struct intel_encoder_context *encoder_context)
+                                   struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
@@ -1655,8 +1655,8 @@ gen75_mfc_avc_batchbuffer_pipeline(VADriverContextP ctx,
 
 static void
 gen75_mfc_build_avc_batchbuffer(VADriverContextP ctx, 
-                               struct encode_state *encode_state,
-                               struct intel_encoder_context *encoder_context)
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
 {
     gen75_mfc_batchbuffer_surfaces_setup(ctx, encode_state, encoder_context);
     gen75_mfc_batchbuffer_idrt_setup(ctx, encode_state, encoder_context);
@@ -1666,8 +1666,8 @@ gen75_mfc_build_avc_batchbuffer(VADriverContextP ctx,
 
 static dri_bo *
 gen75_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
-                                  struct encode_state *encode_state,
-                                  struct intel_encoder_context *encoder_context)
+                                   struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
@@ -1681,8 +1681,8 @@ gen75_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
 
 static void
 gen75_mfc_avc_pipeline_programing(VADriverContextP ctx,
-                                 struct encode_state *encode_state,
-                                 struct intel_encoder_context *encoder_context)
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     dri_bo *slice_batch_bo;
@@ -1723,8 +1723,8 @@ gen75_mfc_avc_pipeline_programing(VADriverContextP ctx,
 
 static VAStatus
 gen75_mfc_avc_encode_picture(VADriverContextP ctx, 
-                            struct encode_state *encode_state,
-                            struct intel_encoder_context *encoder_context)
+                             struct encode_state *encode_state,
+                             struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
@@ -1832,7 +1832,7 @@ static void
 gen75_mfc_mpeg2_qm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
     unsigned char intra_qm[64] = {
-         8, 16, 19, 22, 26, 27, 29, 34,
+        8, 16, 19, 22, 26, 27, 29, 34,
         16, 16, 22, 24, 27, 29, 34, 37,
         19, 22, 26, 27, 29, 34, 34, 38,
         22, 22, 26, 27, 29, 34, 37, 40,
@@ -1861,14 +1861,14 @@ static void
 gen75_mfc_mpeg2_fqm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
     unsigned short intra_fqm[64] = {
-         65536/0x8, 65536/0x10, 65536/0x13, 65536/0x16, 65536/0x16, 65536/0x1a, 65536/0x1a, 65536/0x1b,
-         65536/0x10, 65536/0x10, 65536/0x16, 65536/0x16, 65536/0x1a, 65536/0x1b, 65536/0x1b, 65536/0x1d,
-         65536/0x13, 65536/0x16, 65536/0x1a, 65536/0x1a, 65536/0x1b, 65536/0x1d, 65536/0x1d, 65536/0x23,
-         65536/0x16, 65536/0x18, 65536/0x1b, 65536/0x1b, 65536/0x13, 65536/0x20, 65536/0x22, 65536/0x26,
-         65536/0x1a, 65536/0x1b, 65536/0x13, 65536/0x13, 65536/0x20, 65536/0x23, 65536/0x26, 65536/0x2e,
-         65536/0x1b, 65536/0x1d, 65536/0x22, 65536/0x22, 65536/0x23, 65536/0x28, 65536/0x2e, 65536/0x38,
-         65536/0x1d, 65536/0x22, 65536/0x22, 65536/0x25, 65536/0x28, 65536/0x30, 65536/0x38, 65536/0x45,
-         65536/0x22, 65536/0x25, 65536/0x26, 65536/0x28, 65536/0x30, 65536/0x3a, 65536/0x45, 65536/0x53,
+        65536/0x8, 65536/0x10, 65536/0x13, 65536/0x16, 65536/0x16, 65536/0x1a, 65536/0x1a, 65536/0x1b,
+        65536/0x10, 65536/0x10, 65536/0x16, 65536/0x16, 65536/0x1a, 65536/0x1b, 65536/0x1b, 65536/0x1d,
+        65536/0x13, 65536/0x16, 65536/0x1a, 65536/0x1a, 65536/0x1b, 65536/0x1d, 65536/0x1d, 65536/0x23,
+        65536/0x16, 65536/0x18, 65536/0x1b, 65536/0x1b, 65536/0x13, 65536/0x20, 65536/0x22, 65536/0x26,
+        65536/0x1a, 65536/0x1b, 65536/0x13, 65536/0x13, 65536/0x20, 65536/0x23, 65536/0x26, 65536/0x2e,
+        65536/0x1b, 65536/0x1d, 65536/0x22, 65536/0x22, 65536/0x23, 65536/0x28, 65536/0x2e, 65536/0x38,
+        65536/0x1d, 65536/0x22, 65536/0x22, 65536/0x25, 65536/0x28, 65536/0x30, 65536/0x38, 65536/0x45,
+        65536/0x22, 65536/0x25, 65536/0x26, 65536/0x28, 65536/0x30, 65536/0x3a, 65536/0x45, 65536/0x53,
     };
 
     unsigned short non_intra_fqm[64] = {
@@ -2251,34 +2251,34 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
 		intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
 
 		if (intra_rdo < inter_rdo) 
-                	gen75_mfc_mpeg2_pak_object_intra(ctx,
-                                                 encoder_context,
-                                                 h_pos, v_pos,
-                                                 first_mb_in_slice,
-                                                 last_mb_in_slice,
-                                                 first_mb_in_slice_group,
-                                                 last_mb_in_slice_group,
-                                                 0x1a,
-                                                 slice_param->quantiser_scale_code,
-                                                 0x3f,
-                                                 0,
-                                                 0xff,
-                                                 slice_batch);
+                    gen75_mfc_mpeg2_pak_object_intra(ctx,
+                                                     encoder_context,
+                                                     h_pos, v_pos,
+                                                     first_mb_in_slice,
+                                                     last_mb_in_slice,
+                                                     first_mb_in_slice_group,
+                                                     last_mb_in_slice_group,
+                                                     0x1a,
+                                                     slice_param->quantiser_scale_code,
+                                                     0x3f,
+                                                     0,
+                                                     0xff,
+                                                     slice_batch);
 		else
-			gen75_mfc_mpeg2_pak_object_inter(ctx,
-                                                 encode_state,
-                                                 encoder_context,
-                                                 msg,
-                                                 width_in_mbs, height_in_mbs,
-                                                 h_pos, v_pos,
-                                                 first_mb_in_slice,
-                                                 last_mb_in_slice,
-                                                 first_mb_in_slice_group,
-                                                 last_mb_in_slice_group,
-                                                 slice_param->quantiser_scale_code,
-                                                 0,
-                                                 0xff,
-                                                 slice_batch);
+                    gen75_mfc_mpeg2_pak_object_inter(ctx,
+                                                     encode_state,
+                                                     encoder_context,
+                                                     msg,
+                                                     width_in_mbs, height_in_mbs,
+                                                     h_pos, v_pos,
+                                                     first_mb_in_slice,
+                                                     last_mb_in_slice,
+                                                     first_mb_in_slice_group,
+                                                     last_mb_in_slice_group,
+                                                     slice_param->quantiser_scale_code,
+                                                     0,
+                                                     0xff,
+                                                     slice_batch);
             }
         }
 
@@ -2553,9 +2553,9 @@ gen75_mfc_context_destroy(void *context)
 }
 
 static VAStatus gen75_mfc_pipeline(VADriverContextP ctx,
-                  VAProfile profile,
-                  struct encode_state *encode_state,
-                  struct intel_encoder_context *encoder_context)
+                                   VAProfile profile,
+                                   struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context)
 {
     VAStatus vaStatus;
 

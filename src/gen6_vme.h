@@ -62,25 +62,25 @@ struct gen6_vme_context
 
 
     void (*vme_surface2_setup)(VADriverContextP ctx,
-                                struct i965_gpe_context *gpe_context,
-                                struct object_surface *obj_surface,
-                                unsigned long binding_table_offset,
-                                unsigned long surface_state_offset);
+                               struct i965_gpe_context *gpe_context,
+                               struct object_surface *obj_surface,
+                               unsigned long binding_table_offset,
+                               unsigned long surface_state_offset);
     void (*vme_media_rw_surface_setup)(VADriverContextP ctx,
-                                            struct i965_gpe_context *gpe_context,
-                                            struct object_surface *obj_surface,
-                                            unsigned long binding_table_offset,
-                                            unsigned long surface_state_offset);
+                                       struct i965_gpe_context *gpe_context,
+                                       struct object_surface *obj_surface,
+                                       unsigned long binding_table_offset,
+                                       unsigned long surface_state_offset);
     void (*vme_buffer_suface_setup)(VADriverContextP ctx,
                                     struct i965_gpe_context *gpe_context,
                                     struct i965_buffer_surface *buffer_surface,
                                     unsigned long binding_table_offset,
                                     unsigned long surface_state_offset);
     void (*vme_media_chroma_surface_setup)(VADriverContextP ctx,
-                                            struct i965_gpe_context *gpe_context,
-                                            struct object_surface *obj_surface,
-                                            unsigned long binding_table_offset,
-                                            unsigned long surface_state_offset);
+                                           struct i965_gpe_context *gpe_context,
+                                           struct object_surface *obj_surface,
+                                           unsigned long binding_table_offset,
+                                           unsigned long surface_state_offset);
     void *vme_state_message;
     unsigned int h264_level;
     unsigned int video_coding_type;
@@ -137,25 +137,25 @@ Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
 extern void
 gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
-                              struct encode_state *encode_state,
-                              int mb_width, int mb_height,
-                              int kernel,
-                              int transform_8x8_mode_flag,
-                              struct intel_encoder_context *encoder_context);
+                                     struct encode_state *encode_state,
+                                     int mb_width, int mb_height,
+                                     int kernel,
+                                     int transform_8x8_mode_flag,
+                                     struct intel_encoder_context *encoder_context);
 
 extern void 
 gen7_vme_scoreboard_init(VADriverContextP ctx, struct gen6_vme_context *vme_context);
 
 extern void
 intel_vme_mpeg2_state_setup(VADriverContextP ctx,
-                                       struct encode_state *encode_state,
-                                       struct intel_encoder_context *encoder_context);
+                            struct encode_state *encode_state,
+                            struct intel_encoder_context *encoder_context);
 
 extern void
 gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
-                              struct encode_state *encode_state,
-                              int mb_width, int mb_height,
-                              int kernel,
-                              struct intel_encoder_context *encoder_context);
+                                           struct encode_state *encode_state,
+                                           int mb_width, int mb_height,
+                                           int kernel,
+                                           struct intel_encoder_context *encoder_context);
 
 #endif /* _GEN6_VME_H_ */
