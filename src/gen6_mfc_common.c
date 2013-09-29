@@ -1036,7 +1036,7 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
     if (slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B) {
         slice_obj_surface = NULL;
         ref_surface_id = slice_param->RefPicList0[0].picture_id;
-        if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+        if (ref_surface_id != VA_INVALID_SURFACE) {
             slice_obj_surface = SURFACE(ref_surface_id);
         }
         if (slice_obj_surface && slice_obj_surface->bo) {
@@ -1067,7 +1067,7 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
     if (slice_type == SLICE_TYPE_B) {
         slice_obj_surface = NULL;
         ref_surface_id = slice_param->RefPicList1[0].picture_id;
-        if (ref_surface_id != 0 && ref_surface_id != VA_INVALID_SURFACE) {
+        if (ref_surface_id != VA_INVALID_SURFACE) {
             slice_obj_surface = SURFACE(ref_surface_id);
         }
         if (slice_obj_surface && slice_obj_surface->bo) {
