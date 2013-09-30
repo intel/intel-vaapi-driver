@@ -1286,6 +1286,35 @@ gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     return;
 }
 
+static int
+avc_temporal_find_surface(VAPictureH264 *curr_pic,
+                          VAPictureH264 *ref_list,
+                          int num_pictures,
+                          int dir)
+{
+    int i, found = -1, min = 0x7FFFFFFF;
+
+    for (i = 0; i < num_pictures; i++) {
+        int tmp;
+
+        if ((ref_list[i].flags & VA_PICTURE_H264_INVALID) ||
+            (ref_list[i].picture_id == VA_INVALID_SURFACE))
+            break;
+
+        tmp = curr_pic->TopFieldOrderCnt - ref_list[i].TopFieldOrderCnt;
+
+        if (dir)
+            tmp = -tmp;
+
+        if (tmp > 0 && tmp < min) {
+            min = tmp;
+            found = i;
+        }
+    }
+
+    return found;
+}
+
 void
 intel_avc_vme_reference_state(VADriverContextP ctx,
                               struct encode_state *encode_state,
@@ -1304,22 +1333,49 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
     VASurfaceID ref_surface_id;
     VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    int max_num_references;
+    VAPictureH264 *curr_pic;
+    VAPictureH264 *ref_list;
 
     if (list_index == 0) {
-        ref_surface_id = slice_param->RefPicList0[0].picture_id;
-        vme_context->used_references[0] = &slice_param->RefPicList0[0];
+        max_num_references = pic_param->num_ref_idx_l0_active_minus1 + 1;
+        ref_list = slice_param->RefPicList0;
     } else {
-        ref_surface_id = slice_param->RefPicList1[0].picture_id;
-        vme_context->used_references[1] = &slice_param->RefPicList1[0];
+        max_num_references = pic_param->num_ref_idx_l1_active_minus1 + 1;
+        ref_list = slice_param->RefPicList1;
     }
 
-    if (ref_surface_id != VA_INVALID_SURFACE)
-        obj_surface = SURFACE(ref_surface_id);
+    if (max_num_references == 1) {
+        if (list_index == 0) {
+            ref_surface_id = slice_param->RefPicList0[0].picture_id;
+            vme_context->used_references[0] = &slice_param->RefPicList0[0];
+        } else {
+            ref_surface_id = slice_param->RefPicList1[0].picture_id;
+            vme_context->used_references[1] = &slice_param->RefPicList1[0];
+        }
 
-    if (!obj_surface ||
-        !obj_surface->bo) {
-        obj_surface = encode_state->reference_objects[list_index];
-        vme_context->used_references[list_index] = &pic_param->ReferenceFrames[list_index];
+        if (ref_surface_id != VA_INVALID_SURFACE)
+            obj_surface = SURFACE(ref_surface_id);
+
+        if (!obj_surface ||
+            !obj_surface->bo) {
+            obj_surface = encode_state->reference_objects[list_index];
+            vme_context->used_references[list_index] = &pic_param->ReferenceFrames[list_index];
+        }
+    } else {
+        int ref_idx;
+
+        curr_pic = &pic_param->CurrPic;
+
+        /* select the reference frame in temporal space */
+        ref_idx = avc_temporal_find_surface(curr_pic, ref_list, max_num_references, list_index == 1);
+        ref_surface_id = ref_list[ref_idx].picture_id;
+
+        if (ref_surface_id != VA_INVALID_SURFACE) /* otherwise warning later */
+            obj_surface = SURFACE(ref_surface_id);
+
+        vme_context->used_reference_objects[list_index] = obj_surface;
+        vme_context->used_references[list_index] = &ref_list[ref_idx];
     }
 
     if (obj_surface &&
