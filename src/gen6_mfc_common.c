@@ -1032,6 +1032,13 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
     slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
     if (slice_type == SLICE_TYPE_P || slice_type == SLICE_TYPE_B) {
+        int ref_idx_l0 = (vme_context->ref_index_in_mb[0] & 0xff);
+
+        if (ref_idx_l0 > 3) {
+            WARN_ONCE("ref_idx_l0 is out of range\n");
+            ref_idx_l0 = 0;
+        }
+
         obj_surface = vme_context->used_reference_objects[0];
         frame_index = -1;
         for (i = 0; i < 16; i++) {
@@ -1044,13 +1051,20 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
         if (frame_index == -1) {
             WARN_ONCE("RefPicList0 is not found in DPB!\n");
         } else {
-            /* This is passed by the hacked mode */
-            fref_entry &= ~(0xFF);
-            fref_entry += intel_get_ref_idx_state_1(vme_context->used_references[0], frame_index);
+            int ref_idx_l0_shift = ref_idx_l0 * 8;
+            fref_entry &= ~(0xFF << ref_idx_l0_shift);
+            fref_entry += (intel_get_ref_idx_state_1(vme_context->used_references[0], frame_index) << ref_idx_l0_shift);
         }
     }
 
     if (slice_type == SLICE_TYPE_B) {
+        int ref_idx_l1 = (vme_context->ref_index_in_mb[1] & 0xff);
+
+        if (ref_idx_l1 > 3) {
+            WARN_ONCE("ref_idx_l1 is out of range\n");
+            ref_idx_l1 = 0;
+        }
+
         obj_surface = vme_context->used_reference_objects[1];
         frame_index = -1;
         for (i = 0; i < 16; i++) {
@@ -1063,8 +1077,9 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
         if (frame_index == -1) {
             WARN_ONCE("RefPicList1 is not found in DPB!\n");
         } else {
-            bref_entry &= ~(0xFF);
-            bref_entry += intel_get_ref_idx_state_1(vme_context->used_references[1], frame_index);
+            int ref_idx_l1_shift = ref_idx_l1 * 8;
+            bref_entry &= ~(0xFF << ref_idx_l1_shift);
+            bref_entry += (intel_get_ref_idx_state_1(vme_context->used_references[1], frame_index) << ref_idx_l1_shift);
         }
     }
 
