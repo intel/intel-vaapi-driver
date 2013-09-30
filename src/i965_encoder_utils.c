@@ -233,13 +233,22 @@ slice_header(avc_bitstream *bs,
     
     /* slice type */
     if (IS_P_SLICE(slice_param->slice_type)) {
-        avc_bitstream_put_ui(bs, 0, 1);            /* num_ref_idx_active_override_flag: 0 */
+        avc_bitstream_put_ui(bs, slice_param->num_ref_idx_active_override_flag, 1);            /* num_ref_idx_active_override_flag: */
+
+        if (slice_param->num_ref_idx_active_override_flag)
+            avc_bitstream_put_ue(bs, slice_param->num_ref_idx_l0_active_minus1);
 
         /* ref_pic_list_reordering */
         avc_bitstream_put_ui(bs, 0, 1);            /* ref_pic_list_reordering_flag_l0: 0 */
     } else if (IS_B_SLICE(slice_param->slice_type)) {
         avc_bitstream_put_ui(bs, slice_param->direct_spatial_mv_pred_flag, 1);            /* direct_spatial_mv_pred: 1 */
-        avc_bitstream_put_ui(bs, 0, 1);            /* num_ref_idx_active_override_flag: 0 */
+
+        avc_bitstream_put_ui(bs, slice_param->num_ref_idx_active_override_flag, 1);       /* num_ref_idx_active_override_flag: */
+
+        if (slice_param->num_ref_idx_active_override_flag) {
+            avc_bitstream_put_ue(bs, slice_param->num_ref_idx_l0_active_minus1);
+            avc_bitstream_put_ue(bs, slice_param->num_ref_idx_l1_active_minus1);
+        }
 
         /* ref_pic_list_reordering */
         avc_bitstream_put_ui(bs, 0, 1);            /* ref_pic_list_reordering_flag_l0: 0 */
