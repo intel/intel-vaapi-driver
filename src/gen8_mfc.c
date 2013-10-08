@@ -744,16 +744,29 @@ gen8_mfc_avc_slice_state(VADriverContextP ctx,
     int weighted_pred_idc = 0;
     unsigned int luma_log2_weight_denom = slice_param->luma_log2_weight_denom;
     unsigned int chroma_log2_weight_denom = slice_param->chroma_log2_weight_denom;
-    int bslice = 0;
+    int num_ref_l0 = 0, num_ref_l1 = 0;
 
     if (batch == NULL)
         batch = encoder_context->base.batch;
 
-    if (slice_type == SLICE_TYPE_P) {
+    if (slice_type == SLICE_TYPE_I) {
+        luma_log2_weight_denom = 0;
+        chroma_log2_weight_denom = 0;
+    } else if (slice_type == SLICE_TYPE_P) {
         weighted_pred_idc = pic_param->pic_fields.bits.weighted_pred_flag;
+        num_ref_l0 = pic_param->num_ref_idx_l0_active_minus1 + 1;
+
+        if (slice_param->num_ref_idx_active_override_flag)
+            num_ref_l0 = slice_param->num_ref_idx_l0_active_minus1 + 1;
     } else if (slice_type == SLICE_TYPE_B) {
         weighted_pred_idc = pic_param->pic_fields.bits.weighted_bipred_idc;
-	bslice = 1;
+        num_ref_l0 = pic_param->num_ref_idx_l0_active_minus1 + 1;
+        num_ref_l1 = pic_param->num_ref_idx_l1_active_minus1 + 1;
+
+        if (slice_param->num_ref_idx_active_override_flag) {
+            num_ref_l0 = slice_param->num_ref_idx_l0_active_minus1 + 1;
+            num_ref_l1 = slice_param->num_ref_idx_l1_active_minus1 + 1;
+        }
 
         if (weighted_pred_idc == 2) {
             /* 8.4.3 - Derivation process for prediction weights (8-279) */
@@ -778,14 +791,11 @@ gen8_mfc_avc_slice_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_AVC_SLICE_STATE | (11 - 2) );
     OUT_BCS_BATCH(batch, slice_type);			/*Slice Type: I:P:B Slice*/
 
-    if (slice_type == SLICE_TYPE_I) {
-        OUT_BCS_BATCH(batch, 0);			/*no reference frames and pred_weight_table*/
-    } else {
-        OUT_BCS_BATCH(batch,
-                      (1 << 16) | (bslice << 24) |        	        /*1 reference frame*/
-                      (chroma_log2_weight_denom << 8) |
-                      (luma_log2_weight_denom << 0));
-    }
+    OUT_BCS_BATCH(batch,
+                  (num_ref_l0 << 16) |
+                  (num_ref_l1 << 24) |
+                  (chroma_log2_weight_denom << 8) |
+                  (luma_log2_weight_denom << 0));
 
     OUT_BCS_BATCH(batch, 
                   (weighted_pred_idc << 30) |
