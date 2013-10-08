@@ -894,6 +894,7 @@ gen8_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, in
                               unsigned char target_mb_size,unsigned char max_mb_size, int slice_type,
                               struct intel_batchbuffer *batch)
 {
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     int len_in_dwords = 12;
     unsigned int inter_msg = 0;
     if (batch == NULL)
@@ -971,8 +972,8 @@ gen8_mfc_avc_pak_object_inter(VADriverContextP ctx, int x, int y, int end_mb, in
     inter_msg = msg[1] >> 8;
     /*Stuff for Inter MB*/
     OUT_BCS_BATCH(batch, inter_msg);        
-    OUT_BCS_BATCH(batch, 0x0);    
-    OUT_BCS_BATCH(batch, 0x0);        
+    OUT_BCS_BATCH(batch, vme_context->ref_index_in_mb[0]);
+    OUT_BCS_BATCH(batch, vme_context->ref_index_in_mb[1]);
 
     /*MaxSizeInWord and TargetSzieInWord*/
     OUT_BCS_BATCH(batch, (max_mb_size << 24) |
