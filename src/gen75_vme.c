@@ -330,7 +330,8 @@ static VAStatus gen75_vme_interface_setup(VADriverContextP ctx,
 
 static VAStatus gen75_vme_constant_setup(VADriverContextP ctx, 
                                          struct encode_state *encode_state,
-                                         struct intel_encoder_context *encoder_context)
+                                         struct intel_encoder_context *encoder_context,
+                                         int denom)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     unsigned char *constant_buffer;
@@ -342,13 +343,13 @@ static VAStatus gen75_vme_constant_setup(VADriverContextP ctx,
     if (encoder_context->codec == CODEC_H264 ||
         encoder_context->codec == CODEC_H264_MVC) {
         if (vme_context->h264_level >= 30) {
-            mv_num = 16;
+            mv_num = 16 / denom;
         
             if (vme_context->h264_level >= 31)
-                mv_num = 8;
+                mv_num = 8 / denom;
         } 
     } else if (encoder_context->codec == CODEC_MPEG2) {
-        mv_num = 2;
+        mv_num = 2 / denom;
     }
 
     vme_state_message[31] = mv_num;
@@ -675,7 +676,7 @@ static VAStatus gen75_vme_prepare(VADriverContextP ctx,
     gen75_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
     gen75_vme_interface_setup(ctx, encode_state, encoder_context);
     //gen75_vme_vme_state_setup(ctx, encode_state, is_intra, encoder_context);
-    gen75_vme_constant_setup(ctx, encode_state, encoder_context);
+    gen75_vme_constant_setup(ctx, encode_state, encoder_context, (pSliceParameter->slice_type == SLICE_TYPE_B) ? 2 : 1);
 
     /*Programing media pipeline*/
     gen75_vme_pipeline_programing(ctx, encode_state, encoder_context);
@@ -987,7 +988,7 @@ gen75_vme_mpeg2_prepare(VADriverContextP ctx,
     gen75_vme_interface_setup(ctx, encode_state, encoder_context);
     gen75_vme_vme_state_setup(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
     intel_vme_mpeg2_state_setup(ctx, encode_state, encoder_context);
-    gen75_vme_constant_setup(ctx, encode_state, encoder_context);
+    gen75_vme_constant_setup(ctx, encode_state, encoder_context, 1);
 
     /*Programing media pipeline*/
     gen75_vme_mpeg2_pipeline_programing(ctx, encode_state, slice_param->is_intra_slice, encoder_context);
