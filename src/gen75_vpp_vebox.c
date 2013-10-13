@@ -1336,7 +1336,8 @@ void bdw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
         if (di_param->algorithm == VAProcDeinterlacingBob)
             is_first_frame = 1;
 
-        if (di_param->algorithm == VAProcDeinterlacingMotionAdaptive &&
+        if ((di_param->algorithm == VAProcDeinterlacingMotionAdaptive ||
+            di_param->algorithm == VAProcDeinterlacingMotionCompensated) &&
             proc_ctx->frame_order != -1)
             di_output_frames_flag = 0; /* Output both Current Frame and Previous Frame */
     }
