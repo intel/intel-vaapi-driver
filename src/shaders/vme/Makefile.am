@@ -37,7 +37,7 @@ $(INTEL_GEN6_ASM): $(VME_CORE) $(INTEL_GEN6_INC)
 .gen6.asm.g6b:
 	$(AM_V_GEN)$(GEN4ASM) -g 6 -o $@ $<
 
-$(INTEL_GEN7_ASM): $(VME_CORE) $(INTEL_GEN7_INC)
+$(INTEL_GEN7_ASM): $(VME7_CORE) $(INTEL_GEN7_INC)
 .g7a.gen7.asm:
 	$(AM_V_GEN)cpp -P -DDEV_IVB $< > _vme0.$@ 	&& \
 	m4 _vme0.$@ > $@				&& \
