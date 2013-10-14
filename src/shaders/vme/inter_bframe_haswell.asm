@@ -396,7 +396,7 @@ mb_mvp_start:
 add	(1)	tmp_reg0.0<1>:d		mbb_result.0<0,1,0>:d	mbc_result.0<0,1,0>:d	{align1};
 cmp.z.f0.0 (1)	null:d			tmp_reg0.0<0,1,0>:d	0:d	{align1};
 (-f0.0)	jmpi (1)	mb_median_start;
-cmp.nz.f0.0 (1)	null:d	mba_result.0<0,1,0>:d		1:d		{align1};
+cmp.nz.f0.0 (1)	null:d	mba_result.0<0,1,0>:d		0:d		{align1};
 (f0.0)	mov	(2)	mbb_result.4<1>:ud		mba_result.4<2,2,1>:ud	{align1};	
 (f0.0)	mov	(2)	mbc_result.4<1>:ud		mba_result.4<2,2,1>:ud	{align1};	
 (f0.0)	mov	(2)	mbb_result.20<1>:uw		mba_result.20<2,2,1>:uw	{align1};	
