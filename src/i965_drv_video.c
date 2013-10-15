@@ -2313,17 +2313,33 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
     } else if (obj_context->codec_type == CODEC_ENC) {
         assert(VAEntrypointEncSlice == obj_config->entrypoint);
 
-        assert(obj_context->codec_state.encode.pic_param ||
-               obj_context->codec_state.encode.pic_param_ext);
-        assert(obj_context->codec_state.encode.seq_param ||
-               obj_context->codec_state.encode.seq_param_ext);
-        assert(obj_context->codec_state.encode.num_slice_params >= 1 ||
-               obj_context->codec_state.encode.num_slice_params_ext >= 1);
+        if (!(obj_context->codec_state.encode.pic_param ||
+                obj_context->codec_state.encode.pic_param_ext)) {
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+        if (!(obj_context->codec_state.encode.seq_param ||
+                obj_context->codec_state.encode.seq_param_ext)) {
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+        if ((obj_context->codec_state.encode.num_slice_params <=0) &&
+                (obj_context->codec_state.encode.num_slice_params_ext <=0)) {
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
     } else {
-        assert(obj_context->codec_state.decode.pic_param);
-        assert(obj_context->codec_state.decode.num_slice_params >= 1);
-        assert(obj_context->codec_state.decode.num_slice_datas >= 1);
-        assert(obj_context->codec_state.decode.num_slice_params == obj_context->codec_state.decode.num_slice_datas);
+        if (obj_context->codec_state.decode.pic_param == NULL) {
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+        if (obj_context->codec_state.decode.num_slice_params <=0) {
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+        if (obj_context->codec_state.decode.num_slice_datas <=0) {
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+
+        if (obj_context->codec_state.decode.num_slice_params !=
+                obj_context->codec_state.decode.num_slice_datas) {
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
     }
 
     assert(obj_context->hw_context->run);
