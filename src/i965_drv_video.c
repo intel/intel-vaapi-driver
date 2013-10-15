@@ -1816,6 +1816,9 @@ i965_UnmapBuffer(VADriverContextP ctx, VABufferID buf_id)
     struct object_buffer *obj_buffer = BUFFER(buf_id);
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
 
+    if ((buf_id & OBJECT_HEAP_OFFSET_MASK) != BUFFER_ID_OFFSET)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
     assert(obj_buffer && obj_buffer->buffer_store);
     assert(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer);
     assert(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer));
@@ -2024,7 +2027,6 @@ i965_decoder_render_picture(VADriverContextP ctx,
 
     for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
-        assert(obj_buffer);
 
         if (!obj_buffer)
             return VA_STATUS_ERROR_INVALID_BUFFER;
@@ -2147,7 +2149,6 @@ i965_encoder_render_picture(VADriverContextP ctx,
 
     for (i = 0; i < num_buffers; i++) {  
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
-        assert(obj_buffer);
 
         if (!obj_buffer)
             return VA_STATUS_ERROR_INVALID_BUFFER;
@@ -2240,7 +2241,6 @@ i965_proc_render_picture(VADriverContextP ctx,
 
     for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
-        assert(obj_buffer);
 
         if (!obj_buffer)
             return VA_STATUS_ERROR_INVALID_BUFFER;
@@ -2275,7 +2275,10 @@ i965_RenderPicture(VADriverContextP ctx,
 
     if (!obj_context)
         return VA_STATUS_ERROR_INVALID_CONTEXT;
-    
+
+    if (num_buffers <= 0)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
     obj_config = obj_context->obj_config;
     assert(obj_config);
 
