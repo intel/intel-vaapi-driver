@@ -923,18 +923,14 @@ gen7_mfc_mpeg2_software_slice_batchbuffer(VADriverContextP ctx,
                                           struct encode_state *encode_state,
                                           struct intel_encoder_context *encoder_context)
 {
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch;
-    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
     VAEncSliceParameterBufferMPEG2 *next_slice_group_param = NULL;
     dri_bo *batch_bo;
     int i;
-    int buffer_size;
-    int width_in_mbs = ALIGN(seq_param->picture_width, 16) / 16;
-    int height_in_mbs = ALIGN(seq_param->picture_height, 16) / 16;
 
-    buffer_size = width_in_mbs * height_in_mbs * 64;
-    batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD, buffer_size);
+    batch = mfc_context->aux_batchbuffer;
     batch_bo = batch->buffer;
 
     for (i = 0; i < encode_state->num_slice_params_ext; i++) {
@@ -955,6 +951,7 @@ gen7_mfc_mpeg2_software_slice_batchbuffer(VADriverContextP ctx,
 
     dri_bo_reference(batch_bo);
     intel_batchbuffer_free(batch);
+    mfc_context->aux_batchbuffer = NULL;
 
     return batch_bo;
 }
