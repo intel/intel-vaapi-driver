@@ -42,6 +42,13 @@ struct encode_state;
 
 #define INTRA_MB_FLAG_MASK              0x00002000
 
+/* The space required for slice header SLICE_STATE + header.
+ * Is it enough? */
+#define SLICE_HEADER			80
+
+/* the space required for slice tail. */
+#define SLICE_TAIL			16
+
 #define __SOFTWARE__    0
 
 #define SURFACE_STATE_PADDED_SIZE_0_GEN7        ALIGN(sizeof(struct gen7_surface_state), 32)

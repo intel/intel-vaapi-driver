@@ -427,6 +427,7 @@ static void gen75_mfc_init(VADriverContextP ctx,
     int i;
     int width_in_mbs = 0;
     int height_in_mbs = 0;
+    int slice_batchbuffer_size;
 
     if (encoder_context->codec == CODEC_H264) {
         VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
@@ -440,6 +441,9 @@ static void gen75_mfc_init(VADriverContextP ctx,
         width_in_mbs = ALIGN(pSequenceParameter->picture_width, 16) / 16;
         height_in_mbs = ALIGN(pSequenceParameter->picture_height, 16) / 16;
     }
+
+    slice_batchbuffer_size = 64 * width_in_mbs * height_in_mbs + 4096 +
+		(SLICE_HEADER + SLICE_TAIL) * encode_state->num_slice_params_ext;
 
     /*Encode common setup for MFC*/
     dri_bo_unreference(mfc_context->post_deblocking_output.bo);
@@ -507,7 +511,8 @@ static void gen75_mfc_init(VADriverContextP ctx,
     if (mfc_context->aux_batchbuffer)
         intel_batchbuffer_free(mfc_context->aux_batchbuffer);
 
-    mfc_context->aux_batchbuffer = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD, 0);
+    mfc_context->aux_batchbuffer = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD,
+							slice_batchbuffer_size);
     mfc_context->aux_batchbuffer_surface.bo = mfc_context->aux_batchbuffer->buffer;
     dri_bo_reference(mfc_context->aux_batchbuffer_surface.bo);
     mfc_context->aux_batchbuffer_surface.pitch = 16;
