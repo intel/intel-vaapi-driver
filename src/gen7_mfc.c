@@ -924,7 +924,6 @@ gen7_mfc_mpeg2_software_slice_batchbuffer(VADriverContextP ctx,
                                           struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch;
     VAEncSliceParameterBufferMPEG2 *next_slice_group_param = NULL;
     dri_bo *batch_bo;

@@ -814,7 +814,6 @@ gen7_vme_mpeg2_fill_vme_batchbuffer(VADriverContextP ctx,
                                     struct intel_encoder_context *encoder_context)
 {
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    int number_mb_cmds;
     int mb_x = 0, mb_y = 0;
     int i, s, j;
     unsigned int *command_ptr;

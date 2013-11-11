@@ -1302,7 +1302,6 @@ gen75_mfc_batchbuffer_surfaces_output(VADriverContextP ctx,
                                       struct intel_encoder_context *encoder_context)
 
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     assert(mfc_context->aux_batchbuffer_surface.bo);
     mfc_context->buffer_suface_setup(ctx,
@@ -1435,7 +1434,6 @@ gen75_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
     int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
     int number_mb_cmds = 128;
     int starting_offset = 0;
-    int i;
     int mb_x, mb_y;
     int last_mb, slice_end_x, slice_end_y;
     int remaining_mb = total_mbs;
@@ -1605,7 +1603,7 @@ gen75_mfc_avc_batchbuffer_pipeline(VADriverContextP ctx,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
-    int i, size, offset = 0;
+    int i;
     intel_batchbuffer_start_atomic(batch, 0x4000); 
     gen6_gpe_pipeline_setup(ctx, &mfc_context->gpe_context, batch);
 
@@ -2295,7 +2293,6 @@ gen75_mfc_mpeg2_software_slice_batchbuffer(VADriverContextP ctx,
                                            struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch;
     VAEncSliceParameterBufferMPEG2 *next_slice_group_param = NULL;
     dri_bo *batch_bo;
