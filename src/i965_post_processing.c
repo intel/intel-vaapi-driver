@@ -1738,11 +1738,9 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
 
         if (full_packed_format) {
             scale_factor_of_1st_plane_width_in_byte = 4; 
-            pitch[0] = obj_surface->width * 4;
         }
         else if (packed_yuv ) {
             scale_factor_of_1st_plane_width_in_byte =  2; 
-            pitch[0] = obj_surface->width * 2;
         }
         else if (interleaved_uv) {
             width[1] = obj_surface->orig_width;
@@ -1853,12 +1851,9 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                 width[0] = obj_surface->orig_width * 2; /* surface format is R8, so double the width */
             else
                 width[0] = obj_surface->orig_width;     /* surface foramt is YCBCR, width is specified in units of pixels */
-
-            pitch[0] = obj_surface->width * 2;
         } else if (rgbx_format) {
 	    if (is_target)
                 width[0] = obj_surface->orig_width * 4; /* surface format is R8, so quad the width */
-            pitch[0] = obj_surface->width * 4;
 	}
 
         width[1] = obj_surface->cb_cr_width;

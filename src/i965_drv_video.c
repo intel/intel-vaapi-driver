@@ -2874,12 +2874,13 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
         case VA_FOURCC('Y', 'U', 'Y', '2'):
         case VA_FOURCC('U', 'Y', 'V', 'Y'):
             assert(subsampling == SUBSAMPLE_YUV422H);
-            obj_surface->cb_cr_pitch = obj_surface->width * 2;
+            obj_surface->width = ALIGN(obj_surface->orig_width * 2, 128);
+            obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->y_cb_offset = 0; 
             obj_surface->y_cr_offset = 0; 
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
             obj_surface->cb_cr_height = obj_surface->orig_height / 2;
-            region_width = obj_surface->width * 2;
+            region_width = obj_surface->width;
             region_height = obj_surface->height;
             
             break;
@@ -2890,7 +2891,8 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
         case VA_FOURCC('B', 'G', 'R', 'X'):
             assert(subsampling == SUBSAMPLE_RGBX);
 
-            region_width = obj_surface->width * 4;
+            obj_surface->width = ALIGN(obj_surface->orig_width * 4, 128);
+            region_width = obj_surface->width;
             region_height = obj_surface->height;
             break;
 
@@ -2936,19 +2938,21 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         case VA_FOURCC('Y', 'U', 'Y', '2'):
         case VA_FOURCC('U', 'Y', 'V', 'Y'):
+            obj_surface->width = ALIGN(obj_surface->orig_width * 2, 16);
             obj_surface->y_cb_offset = 0;
             obj_surface->y_cr_offset = 0;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
             obj_surface->cb_cr_height = obj_surface->orig_height;
-            obj_surface->cb_cr_pitch = obj_surface->width * 2;
-            region_width = obj_surface->width * 2;
+            obj_surface->cb_cr_pitch = obj_surface->width;
+            region_width = obj_surface->width;
             region_height = obj_surface->height;
             break;
         case VA_FOURCC('R', 'G', 'B', 'A'):
         case VA_FOURCC('R', 'G', 'B', 'X'):
         case VA_FOURCC('B', 'G', 'R', 'A'):
         case VA_FOURCC('B', 'G', 'R', 'X'):
-            region_width = obj_surface->width * 4;
+            obj_surface->width = ALIGN(obj_surface->orig_width * 4, 16);
+            region_width = obj_surface->width;
             region_height = obj_surface->height;
             break;
 
@@ -2974,9 +2978,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
                                                    &pitch,
                                                    0);
         assert(tiling_mode == I915_TILING_Y);
-        assert(pitch == obj_surface->width     || 
-               pitch == obj_surface->width * 2 ||
-               pitch == obj_surface->width * 4) ;
+        assert(pitch == obj_surface->width);
     } else {
         obj_surface->bo = dri_bo_alloc(i965->intel.bufmgr,
                                        "vaapi surface",
@@ -3078,7 +3080,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     case VA_FOURCC('Y', 'U', 'Y', '2'):
     case VA_FOURCC('U', 'Y', 'V', 'Y'):
         image->num_planes = 1;
-        image->pitches[0] = obj_surface->width * 2; /* Y, width is aligned already */
+        image->pitches[0] = obj_surface->width; /* Y, width is aligned already */
         image->offsets[0] = 0;
         break;
     case VA_FOURCC('R', 'G', 'B', 'A'):
@@ -3086,7 +3088,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     case VA_FOURCC('B', 'G', 'R', 'A'):
     case VA_FOURCC('B', 'G', 'R', 'X'):
         image->num_planes = 1;
-        image->pitches[0] = obj_surface->width * 4;
+        image->pitches[0] = obj_surface->width;
         break;
     default:
         goto error;

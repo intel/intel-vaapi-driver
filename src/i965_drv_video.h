@@ -207,11 +207,11 @@ struct object_surface
     struct object_subpic *obj_subpic[I965_MAX_SUBPIC_SUM];
     unsigned int subpic_render_idx;
 
-    int width;
-    int height;
+    int width;          /* the pitch of plane 0 in bytes in horizontal direction */
+    int height;         /* the pitch of plane 0 in bytes in vertical direction */
     int size;
-    int orig_width;
-    int orig_height;
+    int orig_width;     /* the width of plane 0 in pixels */
+    int orig_height;    /* the height of plane 0 in pixels */
     int flags;
     unsigned int fourcc;    
     dri_bo *bo;
