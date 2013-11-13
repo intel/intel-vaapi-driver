@@ -5483,14 +5483,28 @@ i965_proc_picture(VADriverContextP ctx,
     unsigned int tiling = 0, swizzle = 0;
     int in_width, in_height;
 
-    assert(pipeline_param->surface != VA_INVALID_ID);
-    assert(proc_state->current_render_target != VA_INVALID_ID);
+    if (pipeline_param->surface == VA_INVALID_ID ||
+        proc_state->current_render_target == VA_INVALID_ID) {
+        status = VA_STATUS_ERROR_INVALID_SURFACE;
+        goto error;
+    }
 
     obj_surface = SURFACE(pipeline_param->surface);
-    assert(obj_surface && obj_surface->bo);
 
-    if (!obj_surface || !obj_surface->bo)
+    if (!obj_surface) {
+        status = VA_STATUS_ERROR_INVALID_SURFACE;
         goto error;
+    }
+
+    if (!obj_surface->bo) {
+        status = VA_STATUS_ERROR_INVALID_VALUE; /* The input surface is created without valid content */
+        goto error;
+    }
+
+    if (pipeline_param->num_filters && !pipeline_param->filters) {
+        status = VA_STATUS_ERROR_INVALID_PARAMETER;
+        goto error;
+    }
 
     in_width = obj_surface->orig_width;
     in_height = obj_surface->orig_height;
@@ -5574,10 +5588,12 @@ i965_proc_picture(VADriverContextP ctx,
         VAProcFilterType filter_type;
         int kernel_index;
 
-        assert(obj_buffer && obj_buffer->buffer_store);
-
-        if (!obj_buffer || !obj_buffer->buffer_store)
+        if (!obj_buffer ||
+            !obj_buffer->buffer_store ||
+            !obj_buffer->buffer_store->buffer) {
+            status = VA_STATUS_ERROR_INVALID_FILTER_CHAIN;
             goto error;
+        }
 
         out_surface_id = VA_INVALID_ID;
         filter_param = (VAProcFilterParameterBufferBase *)obj_buffer->buffer_store->buffer;
@@ -5617,10 +5633,11 @@ i965_proc_picture(VADriverContextP ctx,
 
     proc_context->pp_context.pipeline_param = NULL;
     obj_surface = SURFACE(proc_state->current_render_target);
-    assert(obj_surface);
     
-    if (!obj_surface)
+    if (!obj_surface) {
+        status = VA_STATUS_ERROR_INVALID_SURFACE;
         goto error;
+    }
 
     int csc_needed = 0;
     if (obj_surface->fourcc && obj_surface->fourcc !=  VA_FOURCC('N','V','1','2')){
@@ -5694,7 +5711,7 @@ error:
                              tmp_surfaces,
                              num_tmp_surfaces);
 
-    return VA_STATUS_ERROR_INVALID_PARAMETER;
+    return status;
 }
 
 static void

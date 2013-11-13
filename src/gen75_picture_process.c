@@ -123,25 +123,39 @@ gen75_proc_picture(VADriverContextP ctx,
              (VAProcPipelineParameterBuffer *)proc_st->pipeline_param->buffer;
     struct object_surface *obj_dst_surf = NULL;
     struct object_surface *obj_src_surf = NULL;
+    VAStatus status;
+
     proc_ctx->pipeline_param = pipeline_param;
-    assert(proc_st->current_render_target != VA_INVALID_SURFACE);
 
     if (proc_st->current_render_target == VA_INVALID_SURFACE ||
-        pipeline_param->surface == VA_INVALID_SURFACE)
+        pipeline_param->surface == VA_INVALID_SURFACE) {
+        status = VA_STATUS_ERROR_INVALID_SURFACE;
         goto error;
+    }
 
     obj_dst_surf = SURFACE(proc_st->current_render_target);
 
-    if (!obj_dst_surf)
+    if (!obj_dst_surf) {
+        status = VA_STATUS_ERROR_INVALID_SURFACE;
         goto error;
+    }
 
     obj_src_surf = SURFACE(proc_ctx->pipeline_param->surface);
 
-    if (!obj_src_surf)
+    if (!obj_src_surf) {
+        status = VA_STATUS_ERROR_INVALID_SURFACE;
         goto error;
+    }
 
-    if (pipeline_param->num_filters && !pipeline_param->filters)
+    if (!obj_src_surf->bo) {
+        status = VA_STATUS_ERROR_INVALID_VALUE; /* The input surface is created without valid content */
         goto error;
+    }
+
+    if (pipeline_param->num_filters && !pipeline_param->filters) {
+        status = VA_STATUS_ERROR_INVALID_PARAMETER;
+        goto error;
+    }
 
     if (!obj_dst_surf->bo) {
         unsigned int is_tiled = 0;
@@ -166,8 +180,10 @@ gen75_proc_picture(VADriverContextP ctx,
        
        if (!obj_buf ||
            !obj_buf->buffer_store ||
-           !obj_buf->buffer_store->buffer)
+           !obj_buf->buffer_store->buffer) {
+           status = VA_STATUS_ERROR_INVALID_FILTER_CHAIN;
            goto error;
+       }
 
        VAProcFilterParameterBuffer* filter =
            (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
@@ -177,12 +193,11 @@ gen75_proc_picture(VADriverContextP ctx,
            filter->type == VAProcFilterColorBalance){
            gen75_vpp_vebox(ctx, proc_ctx);
        }else if(filter->type == VAProcFilterSharpening){
-           assert(obj_src_surf->fourcc == VA_FOURCC('N','V','1','2') && 
-                  obj_dst_surf->fourcc == VA_FOURCC('N','V','1','2'));
-
            if (obj_src_surf->fourcc != VA_FOURCC('N', 'V', '1', '2') ||
-               obj_dst_surf->fourcc != VA_FOURCC('N', 'V', '1', '2'))
+               obj_dst_surf->fourcc != VA_FOURCC('N', 'V', '1', '2')) {
+               status = VA_STATUS_ERROR_UNIMPLEMENTED;
                goto error;
+           }
 
            gen75_vpp_gpe(ctx, proc_ctx);
        } 
@@ -191,12 +206,12 @@ gen75_proc_picture(VADriverContextP ctx,
          for (i = 0; i < pipeline_param->num_filters; i++){
              struct object_buffer * obj_buf = BUFFER(pipeline_param->filters[i]);
 
-             assert(obj_buf && obj_buf->buffer_store && obj_buf->buffer_store->buffer);
-       
              if (!obj_buf ||
                  !obj_buf->buffer_store ||
-                 !obj_buf->buffer_store->buffer)
+                 !obj_buf->buffer_store->buffer) {
+                 status = VA_STATUS_ERROR_INVALID_FILTER_CHAIN;
                  goto error;
+             }
 
              VAProcFilterParameterBuffer* filter =
                  (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
@@ -214,7 +229,7 @@ gen75_proc_picture(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 
 error:
-    return VA_STATUS_ERROR_INVALID_PARAMETER;
+    return status;
 }
 
 static void 
