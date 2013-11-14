@@ -138,7 +138,7 @@ struct encode_state
     int num_slice_params_ext;
     int last_packed_header_type;
 
-    struct buffer_store *misc_param[8];
+    struct buffer_store *misc_param[16];
 
     VASurfaceID current_render_target;
     struct object_surface *input_yuv_object;
