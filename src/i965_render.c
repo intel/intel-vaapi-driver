@@ -323,6 +323,12 @@ static float yuv_to_rgb_bt709[3][4] = {
 {1.164,		2.112,	0,		-0.50196,},
 };
 
+static float yuv_to_rgb_smpte_240[3][4] = {
+{1.164,		0,	1.794,		-0.06275,},
+{1.164,		-0.258,	-0.5425,	-0.50196,},
+{1.164,		2.078,	0,		-0.50196,},
+};
+
 static void
 i965_render_vs_unit(VADriverContextP ctx)
 {
@@ -1119,6 +1125,8 @@ i965_render_upload_constants(VADriverContextP ctx,
     yuv_to_rgb = (float *)constant_buffer + 8;
     if (color_flag == VA_SRC_BT709)
         memcpy(yuv_to_rgb, yuv_to_rgb_bt709, sizeof(yuv_to_rgb_bt709));
+    else if (color_flag == VA_SRC_SMPTE_240)
+        memcpy(yuv_to_rgb, yuv_to_rgb_smpte_240, sizeof(yuv_to_rgb_smpte_240));
     else
         memcpy(yuv_to_rgb, yuv_to_rgb_bt601, sizeof(yuv_to_rgb_bt601));
 
