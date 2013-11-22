@@ -35,9 +35,6 @@ define(`vh',    `m5')
 define(`bl',    `g2.0<8,8,1>F')
 define(`bh',    `g4.0<8,8,1>F')
 
-define(`a0_a_x',`g7.0<0,1,0>F')
-define(`a0_a_y',`g7.16<0,1,0>F')
-
 /* U */
 pln (8) ul<1>F a0_a_x bl { align1 }; /* pixel 0-7 */
 pln (8) uh<1>F a0_a_x bh { align1 }; /* pixel 8-15 */

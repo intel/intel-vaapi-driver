@@ -1,5 +1,5 @@
 /*
- * Copyright © 2006 Intel Corporation
+ * Copyright © 2006-2013 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,39 +39,43 @@ define(`screen_y0', `g1.4<0,1,0>F')
 define(`interleaved_uv', `g2.0<0,1,0>UW')
 
 /* Source transformation parameters */
-define(`src_du_dx', `g3.0<0,1,0>F')
-define(`src_du_dy', `g3.4<0,1,0>F')
-define(`src_uo',    `g3.12<0,1,0>F')
-define(`src_dv_dx', `g3.16<0,1,0>F')
-define(`src_dv_dy', `g3.20<0,1,0>F')
-define(`src_vo',    `g3.28<0,1,0>F')
-define(`src_dw_dx', `g4.0<0,1,0>F')
-define(`src_dw_dy', `g4.4<0,1,0>F')
-define(`src_wo',    `g4.12<0,1,0>F')
+define(`src_du_dx', `g6.0<0,1,0>F')
+define(`src_du_dy', `g6.4<0,1,0>F')
+define(`src_uo',    `g6.12<0,1,0>F')
+define(`src_dv_dx', `g6.16<0,1,0>F')
+define(`src_dv_dy', `g6.20<0,1,0>F')
+define(`src_vo',    `g6.28<0,1,0>F')
+define(`src_dw_dx', `g7.0<0,1,0>F')
+define(`src_dw_dy', `g7.4<0,1,0>F')
+define(`src_wo',    `g7.12<0,1,0>F')
 
-define(`mask_du_dx', `g5.0<0,1,0>F')
-define(`mask_du_dy', `g5.4<0,1,0>F')
-define(`mask_uo',    `g5.12<0,1,0>F')
-define(`mask_dv_dx', `g5.16<0,1,0>F')
-define(`mask_dv_dy', `g5.20<0,1,0>F')
-define(`mask_vo',    `g5.28<0,1,0>F')
-define(`mask_dw_dx', `g6.0<0,1,0>F')
-define(`mask_dw_dy', `g6.4<0,1,0>F')
-define(`mask_wo',    `g6.12<0,1,0>F')
+define(`mask_du_dx', `g8.0<0,1,0>F')
+define(`mask_du_dy', `g8.4<0,1,0>F')
+define(`mask_uo',    `g8.12<0,1,0>F')
+define(`mask_dv_dx', `g8.16<0,1,0>F')
+define(`mask_dv_dy', `g8.20<0,1,0>F')
+define(`mask_vo',    `g8.28<0,1,0>F')
+define(`mask_dw_dx', `g9.0<0,1,0>F')
+define(`mask_dw_dy', `g9.4<0,1,0>F')
+define(`mask_wo',    `g9.12<0,1,0>F')
+
+/* Attribute for snb+ */
+define(`a0_a_x',`g10.0<0,1,0>F')
+define(`a0_a_y',`g10.16<0,1,0>F')
 
 /*
  * Local variables. Pairs must be aligned on even reg boundry
  */
 
 /* this holds the X dest coordinates */
-define(`dst_x',	    `g8')
+define(`dst_x',	    `g42')
 define(`dst_x_0',   `dst_x')
-define(`dst_x_1',   `g9')
+define(`dst_x_1',   `g43')
 
 /* this holds the Y dest coordinates */
-define(`dst_y',	    `g10')
+define(`dst_y',	    `g44')
 define(`dst_y_0',   `dst_y')
-define(`dst_y_1',   `g11')
+define(`dst_y_1',   `g45')
 
 /* When computing x * dn/dx, use this */
 define(`temp_x',    `g30')

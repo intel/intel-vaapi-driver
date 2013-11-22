@@ -55,7 +55,7 @@ static const uint32_t sf_kernel_static[][4] =
 #include "shaders/render/exa_sf.g4b"
 };
 
-#define PS_KERNEL_NUM_GRF       32
+#define PS_KERNEL_NUM_GRF       48
 #define PS_MAX_THREADS          32
 
 #define I965_GRF_BLOCKS(nreg)	((nreg + 15) / 16 - 1)
@@ -308,8 +308,8 @@ static struct i965_kernel render_kernels_gen7_haswell[] = {
 #define URB_SF_ENTRIES	      1
 #define URB_SF_ENTRY_SIZE     2
 
-#define URB_CS_ENTRIES	      1
-#define URB_CS_ENTRY_SIZE     1
+#define URB_CS_ENTRIES	      4
+#define URB_CS_ENTRY_SIZE     4
 
 static void
 i965_render_vs_unit(VADriverContextP ctx)
@@ -445,8 +445,8 @@ i965_subpic_render_wm_unit(VADriverContextP ctx)
     wm_state->thread2.scratch_space_base_pointer = 0;
     wm_state->thread2.per_thread_scratch_space = 0; /* 1024 bytes */
 
-    wm_state->thread3.dispatch_grf_start_reg = 3; /* XXX */
-    wm_state->thread3.const_urb_entry_read_length = 0;
+    wm_state->thread3.dispatch_grf_start_reg = 2; /* XXX */
+    wm_state->thread3.const_urb_entry_read_length = 4;
     wm_state->thread3.const_urb_entry_read_offset = 0;
     wm_state->thread3.urb_entry_read_length = 1; /* XXX */
     wm_state->thread3.urb_entry_read_offset = 0; /* XXX */
@@ -510,7 +510,7 @@ i965_render_wm_unit(VADriverContextP ctx)
     wm_state->thread2.per_thread_scratch_space = 0; /* 1024 bytes */
 
     wm_state->thread3.dispatch_grf_start_reg = 2; /* XXX */
-    wm_state->thread3.const_urb_entry_read_length = 1;
+    wm_state->thread3.const_urb_entry_read_length = 4;
     wm_state->thread3.const_urb_entry_read_offset = 0;
     wm_state->thread3.urb_entry_read_length = 1; /* XXX */
     wm_state->thread3.urb_entry_read_offset = 0; /* XXX */
@@ -2071,7 +2071,7 @@ gen6_emit_wm_state(VADriverContextP ctx, int kernel)
     OUT_RELOC(batch, 
               render_state->curbe.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0,
-              0);
+              (URB_CS_ENTRY_SIZE-1));
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
@@ -2837,7 +2837,7 @@ gen7_emit_wm_state(VADriverContextP ctx, int kernel)
 
     BEGIN_BATCH(batch, 7);
     OUT_BATCH(batch, GEN6_3DSTATE_CONSTANT_PS | (7 - 2));
-    OUT_BATCH(batch, 1);
+    OUT_BATCH(batch, URB_CS_ENTRY_SIZE);
     OUT_BATCH(batch, 0);
     OUT_RELOC(batch, 
               render_state->curbe.bo,
