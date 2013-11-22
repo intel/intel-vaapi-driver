@@ -45,17 +45,17 @@ define(`slot_b_01',     `g71')
 define(`slot_a_00',     `g72')
 define(`slot_a_01',     `g73')
 
-mov (8) slot_r_00<1>F     src_sample_r_01<1>F { align1 mask_disable };
-mov (8) slot_r_01<1>F     src_sample_r_23<1>F { align1 mask_disable };
+mov (8) slot_r_00<1>F     src_sample_r_01<8,8,1>F { align1 mask_disable };
+mov (8) slot_r_01<1>F     src_sample_r_23<8,8,1>F { align1 mask_disable };
 
-mov (8) slot_g_00<1>F     src_sample_g_01<1>F { align1 mask_disable };
-mov (8) slot_g_01<1>F     src_sample_g_23<1>F { align1 mask_disable };
+mov (8) slot_g_00<1>F     src_sample_g_01<8,8,1>F { align1 mask_disable };
+mov (8) slot_g_01<1>F     src_sample_g_23<8,8,1>F { align1 mask_disable };
 
-mov (8) slot_b_00<1>F     src_sample_b_01<1>F { align1 mask_disable };
-mov (8) slot_b_01<1>F     src_sample_b_23<1>F { align1 mask_disable };
+mov (8) slot_b_00<1>F     src_sample_b_01<8,8,1>F { align1 mask_disable };
+mov (8) slot_b_01<1>F     src_sample_b_23<8,8,1>F { align1 mask_disable };
 
-mov (8) slot_a_00<1>F     src_sample_a_01<1>F { align1 mask_disable };
-mov (8) slot_a_01<1>F     src_sample_a_23<1>F { align1 mask_disable };
+mov (8) slot_a_00<1>F     src_sample_a_01<8,8,1>F { align1 mask_disable };
+mov (8) slot_a_01<1>F     src_sample_a_23<8,8,1>F { align1 mask_disable };
 
 send (16) 
 	data_port_msg_2_ind 
