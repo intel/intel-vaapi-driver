@@ -317,6 +317,12 @@ static float yuv_to_rgb_bt601[3][4] = {
 {1.164,		2.017,	0,		-0.50196,},
 };
 
+static float yuv_to_rgb_bt709[3][4] = {
+{1.164,		0,	1.793,		-0.06275,},
+{1.164,		-0.213,	-0.533,		-0.50196,},
+{1.164,		2.112,	0,		-0.50196,},
+};
+
 static void
 i965_render_vs_unit(VADriverContextP ctx)
 {
@@ -1066,7 +1072,8 @@ i965_render_upload_vertex(
 
 static void
 i965_render_upload_constants(VADriverContextP ctx,
-                             struct object_surface *obj_surface)
+                             struct object_surface *obj_surface,
+                             unsigned int flags)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
@@ -1077,6 +1084,7 @@ i965_render_upload_constants(VADriverContextP ctx,
     float hue = (float)i965->hue_attrib->value / 180 * PI;
     float saturation = (float)i965->saturation_attrib->value / DEFAULT_SATURATION;
     float *yuv_to_rgb;
+    unsigned int color_flag;
 
     dri_bo_map(render_state->curbe.bo, 1);
     assert(render_state->curbe.bo->virtual);
@@ -1107,8 +1115,12 @@ i965_render_upload_constants(VADriverContextP ctx,
     *color_balance_base++ = cos(hue) * contrast * saturation;
     *color_balance_base++ = sin(hue) * contrast * saturation;
 
+    color_flag = flags & VA_SRC_COLOR_MASK;
     yuv_to_rgb = (float *)constant_buffer + 8;
-    memcpy(yuv_to_rgb, yuv_to_rgb_bt601, sizeof(yuv_to_rgb_bt601));
+    if (color_flag == VA_SRC_BT709)
+        memcpy(yuv_to_rgb, yuv_to_rgb_bt709, sizeof(yuv_to_rgb_bt709));
+    else
+        memcpy(yuv_to_rgb, yuv_to_rgb_bt601, sizeof(yuv_to_rgb_bt601));
 
     dri_bo_unmap(render_state->curbe.bo);
 }
@@ -1155,7 +1167,7 @@ i965_surface_render_state_setup(
     i965_render_cc_viewport(ctx);
     i965_render_cc_unit(ctx);
     i965_render_upload_vertex(ctx, obj_surface, src_rect, dst_rect);
-    i965_render_upload_constants(ctx, obj_surface);
+    i965_render_upload_constants(ctx, obj_surface, flags);
 }
 
 static void
@@ -1842,7 +1854,7 @@ gen6_render_setup_states(
     gen6_render_color_calc_state(ctx);
     gen6_render_blend_state(ctx);
     gen6_render_depth_stencil_state(ctx);
-    i965_render_upload_constants(ctx, obj_surface);
+    i965_render_upload_constants(ctx, obj_surface, flags);
     i965_render_upload_vertex(ctx, obj_surface, src_rect, dst_rect);
 }
 
@@ -2436,7 +2448,7 @@ gen7_render_setup_states(
     gen7_render_color_calc_state(ctx);
     gen7_render_blend_state(ctx);
     gen7_render_depth_stencil_state(ctx);
-    i965_render_upload_constants(ctx, obj_surface);
+    i965_render_upload_constants(ctx, obj_surface, flags);
     i965_render_upload_vertex(ctx, obj_surface, src_rect, dst_rect);
 }
 

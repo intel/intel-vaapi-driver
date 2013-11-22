@@ -127,6 +127,7 @@ i965_put_surface_dri(
     bool new_region = false;
     uint32_t name;
     int i, ret;
+    unsigned int color_flag = 0;
 
     /* Currently don't support DRI1 */
     if (!VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2))
@@ -178,6 +179,12 @@ i965_put_surface_dri(
         ret = dri_bo_get_tiling(dest_region->bo, &(dest_region->tiling), &(dest_region->swizzle));
         assert(ret == 0);
     }
+
+    color_flag = flags & VA_SRC_COLOR_MASK;
+    if (color_flag == 0)
+        color_flag = VA_SRC_BT601;
+
+    pp_flag = color_flag;
 
     if ((flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC)
         pp_flag |= I965_PP_FLAG_AVS;
