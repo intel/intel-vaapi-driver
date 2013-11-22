@@ -311,6 +311,12 @@ static struct i965_kernel render_kernels_gen7_haswell[] = {
 #define URB_CS_ENTRIES	      4
 #define URB_CS_ENTRY_SIZE     4
 
+static float yuv_to_rgb_bt601[3][4] = {
+{1.164,		0,	1.596,		-0.06275,},
+{1.164,		-0.392,	-0.813,		-0.50196,},
+{1.164,		2.017,	0,		-0.50196,},
+};
+
 static void
 i965_render_vs_unit(VADriverContextP ctx)
 {
@@ -1070,6 +1076,7 @@ i965_render_upload_constants(VADriverContextP ctx,
     float brightness = (float)i965->brightness_attrib->value / 255; /* YUV is float in the shader */
     float hue = (float)i965->hue_attrib->value / 180 * PI;
     float saturation = (float)i965->saturation_attrib->value / DEFAULT_SATURATION;
+    float *yuv_to_rgb;
 
     dri_bo_map(render_state->curbe.bo, 1);
     assert(render_state->curbe.bo->virtual);
@@ -1099,6 +1106,9 @@ i965_render_upload_constants(VADriverContextP ctx,
     *color_balance_base++ = brightness;
     *color_balance_base++ = cos(hue) * contrast * saturation;
     *color_balance_base++ = sin(hue) * contrast * saturation;
+
+    yuv_to_rgb = (float *)constant_buffer + 8;
+    memcpy(yuv_to_rgb, yuv_to_rgb_bt601, sizeof(yuv_to_rgb_bt601));
 
     dri_bo_unmap(render_state->curbe.bo);
 }

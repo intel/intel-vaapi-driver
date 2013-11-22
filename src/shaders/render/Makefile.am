@@ -2,7 +2,10 @@
 INTEL_G4I =			\
 	exa_wm.g4i		\
 	exa_wm_affine.g4i	\
-	exa_wm_yuv_color_balance.gxa
+	exa_wm_yuv_color_balance.gxa \
+	exa_yuv_rgb.gxa		\
+	exa_yuv_gen4.g4i	\
+	exa_yuv_gen6.g4i
 
 INTEL_G4A =				\
 	exa_sf.g4a			\

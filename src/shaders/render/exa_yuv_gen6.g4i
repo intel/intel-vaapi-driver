@@ -1,5 +1,5 @@
 /*
- * Copyright © 2006-2013 Intel Corporation
+ * Copyright © 2013 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,12 +21,22 @@
  * IN THE SOFTWARE.
  *
  * Authors:
- *    Keith Packard <keithp@keithp.com>
- *    Eric Anholt <eric@anholt.net>
- *
+ *    Zhao Yakui <yakui.zhao@intel.com>
  */
+/* YUV to RGB matrix coeff */
 
-include(`exa_wm.g4i')
-include(`exa_yuv_gen4.g4i')
-include(`exa_yuv_rgb.gxa')
 
+define(`coef_ry',	`g7.0<0,1,0>F')
+define(`coef_ru',	`g7.4<0,1,0>F')
+define(`coef_rv',	`g7.8<0,1,0>F')
+define(`coef_yd',	`g7.12<0,1,0>F')
+
+define(`coef_gy',	`g7.16<0,1,0>F')
+define(`coef_gu',	`g7.20<0,1,0>F')
+define(`coef_gv',	`g7.24<0,1,0>F')
+define(`coef_ud',	`g7.28<0,1,0>F')
+
+define(`coef_by',	`g8.0<0,1,0>F')
+define(`coef_bu',	`g8.4<0,1,0>F')
+define(`coef_bv',	`g8.8<0,1,0>F')
+define(`coef_vd',	`g8.12<0,1,0>F')
