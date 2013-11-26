@@ -703,3 +703,44 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
 out:
     return vaStatus;
 }
+
+/*
+ * Return the next slice paramter
+ *
+ * Input:
+ *      slice_param: the current slice
+ *      *group_idx & *element_idx the current slice position in slice groups
+ * Output:
+ *      Return the next slice parameter
+ *      *group_idx & *element_idx the next slice position in slice groups,
+ *      if the next slice is NULL, *group_idx & *element_idx will be ignored
+ */
+VASliceParameterBufferMPEG2 *
+intel_mpeg2_find_next_slice(struct decode_state *decode_state,
+                            VAPictureParameterBufferMPEG2 *pic_param,
+                            VASliceParameterBufferMPEG2 *slice_param,
+                            int *group_idx,
+                            int *element_idx)
+{
+    VASliceParameterBufferMPEG2 *next_slice_param;
+    unsigned int width_in_mbs = ALIGN(pic_param->horizontal_size, 16) / 16;
+    int j = *group_idx, i = *element_idx + 1;
+
+    for (; j < decode_state->num_slice_params; j++) {
+        for (; i < decode_state->slice_params[j]->num_elements; i++) {
+            next_slice_param = ((VASliceParameterBufferMPEG2 *)decode_state->slice_params[j]->buffer) + i;
+
+            if ((next_slice_param->slice_vertical_position * width_in_mbs + next_slice_param->slice_horizontal_position) >=
+                (slice_param->slice_vertical_position * width_in_mbs + slice_param->slice_horizontal_position)) {
+                *group_idx = j;
+                *element_idx = i;
+
+                return next_slice_param;
+            }
+        }
+
+        i = 0;
+    }
+
+    return NULL;
+}

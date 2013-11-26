@@ -1167,9 +1167,9 @@ gen6_mfd_mpeg2_decode_picture(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen6_mfd_context->base.batch;
     VAPictureParameterBufferMPEG2 *pic_param;
-    VASliceParameterBufferMPEG2 *slice_param, *next_slice_param, *next_slice_group_param;
+    VASliceParameterBufferMPEG2 *slice_param, *next_slice_param;
     dri_bo *slice_data_bo;
-    int i, j;
+    int group_idx = 0, pre_group_idx = -1, element_idx = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferMPEG2 *)decode_state->pic_param->buffer;
@@ -1188,28 +1188,18 @@ gen6_mfd_mpeg2_decode_picture(VADriverContextP ctx,
         gen6_mfd_context->wa_mpeg2_slice_vertical_position =
             mpeg2_wa_slice_vertical_position(decode_state, pic_param);
 
-    for (j = 0; j < decode_state->num_slice_params; j++) {
-        assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
-        slice_param = (VASliceParameterBufferMPEG2 *)decode_state->slice_params[j]->buffer;
-        slice_data_bo = decode_state->slice_datas[j]->bo;
-        gen6_mfd_ind_obj_base_addr_state(ctx, slice_data_bo, MFX_FORMAT_MPEG2, gen6_mfd_context);
+    slice_param = (VASliceParameterBufferMPEG2 *)decode_state->slice_params[group_idx]->buffer;
 
-        if (j == decode_state->num_slice_params - 1)
-            next_slice_group_param = NULL;
-        else
-            next_slice_group_param = (VASliceParameterBufferMPEG2 *)decode_state->slice_params[j + 1]->buffer;
-
-        for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
-            assert(slice_param->slice_data_flag == VA_SLICE_DATA_FLAG_ALL);
-
-            if (i < decode_state->slice_params[j]->num_elements - 1)
-                next_slice_param = slice_param + 1;
-            else
-                next_slice_param = next_slice_group_param;
-
-            gen6_mfd_mpeg2_bsd_object(ctx, pic_param, slice_param, next_slice_param, gen6_mfd_context);
-            slice_param++;
+    for (; slice_param;) {
+        if (pre_group_idx != group_idx) {
+            slice_data_bo = decode_state->slice_datas[group_idx]->bo;
+            gen6_mfd_ind_obj_base_addr_state(ctx, slice_data_bo, MFX_FORMAT_MPEG2, gen6_mfd_context);
+            pre_group_idx = group_idx;
         }
+
+        next_slice_param = intel_mpeg2_find_next_slice(decode_state, pic_param, slice_param, &group_idx, &element_idx);
+        gen6_mfd_mpeg2_bsd_object(ctx, pic_param, slice_param, next_slice_param, gen6_mfd_context);
+        slice_param = next_slice_param;
     }
 
     intel_batchbuffer_end_atomic(batch);
