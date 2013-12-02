@@ -1597,6 +1597,7 @@ i965_subpic_render_pipeline_setup(VADriverContextP ctx)
     i965_render_pipelined_pointers(ctx);
     i965_render_urb_layout(ctx);
     i965_render_cs_urb_layout(ctx);
+    i965_render_constant_buffer(ctx);
     i965_render_drawing_rectangle(ctx);
     i965_render_vertex_elements(ctx);
     i965_render_startup(ctx);
