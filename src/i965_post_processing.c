@@ -3210,7 +3210,7 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
     int dndi_top_first = 1;
     VAProcFilterParameterBufferDeinterlacing *di_filter_param = (VAProcFilterParameterBufferDeinterlacing *)filter_param;
 
-    if (di_filter_param->flags & VA_DEINTERLACING_BOTTOM_FIELD_FIRST)
+    if (di_filter_param->flags & VA_DEINTERLACING_BOTTOM_FIELD)
         dndi_top_first = 0;
     else
         dndi_top_first = 1;
@@ -3612,7 +3612,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     VAProcFilterParameterBufferDeinterlacing *di_filter_param = (VAProcFilterParameterBufferDeinterlacing *)filter_param;
     int is_first_frame = (pp_dndi_context->frame_order == -1);
 
-    if (di_filter_param->flags & VA_DEINTERLACING_BOTTOM_FIELD_FIRST)
+    if (di_filter_param->flags & VA_DEINTERLACING_BOTTOM_FIELD)
         dndi_top_first = 0;
     else
         dndi_top_first = 1;
