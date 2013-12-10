@@ -179,6 +179,8 @@ static const struct hw_codec_info hsw_hw_codec_info = {
     .has_tiled_surface = 1,
     .has_di_motion_adptive = 1,
     .has_di_motion_compensated = 1,
+    .has_h264_mvc_decoding = 1,
+    .has_h264_mvc_encoding = 1,
 
     .num_filters = 5,
     .filters = {
@@ -221,6 +223,8 @@ static const struct hw_codec_info bdw_hw_codec_info = {
     .has_di_motion_adptive = 1,
     .has_di_motion_compensated = 1,
     .has_vp8_decoding = 1,
+    .has_h264_mvc_decoding = 1,
+    .has_h264_mvc_encoding = 1,
 
     .num_filters = 5,
     .filters = {
