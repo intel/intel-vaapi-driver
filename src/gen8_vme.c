@@ -1068,12 +1068,14 @@ gen8_vme_mpeg2_pipeline_programing(VADriverContextP ctx,
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
     gen8_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
-    BEGIN_BATCH(batch, 2);
-    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
+    BEGIN_BATCH(batch, 4);
+    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
     OUT_RELOC(batch,
               vme_context->vme_batchbuffer.bo,
               I915_GEM_DOMAIN_COMMAND, 0, 
               0);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
     intel_batchbuffer_end_atomic(batch);	
