@@ -187,7 +187,21 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
         IS_GEN7(intel->device_id) ||
         IS_GEN8(intel->device_id)) {
         if (batch->flag == I915_EXEC_RENDER) {
-            if (IS_GEN6(intel->device_id)) {
+            if (IS_GEN8(intel->device_id)) {
+                BEGIN_BATCH(batch, 6);
+                OUT_BATCH(batch, CMD_PIPE_CONTROL | (6 - 2));
+
+                OUT_BATCH(batch,
+                          CMD_PIPE_CONTROL_WC_FLUSH |
+                          CMD_PIPE_CONTROL_TC_FLUSH |
+                          CMD_PIPE_CONTROL_DC_FLUSH |
+                          CMD_PIPE_CONTROL_NOWRITE);
+                OUT_BATCH(batch, 0); /* write address */
+                OUT_BATCH(batch, 0);
+                OUT_BATCH(batch, 0); /* write data */
+                OUT_BATCH(batch, 0);
+                ADVANCE_BATCH(batch);
+            } else if (IS_GEN6(intel->device_id)) {
                 assert(batch->wa_render_bo);
 
                 BEGIN_BATCH(batch, 4 * 3);
@@ -214,6 +228,9 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
                           CMD_PIPE_CONTROL_WC_FLUSH |
                           CMD_PIPE_CONTROL_TC_FLUSH |
                           CMD_PIPE_CONTROL_NOWRITE);
+                OUT_BATCH(batch, 0); /* write address */
+                OUT_BATCH(batch, 0); /* write data */
+                ADVANCE_BATCH(batch);
             } else {
                 BEGIN_BATCH(batch, 4);
                 OUT_BATCH(batch, CMD_PIPE_CONTROL | (4 - 2));
@@ -223,11 +240,11 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
                           CMD_PIPE_CONTROL_TC_FLUSH |
                           CMD_PIPE_CONTROL_DC_FLUSH |
                           CMD_PIPE_CONTROL_NOWRITE);
+                OUT_BATCH(batch, 0); /* write address */
+                OUT_BATCH(batch, 0); /* write data */
+                ADVANCE_BATCH(batch);
             }
 
-            OUT_BATCH(batch, 0); /* write address */
-            OUT_BATCH(batch, 0); /* write data */
-            ADVANCE_BATCH(batch);
         } else {
             if (batch->flag == I915_EXEC_BLT) {
                 BEGIN_BLT_BATCH(batch, 4);
