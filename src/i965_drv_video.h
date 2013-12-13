@@ -78,6 +78,7 @@ struct i965_kernel
     const uint32_t (*bin)[4];
     int size;
     dri_bo *bo;
+    unsigned int kernel_offset;
 };
 
 struct buffer_store

@@ -114,6 +114,29 @@ struct i965_gpe_context
 
     unsigned int num_kernels;
     struct i965_kernel kernels[MAX_GPE_KERNELS];
+
+    struct {
+        dri_bo *bo;
+        int bo_size;
+        unsigned int end_offset;
+    } instruction_state;
+
+    struct {
+        dri_bo *bo;
+    } indirect_state;
+
+    struct {
+        dri_bo *bo;
+        int bo_size;
+        unsigned int end_offset;
+    } dynamic_state;
+
+    unsigned int sampler_offset;
+    int sampler_size;
+    unsigned int idrt_offset;
+    int idrt_size;
+    unsigned int curbe_offset;
+    int curbe_size;
 };
 
 void i965_gpe_context_destroy(struct i965_gpe_context *gpe_context);
@@ -186,4 +209,14 @@ extern void gen8_gpe_media_chroma_surface_setup(VADriverContextP ctx,
 void gen8_gpe_pipeline_setup(VADriverContextP ctx,
                              struct i965_gpe_context *gpe_context,
                              struct intel_batchbuffer *batch);
+
+
+void gen8_gpe_context_destroy(struct i965_gpe_context *gpe_context);
+void gen8_gpe_context_init(VADriverContextP ctx,
+                           struct i965_gpe_context *gpe_context);
+
+void gen8_gpe_load_kernels(VADriverContextP ctx,
+                           struct i965_gpe_context *gpe_context,
+                           struct i965_kernel *kernel_list,
+                           unsigned int num_kernels);
 #endif /* _I965_GPE_UTILS_H_ */

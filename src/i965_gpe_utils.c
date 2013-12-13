@@ -949,18 +949,39 @@ gen8_gpe_state_base_address(VADriverContextP ctx,
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//General State Base Address
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
+
 	/*DW4 Surface state base address */
     OUT_RELOC(batch, gpe_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
     OUT_BATCH(batch, 0);
+
 	/*DW6. Dynamic state base address */
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Dynamic State Base Address
+    if (gpe_context->dynamic_state.bo)
+        OUT_RELOC(batch, gpe_context->dynamic_state.bo,
+                  I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
+                  0, BASE_ADDRESS_MODIFY);
+    else
+        OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+
     OUT_BATCH(batch, 0);
 
 	/*DW8. Indirect Object base address */
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Indirect Object Base Address
+    if (gpe_context->indirect_state.bo)
+        OUT_RELOC(batch, gpe_context->indirect_state.bo,
+                  I915_GEM_DOMAIN_SAMPLER,
+                  0, BASE_ADDRESS_MODIFY);
+    else
+        OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+
     OUT_BATCH(batch, 0);
+
 	/*DW10. Instruct base address */
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//Instruction Base Address
+    if (gpe_context->instruction_state.bo)
+        OUT_RELOC(batch, gpe_context->instruction_state.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION,
+                  0, BASE_ADDRESS_MODIFY);
+    else
+        OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+
     OUT_BATCH(batch, 0);
 
 	/* DW12. Size limitation */
@@ -1008,6 +1029,38 @@ gen8_gpe_vfe_state(VADriverContextP ctx,
 
 }
 
+
+static void
+gen8_gpe_curbe_load(VADriverContextP ctx,
+                    struct i965_gpe_context *gpe_context,
+                    struct intel_batchbuffer *batch)
+{
+    BEGIN_BATCH(batch, 4);
+
+    OUT_BATCH(batch, CMD_MEDIA_CURBE_LOAD | (4 - 2));
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, gpe_context->curbe_size);
+    OUT_BATCH(batch, gpe_context->curbe_offset);
+
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen8_gpe_idrt(VADriverContextP ctx,
+              struct i965_gpe_context *gpe_context,
+              struct intel_batchbuffer *batch)
+{
+    BEGIN_BATCH(batch, 4);
+
+    OUT_BATCH(batch, CMD_MEDIA_INTERFACE_LOAD | (4 - 2));
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, gpe_context->idrt_size);
+    OUT_BATCH(batch, gpe_context->idrt_offset);
+
+    ADVANCE_BATCH(batch);
+}
+
+
 void
 gen8_gpe_pipeline_setup(VADriverContextP ctx,
                         struct i965_gpe_context *gpe_context,
@@ -1018,7 +1071,131 @@ gen8_gpe_pipeline_setup(VADriverContextP ctx,
     i965_gpe_select(ctx, gpe_context, batch);
     gen8_gpe_state_base_address(ctx, gpe_context, batch);
     gen8_gpe_vfe_state(ctx, gpe_context, batch);
-    gen6_gpe_curbe_load(ctx, gpe_context, batch);
-    gen6_gpe_idrt(ctx, gpe_context, batch);
+    gen8_gpe_curbe_load(ctx, gpe_context, batch);
+    gen8_gpe_idrt(ctx, gpe_context, batch);
+}
+
+void
+gen8_gpe_context_init(VADriverContextP ctx,
+                      struct i965_gpe_context *gpe_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    dri_bo *bo;
+    int bo_size;
+    unsigned int end_offset;
+
+    dri_bo_unreference(gpe_context->surface_state_binding_table.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "surface state & binding table",
+                      gpe_context->surface_state_binding_table.length,
+                      4096);
+    assert(bo);
+    gpe_context->surface_state_binding_table.bo = bo;
+
+    bo_size = gpe_context->idrt_size + gpe_context->curbe_size + gpe_context->sampler_size + 192;
+    dri_bo_unreference(gpe_context->dynamic_state.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "surface state & binding table",
+                      bo_size,
+                      4096);
+    assert(bo);
+    gpe_context->dynamic_state.bo = bo;
+    gpe_context->dynamic_state.bo_size = bo_size;
+
+    end_offset = 0;
+    gpe_context->dynamic_state.end_offset = 0;
+
+    /* Constant buffer offset */
+    gpe_context->curbe_offset = ALIGN(end_offset, 64);
+    end_offset += gpe_context->curbe_size;
+
+    /* Interface descriptor offset */
+    gpe_context->idrt_offset = ALIGN(end_offset, 64);
+    end_offset += gpe_context->idrt_size;
+
+    /* Sampler state offset */
+    gpe_context->sampler_offset = ALIGN(end_offset, 64);
+    end_offset += gpe_context->sampler_size;
+
+    /* update the end offset of dynamic_state */
+    gpe_context->dynamic_state.end_offset = end_offset;
+}
+
+
+void
+gen8_gpe_context_destroy(struct i965_gpe_context *gpe_context)
+{
+    int i;
+
+    dri_bo_unreference(gpe_context->surface_state_binding_table.bo);
+    gpe_context->surface_state_binding_table.bo = NULL;
+
+    dri_bo_unreference(gpe_context->instruction_state.bo);
+    gpe_context->instruction_state.bo = NULL;
+
+    dri_bo_unreference(gpe_context->dynamic_state.bo);
+    gpe_context->dynamic_state.bo = NULL;
+
+    dri_bo_unreference(gpe_context->indirect_state.bo);
+    gpe_context->indirect_state.bo = NULL;
+
+}
+
+
+void
+gen8_gpe_load_kernels(VADriverContextP ctx,
+                      struct i965_gpe_context *gpe_context,
+                      struct i965_kernel *kernel_list,
+                      unsigned int num_kernels)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int i, kernel_size;
+    unsigned int kernel_offset, end_offset;
+    unsigned char *kernel_ptr;
+    struct i965_kernel *kernel;
+
+    assert(num_kernels <= MAX_GPE_KERNELS);
+    memcpy(gpe_context->kernels, kernel_list, sizeof(*kernel_list) * num_kernels);
+    gpe_context->num_kernels = num_kernels;
+
+    kernel_size = num_kernels * 64;
+    for (i = 0; i < num_kernels; i++) {
+        kernel = &gpe_context->kernels[i];
+
+        kernel_size += kernel->size;
+    }
+
+    gpe_context->instruction_state.bo = dri_bo_alloc(i965->intel.bufmgr,
+                                  "kernel shader",
+                                  kernel_size,
+                                  0x1000);
+    if (gpe_context->instruction_state.bo == NULL) {
+        WARN_ONCE("failure to allocate the buffer space for kernel shader\n");
+        return;
+    }
+
+    assert(gpe_context->instruction_state.bo);
+
+    gpe_context->instruction_state.bo_size = kernel_size;
+    gpe_context->instruction_state.end_offset = 0;
+    end_offset = 0;
+
+    dri_bo_map(gpe_context->instruction_state.bo, 1);
+    kernel_ptr = (unsigned char *)(gpe_context->instruction_state.bo->virtual);
+    for (i = 0; i < num_kernels; i++) {
+        kernel_offset = ALIGN(end_offset, 64);
+        kernel = &gpe_context->kernels[i];
+        kernel->kernel_offset = kernel_offset;
+
+        memcpy(kernel_ptr + kernel_offset, kernel->bin, kernel->size);
+
+        end_offset += kernel->size;
+    }
+
+    gpe_context->instruction_state.end_offset = end_offset;
+
+    dri_bo_unmap(gpe_context->instruction_state.bo);
+
+    return;
 }
 
