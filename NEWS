@@ -1,5 +1,13 @@
-libva-intel-driver NEWS -- summary of changes.  2013-09-23
+libva-intel-driver NEWS -- summary of changes.  2013-12-16
 Copyright (C) 2009-2013 Intel Corporation
+
+Version 1.2.2 - 16.Dec.2013
+* Motion compensation DI on HSW
+* Optimization of FPS for H.264 encoding on HSW
+* Add brightness/contrast/hue/saturation support for rendering.
+* Support BT601/BT709/SMPTE240 in vaPutSurface()
+* Expose Constrained Baseline Profile instead of Baseline Profile for H.264
+* Bug fixes
 
 Version 1.2.1 - 23.Sep.2013
 * Add PCI IDs for Bay Trail
