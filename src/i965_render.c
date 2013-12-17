@@ -3487,6 +3487,17 @@ gen8_emit_vs_state(VADriverContextP ctx)
     OUT_BATCH(batch, 0); /* pass-through */
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
 }
 
 /*
@@ -3505,10 +3516,31 @@ gen8_emit_urb(VADriverContextP ctx)
     /* The minimum urb entries is 64 */
 
     BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
+    /* Size is 8Kbs and base address is 0Kb */
+    BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS | (2 - 2));
     /* Size is 8Kbs and base address is 0Kb */
     OUT_BATCH(batch,
-		(0 << GEN8_PUSH_CONSTANT_BUFFER_OFFSET_SHIFT) |
+		(1 << GEN8_PUSH_CONSTANT_BUFFER_OFFSET_SHIFT) |
 		(4 << GEN8_PUSH_CONSTANT_BUFFER_SIZE_SHIFT));
     ADVANCE_BATCH(batch);
 
@@ -3584,6 +3616,11 @@ gen8_emit_bypass_state(VADriverContextP ctx)
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
     /* disable HS */
     BEGIN_BATCH(batch, 11);
     OUT_BATCH(batch, GEN7_3DSTATE_CONSTANT_HS | (11 - 2));
@@ -3616,6 +3653,11 @@ gen8_emit_bypass_state(VADriverContextP ctx)
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS | (2 - 2));
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
@@ -3660,6 +3702,11 @@ gen8_emit_bypass_state(VADriverContextP ctx)
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS | (2 - 2));
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
@@ -3936,6 +3983,21 @@ gen8_emit_depth_stencil_state(VADriverContextP ctx)
 }
 
 static void
+gen8_emit_wm_hz_op(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = i965->batch;
+
+    BEGIN_BATCH(batch, 5);
+    OUT_BATCH(batch, GEN8_3DSTATE_WM_HZ_OP | (5 - 2));
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+}
+
+static void
 gen8_render_emit_states(VADriverContextP ctx, int kernel)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -3949,6 +4011,7 @@ gen8_render_emit_states(VADriverContextP ctx, int kernel)
     gen8_emit_urb(ctx);
     gen8_emit_cc_state_pointers(ctx);
     gen7_emit_sampler_state_pointers(ctx);
+    gen8_emit_wm_hz_op(ctx);
     gen8_emit_bypass_state(ctx);
     gen8_emit_vs_state(ctx);
     gen8_emit_clip_state(ctx);
