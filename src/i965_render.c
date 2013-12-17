@@ -2566,6 +2566,8 @@ gen8_render_initialize(VADriverContextP ctx)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
     dri_bo *bo;
+    int size;
+    unsigned int end_offset;
 
     /* VERTEX BUFFER */
     dri_bo_unreference(render_state->vb.vertex_buffer);
@@ -2585,50 +2587,70 @@ gen8_render_initialize(VADriverContextP ctx)
     assert(bo);
     render_state->wm.surface_state_binding_table_bo = bo;
 
-    dri_bo_unreference(render_state->wm.sampler);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "sampler state",
-                      MAX_SAMPLERS * sizeof(struct gen8_sampler_state),
-                      4096);
-    assert(bo);
-    render_state->wm.sampler = bo;
+    render_state->curbe_size = 256;
+
     render_state->wm.sampler_count = 0;
 
-    /* COLOR CALCULATOR */
-    dri_bo_unreference(render_state->cc.state);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "color calc state",
-                      sizeof(struct gen6_color_calc_state),
-                      4096);
-    assert(bo);
-    render_state->cc.state = bo;
+    render_state->sampler_size = MAX_SAMPLERS * sizeof(struct gen8_sampler_state);
 
-    /* CC VIEWPORT */
-    dri_bo_unreference(render_state->cc.viewport);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "cc viewport",
-                      sizeof(struct i965_cc_viewport),
-                      4096);
-    assert(bo);
-    render_state->cc.viewport = bo;
+    render_state->cc_state_size = sizeof(struct gen6_color_calc_state);
 
-    /* BLEND STATE */
-    dri_bo_unreference(render_state->cc.blend);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "blend state",
-                      sizeof(struct gen6_blend_state),
-                      4096);
-    assert(bo);
-    render_state->cc.blend = bo;
+    render_state->cc_viewport_size = sizeof(struct i965_cc_viewport);
 
-    /* DEPTH & STENCIL STATE */
-    dri_bo_unreference(render_state->cc.depth_stencil);
+    render_state->blend_state_size = sizeof(struct gen8_global_blend_state) +
+			16 * sizeof(struct gen8_blend_state_rt);
+
+    render_state->sf_clip_size = 1024;
+
+    render_state->scissor_size = 1024;
+
+    size = 4096 + render_state->curbe_size + render_state->sampler_size +
+		render_state->cc_state_size + render_state->cc_viewport_size +
+		render_state->blend_state_size + render_state->sf_clip_size +
+		render_state->scissor_size;
+
+    dri_bo_unreference(render_state->dynamic_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "depth & stencil state",
-                      sizeof(struct gen6_depth_stencil_state),
+                      "dynamic_state",
+                      size,
                       4096);
-    assert(bo);
-    render_state->cc.depth_stencil = bo;
+
+    render_state->dynamic_state.bo = bo;
+
+    end_offset = 0;
+    render_state->dynamic_state.end_offset = 0;
+
+    /* Constant buffer offset */
+    render_state->curbe_offset = ALIGN(end_offset, 64);
+    end_offset += render_state->curbe_size;
+
+    /* Sampler_state  */
+    render_state->sampler_offset = ALIGN(end_offset, 64);
+    end_offset += render_state->sampler_size;
+
+    /* CC_VIEWPORT_state  */
+    render_state->cc_viewport_offset = ALIGN(end_offset, 64);
+    end_offset += render_state->cc_viewport_size;
+
+    /* CC_STATE_state  */
+    render_state->cc_state_offset = ALIGN(end_offset, 64);
+    end_offset += render_state->cc_state_size;
+
+    /* Blend_state  */
+    render_state->blend_state_offset = ALIGN(end_offset, 64);
+    end_offset += render_state->blend_state_size;
+
+    /* SF_CLIP_state  */
+    render_state->sf_clip_offset = ALIGN(end_offset, 64);
+    end_offset += render_state->sf_clip_size;
+
+    /* SCISSOR_state  */
+    render_state->scissor_offset = ALIGN(end_offset, 64);
+    end_offset += render_state->scissor_size;
+
+    /* update the end offset of dynamic_state */
+    render_state->dynamic_state.end_offset = ALIGN(end_offset, 64);
+
 }
 
 static void
@@ -2714,13 +2736,19 @@ gen8_render_sampler(VADriverContextP ctx)
     struct i965_render_state *render_state = &i965->render_state;
     struct gen8_sampler_state *sampler_state;
     int i;
+    unsigned char *cc_ptr;
     
     assert(render_state->wm.sampler_count > 0);
     assert(render_state->wm.sampler_count <= MAX_SAMPLERS);
 
-    dri_bo_map(render_state->wm.sampler, 1);
-    assert(render_state->wm.sampler->virtual);
-    sampler_state = render_state->wm.sampler->virtual;
+    dri_bo_map(render_state->dynamic_state.bo, 1);
+    assert(render_state->dynamic_state.bo->virtual);
+
+    cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
+			render_state->sampler_offset;
+
+    sampler_state = (struct gen8_sampler_state *) cc_ptr;
+
     for (i = 0; i < render_state->wm.sampler_count; i++) {
         memset(sampler_state, 0, sizeof(*sampler_state));
         sampler_state->ss0.min_filter = I965_MAPFILTER_LINEAR;
@@ -2731,7 +2759,7 @@ gen8_render_sampler(VADriverContextP ctx)
         sampler_state++;
     }
 
-    dri_bo_unmap(render_state->wm.sampler);
+    dri_bo_unmap(render_state->dynamic_state.bo);
 }
 
 
@@ -2762,17 +2790,104 @@ gen8_render_blend_state(VADriverContextP ctx)
     struct i965_render_state *render_state = &i965->render_state;
     struct gen8_global_blend_state *global_blend_state;
     struct gen8_blend_state_rt *blend_state;
+    unsigned char *cc_ptr;
     
-    dri_bo_map(render_state->cc.blend, 1);
-    assert(render_state->cc.blend->virtual);
-    global_blend_state = render_state->cc.blend->virtual;
+    dri_bo_map(render_state->dynamic_state.bo, 1);
+    assert(render_state->dynamic_state.bo->virtual);
+
+    cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
+			render_state->blend_state_offset;
+
+    global_blend_state = (struct gen8_global_blend_state*) cc_ptr;
+
     memset(global_blend_state, 0, sizeof(*global_blend_state));
     /* Global blend state + blend_state for Render Target */
     blend_state = (struct gen8_blend_state_rt *)(global_blend_state + 1);
     blend_state->blend1.logic_op_enable = 1;
     blend_state->blend1.logic_op_func = 0xc;
     blend_state->blend1.pre_blend_clamp_enable = 1;
-    dri_bo_unmap(render_state->cc.blend);
+
+    dri_bo_unmap(render_state->dynamic_state.bo);
+}
+
+
+static void 
+gen8_render_cc_viewport(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    struct i965_cc_viewport *cc_viewport;
+    unsigned char *cc_ptr;
+
+    dri_bo_map(render_state->dynamic_state.bo, 1);
+    assert(render_state->dynamic_state.bo->virtual);
+
+    cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
+			render_state->cc_viewport_offset;
+
+    cc_viewport = (struct i965_cc_viewport *) cc_ptr;
+
+    memset(cc_viewport, 0, sizeof(*cc_viewport));
+    
+    cc_viewport->min_depth = -1.e35;
+    cc_viewport->max_depth = 1.e35;
+
+    dri_bo_unmap(render_state->dynamic_state.bo);
+}
+
+static void
+gen8_render_color_calc_state(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    struct gen6_color_calc_state *color_calc_state;
+    unsigned char *cc_ptr;
+
+    dri_bo_map(render_state->dynamic_state.bo, 1);
+    assert(render_state->dynamic_state.bo->virtual);
+
+    cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
+			render_state->cc_state_offset;
+
+    color_calc_state = (struct gen6_color_calc_state *) cc_ptr;
+
+    memset(color_calc_state, 0, sizeof(*color_calc_state));
+    color_calc_state->constant_r = 1.0;
+    color_calc_state->constant_g = 0.0;
+    color_calc_state->constant_b = 1.0;
+    color_calc_state->constant_a = 1.0;
+    dri_bo_unmap(render_state->dynamic_state.bo);
+}
+
+static void
+gen8_render_upload_constants(VADriverContextP ctx,
+                             struct object_surface *obj_surface)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    unsigned short *constant_buffer;
+    unsigned char *cc_ptr;
+
+    dri_bo_map(render_state->dynamic_state.bo, 1);
+    assert(render_state->dynamic_state.bo->virtual);
+
+    cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
+			render_state->curbe_offset;
+
+    constant_buffer = (unsigned short *) cc_ptr;
+
+    if (obj_surface->subsampling == SUBSAMPLE_YUV400) {
+        assert(obj_surface->fourcc == VA_FOURCC('Y', '8', '0', '0'));
+
+        *constant_buffer = 2;
+    } else {
+        if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'))
+            *constant_buffer = 1;
+        else
+            *constant_buffer = 0;
+    }
+
+    dri_bo_unmap(render_state->dynamic_state.bo);
 }
 
 static void
@@ -2787,10 +2902,10 @@ gen8_render_setup_states(
     i965_render_dest_surface_state(ctx, 0);
     i965_render_src_surfaces_state(ctx, obj_surface, flags);
     gen8_render_sampler(ctx);
-    i965_render_cc_viewport(ctx);
-    gen7_render_color_calc_state(ctx);
+    gen8_render_cc_viewport(ctx);
+    gen8_render_color_calc_state(ctx);
     gen8_render_blend_state(ctx);
-    i965_render_upload_constants(ctx, obj_surface, flags);
+    gen8_render_upload_constants(ctx, obj_surface);
     i965_render_upload_vertex(ctx, obj_surface, src_rect, dst_rect);
 }
 
@@ -2860,16 +2975,19 @@ gen8_emit_state_base_address(VADriverContextP ctx)
 	OUT_BATCH(batch, 0);
 
 	/*DW6*/
-    OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Dynamic state base address */
-	OUT_BATCH(batch, 0);
+    /* Dynamic state base address */
+    OUT_RELOC(batch, render_state->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
+		0, BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
 
 	/*DW8*/
     OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Indirect object base address */
-	OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
 
 	/*DW10 */
-    OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Instruction base address */
-	OUT_BATCH(batch, 0);
+    /* Instruction base address */
+    OUT_RELOC(batch, render_state->instruction_state.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
 
 	/*DW12 */	
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* General state upper bound */
@@ -2992,18 +3110,12 @@ gen8_emit_cc_state_pointers(VADriverContextP ctx)
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN6_3DSTATE_CC_STATE_POINTERS | (2 - 2));
-    OUT_RELOC(batch,
-              render_state->cc.state,
-              I915_GEM_DOMAIN_INSTRUCTION, 0,
-              1);
+    OUT_BATCH(batch, (render_state->cc_state_offset + 1));
     ADVANCE_BATCH(batch);
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN7_3DSTATE_BLEND_STATE_POINTERS | (2 - 2));
-    OUT_RELOC(batch,
-              render_state->cc.blend,
-              I915_GEM_DOMAIN_INSTRUCTION, 0,
-              1);
+    OUT_BATCH(batch, (render_state->blend_state_offset + 1));
     ADVANCE_BATCH(batch);
 
 }
@@ -3895,10 +4007,7 @@ gen8_emit_wm_state(VADriverContextP ctx, int kernel)
     OUT_BATCH(batch, 1);
     OUT_BATCH(batch, 0);
     /*DW3-4. Constant buffer 0 */
-    OUT_RELOC(batch, 
-              render_state->curbe.bo,
-              I915_GEM_DOMAIN_INSTRUCTION, 0,
-              0);
+    OUT_BATCH(batch, render_state->curbe_offset);
     OUT_BATCH(batch, 0);
 
     /*DW5-10. Constant buffer 1-3 */
@@ -3913,10 +4022,8 @@ gen8_emit_wm_state(VADriverContextP ctx, int kernel)
     BEGIN_BATCH(batch, 12);
     OUT_BATCH(batch, GEN7_3DSTATE_PS | (12 - 2));
     /* PS shader address */
-    OUT_RELOC(batch, 
-              render_state->render_kernels[kernel].bo,
-              I915_GEM_DOMAIN_INSTRUCTION, 0,
-              0);
+    OUT_BATCH(batch, render_state->render_kernels[kernel].kernel_offset);
+
     OUT_BATCH(batch, 0);
     /* DW3. PS shader flag .Binding table cnt/sample cnt */
     OUT_BATCH(batch, 
@@ -4020,6 +4127,38 @@ gen8_emit_wm_hz_op(VADriverContextP ctx)
 }
 
 static void
+gen8_emit_viewport_state_pointers(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = i965->batch;
+    struct i965_render_state *render_state = &i965->render_state;
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC | (2 - 2));
+    OUT_BATCH(batch, render_state->cc_viewport_offset);
+    ADVANCE_BATCH(batch);
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CL | (2 - 2));
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen8_emit_sampler_state_pointers(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = i965->batch;
+    struct i965_render_state *render_state = &i965->render_state;
+
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS | (2 - 2));
+    OUT_BATCH(batch, render_state->sampler_offset);
+    ADVANCE_BATCH(batch);
+}
+
+
+static void
 gen8_render_emit_states(VADriverContextP ctx, int kernel)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -4029,10 +4168,10 @@ gen8_render_emit_states(VADriverContextP ctx, int kernel)
     intel_batchbuffer_emit_mi_flush(batch);
     gen8_emit_invarient_states(ctx);
     gen8_emit_state_base_address(ctx);
-    gen7_emit_viewport_state_pointers(ctx);
+    gen8_emit_viewport_state_pointers(ctx);
     gen8_emit_urb(ctx);
     gen8_emit_cc_state_pointers(ctx);
-    gen7_emit_sampler_state_pointers(ctx);
+    gen8_emit_sampler_state_pointers(ctx);
     gen8_emit_wm_hz_op(ctx);
     gen8_emit_bypass_state(ctx);
     gen8_emit_vs_state(ctx);
@@ -4114,10 +4253,16 @@ gen8_subpicture_render_blend_state(VADriverContextP ctx)
     struct i965_render_state *render_state = &i965->render_state;
     struct gen8_global_blend_state *global_blend_state;
     struct gen8_blend_state_rt *blend_state;
+    unsigned char *cc_ptr;
+    
+    dri_bo_map(render_state->dynamic_state.bo, 1);
+    assert(render_state->dynamic_state.bo->virtual);
 
-    dri_bo_map(render_state->cc.blend, 1);
-    assert(render_state->cc.blend->virtual);
-    global_blend_state = render_state->cc.blend->virtual;
+    cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
+			render_state->blend_state_offset;
+
+    global_blend_state = (struct gen8_global_blend_state*) cc_ptr;
+
     memset(global_blend_state, 0, sizeof(*global_blend_state));
     /* Global blend state + blend_state for Render Target */
     blend_state = (struct gen8_blend_state_rt *)(global_blend_state + 1);
@@ -4130,7 +4275,8 @@ gen8_subpicture_render_blend_state(VADriverContextP ctx)
     blend_state->blend1.post_blend_clamp_enable = 1;
     blend_state->blend1.pre_blend_clamp_enable = 1;
     blend_state->blend1.clamp_range = 0; /* clamp range [0, 1] */
-    dri_bo_unmap(render_state->cc.blend);
+
+    dri_bo_unmap(render_state->dynamic_state.bo);
 }
 
 static void
@@ -4282,6 +4428,79 @@ intel_render_put_subpicture(
         i965_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
 }
 
+static bool 
+gen8_render_init(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    int i, kernel_size;
+    unsigned int kernel_offset, end_offset;
+    unsigned char *kernel_ptr;
+    struct i965_kernel *kernel;
+
+
+    if (IS_GEN8(i965->intel.device_id)) {
+        memcpy(render_state->render_kernels, render_kernels_gen8,
+			sizeof(render_state->render_kernels));
+    }
+
+    kernel_size = 4096;
+
+    for (i = 0; i < NUM_RENDER_KERNEL; i++) {
+        kernel = &render_state->render_kernels[i];
+
+        if (!kernel->size)
+            continue;
+
+        kernel_size += kernel->size;
+    }
+
+    render_state->instruction_state.bo = dri_bo_alloc(i965->intel.bufmgr,
+                                  "kernel shader",
+                                  kernel_size,
+                                  0x1000);
+    if (render_state->instruction_state.bo == NULL) {
+        WARN_ONCE("failure to allocate the buffer space for kernel shader\n");
+        return false;
+    }
+
+    assert(render_state->instruction_state.bo);
+
+    render_state->instruction_state.bo_size = kernel_size;
+    render_state->instruction_state.end_offset = 0;
+    end_offset = 0;
+
+    dri_bo_map(render_state->instruction_state.bo, 1);
+    kernel_ptr = (unsigned char *)(render_state->instruction_state.bo->virtual);
+    for (i = 0; i < NUM_RENDER_KERNEL; i++) {
+        kernel = &render_state->render_kernels[i];
+        kernel_offset = ALIGN(end_offset, 64);
+        kernel->kernel_offset = kernel_offset;
+
+        if (!kernel->size)
+            continue;
+
+        memcpy(kernel_ptr + kernel_offset, kernel->bin, kernel->size);
+
+        end_offset += kernel->size;
+    }
+
+    render_state->instruction_state.end_offset = end_offset;
+
+    dri_bo_unmap(render_state->instruction_state.bo);
+
+
+    if (IS_GEN8(i965->intel.device_id)) {
+        render_state->max_wm_threads = 64;
+    } else {
+        /* should never get here !!! */
+        assert(0);
+    }
+
+    return true;
+}
+
+
 bool 
 i965_render_init(VADriverContextP ctx)
 {
@@ -4296,8 +4515,7 @@ i965_render_init(VADriverContextP ctx)
                                  sizeof(render_kernels_gen6[0])));
 
     if (IS_GEN8(i965->intel.device_id)) {
-        memcpy(render_state->render_kernels, render_kernels_gen8,
-			sizeof(render_state->render_kernels));
+        return gen8_render_init(ctx);
     } else  if (IS_GEN7(i965->intel.device_id)) 
         memcpy(render_state->render_kernels,
                (IS_HASWELL(i965->intel.device_id) ? render_kernels_gen7_haswell : render_kernels_gen7),
@@ -4328,9 +4546,7 @@ i965_render_init(VADriverContextP ctx)
                       4096, 64);
     assert(render_state->curbe.bo);
 
-    if (IS_GEN8(i965->intel.device_id)) {
-        render_state->max_wm_threads = 64;
-    } else if (IS_HSW_GT1(i965->intel.device_id)) {
+    if (IS_HSW_GT1(i965->intel.device_id)) {
         render_state->max_wm_threads = 102;
     } else if (IS_HSW_GT2(i965->intel.device_id)) {
         render_state->max_wm_threads = 204;
@@ -4356,12 +4572,52 @@ i965_render_init(VADriverContextP ctx)
     return true;
 }
 
+static void 
+gen8_render_terminate(VADriverContextP ctx)
+{
+    int i;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+
+    dri_bo_unreference(render_state->vb.vertex_buffer);
+    render_state->vb.vertex_buffer = NULL;
+
+    dri_bo_unreference(render_state->wm.surface_state_binding_table_bo);
+    render_state->wm.surface_state_binding_table_bo = NULL;
+   
+    if (render_state->instruction_state.bo) {
+        dri_bo_unreference(render_state->instruction_state.bo);
+        render_state->instruction_state.bo = NULL;
+    }
+
+    if (render_state->dynamic_state.bo) {
+        dri_bo_unreference(render_state->dynamic_state.bo);
+        render_state->dynamic_state.bo = NULL;
+    }
+
+    if (render_state->indirect_state.bo) {
+        dri_bo_unreference(render_state->indirect_state.bo);
+        render_state->indirect_state.bo = NULL;
+    }
+
+    if (render_state->draw_region) {
+        dri_bo_unreference(render_state->draw_region->bo);
+        free(render_state->draw_region);
+        render_state->draw_region = NULL;
+    }
+}
+
 void 
 i965_render_terminate(VADriverContextP ctx)
 {
     int i;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
+
+    if (IS_GEN8(i965->intel.device_id)) {
+        gen8_render_terminate(ctx);
+        return;
+    } 
 
     dri_bo_unreference(render_state->curbe.bo);
     render_state->curbe.bo = NULL;
