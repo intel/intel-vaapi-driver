@@ -3427,23 +3427,45 @@ gen8_emit_vertex_element_state(VADriverContextP ctx)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965->batch;
 
+    /*
+     * The VUE layout
+     * dword 0-3: pad (0, 0, 0. 0)
+     * dword 4-7: position (x, y, 1.0, 1.0),
+     * dword 8-11: texture coordinate 0 (u0, v0, 1.0, 1.0)
+     */
+
     /* Set up our vertex elements, sourced from the single vertex buffer. */
-    OUT_BATCH(batch, CMD_VERTEX_ELEMENTS | (5 - 2));
-    /* offset 0: X,Y -> {X, Y, 1.0, 1.0} */
+    OUT_BATCH(batch, CMD_VERTEX_ELEMENTS | (7 - 2));
+
+    /* Element state 0. These are 4 dwords of 0 required for the VUE format.
+     * We don't really know or care what they do.
+     */
+
+    OUT_BATCH(batch, (0 << GEN8_VE0_VERTEX_BUFFER_INDEX_SHIFT) |
+              GEN8_VE0_VALID |
+              (I965_SURFACEFORMAT_R32G32_FLOAT << VE0_FORMAT_SHIFT) |
+              (0 << VE0_OFFSET_SHIFT));
+    OUT_BATCH(batch, (I965_VFCOMPONENT_STORE_0 << VE1_VFCOMPONENT_0_SHIFT) |
+              (I965_VFCOMPONENT_STORE_0 << VE1_VFCOMPONENT_1_SHIFT) |
+              (I965_VFCOMPONENT_STORE_0 << VE1_VFCOMPONENT_2_SHIFT) |
+              (I965_VFCOMPONENT_STORE_0 << VE1_VFCOMPONENT_3_SHIFT));
+
+    /* offset 8: X, Y -> {x, y, 1.0, 1.0} */
+    OUT_BATCH(batch, (0 << GEN8_VE0_VERTEX_BUFFER_INDEX_SHIFT) |
+              GEN8_VE0_VALID |
+              (I965_SURFACEFORMAT_R32G32_FLOAT << VE0_FORMAT_SHIFT) |
+              (8 << VE0_OFFSET_SHIFT));
+    OUT_BATCH(batch, (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_0_SHIFT) |
+	      (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_1_SHIFT) |
+              (I965_VFCOMPONENT_STORE_1_FLT << VE1_VFCOMPONENT_2_SHIFT) |
+              (I965_VFCOMPONENT_STORE_1_FLT << VE1_VFCOMPONENT_3_SHIFT));
+
+    /* offset 0: u,v -> {U, V, 1.0, 1.0} */
     OUT_BATCH(batch, (0 << GEN8_VE0_VERTEX_BUFFER_INDEX_SHIFT) |
               GEN8_VE0_VALID |
               (I965_SURFACEFORMAT_R32G32_FLOAT << VE0_FORMAT_SHIFT) |
               (0 << VE0_OFFSET_SHIFT));
     OUT_BATCH(batch, (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_0_SHIFT) |
-              (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_1_SHIFT) |
-              (I965_VFCOMPONENT_STORE_1_FLT << VE1_VFCOMPONENT_2_SHIFT) |
-              (I965_VFCOMPONENT_STORE_1_FLT << VE1_VFCOMPONENT_3_SHIFT));
-    /* offset 8: S0, T0 -> {S0, T0, 1.0, 1.0} */
-    OUT_BATCH(batch, (0 << GEN8_VE0_VERTEX_BUFFER_INDEX_SHIFT) |
-              GEN8_VE0_VALID |
-              (I965_SURFACEFORMAT_R32G32_FLOAT << VE0_FORMAT_SHIFT) |
-              (8 << VE0_OFFSET_SHIFT));
-    OUT_BATCH(batch, (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_0_SHIFT) | 
               (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_1_SHIFT) |
               (I965_VFCOMPONENT_STORE_1_FLT << VE1_VFCOMPONENT_2_SHIFT) |
               (I965_VFCOMPONENT_STORE_1_FLT << VE1_VFCOMPONENT_3_SHIFT));
@@ -3797,7 +3819,7 @@ gen8_emit_sf_state(VADriverContextP ctx)
 	      (GEN8_SBE_FORCE_URB_ENTRY_READ_OFFSET) |
               (1 << GEN7_SBE_NUM_OUTPUTS_SHIFT) |
               (1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT) |
-              (0 << GEN8_SBE_URB_ENTRY_READ_OFFSET_SHIFT));
+              (1 << GEN8_SBE_URB_ENTRY_READ_OFFSET_SHIFT));
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
