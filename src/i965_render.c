@@ -4299,6 +4299,35 @@ gen7_subpicture_render_setup_states(
 }
 
 static void
+gen8_subpic_render_upload_constants(VADriverContextP ctx,
+                                    struct object_surface *obj_surface)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    float *constant_buffer;
+    float global_alpha = 1.0;
+    unsigned int index = obj_surface->subpic_render_idx;
+    struct object_subpic *obj_subpic = obj_surface->obj_subpic[index];
+    unsigned char *cc_ptr;
+
+    if (obj_subpic->flags & VA_SUBPICTURE_GLOBAL_ALPHA) {
+        global_alpha = obj_subpic->global_alpha;
+    }
+
+
+    dri_bo_map(render_state->dynamic_state.bo, 1);
+    assert(render_state->dynamic_state.bo->virtual);
+
+    cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
+				render_state->curbe_offset;
+
+    constant_buffer = (float *) cc_ptr;
+    *constant_buffer = global_alpha;
+
+    dri_bo_unmap(render_state->dynamic_state.bo);
+}
+
+static void
 gen8_subpicture_render_setup_states(
     VADriverContextP   ctx,
     struct object_surface *obj_surface,
@@ -4309,10 +4338,10 @@ gen8_subpicture_render_setup_states(
     i965_render_dest_surface_state(ctx, 0);
     i965_subpic_render_src_surfaces_state(ctx, obj_surface);
     gen8_render_sampler(ctx);
-    i965_render_cc_viewport(ctx);
-    gen7_render_color_calc_state(ctx);
+    gen8_render_cc_viewport(ctx);
+    gen8_render_color_calc_state(ctx);
     gen8_subpicture_render_blend_state(ctx);
-    i965_subpic_render_upload_constants(ctx, obj_surface);
+    gen8_subpic_render_upload_constants(ctx, obj_surface);
     i965_subpic_render_upload_vertex(ctx, obj_surface, dst_rect);
 }
 
