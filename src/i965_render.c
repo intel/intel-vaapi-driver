@@ -157,6 +157,7 @@ static const uint32_t sf_kernel_static_gen8[][4] =
 static const uint32_t ps_kernel_static_gen8[][4] = {
 #include "shaders/render/exa_wm_src_affine.g8b"
 #include "shaders/render/exa_wm_src_sample_planar.g8b"
+#include "shaders/render/exa_wm_yuv_color_balance.g8b"
 #include "shaders/render/exa_wm_yuv_rgb.g8b"
 #include "shaders/render/exa_wm_write.g8b"
 };
@@ -2867,6 +2868,11 @@ gen8_render_upload_constants(VADriverContextP ctx,
     struct i965_render_state *render_state = &i965->render_state;
     unsigned short *constant_buffer;
     unsigned char *cc_ptr;
+    float *color_balance_base;
+    float contrast = (float)i965->contrast_attrib->value / DEFAULT_CONTRAST;
+    float brightness = (float)i965->brightness_attrib->value / 255; /* YUV is float in the shader */
+    float hue = (float)i965->hue_attrib->value / 180 * PI;
+    float saturation = (float)i965->saturation_attrib->value / DEFAULT_SATURATION;
 
     dri_bo_map(render_state->dynamic_state.bo, 1);
     assert(render_state->dynamic_state.bo->virtual);
@@ -2886,6 +2892,20 @@ gen8_render_upload_constants(VADriverContextP ctx,
         else
             *constant_buffer = 0;
     }
+
+    if (i965->contrast_attrib->value == DEFAULT_CONTRAST &&
+        i965->brightness_attrib->value == DEFAULT_BRIGHTNESS &&
+        i965->hue_attrib->value == DEFAULT_HUE &&
+        i965->saturation_attrib->value == DEFAULT_SATURATION)
+        constant_buffer[1] = 1; /* skip color balance transformation */
+    else
+        constant_buffer[1] = 0;
+
+    color_balance_base = (float *)constant_buffer + 4;
+    *color_balance_base++ = contrast;
+    *color_balance_base++ = brightness;
+    *color_balance_base++ = cos(hue) * contrast * saturation;
+    *color_balance_base++ = sin(hue) * contrast * saturation;
 
     dri_bo_unmap(render_state->dynamic_state.bo);
 }

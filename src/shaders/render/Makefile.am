@@ -89,6 +89,7 @@ INTEL_G8A =				\
 	exa_wm_src_affine.g8a 		\
 	exa_wm_src_sample_planar.g8a 	\
 	exa_wm_src_sample_argb.g8a 	\
+	exa_wm_yuv_color_balance.g8a	\
 	exa_wm_write.g8a 		\
 	exa_wm_yuv_rgb.g8a
 
@@ -98,6 +99,7 @@ INTEL_G8B =				\
 	exa_wm_src_affine.g8b 		\
 	exa_wm_src_sample_planar.g8b 	\
 	exa_wm_src_sample_argb.g8b 	\
+	exa_wm_yuv_color_balance.g8b	\
 	exa_wm_yuv_rgb.g8b		\
 	exa_wm_write.g8b 
 
