@@ -1037,9 +1037,9 @@ Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *
     vme_context->gpe_context.curbe.length = CURBE_TOTAL_DATA_LENGTH;
 
     vme_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
-    vme_context->gpe_context.vfe_state.num_urb_entries = 16;
+    vme_context->gpe_context.vfe_state.num_urb_entries = 64;
     vme_context->gpe_context.vfe_state.gpgpu_mode = 0;
-    vme_context->gpe_context.vfe_state.urb_entry_size = 59 - 1;
+    vme_context->gpe_context.vfe_state.urb_entry_size = 16;
     vme_context->gpe_context.vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
 
     gen7_vme_scoreboard_init(ctx, vme_context);
