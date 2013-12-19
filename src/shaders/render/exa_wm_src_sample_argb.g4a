@@ -48,5 +48,5 @@ send (16) src_msg_ind		/* msg reg index */
 				/* here(src->dst) we should use src_sampler and src_surface */
 	mlen 5 rlen 8 { align1 };   /* required message len 5, readback len 8 */
 
-mul (8) src_sample_a_01<1>f src_sample_a_01<1>f global_alpha { align1 };
-mul (8) src_sample_a_23<1>f src_sample_a_23<1>f global_alpha { align1 };
+mul (8) src_sample_a_01<1>f src_sample_a_01<8,8,1>f global_alpha { align1 };
+mul (8) src_sample_a_23<1>f src_sample_a_23<8,8,1>f global_alpha { align1 };
