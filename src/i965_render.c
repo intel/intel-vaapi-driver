@@ -4266,6 +4266,7 @@ gen8_subpicture_render_blend_state(VADriverContextP ctx)
     memset(global_blend_state, 0, sizeof(*global_blend_state));
     /* Global blend state + blend_state for Render Target */
     blend_state = (struct gen8_blend_state_rt *)(global_blend_state + 1);
+    blend_state->blend0.color_blend_func = I965_BLENDFUNCTION_ADD;
     blend_state->blend0.dest_blend_factor = I965_BLENDFACTOR_INV_SRC_ALPHA;
     blend_state->blend0.src_blend_factor = I965_BLENDFACTOR_SRC_ALPHA;
     blend_state->blend0.alpha_blend_func = I965_BLENDFUNCTION_ADD;
