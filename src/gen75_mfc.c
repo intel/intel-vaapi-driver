@@ -427,7 +427,8 @@ static void gen75_mfc_init(VADriverContextP ctx,
     int height_in_mbs = 0;
     int slice_batchbuffer_size;
 
-    if (encoder_context->codec == CODEC_H264) {
+    if (encoder_context->codec == CODEC_H264 ||
+        encoder_context->codec == CODEC_H264_MVC) {
         VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
         width_in_mbs = pSequenceParameter->picture_width_in_mbs;
         height_in_mbs = pSequenceParameter->picture_height_in_mbs;
@@ -1182,13 +1183,13 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     assert(pPicParameter->pic_init_qp >= 0 && pPicParameter->pic_init_qp < 52);
     assert(qp >= 0 && qp < 52);
 
-    gen75_mfc_avc_slice_state(ctx, 
+    gen75_mfc_avc_slice_state(ctx,
                               pPicParameter,
                               pSliceParameter,
                               encode_state, encoder_context,
                               (rate_control_mode == VA_RC_CBR), qp, slice_batch);
 
-    if ( slice_index == 0) 
+    if ( slice_index == 0)
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
 
     slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
@@ -1198,6 +1199,8 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                                (unsigned int *)slice_header, ALIGN(slice_header_length_in_bits, 32) >> 5, slice_header_length_in_bits & 0x1f,
                                5,  /* first 5 bytes are start code + nal unit type */
                                1, 0, 1, slice_batch);
+
+    free(slice_header);
 
     dri_bo_map(vme_context->vme_output.bo , 1);
     msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
@@ -1244,7 +1247,6 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                                    1, 1, 1, 0, slice_batch);
     }
 
-    free(slice_header);
 
 }
 
@@ -1556,6 +1558,7 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                                0,
                                1,
                                slice_batch);
+
     free(slice_header);
 
     intel_batchbuffer_align(slice_batch, 16); /* aligned by an Oword */
@@ -2534,6 +2537,8 @@ static VAStatus gen75_mfc_pipeline(VADriverContextP ctx,
     case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
+    case VAProfileH264MultiviewHigh:
+    case VAProfileH264StereoHigh:
         vaStatus = gen75_mfc_avc_encode_picture(ctx, encode_state, encoder_context);
         break;
 

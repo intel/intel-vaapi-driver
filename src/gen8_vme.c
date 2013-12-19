@@ -321,7 +321,8 @@ static VAStatus gen8_vme_constant_setup(VADriverContextP ctx,
 
     vme_state_message = (unsigned int *)vme_context->vme_state_message;
 
-    if (encoder_context->codec == CODEC_H264) {
+    if (encoder_context->codec == CODEC_H264 ||
+        encoder_context->codec == CODEC_H264_MVC) {
         if (vme_context->h264_level >= 30) {
             mv_num = 16;
         
@@ -1155,6 +1156,7 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
     switch (encoder_context->codec) {
     case CODEC_H264:
+    case CODEC_H264_MVC:
         vme_kernel_list = gen8_vme_kernels;
         encoder_context->vme_pipeline = gen8_vme_pipeline;
        	i965_kernel_num = sizeof(gen8_vme_kernels) / sizeof(struct i965_kernel); 
