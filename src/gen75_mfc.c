@@ -1621,6 +1621,8 @@ gen75_mfc_avc_batchbuffer_pipeline(VADriverContextP ctx,
 	OUT_BCS_BATCH(slice_batch, 0);
 	OUT_BCS_BATCH(slice_batch, MI_BATCH_BUFFER_END);
 	ADVANCE_BCS_BATCH(slice_batch);
+	mfc_context->aux_batchbuffer = NULL;
+	intel_batchbuffer_free(slice_batch);
     }
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
@@ -1644,8 +1646,8 @@ gen75_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
-    gen75_mfc_build_avc_batchbuffer(ctx, encode_state, encoder_context);
     dri_bo_reference(mfc_context->aux_batchbuffer_surface.bo);
+    gen75_mfc_build_avc_batchbuffer(ctx, encode_state, encoder_context);
 
     return mfc_context->aux_batchbuffer_surface.bo;
 }
