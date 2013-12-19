@@ -2862,7 +2862,8 @@ gen8_render_color_calc_state(VADriverContextP ctx)
 
 static void
 gen8_render_upload_constants(VADriverContextP ctx,
-                             struct object_surface *obj_surface)
+                             struct object_surface *obj_surface,
+                             unsigned int flags)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
@@ -2873,6 +2874,8 @@ gen8_render_upload_constants(VADriverContextP ctx,
     float brightness = (float)i965->brightness_attrib->value / 255; /* YUV is float in the shader */
     float hue = (float)i965->hue_attrib->value / 180 * PI;
     float saturation = (float)i965->saturation_attrib->value / DEFAULT_SATURATION;
+    float *yuv_to_rgb;
+    unsigned int color_flag;
 
     dri_bo_map(render_state->dynamic_state.bo, 1);
     assert(render_state->dynamic_state.bo->virtual);
@@ -2907,6 +2910,15 @@ gen8_render_upload_constants(VADriverContextP ctx,
     *color_balance_base++ = cos(hue) * contrast * saturation;
     *color_balance_base++ = sin(hue) * contrast * saturation;
 
+    color_flag = flags & VA_SRC_COLOR_MASK;
+    yuv_to_rgb = (float *)constant_buffer + 8;
+    if (color_flag == VA_SRC_BT709)
+        memcpy(yuv_to_rgb, yuv_to_rgb_bt709, sizeof(yuv_to_rgb_bt709));
+    else if (color_flag == VA_SRC_SMPTE_240)
+        memcpy(yuv_to_rgb, yuv_to_rgb_smpte_240, sizeof(yuv_to_rgb_smpte_240));
+    else
+        memcpy(yuv_to_rgb, yuv_to_rgb_bt601, sizeof(yuv_to_rgb_bt601));
+
     dri_bo_unmap(render_state->dynamic_state.bo);
 }
 
@@ -2925,7 +2937,7 @@ gen8_render_setup_states(
     gen8_render_cc_viewport(ctx);
     gen8_render_color_calc_state(ctx);
     gen8_render_blend_state(ctx);
-    gen8_render_upload_constants(ctx, obj_surface);
+    gen8_render_upload_constants(ctx, obj_surface, flags);
     i965_render_upload_vertex(ctx, obj_surface, src_rect, dst_rect);
 }
 
@@ -4024,7 +4036,7 @@ gen8_emit_wm_state(VADriverContextP ctx, int kernel)
 
     BEGIN_BATCH(batch, 11);
     OUT_BATCH(batch, GEN6_3DSTATE_CONSTANT_PS | (11 - 2));
-    OUT_BATCH(batch, 1);
+    OUT_BATCH(batch, URB_CS_ENTRY_SIZE);
     OUT_BATCH(batch, 0);
     /*DW3-4. Constant buffer 0 */
     OUT_BATCH(batch, render_state->curbe_offset);
