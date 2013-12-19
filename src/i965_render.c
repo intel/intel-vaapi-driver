@@ -3674,8 +3674,8 @@ gen8_emit_urb(VADriverContextP ctx)
     OUT_BATCH(batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS | (2 - 2));
     /* Size is 8Kbs and base address is 0Kb */
     OUT_BATCH(batch,
-		(1 << GEN8_PUSH_CONSTANT_BUFFER_OFFSET_SHIFT) |
-		(4 << GEN8_PUSH_CONSTANT_BUFFER_SIZE_SHIFT));
+		(0 << GEN8_PUSH_CONSTANT_BUFFER_OFFSET_SHIFT) |
+		(8 << GEN8_PUSH_CONSTANT_BUFFER_SIZE_SHIFT));
     ADVANCE_BATCH(batch);
 
     BEGIN_BATCH(batch, 2);
