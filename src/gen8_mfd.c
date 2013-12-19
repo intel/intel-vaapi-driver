@@ -3054,7 +3054,7 @@ gen8_mfd_decode_picture(VADriverContextP ctx,
         gen8_mfd_mpeg2_decode_picture(ctx, decode_state, gen7_mfd_context);
         break;
         
-    case VAProfileH264Baseline:
+    case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
         gen8_mfd_avc_decode_picture(ctx, decode_state, gen7_mfd_context);
@@ -3150,7 +3150,7 @@ gen8_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
         gen8_mfd_mpeg2_context_init(ctx, gen7_mfd_context);
         break;
 
-    case VAProfileH264Baseline:
+    case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
         gen8_mfd_avc_context_init(ctx, gen7_mfd_context);
