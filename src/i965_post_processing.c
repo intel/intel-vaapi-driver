@@ -894,7 +894,7 @@ static struct pp_module pp_modules_gen7[] = {
             NULL,
         },
     
-        gen7_pp_rgbx_avs_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -1145,7 +1145,7 @@ static struct pp_module pp_modules_gen75[] = {
             NULL,
         },
     
-        gen7_pp_rgbx_avs_initialize,
+        gen7_pp_plx_avs_initialize,
     },
 
     {
@@ -3490,6 +3490,16 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_static_parameter->grf2.avs_wa_enable = 1; /* must be set for GEN7 */
     if (IS_HASWELL(i965->intel.device_id))
     	pp_static_parameter->grf2.avs_wa_enable = 0; /* HSW don't use the WA */
+
+    if (pp_static_parameter->grf2.avs_wa_enable) {
+        int src_fourcc = pp_get_surface_fourcc(ctx, src_surface);
+        if ((src_fourcc == VA_FOURCC('R', 'G', 'B', 'A')) ||
+            (src_fourcc == VA_FOURCC('R', 'G', 'B', 'X')) ||
+            (src_fourcc == VA_FOURCC('B', 'G', 'R', 'A')) ||
+            (src_fourcc == VA_FOURCC('B', 'G', 'R', 'X'))) {
+            pp_static_parameter->grf2.avs_wa_enable = 0;
+        }
+    }
 	
     pp_static_parameter->grf2.avs_wa_width = dw;
     pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * dw);
