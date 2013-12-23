@@ -2745,12 +2745,14 @@ static const int vp8_ac_qlookup[128] =
     213, 217, 221, 225, 229, 234, 239, 245, 249, 254, 259, 264, 269, 274, 279, 284,
 };
 
-static inline unsigned int vp8_clip_quantization_index(unsigned int index)
+static inline unsigned int vp8_clip_quantization_index(int index)
 {
     if(index > 127)
         return 127;
     else if(index <0)
         return 0;
+
+    return index;
 }
 
 static void
