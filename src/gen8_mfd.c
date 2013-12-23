@@ -1886,6 +1886,7 @@ gen8_mfd_jpeg_decode_init(VADriverContextP ctx,
     struct object_surface *obj_surface;
     VAPictureParameterBufferJPEGBaseline *pic_param;
     int subsampling = SUBSAMPLE_YUV420;
+    int fourcc = VA_FOURCC('I', 'M', 'C', '3');
 
     pic_param = (VAPictureParameterBufferJPEGBaseline *)decode_state->pic_param->buffer;
 
@@ -1900,35 +1901,43 @@ gen8_mfd_jpeg_decode_init(VADriverContextP ctx,
         int v3 = pic_param->components[2].v_sampling_factor;
 
         if (h1 == 2 && h2 == 1 && h3 == 1 &&
-            v1 == 2 && v2 == 1 && v3 == 1)
+            v1 == 2 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV420;
-        else if (h1 == 2 && h2 == 1 && h3 == 1 &&
-                 v1 == 1 && v2 == 1 && v3 == 1)
+            fourcc = VA_FOURCC('I', 'M', 'C', '3');
+        } else if (h1 == 2 && h2 == 1 && h3 == 1 &&
+                   v1 == 1 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV422H;
-        else if (h1 == 1 && h2 == 1 && h3 == 1 &&
-                 v1 == 1 && v2 == 1 && v3 == 1)
+            fourcc = VA_FOURCC('4', '2', '2', 'H');
+        } else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+                   v1 == 1 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV444;
-        else if (h1 == 4 && h2 == 1 && h3 == 1 &&
-                 v1 == 1 && v2 == 1 && v3 == 1)
+            fourcc = VA_FOURCC('4', '4', '4', 'P');
+        } else if (h1 == 4 && h2 == 1 && h3 == 1 &&
+                   v1 == 1 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV411;
-        else if (h1 == 1 && h2 == 1 && h3 == 1 &&
-                 v1 == 2 && v2 == 1 && v3 == 1)
+            fourcc = VA_FOURCC('4', '1', '1', 'P');
+        } else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+                   v1 == 2 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV422V;
-        else if (h1 == 2 && h2 == 1 && h3 == 1 &&
-                 v1 == 2 && v2 == 2 && v3 == 2)
+            fourcc = VA_FOURCC('4', '2', '2', 'V');
+        } else if (h1 == 2 && h2 == 1 && h3 == 1 &&
+                   v1 == 2 && v2 == 2 && v3 == 2) {
             subsampling = SUBSAMPLE_YUV422H;
-        else if (h2 == 2 && h2 == 2 && h3 == 2 &&
-                 v1 == 2 && v2 == 1 && v3 == 1)
+            fourcc = VA_FOURCC('4', '2', '2', 'H');
+        } else if (h2 == 2 && h2 == 2 && h3 == 2 &&
+                   v1 == 2 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV422V;
-        else
+            fourcc = VA_FOURCC('4', '2', '2', 'V');
+        } else
             assert(0);
-    } else {
+    }
+    else {
         assert(0);
     }
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('I','M','C','1'), subsampling);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, fourcc, subsampling);
 
     dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
