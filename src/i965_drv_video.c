@@ -349,10 +349,10 @@ static struct hw_codec_info gen8_hw_codec_info = {
 
     .num_filters = 4,
     .filters = {
-        VAProcFilterNoiseReduction,
-        VAProcFilterDeinterlacing,
-        VAProcFilterSharpening, /* need to rebuild the shader for BDW */
-        VAProcFilterColorBalance,
+        { VAProcFilterNoiseReduction, I965_RING_VEBOX },
+        { VAProcFilterDeinterlacing, I965_RING_VEBOX },
+        { VAProcFilterSharpening, I965_RING_NULL }, /* need to rebuild the shader for BDW */
+        { VAProcFilterColorBalance, I965_RING_VEBOX},
     },
 };
 
