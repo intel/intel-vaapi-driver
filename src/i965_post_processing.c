@@ -3519,7 +3519,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
                            void *filter_param)
 {
 /* TODO: Add the sampler_8x8 state */
-    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->private_context;
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->pp_avs_context;
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct gen8_sampler_8x8_avs *sampler_8x8;
     struct i965_sampler_8x8_coefficient *sampler_8x8_state;
