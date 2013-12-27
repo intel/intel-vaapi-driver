@@ -3528,6 +3528,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     int i;
     int width[3], height[3], pitch[3], offset[3];
     int src_width, src_height;
+    unsigned char *cc_ptr;
 
     memset(pp_static_parameter, 0, sizeof(struct gen7_pp_static_parameter));
 
@@ -3542,12 +3543,13 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
                                          width, height, pitch, offset);
 
     /* sampler 8x8 state */
-    dri_bo_map(pp_context->sampler_state_table.bo, True);
-    assert(pp_context->sampler_state_table.bo->virtual);
+    dri_bo_map(pp_context->dynamic_state.bo, True);
+    assert(pp_context->dynamic_state.bo->virtual);
 
+    cc_ptr = (unsigned char *) pp_context->dynamic_state.bo->virtual +
+        pp_context->sampler_offset;
     /* Currently only one gen8 sampler_8x8 is initialized */
-    sampler_8x8 = (struct gen8_sampler_8x8_avs *)
-        pp_context->sampler_state_table.bo->virtual;
+    sampler_8x8 = (struct gen8_sampler_8x8_avs *)cc_ptr;
     memset(sampler_8x8, 0, sizeof(*sampler_8x8));
 
     sampler_8x8->dw0.gain_factor = 44;
@@ -3696,7 +3698,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     sampler_8x8->dw153.bypass_y_adaptive_filtering = 1;
     sampler_8x8->dw153.bypass_x_adaptive_filtering = 1;
 
-    dri_bo_unmap(pp_context->sampler_state_table.bo);
+    dri_bo_unmap(pp_context->dynamic_state.bo);
 
 
     /* private function & data */
@@ -4922,8 +4924,10 @@ gen8_pp_initialize(
 {
     VAStatus va_status;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct pp_module *pp_module;
     dri_bo *bo;
+    int bo_size;
+    unsigned int end_offset;
+    struct pp_module *pp_module;
     int static_param_size, inline_param_size;
 
     dri_bo_unreference(pp_context->surface_state_binding_table.bo);
@@ -4934,40 +4938,41 @@ gen8_pp_initialize(
     assert(bo);
     pp_context->surface_state_binding_table.bo = bo;
 
-    dri_bo_unreference(pp_context->curbe.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "constant buffer",
-                      4096, 
-                      4096);
-    assert(bo);
-    pp_context->curbe.bo = bo;
-
-    dri_bo_unreference(pp_context->idrt.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "interface discriptor", 
-                      sizeof(struct gen8_interface_descriptor_data), 
-                      4096);
-    assert(bo);
-    pp_context->idrt.bo = bo;
     pp_context->idrt.num_interface_descriptors = 0;
 
-    dri_bo_unreference(pp_context->sampler_state_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "sampler 8x8 state ",
-                      4096 * 2,
-                      4096);
-    assert(bo);
-    pp_context->sampler_state_table.bo = bo;
+    pp_context->sampler_size = 2 * 4096;
 
+    bo_size = 4096 + pp_context->curbe_size + pp_context->sampler_size
+		+ pp_context->idrt_size;
 
-    dri_bo_unreference(pp_context->vfe_state.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "vfe state", 
-                      sizeof(struct i965_vfe_state), 
-                      4096);
+    dri_bo_unreference(pp_context->dynamic_state.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "dynamic_state",
+                      bo_size,
+		      4096);
+
     assert(bo);
-    pp_context->vfe_state.bo = bo;
-    
+    pp_context->dynamic_state.bo = bo;
+    pp_context->dynamic_state.bo_size = bo_size;
+
+    end_offset = 0;
+    pp_context->dynamic_state.end_offset = 0;
+
+    /* Constant buffer offset */
+    pp_context->curbe_offset = ALIGN(end_offset, 64);
+    end_offset = pp_context->curbe_offset + pp_context->curbe_size;
+
+    /* Interface descriptor offset */
+    pp_context->idrt_offset = ALIGN(end_offset, 64);
+    end_offset = pp_context->idrt_offset + pp_context->idrt_size;
+
+    /* Sampler state offset */
+    pp_context->sampler_offset = ALIGN(end_offset, 64);
+    end_offset = pp_context->sampler_offset + pp_context->sampler_size;
+
+    /* update the end offset of dynamic_state */
+    pp_context->dynamic_state.end_offset = ALIGN(end_offset, 64);
+
     static_param_size = sizeof(struct gen7_pp_static_parameter);
     inline_param_size = sizeof(struct gen7_pp_inline_parameter);
 
@@ -5046,36 +5051,29 @@ gen8_pp_interface_descriptor_table(VADriverContextP   ctx,
     struct gen8_interface_descriptor_data *desc;
     dri_bo *bo;
     int pp_index = pp_context->current_pp;
+    unsigned char *cc_ptr;
 
-    bo = pp_context->idrt.bo;
-    dri_bo_map(bo, True);
+    bo = pp_context->dynamic_state.bo;
+
+    dri_bo_map(bo, 1);
     assert(bo->virtual);
-    desc = bo->virtual;
+    cc_ptr = (unsigned char *)bo->virtual + pp_context->idrt_offset;
+
+    desc = (struct gen8_interface_descriptor_data *) cc_ptr +
+		pp_context->idrt.num_interface_descriptors;
+
     memset(desc, 0, sizeof(*desc));
     desc->desc0.kernel_start_pointer = 
-	pp_context->pp_modules[pp_index].kernel.bo->offset >> 6; /* reloc */
+	pp_context->pp_modules[pp_index].kernel.kernel_offset >> 6; /* reloc */
     desc->desc2.single_program_flow = 1;
     desc->desc2.floating_point_mode = FLOATING_POINT_IEEE_754;
-    desc->desc3.sampler_count = 1;      /* 1 - 4 samplers used */
-    desc->desc3.sampler_state_pointer = 
-	pp_context->sampler_state_table.bo->offset >> 5;
+    desc->desc3.sampler_count = 0;      /* 1 - 4 samplers used */
+    desc->desc3.sampler_state_pointer = pp_context->sampler_offset >> 5;
     desc->desc4.binding_table_entry_count = 0;
     desc->desc4.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
     desc->desc5.constant_urb_entry_read_offset = 0;
     
     desc->desc5.constant_urb_entry_read_length = 6; /* grf 1-6 */
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_INSTRUCTION, 0,
-                      0,
-                      offsetof(struct gen8_interface_descriptor_data, desc0),
-                      pp_context->pp_modules[pp_index].kernel.bo);
-
-    dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_INSTRUCTION, 0,
-                      desc->desc3.sampler_count << 2,
-                      offsetof(struct gen8_interface_descriptor_data, desc3),
-                      pp_context->sampler_state_table.bo);
 
     dri_bo_unmap(bo);
     pp_context->idrt.num_interface_descriptors++;
@@ -5114,11 +5112,34 @@ gen6_pp_states_setup(VADriverContextP ctx,
 }
 
 static void
+gen8_pp_upload_constants(VADriverContextP ctx,
+                         struct i965_post_processing_context *pp_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    unsigned char *constant_buffer;
+    int param_size;
+
+    assert(sizeof(struct gen7_pp_static_parameter) == 192);
+
+    if (IS_GEN8(i965->intel.device_id))
+        param_size = sizeof(struct gen7_pp_static_parameter);
+
+    dri_bo_map(pp_context->dynamic_state.bo, 1);
+    assert(pp_context->dynamic_state.bo->virtual);
+    constant_buffer = (unsigned char *) pp_context->dynamic_state.bo->virtual +
+			pp_context->curbe_offset;
+
+    memcpy(constant_buffer, pp_context->pp_static_parameter, param_size);
+    dri_bo_unmap(pp_context->dynamic_state.bo);
+    return;
+}
+
+static void
 gen8_pp_states_setup(VADriverContextP ctx,
                      struct i965_post_processing_context *pp_context)
 {
     gen8_pp_interface_descriptor_table(ctx, pp_context);
-    gen6_pp_upload_constants(ctx, pp_context);
+    gen8_pp_upload_constants(ctx, pp_context);
 }
 
 static void
@@ -5168,7 +5189,8 @@ gen8_pp_state_base_address(VADriverContextP ctx,
     OUT_RELOC(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
 	OUT_BATCH(batch, 0);
 	/* DW6. Dynamic state address */
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_RELOC(batch, pp_context->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
+		0, 0 | BASE_ADDRESS_MODIFY);
 	OUT_BATCH(batch, 0);
 
 	/* DW8. Indirect object address */
@@ -5176,7 +5198,7 @@ gen8_pp_state_base_address(VADriverContextP ctx,
 	OUT_BATCH(batch, 0);
 
 	/* DW10. Instruction base address */
-    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_RELOC(batch, pp_context->instruction_state.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY);
 	OUT_BATCH(batch, 0);
 
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
@@ -5290,10 +5312,7 @@ gen8_interface_descriptor_load(VADriverContextP ctx,
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
               pp_context->idrt.num_interface_descriptors * sizeof(struct gen8_interface_descriptor_data));
-    OUT_RELOC(batch, 
-              pp_context->idrt.bo,
-              I915_GEM_DOMAIN_INSTRUCTION, 0,
-              0);
+    OUT_BATCH(batch, pp_context->idrt_offset);
     ADVANCE_BATCH(batch);
 }
 
@@ -5436,6 +5455,99 @@ gen6_pp_pipeline_setup(VADriverContextP ctx,
 }
 
 static void
+gen8_pp_curbe_load(VADriverContextP ctx,
+                   struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int param_size = 64;
+
+    if (IS_GEN8(i965->intel.device_id))
+        param_size = sizeof(struct gen7_pp_static_parameter);
+
+    BEGIN_BATCH(batch, 4);
+    OUT_BATCH(batch, CMD_MEDIA_CURBE_LOAD | (4 - 2));
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch,
+              param_size);
+    OUT_BATCH(batch, pp_context->curbe_offset);
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen8_pp_object_walker(VADriverContextP ctx,
+                      struct i965_post_processing_context *pp_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = pp_context->batch;
+    int x, x_steps, y, y_steps;
+    int param_size, command_length_in_dws, extra_cmd_in_dws;
+    dri_bo *command_buffer;
+    unsigned int *command_ptr;
+
+    param_size = sizeof(struct gen7_pp_inline_parameter);
+    if (IS_GEN8(i965->intel.device_id))
+        param_size = sizeof(struct gen7_pp_inline_parameter);
+
+    x_steps = pp_context->pp_x_steps(pp_context->private_context);
+    y_steps = pp_context->pp_y_steps(pp_context->private_context);
+    command_length_in_dws = 6 + (param_size >> 2);
+    extra_cmd_in_dws = 2;
+    command_buffer = dri_bo_alloc(i965->intel.bufmgr,
+                                  "command objects buffer",
+                                  (command_length_in_dws + extra_cmd_in_dws) * 4 * x_steps * y_steps + 64,
+                                  4096);
+
+    dri_bo_map(command_buffer, 1);
+    command_ptr = command_buffer->virtual;
+
+    for (y = 0; y < y_steps; y++) {
+        for (x = 0; x < x_steps; x++) {
+            if (!pp_context->pp_set_block_parameter(pp_context, x, y)) {
+
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (command_length_in_dws - 2));
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+                *command_ptr++ = 0;
+                memcpy(command_ptr, pp_context->pp_inline_parameter, param_size);
+                command_ptr += (param_size >> 2);
+
+                *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
+                *command_ptr++ = 0;
+            }
+        }
+    }
+
+    if ((command_length_in_dws + extra_cmd_in_dws) * x_steps * y_steps % 2 == 0)
+        *command_ptr++ = 0;
+
+    *command_ptr++ = MI_BATCH_BUFFER_END;
+    *command_ptr++ = 0;
+
+    dri_bo_unmap(command_buffer);
+
+    if (IS_GEN8(i965->intel.device_id)) {
+	BEGIN_BATCH(batch, 3);
+	OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
+	OUT_RELOC(batch, command_buffer,
+		  I915_GEM_DOMAIN_COMMAND, 0, 0);
+	OUT_BATCH(batch, 0);
+	ADVANCE_BATCH(batch);
+    }
+
+    dri_bo_unreference(command_buffer);
+
+    /* Have to execute the batch buffer here becuase MI_BATCH_BUFFER_END
+     * will cause control to pass back to ring buffer
+     */
+    intel_batchbuffer_end_atomic(batch);
+    intel_batchbuffer_flush(batch);
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+}
+
+static void
 gen8_pp_pipeline_setup(VADriverContextP ctx,
                        struct i965_post_processing_context *pp_context)
 {
@@ -5446,10 +5558,10 @@ gen8_pp_pipeline_setup(VADriverContextP ctx,
     gen6_pp_pipeline_select(ctx, pp_context);
     gen8_pp_state_base_address(ctx, pp_context);
     gen8_pp_vfe_state(ctx, pp_context);
-    gen6_pp_curbe_load(ctx, pp_context);
+    gen8_pp_curbe_load(ctx, pp_context);
     gen8_interface_descriptor_load(ctx, pp_context);
     gen8_pp_vfe_state(ctx, pp_context);
-    gen6_pp_object_walker(ctx, pp_context);
+    gen8_pp_object_walker(ctx, pp_context);
     intel_batchbuffer_end_atomic(batch);
 }
 
@@ -6158,6 +6270,39 @@ i965_image_processing(VADriverContextP ctx,
 }       
 
 static void
+gen8_post_processing_context_finalize(struct i965_post_processing_context *pp_context)
+{
+    dri_bo_unreference(pp_context->surface_state_binding_table.bo);
+    pp_context->surface_state_binding_table.bo = NULL;
+
+    dri_bo_unreference(pp_context->pp_dndi_context.stmm_bo);
+    pp_context->pp_dndi_context.stmm_bo = NULL;
+
+    dri_bo_unreference(pp_context->pp_dn_context.stmm_bo);
+    pp_context->pp_dn_context.stmm_bo = NULL;
+
+    if (pp_context->instruction_state.bo) {
+	dri_bo_unreference(pp_context->instruction_state.bo);
+	pp_context->instruction_state.bo = NULL;
+    }
+
+    if (pp_context->indirect_state.bo) {
+	dri_bo_unreference(pp_context->indirect_state.bo);
+	pp_context->indirect_state.bo = NULL;
+    }
+
+    if (pp_context->dynamic_state.bo) {
+	dri_bo_unreference(pp_context->dynamic_state.bo);
+	pp_context->dynamic_state.bo = NULL;
+    }
+
+    free(pp_context->pp_static_parameter);
+    free(pp_context->pp_inline_parameter);
+    pp_context->pp_static_parameter = NULL;
+    pp_context->pp_inline_parameter = NULL;
+}
+
+static void
 i965_post_processing_context_finalize(struct i965_post_processing_context *pp_context)
 {
     int i;
@@ -6210,7 +6355,11 @@ i965_post_processing_terminate(VADriverContextP ctx)
     struct i965_post_processing_context *pp_context = i965->pp_context;
 
     if (pp_context) {
-        i965_post_processing_context_finalize(pp_context);
+        if (IS_GEN8(i965->intel.device_id)) {
+            gen8_post_processing_context_finalize(pp_context);
+        } else {
+	    i965_post_processing_context_finalize(pp_context);
+        }
         free(pp_context);
     }
 
@@ -6219,6 +6368,96 @@ i965_post_processing_terminate(VADriverContextP ctx)
 
 #define VPP_CURBE_ALLOCATION_SIZE	32
 
+
+static void
+gen8_post_processing_context_init(VADriverContextP ctx,
+                                  struct i965_post_processing_context *pp_context,
+                                  struct intel_batchbuffer *batch)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    int i, kernel_size;
+    unsigned int kernel_offset, end_offset;
+    unsigned char *kernel_ptr;
+    struct pp_module *pp_module;
+
+    {
+	pp_context->vfe_gpu_state.max_num_threads = 60;
+	pp_context->vfe_gpu_state.num_urb_entries = 59;
+	pp_context->vfe_gpu_state.gpgpu_mode = 0;
+	pp_context->vfe_gpu_state.urb_entry_size = 16 - 1;
+	pp_context->vfe_gpu_state.curbe_allocation_size = VPP_CURBE_ALLOCATION_SIZE;
+    }
+
+    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
+
+    if (IS_GEN8(i965->intel.device_id))
+        memcpy(pp_context->pp_modules, pp_modules_gen8, sizeof(pp_context->pp_modules));
+    else {
+        /* should never get here !!! */
+        assert(0);
+    }
+
+    kernel_size = 4096 ;
+
+    for (i = 0; i < NUM_PP_MODULES; i++) {
+        pp_module = &pp_context->pp_modules[i];
+
+        if (pp_module->kernel.bin && pp_module->kernel.size) {
+	    kernel_size += pp_module->kernel.size;
+        }
+    }
+
+    pp_context->instruction_state.bo = dri_bo_alloc(i965->intel.bufmgr,
+                                  "kernel shader",
+                                  kernel_size,
+                                  0x1000);
+    if (pp_context->instruction_state.bo == NULL) {
+        WARN_ONCE("failure to allocate the buffer space for kernel shader in VPP\n");
+        return;
+    }
+
+    assert(pp_context->instruction_state.bo);
+
+
+    pp_context->instruction_state.bo_size = kernel_size;
+    pp_context->instruction_state.end_offset = 0;
+    end_offset = 0;
+
+    dri_bo_map(pp_context->instruction_state.bo, 1);
+    kernel_ptr = (unsigned char *)(pp_context->instruction_state.bo->virtual);
+
+    for (i = 0; i < NUM_PP_MODULES; i++) {
+        pp_module = &pp_context->pp_modules[i];
+
+        kernel_offset = ALIGN(end_offset, 64);
+        pp_module->kernel.kernel_offset = kernel_offset;
+
+        if (pp_module->kernel.bin && pp_module->kernel.size) {
+
+	    memcpy(kernel_ptr + kernel_offset, pp_module->kernel.bin, pp_module->kernel.size);
+	    end_offset = kernel_offset + pp_module->kernel.size;
+        }
+    }
+
+    pp_context->instruction_state.end_offset = ALIGN(end_offset, 64);
+
+    dri_bo_unmap(pp_context->instruction_state.bo);
+
+    /* static & inline parameters */
+    if (IS_GEN8(i965->intel.device_id)) {
+        pp_context->pp_static_parameter = calloc(sizeof(struct gen7_pp_static_parameter), 1);
+        pp_context->pp_inline_parameter = calloc(sizeof(struct gen7_pp_inline_parameter), 1);
+    }
+
+    pp_context->pp_dndi_context.current_out_surface = VA_INVALID_SURFACE;
+    pp_context->pp_dndi_context.current_out_obj_surface = NULL;
+    pp_context->pp_dndi_context.frame_order = -1;
+    pp_context->batch = batch;
+
+    pp_context->idrt_size = 5 * sizeof(struct gen8_interface_descriptor_data);
+    pp_context->curbe_size = 256;
+}
+
 static void
 i965_post_processing_context_init(VADriverContextP ctx,
                                   struct i965_post_processing_context *pp_context,
@@ -6226,6 +6465,11 @@ i965_post_processing_context_init(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
+
+    if (IS_GEN8(i965->intel.device_id)) {
+        gen8_post_processing_context_init(ctx, pp_context, batch);
+        return;
+    };
 
     if (IS_IRONLAKE(i965->intel.device_id)) {
 	pp_context->urb.size = URB_SIZE((&i965->intel));
@@ -6251,11 +6495,8 @@ i965_post_processing_context_init(VADriverContextP ctx,
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen7));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen75));
-    assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
 
-    if (IS_GEN8(i965->intel.device_id))
-        memcpy(pp_context->pp_modules, pp_modules_gen8, sizeof(pp_context->pp_modules));
-    else if (IS_HASWELL(i965->intel.device_id))
+    if (IS_HASWELL(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen75, sizeof(pp_context->pp_modules));
     else if (IS_GEN7(i965->intel.device_id))
         memcpy(pp_context->pp_modules, pp_modules_gen7, sizeof(pp_context->pp_modules));

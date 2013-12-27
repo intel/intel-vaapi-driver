@@ -503,6 +503,29 @@ struct i965_post_processing_context
     unsigned int block_horizontal_mask_left:16;
     unsigned int block_horizontal_mask_right:16;
     unsigned int block_vertical_mask_bottom:8;
+
+    struct {
+        dri_bo *bo;
+        int bo_size;
+        unsigned int end_offset;
+    } instruction_state;
+
+    struct {
+        dri_bo *bo;
+    } indirect_state;
+
+    struct {
+        dri_bo *bo;
+        int bo_size;
+        unsigned int end_offset;
+    } dynamic_state;
+
+    unsigned int sampler_offset;
+    int sampler_size;
+    unsigned int idrt_offset;
+    int idrt_size;
+    unsigned int curbe_offset;
+    int curbe_size;
 };
 
 struct i965_proc_context
