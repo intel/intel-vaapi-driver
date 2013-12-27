@@ -1082,7 +1082,7 @@ gen8_gpe_context_init(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     dri_bo *bo;
     int bo_size;
-    unsigned int end_offset;
+    unsigned int start_offset, end_offset;
 
     dri_bo_unreference(gpe_context->surface_state_binding_table.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -1106,16 +1106,19 @@ gen8_gpe_context_init(VADriverContextP ctx,
     gpe_context->dynamic_state.end_offset = 0;
 
     /* Constant buffer offset */
-    gpe_context->curbe_offset = ALIGN(end_offset, 64);
-    end_offset += gpe_context->curbe_size;
+    start_offset = ALIGN(end_offset, 64);
+    gpe_context->curbe_offset = start_offset;
+    end_offset = start_offset + gpe_context->curbe_size;
 
     /* Interface descriptor offset */
-    gpe_context->idrt_offset = ALIGN(end_offset, 64);
-    end_offset += gpe_context->idrt_size;
+    start_offset = ALIGN(end_offset, 64);
+    gpe_context->idrt_offset = start_offset;
+    end_offset = start_offset + gpe_context->idrt_size;
 
     /* Sampler state offset */
-    gpe_context->sampler_offset = ALIGN(end_offset, 64);
-    end_offset += gpe_context->sampler_size;
+    start_offset = ALIGN(end_offset, 64);
+    gpe_context->sampler_offset = start_offset;
+    end_offset = start_offset + gpe_context->sampler_size;
 
     /* update the end offset of dynamic_state */
     gpe_context->dynamic_state.end_offset = end_offset;
@@ -1187,9 +1190,11 @@ gen8_gpe_load_kernels(VADriverContextP ctx,
         kernel = &gpe_context->kernels[i];
         kernel->kernel_offset = kernel_offset;
 
-        memcpy(kernel_ptr + kernel_offset, kernel->bin, kernel->size);
+        if (kernel->size) {
+            memcpy(kernel_ptr + kernel_offset, kernel->bin, kernel->size);
 
-        end_offset += kernel->size;
+            end_offset = kernel_offset + kernel->size;
+        }
     }
 
     gpe_context->instruction_state.end_offset = end_offset;
