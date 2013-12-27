@@ -162,6 +162,7 @@ gen8_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    int vme_size;
 
     BEGIN_BCS_BATCH(batch, 26);
 
@@ -174,11 +175,12 @@ gen8_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
+    vme_size = vme_context->vme_output.size_block * vme_context->vme_output.num_blocks;
     /* the DW6-10 is for MFX Indirect MV Object Base Address */
     OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0x80000000); /* must set, up to 2G */
+    OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
     OUT_BCS_BATCH(batch, 0);
 
     /* the DW11-15 is for MFX IT-COFF. Not used on encoder */
