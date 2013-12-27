@@ -1204,6 +1204,7 @@ static const uint32_t pp_pa_load_save_pl3_gen8[][4] = {
 #include "shaders/post_processing/gen8/pa_to_pl3.g8b"
 };
 static const uint32_t pp_pa_load_save_pa_gen8[][4] = {
+#include "shaders/post_processing/gen8/pa_to_pa.g8b"
 };
 static const uint32_t pp_rgbx_load_save_nv12_gen8[][4] = {
 #include "shaders/post_processing/gen8/rgbx_to_nv12.g8b"
