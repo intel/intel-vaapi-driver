@@ -1054,7 +1054,7 @@ static struct pp_module pp_modules_gen75[] = {
             NULL,
         },
 
-        gen7_pp_nv12_dndi_initialize,
+        gen8_pp_plx_avs_initialize,
     },
 
     {
