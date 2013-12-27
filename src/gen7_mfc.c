@@ -214,7 +214,7 @@ gen7_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
     OUT_BCS_BATCH(batch, MFX_AVC_IMG_STATE | (16 - 2));
     /*DW1 frame size */
     OUT_BCS_BATCH(batch,
-                  ((width_in_mbs * height_in_mbs) & 0xFFFF));
+                  ((width_in_mbs * height_in_mbs - 1) & 0xFFFF));
     OUT_BCS_BATCH(batch, 
                   ((height_in_mbs - 1) << 16) | 
                   ((width_in_mbs - 1) << 0));

@@ -433,7 +433,7 @@ gen8_mfd_avc_img_state(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 17);
     OUT_BCS_BATCH(batch, MFX_AVC_IMG_STATE | (17 - 2));
     OUT_BCS_BATCH(batch, 
-                  width_in_mbs * height_in_mbs);
+                  (width_in_mbs * height_in_mbs - 1));
     OUT_BCS_BATCH(batch, 
                   ((height_in_mbs - 1) << 16) | 
                   ((width_in_mbs - 1) << 0));
