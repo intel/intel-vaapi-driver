@@ -2559,6 +2559,8 @@ gen7_render_initialize(VADriverContextP ctx)
 /*
  * for GEN8
  */
+#define ALIGNMENT       64
+
 static void 
 gen8_render_initialize(VADriverContextP ctx)
 {
@@ -2603,10 +2605,13 @@ gen8_render_initialize(VADriverContextP ctx)
 
     render_state->scissor_size = 1024;
 
-    size = 4096 + render_state->curbe_size + render_state->sampler_size +
-		render_state->cc_state_size + render_state->cc_viewport_size +
-		render_state->blend_state_size + render_state->sf_clip_size +
-		render_state->scissor_size;
+    size = ALIGN(render_state->curbe_size, ALIGNMENT) +
+        ALIGN(render_state->sampler_size, ALIGNMENT) +
+        ALIGN(render_state->cc_viewport_size, ALIGNMENT) +
+        ALIGN(render_state->cc_state_size, ALIGNMENT) +
+        ALIGN(render_state->blend_state_size, ALIGNMENT) +
+        ALIGN(render_state->sf_clip_size, ALIGNMENT) +
+        ALIGN(render_state->scissor_size, ALIGNMENT);
 
     dri_bo_unreference(render_state->dynamic_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -2620,35 +2625,35 @@ gen8_render_initialize(VADriverContextP ctx)
     render_state->dynamic_state.end_offset = 0;
 
     /* Constant buffer offset */
-    render_state->curbe_offset = ALIGN(end_offset, 64);
-    end_offset += render_state->curbe_size;
+    render_state->curbe_offset = end_offset;
+    end_offset += ALIGN(render_state->curbe_size, ALIGNMENT);
 
     /* Sampler_state  */
-    render_state->sampler_offset = ALIGN(end_offset, 64);
-    end_offset += render_state->sampler_size;
+    render_state->sampler_offset = end_offset;
+    end_offset += ALIGN(render_state->sampler_size, ALIGNMENT);
 
     /* CC_VIEWPORT_state  */
-    render_state->cc_viewport_offset = ALIGN(end_offset, 64);
-    end_offset += render_state->cc_viewport_size;
+    render_state->cc_viewport_offset = end_offset;
+    end_offset += ALIGN(render_state->cc_viewport_size, ALIGNMENT);
 
     /* CC_STATE_state  */
-    render_state->cc_state_offset = ALIGN(end_offset, 64);
-    end_offset += render_state->cc_state_size;
+    render_state->cc_state_offset = end_offset;
+    end_offset += ALIGN(render_state->cc_state_size, ALIGNMENT);
 
     /* Blend_state  */
-    render_state->blend_state_offset = ALIGN(end_offset, 64);
-    end_offset += render_state->blend_state_size;
+    render_state->blend_state_offset = end_offset;
+    end_offset += ALIGN(render_state->blend_state_size, ALIGNMENT);
 
     /* SF_CLIP_state  */
-    render_state->sf_clip_offset = ALIGN(end_offset, 64);
-    end_offset += render_state->sf_clip_size;
+    render_state->sf_clip_offset = end_offset;
+    end_offset += ALIGN(render_state->sf_clip_size, ALIGNMENT);
 
     /* SCISSOR_state  */
-    render_state->scissor_offset = ALIGN(end_offset, 64);
-    end_offset += render_state->scissor_size;
+    render_state->scissor_offset = end_offset;
+    end_offset += ALIGN(render_state->scissor_size, ALIGNMENT);
 
     /* update the end offset of dynamic_state */
-    render_state->dynamic_state.end_offset = ALIGN(end_offset, 64);
+    render_state->dynamic_state.end_offset = end_offset;
 
 }
 
@@ -4534,7 +4539,7 @@ gen8_render_init(VADriverContextP ctx)
     kernel_ptr = (unsigned char *)(render_state->instruction_state.bo->virtual);
     for (i = 0; i < NUM_RENDER_KERNEL; i++) {
         kernel = &render_state->render_kernels[i];
-        kernel_offset = ALIGN(end_offset, 64);
+        kernel_offset = end_offset;
         kernel->kernel_offset = kernel_offset;
 
         if (!kernel->size)
@@ -4542,7 +4547,7 @@ gen8_render_init(VADriverContextP ctx)
 
         memcpy(kernel_ptr + kernel_offset, kernel->bin, kernel->size);
 
-        end_offset += kernel->size;
+        end_offset += ALIGN(kernel->size, ALIGNMENT);
     }
 
     render_state->instruction_state.end_offset = end_offset;
