@@ -2799,7 +2799,7 @@ gen8_render_blend_state(VADriverContextP ctx)
 
     global_blend_state = (struct gen8_global_blend_state*) cc_ptr;
 
-    memset(global_blend_state, 0, sizeof(*global_blend_state));
+    memset(global_blend_state, 0, render_state->blend_state_size);
     /* Global blend state + blend_state for Render Target */
     blend_state = (struct gen8_blend_state_rt *)(global_blend_state + 1);
     blend_state->blend1.logic_op_enable = 1;
@@ -4293,7 +4293,7 @@ gen8_subpicture_render_blend_state(VADriverContextP ctx)
 
     global_blend_state = (struct gen8_global_blend_state*) cc_ptr;
 
-    memset(global_blend_state, 0, sizeof(*global_blend_state));
+    memset(global_blend_state, 0, render_state->blend_state_size);
     /* Global blend state + blend_state for Render Target */
     blend_state = (struct gen8_blend_state_rt *)(global_blend_state + 1);
     blend_state->blend0.color_blend_func = I965_BLENDFUNCTION_ADD;
