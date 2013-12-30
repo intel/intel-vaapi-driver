@@ -204,7 +204,8 @@ i965_put_surface_dri(
         }
     }
 
-    dri_vtable->swap_buffer(ctx, dri_drawable);
+    if (!getenv("INTEL_DEBUG_BENCH"))
+        dri_vtable->swap_buffer(ctx, dri_drawable);
     obj_surface->flags |= SURFACE_DISPLAYED;
 
     if ((obj_surface->flags & SURFACE_ALL_MASK) == SURFACE_DISPLAYED) {
