@@ -2491,7 +2491,6 @@ gen7_render_initialize(VADriverContextP ctx)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
     dri_bo *bo;
-    int size;
 
     /* VERTEX BUFFER */
     dri_bo_unreference(render_state->vb.vertex_buffer);
@@ -2540,10 +2539,9 @@ gen7_render_initialize(VADriverContextP ctx)
 
     /* BLEND STATE */
     dri_bo_unreference(render_state->cc.blend);
-    size = sizeof(struct gen8_global_blend_state) + 2 * sizeof(struct gen8_blend_state_rt);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "blend state",
-                      size,
+                      sizeof(struct gen6_blend_state),
                       4096);
     assert(bo);
     render_state->cc.blend = bo;
