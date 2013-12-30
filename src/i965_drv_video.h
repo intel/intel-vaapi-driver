@@ -60,9 +60,9 @@
 #define I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST   0x00000002
 
 #define DEFAULT_BRIGHTNESS      0
-#define DEFAULT_CONTRAST        10
+#define DEFAULT_CONTRAST        50
 #define DEFAULT_HUE             0
-#define DEFAULT_SATURATION      10
+#define DEFAULT_SATURATION      50
 
 struct i965_surface
 {
