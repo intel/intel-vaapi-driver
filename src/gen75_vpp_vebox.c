@@ -131,6 +131,7 @@ VAStatus vpp_surface_scaling(VADriverContextP ctx,
 
 void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     unsigned int* p_table ;
     int progressive_dn = 1;
     int dndi_top_first = 0;
@@ -155,7 +156,9 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
     */
     p_table = (unsigned int *)proc_ctx->dndi_state_table.ptr;
 
-    *p_table ++ = 0;               // reserved  . w0
+     if (IS_HASWELL(i965->intel.device_id))
+         *p_table ++ = 0;               // reserved  . w0
+
     *p_table ++ = ( 140 << 24 |    // denoise STAD threshold . w1
                     192 << 16 |    // dnmh_history_max
                     0   << 12 |    // reserved
@@ -225,6 +228,8 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
                     13 << 6   |  // chr temp diff th
                     7 );         // chr temp diff low
 
+    if (IS_GEN8(i965->intel.device_id))
+        *p_table ++ = 0;         // parameters for hot pixel, 
 }
 
 void hsw_veb_iecp_std_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
