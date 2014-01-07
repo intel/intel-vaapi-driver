@@ -41,9 +41,11 @@
 #define MAX_INTERFACE_DESC_GEN6      MAX_GPE_KERNELS
 #define MAX_MEDIA_SURFACES_GEN6      34
 
-#define SURFACE_STATE_PADDED_SIZE     MAX(SURFACE_STATE_PADDED_SIZE_0_GEN7, SURFACE_STATE_PADDED_SIZE_1_GEN7)
-#define SURFACE_STATE_OFFSET(index)   (SURFACE_STATE_PADDED_SIZE * (index))
-#define BINDING_TABLE_OFFSET(index)   (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * (index))
+#define SURFACE_STATE_OFFSET_GEN7(index)   (SURFACE_STATE_PADDED_SIZE_GEN7 * (index))
+#define BINDING_TABLE_OFFSET_GEN7(index)   (SURFACE_STATE_OFFSET_GEN7(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * (index))
+
+#define SURFACE_STATE_OFFSET_GEN8(index)   (SURFACE_STATE_PADDED_SIZE_GEN8 * (index))
+#define BINDING_TABLE_OFFSET_GEN8(index)   (SURFACE_STATE_OFFSET_GEN8(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * (index))
 
 #define CURBE_ALLOCATION_SIZE   37              
 #define CURBE_TOTAL_DATA_LENGTH (4 * 32)        
@@ -96,6 +98,41 @@ static struct i965_kernel gen75_vpp_sharpening_kernels[] = {
     },
 }; 
 
+/* sharpening kernels for Broadwell */
+static const unsigned int gen8_gpe_sharpening_h_blur[][4] = {
+   #include "shaders/post_processing/gen8/sharpening_h_blur.g8b"
+};
+static const unsigned int gen8_gpe_sharpening_v_blur[][4] = {
+   #include "shaders/post_processing/gen8/sharpening_v_blur.g8b"
+};
+static const unsigned int gen8_gpe_sharpening_unmask[][4] = {
+   #include "shaders/post_processing/gen8/sharpening_unmask.g8b"
+};
+
+static struct i965_kernel gen8_vpp_sharpening_kernels[] = {
+    {
+        "vpp: sharpening(horizontal blur)",
+        VPP_GPE_SHARPENING,
+        gen8_gpe_sharpening_h_blur,
+        sizeof(gen8_gpe_sharpening_h_blur),
+        NULL
+    },
+    {
+        "vpp: sharpening(vertical blur)",
+        VPP_GPE_SHARPENING,
+        gen8_gpe_sharpening_v_blur,
+        sizeof(gen8_gpe_sharpening_v_blur),
+        NULL
+    },
+    {
+        "vpp: sharpening(unmask)",
+        VPP_GPE_SHARPENING,
+        gen8_gpe_sharpening_unmask,
+        sizeof(gen8_gpe_sharpening_unmask),
+        NULL
+    },
+};
+
 static VAStatus
 gen75_gpe_process_surfaces_setup(VADriverContextP ctx,
                    struct vpp_gpe_context *vpp_gpe_ctx)
@@ -112,14 +149,14 @@ gen75_gpe_process_surfaces_setup(VADriverContextP ctx,
          gen7_gpe_media_rw_surface_setup(ctx,
                                          &vpp_gpe_ctx->gpe_ctx,
                                           obj_surface,
-                                          BINDING_TABLE_OFFSET(i),
-                                          SURFACE_STATE_OFFSET(i));
+                                          BINDING_TABLE_OFFSET_GEN7(i),
+                                          SURFACE_STATE_OFFSET_GEN7(i));
 
          gen75_gpe_media_chroma_surface_setup(ctx,
                                           &vpp_gpe_ctx->gpe_ctx,
                                           obj_surface,
-                                          BINDING_TABLE_OFFSET(i + 1),
-                                          SURFACE_STATE_OFFSET(i + 1));
+                                          BINDING_TABLE_OFFSET_GEN7(i + 1),
+                                          SURFACE_STATE_OFFSET_GEN7(i + 1));
     }
 
     /* Binding output NV12 surface(Luma + Chroma) */
@@ -128,19 +165,19 @@ gen75_gpe_process_surfaces_setup(VADriverContextP ctx,
     gen7_gpe_media_rw_surface_setup(ctx,
                                     &vpp_gpe_ctx->gpe_ctx,
                                     obj_surface,
-                                    BINDING_TABLE_OFFSET(input_surface_sum),
-                                    SURFACE_STATE_OFFSET(input_surface_sum));
+                                    BINDING_TABLE_OFFSET_GEN7(input_surface_sum),
+                                    SURFACE_STATE_OFFSET_GEN7(input_surface_sum));
     gen75_gpe_media_chroma_surface_setup(ctx,
                                     &vpp_gpe_ctx->gpe_ctx,
                                     obj_surface,
-                                    BINDING_TABLE_OFFSET(input_surface_sum + 1),
-                                    SURFACE_STATE_OFFSET(input_surface_sum + 1));
+                                    BINDING_TABLE_OFFSET_GEN7(input_surface_sum + 1),
+                                    SURFACE_STATE_OFFSET_GEN7(input_surface_sum + 1));
     /* Bind kernel return buffer surface */
     gen7_gpe_buffer_suface_setup(ctx,
                                   &vpp_gpe_ctx->gpe_ctx,
                                   &vpp_gpe_ctx->vpp_kernel_return,
-                                  BINDING_TABLE_OFFSET((input_surface_sum + 2)),
-                                  SURFACE_STATE_OFFSET(input_surface_sum + 2));
+                                  BINDING_TABLE_OFFSET_GEN7((input_surface_sum + 2)),
+                                  SURFACE_STATE_OFFSET_GEN7(input_surface_sum + 2));
 
     return VA_STATUS_SUCCESS;
 }
@@ -166,7 +203,7 @@ gen75_gpe_process_interface_setup(VADriverContextP ctx,
         desc->desc2.sampler_count = 0; /* FIXME: */
         desc->desc2.sampler_state_pointer = 0;
         desc->desc3.binding_table_entry_count = 6; /* FIXME: */
-        desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET(0) >> 5);
+        desc->desc3.binding_table_pointer = (BINDING_TABLE_OFFSET_GEN7(0) >> 5);
         desc->desc4.constant_urb_entry_read_offset = 0;
         desc->desc4.constant_urb_entry_read_length = 0;
 
@@ -328,11 +365,254 @@ gen75_gpe_process(VADriverContextP ctx,
     return va_status;
 }
 
+
+static VAStatus
+gen8_gpe_process_surfaces_setup(VADriverContextP ctx,
+                   struct vpp_gpe_context *vpp_gpe_ctx)
+{
+    struct object_surface *obj_surface;
+    unsigned int i = 0;
+    unsigned char input_surface_sum = (1 + vpp_gpe_ctx->forward_surf_sum +
+                                         vpp_gpe_ctx->backward_surf_sum) * 2;
+
+    /* Binding input NV12 surfaces (Luma + Chroma)*/
+    for( i = 0; i < input_surface_sum; i += 2){
+         obj_surface = vpp_gpe_ctx->surface_input_object[i/2];
+         assert(obj_surface);
+         gen8_gpe_media_rw_surface_setup(ctx,
+                                         &vpp_gpe_ctx->gpe_ctx,
+                                          obj_surface,
+                                          BINDING_TABLE_OFFSET_GEN8(i),
+                                          SURFACE_STATE_OFFSET_GEN8(i));
+
+         gen8_gpe_media_chroma_surface_setup(ctx,
+                                          &vpp_gpe_ctx->gpe_ctx,
+                                          obj_surface,
+                                          BINDING_TABLE_OFFSET_GEN8(i + 1),
+                                          SURFACE_STATE_OFFSET_GEN8(i + 1));
+    }
+
+    /* Binding output NV12 surface(Luma + Chroma) */
+    obj_surface = vpp_gpe_ctx->surface_output_object;
+    assert(obj_surface);
+    gen8_gpe_media_rw_surface_setup(ctx,
+                                    &vpp_gpe_ctx->gpe_ctx,
+                                    obj_surface,
+                                    BINDING_TABLE_OFFSET_GEN8(input_surface_sum),
+                                    SURFACE_STATE_OFFSET_GEN8(input_surface_sum));
+    gen8_gpe_media_chroma_surface_setup(ctx,
+                                    &vpp_gpe_ctx->gpe_ctx,
+                                    obj_surface,
+                                    BINDING_TABLE_OFFSET_GEN8(input_surface_sum + 1),
+                                    SURFACE_STATE_OFFSET_GEN8(input_surface_sum + 1));
+    /* Bind kernel return buffer surface */
+    gen7_gpe_buffer_suface_setup(ctx,
+                                  &vpp_gpe_ctx->gpe_ctx,
+                                  &vpp_gpe_ctx->vpp_kernel_return,
+                                  BINDING_TABLE_OFFSET_GEN8((input_surface_sum + 2)),
+                                  SURFACE_STATE_OFFSET_GEN8(input_surface_sum + 2));
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen8_gpe_process_interface_setup(VADriverContextP ctx,
+                    struct vpp_gpe_context *vpp_gpe_ctx)
+{
+    struct gen8_interface_descriptor_data *desc;
+    dri_bo *bo = vpp_gpe_ctx->gpe_ctx.dynamic_state.bo;
+    int i;
+
+    dri_bo_map(bo, 1);
+    assert(bo->virtual);
+    desc = (struct gen8_interface_descriptor_data *)(bo->virtual
+                               + vpp_gpe_ctx->gpe_ctx.idrt_offset);
+
+    /*Setup the descritor table*/
+    for (i = 0; i < vpp_gpe_ctx->sub_shader_sum; i++){
+        struct i965_kernel *kernel;
+        kernel = &vpp_gpe_ctx->gpe_ctx.kernels[i];
+        assert(sizeof(*desc) == 32);
+        /*Setup the descritor table*/
+         memset(desc, 0, sizeof(*desc));
+         desc->desc0.kernel_start_pointer = kernel->kernel_offset >> 6;
+         desc->desc3.sampler_count = 0; /* FIXME: */
+         desc->desc3.sampler_state_pointer = 0;
+         desc->desc4.binding_table_entry_count = 6; /* FIXME: */
+         desc->desc4.binding_table_pointer = (BINDING_TABLE_OFFSET_GEN8(0) >> 5);
+         desc->desc5.constant_urb_entry_read_offset = 0;
+         desc->desc5.constant_urb_entry_read_length = 0;
+
+         desc++;
+    }
+
+    dri_bo_unmap(bo);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen8_gpe_process_constant_fill(VADriverContextP ctx,
+                   struct vpp_gpe_context *vpp_gpe_ctx)
+{
+    dri_bo_map(vpp_gpe_ctx->gpe_ctx.dynamic_state.bo, 1);
+    assert(vpp_gpe_ctx->gpe_ctx.dynamic_state.bo->virtual);
+    unsigned char* constant_buffer = vpp_gpe_ctx->gpe_ctx.dynamic_state.bo->virtual;
+    memcpy(constant_buffer, vpp_gpe_ctx->kernel_param,
+                            vpp_gpe_ctx->kernel_param_size);
+    dri_bo_unmap(vpp_gpe_ctx->gpe_ctx.dynamic_state.bo);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen8_gpe_process_parameters_fill(VADriverContextP ctx,
+                           struct vpp_gpe_context *vpp_gpe_ctx)
+{
+    unsigned int *command_ptr;
+    unsigned int i, size = vpp_gpe_ctx->thread_param_size;
+    unsigned char* position = NULL;
+
+    /* Thread inline data setting*/
+    dri_bo_map(vpp_gpe_ctx->vpp_batchbuffer.bo, 1);
+    command_ptr = vpp_gpe_ctx->vpp_batchbuffer.bo->virtual;
+
+    for(i = 0; i < vpp_gpe_ctx->thread_num; i ++)
+    {
+         *command_ptr++ = (CMD_MEDIA_OBJECT | (size/sizeof(int) + 6 - 2));
+         *command_ptr++ = vpp_gpe_ctx->sub_shader_index;
+         *command_ptr++ = 0;
+         *command_ptr++ = 0;
+         *command_ptr++ = 0;
+         *command_ptr++ = 0;
+
+         /* copy thread inline data */
+         position =(unsigned char*)(vpp_gpe_ctx->thread_param + size * i);
+         memcpy(command_ptr, position, size);
+         command_ptr += size/sizeof(int);
+
+         *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
+         *command_ptr++ = 0;
+    }
+
+    *command_ptr++ = 0;
+    *command_ptr++ = MI_BATCH_BUFFER_END;
+
+    dri_bo_unmap(vpp_gpe_ctx->vpp_batchbuffer.bo);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen8_gpe_process_pipeline_setup(VADriverContextP ctx,
+                   struct vpp_gpe_context *vpp_gpe_ctx)
+{
+    intel_batchbuffer_start_atomic(vpp_gpe_ctx->batch, 0x1000);
+    intel_batchbuffer_emit_mi_flush(vpp_gpe_ctx->batch);
+
+    gen8_gpe_pipeline_setup(ctx, &vpp_gpe_ctx->gpe_ctx, vpp_gpe_ctx->batch);
+
+    gen8_gpe_process_parameters_fill(ctx, vpp_gpe_ctx);
+
+    BEGIN_BATCH(vpp_gpe_ctx->batch, 3);
+    OUT_BATCH(vpp_gpe_ctx->batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
+    OUT_RELOC(vpp_gpe_ctx->batch,
+              vpp_gpe_ctx->vpp_batchbuffer.bo,
+              I915_GEM_DOMAIN_COMMAND, 0,
+              0);
+    OUT_BATCH(vpp_gpe_ctx->batch, 0);
+
+    ADVANCE_BATCH(vpp_gpe_ctx->batch);
+
+    intel_batchbuffer_end_atomic(vpp_gpe_ctx->batch);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen8_gpe_process_init(VADriverContextP ctx,
+                 struct vpp_gpe_context *vpp_gpe_ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    dri_bo *bo;
+
+    unsigned int batch_buf_size = vpp_gpe_ctx->thread_num *
+                 (vpp_gpe_ctx->thread_param_size + 6 * sizeof(int)) + 16;
+
+    vpp_gpe_ctx->vpp_kernel_return.num_blocks = vpp_gpe_ctx->thread_num;
+    vpp_gpe_ctx->vpp_kernel_return.size_block = 16;
+    vpp_gpe_ctx->vpp_kernel_return.pitch = 1;
+
+    unsigned int kernel_return_size =  vpp_gpe_ctx->vpp_kernel_return.num_blocks
+           * vpp_gpe_ctx->vpp_kernel_return.size_block;
+
+    dri_bo_unreference(vpp_gpe_ctx->vpp_batchbuffer.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "vpp batch buffer",
+                       batch_buf_size, 0x1000);
+    vpp_gpe_ctx->vpp_batchbuffer.bo = bo;
+    dri_bo_reference(vpp_gpe_ctx->vpp_batchbuffer.bo);
+
+    dri_bo_unreference(vpp_gpe_ctx->vpp_kernel_return.bo);
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "vpp kernel return buffer",
+                       kernel_return_size, 0x1000);
+    vpp_gpe_ctx->vpp_kernel_return.bo = bo;
+    dri_bo_reference(vpp_gpe_ctx->vpp_kernel_return.bo);
+
+    vpp_gpe_ctx->gpe_context_init(ctx, &vpp_gpe_ctx->gpe_ctx);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen8_gpe_process_prepare(VADriverContextP ctx,
+                    struct vpp_gpe_context *vpp_gpe_ctx)
+{
+    /*Setup all the memory object*/
+    gen8_gpe_process_surfaces_setup(ctx, vpp_gpe_ctx);
+    gen8_gpe_process_interface_setup(ctx, vpp_gpe_ctx);
+    //gen8_gpe_process_constant_setup(ctx, vpp_gpe_ctx);
+
+    /*Programing media pipeline*/
+    gen8_gpe_process_pipeline_setup(ctx, vpp_gpe_ctx);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen8_gpe_process_run(VADriverContextP ctx,
+                struct vpp_gpe_context *vpp_gpe_ctx)
+{
+    intel_batchbuffer_flush(vpp_gpe_ctx->batch);
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen8_gpe_process(VADriverContextP ctx,
+                  struct vpp_gpe_context * vpp_gpe_ctx)
+{
+    VAStatus va_status = VA_STATUS_SUCCESS;
+
+    va_status = gen8_gpe_process_init(ctx, vpp_gpe_ctx);
+    va_status |=gen8_gpe_process_prepare(ctx, vpp_gpe_ctx);
+    va_status |=gen8_gpe_process_run(ctx, vpp_gpe_ctx);
+
+    return va_status;
+}
+
 static VAStatus
 vpp_gpe_process(VADriverContextP ctx,
                   struct vpp_gpe_context * vpp_gpe_ctx)
 {
-    return gen75_gpe_process(ctx, vpp_gpe_ctx);
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    if (IS_HASWELL(i965->intel.device_id))
+       return gen75_gpe_process(ctx, vpp_gpe_ctx);
+    else if (IS_GEN8(i965->intel.device_id))
+       return gen8_gpe_process(ctx, vpp_gpe_ctx);
+
+     return VA_STATUS_ERROR_UNIMPLEMENTED;
 }
 
 static VAStatus
@@ -366,9 +646,15 @@ vpp_gpe_process_sharpening(VADriverContextP ctx,
 
      if(vpp_gpe_ctx->is_first_frame){
          vpp_gpe_ctx->sub_shader_sum = 3;
-         i965_gpe_load_kernels(ctx,
+         struct i965_kernel * vpp_kernels;
+         if (IS_HASWELL(i965->intel.device_id))
+             vpp_kernels = gen75_vpp_sharpening_kernels;
+         else if (IS_GEN8(i965->intel.device_id))
+             vpp_kernels = gen8_vpp_sharpening_kernels;
+
+         vpp_gpe_ctx->gpe_load_kernels(ctx,
                                &vpp_gpe_ctx->gpe_ctx,
-                               gen75_vpp_sharpening_kernels,
+                               vpp_kernels,
                                vpp_gpe_ctx->sub_shader_sum);
      }
 
@@ -586,21 +872,13 @@ vpp_gpe_context_init(VADriverContextP ctx)
     struct vpp_gpe_context  *vpp_gpe_ctx = calloc(1, sizeof(struct vpp_gpe_context));
     struct i965_gpe_context *gpe_ctx = &(vpp_gpe_ctx->gpe_ctx);
 
-    assert(IS_HASWELL(i965->intel.device_id));
+    assert(IS_HASWELL(i965->intel.device_id) ||
+           IS_GEN8(i965->intel.device_id));
 
-    vpp_gpe_ctx->gpe_context_init     = i965_gpe_context_init;
-    vpp_gpe_ctx->gpe_context_destroy  = i965_gpe_context_destroy;
-    vpp_gpe_ctx->gpe_load_kernels     = i965_gpe_load_kernels;
     vpp_gpe_ctx->surface_tmp = VA_INVALID_ID;
     vpp_gpe_ctx->surface_tmp_object = NULL;
-
-    gpe_ctx->surface_state_binding_table.length = 
-               (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
-
-    gpe_ctx->idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
-    gpe_ctx->idrt.entry_size = sizeof(struct gen6_interface_descriptor_data);
-
-    gpe_ctx->curbe.length = CURBE_TOTAL_DATA_LENGTH;
+    vpp_gpe_ctx->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, 0);
+    vpp_gpe_ctx->is_first_frame = 1;
 
     gpe_ctx->vfe_state.max_num_threads = 60 - 1;
     gpe_ctx->vfe_state.num_urb_entries = 16;
@@ -608,9 +886,28 @@ vpp_gpe_context_init(VADriverContextP ctx)
     gpe_ctx->vfe_state.urb_entry_size = 59 - 1;
     gpe_ctx->vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
  
-    vpp_gpe_ctx->batch = intel_batchbuffer_new(&i965->intel, I915_EXEC_RENDER, 0);
+    if (IS_HASWELL(i965->intel.device_id)) {
+        vpp_gpe_ctx->gpe_context_init     = i965_gpe_context_init;
+        vpp_gpe_ctx->gpe_context_destroy  = i965_gpe_context_destroy;
+        vpp_gpe_ctx->gpe_load_kernels     = i965_gpe_load_kernels;
+        gpe_ctx->surface_state_binding_table.length =
+               (SURFACE_STATE_PADDED_SIZE_GEN7 + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
-    vpp_gpe_ctx->is_first_frame = 1; 
+        gpe_ctx->curbe.length = CURBE_TOTAL_DATA_LENGTH;
+        gpe_ctx->idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
+        gpe_ctx->idrt.entry_size = sizeof(struct gen6_interface_descriptor_data);
+
+    } else if (IS_GEN8(i965->intel.device_id)) {
+        vpp_gpe_ctx->gpe_context_init     = gen8_gpe_context_init;
+        vpp_gpe_ctx->gpe_context_destroy  = gen8_gpe_context_destroy;
+        vpp_gpe_ctx->gpe_load_kernels     = gen8_gpe_load_kernels;
+        gpe_ctx->surface_state_binding_table.length =
+               (SURFACE_STATE_PADDED_SIZE_GEN8 + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
+
+        gpe_ctx->curbe_size = CURBE_TOTAL_DATA_LENGTH;
+        gpe_ctx->idrt_size  = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
+
+    }
 
     return vpp_gpe_ctx;
 }
