@@ -101,14 +101,14 @@ gen75_vpp_gpe(VADriverContextP ctx,
      VAStatus va_status = VA_STATUS_SUCCESS;
 
      if(proc_ctx->vpp_gpe_ctx == NULL){
-         proc_ctx->vpp_gpe_ctx = gen75_gpe_context_init(ctx);
+         proc_ctx->vpp_gpe_ctx = vpp_gpe_context_init(ctx);
      }
    
      proc_ctx->vpp_gpe_ctx->pipeline_param = proc_ctx->pipeline_param;
      proc_ctx->vpp_gpe_ctx->surface_pipeline_input_object = proc_ctx->surface_pipeline_input_object;
      proc_ctx->vpp_gpe_ctx->surface_output_object = proc_ctx->surface_render_output_object;
 
-     va_status = gen75_gpe_process_picture(ctx, proc_ctx->vpp_gpe_ctx);
+     va_status = vpp_gpe_process_picture(ctx, proc_ctx->vpp_gpe_ctx);
  
      return va_status;     
 }
@@ -254,7 +254,7 @@ gen75_proc_context_destroy(void *hw_context)
     }
 
     if(proc_ctx->vpp_gpe_ctx){
-       gen75_gpe_context_destroy(ctx,proc_ctx->vpp_gpe_ctx);
+       vpp_gpe_context_destroy(ctx,proc_ctx->vpp_gpe_ctx);
        proc_ctx->vpp_gpe_ctx = NULL;
     }
 

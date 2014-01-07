@@ -79,6 +79,7 @@ struct vpp_gpe_context{
   
     unsigned char * kernel_param;  
     unsigned int kernel_param_size;
+
     unsigned char * thread_param;  
     unsigned int thread_param_size;
     unsigned int thread_num;
@@ -95,33 +96,26 @@ struct vpp_gpe_context{
     unsigned int in_frame_h;
     unsigned int is_first_frame;
 
-    void (*vpp_media_rw_surface_setup)(VADriverContextP ctx,
-                                       struct i965_gpe_context *gpe_context,
-                                       struct object_surface *obj_surface,
-                                       unsigned long binding_table_offset,
-                                       unsigned long surface_state_offset);
-	
-    void (*vpp_buffer_surface_setup)(VADriverContextP ctx,
-                                    struct i965_gpe_context *gpe_context,
-                                    struct i965_buffer_surface *buffer_surface,
-                                    unsigned long binding_table_offset,
-                                    unsigned long surface_state_offset);
+    void (*gpe_context_init)(VADriverContextP ctx,
+                             struct i965_gpe_context *gpe_context);
 
-   void (*vpp_media_chroma_surface_setup)(VADriverContextP ctx,
-                                         struct i965_gpe_context *gpe_context,
-                                         struct object_surface *obj_surface,
-                                         unsigned long binding_table_offset,
-                                         unsigned long surface_state_offset);
+    void (*gpe_context_destroy)(struct i965_gpe_context *gpe_context);
+
+    void (*gpe_load_kernels)(VADriverContextP ctx,
+                             struct i965_gpe_context *gpe_context,
+                             struct i965_kernel *kernel_list,
+                             unsigned int num_kernels);
+
 };
 
 struct vpp_gpe_context *
-gen75_gpe_context_init(VADriverContextP ctx); 
+vpp_gpe_context_init(VADriverContextP ctx);
 
 void 
-gen75_gpe_context_destroy(VADriverContextP ctx, 
-                          struct vpp_gpe_context* vpp_context);
+vpp_gpe_context_destroy(VADriverContextP ctx,
+                        struct vpp_gpe_context* vpp_context);
 
 VAStatus
-gen75_gpe_process_picture(VADriverContextP ctx, 
-                    struct vpp_gpe_context * vpp_context); 
+vpp_gpe_process_picture(VADriverContextP ctx,
+                        struct vpp_gpe_context * vpp_context);
 #endif
