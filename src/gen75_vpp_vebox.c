@@ -1360,8 +1360,8 @@ void bdw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
                   0 << 11 |       // vignette enable
                   0 << 10 |       // demosaic enable
                   di_output_frames_flag << 8  |       // DI output frame
-                  0 << 7  |       // 444->422 downsample method
-                  0 << 6  |       // 422->420 downsample method
+                  1 << 7  |       // 444->422 downsample method
+                  1 << 6  |       // 422->420 downsample method
                   is_first_frame  << 5  |   // DN/DI first frame
                   is_di_enabled   << 4  |             // DI enable
                   is_dn_enabled   << 3  |             // DN enable
