@@ -2855,7 +2855,7 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
                   pic_param->pic_fields.bits.segmentation_enabled << 8 |
                   0 << 7 | /* segmentation id streamin disabled */
                   0 << 6 | /* segmentation id streamout disabled */
-                  pic_param->pic_fields.bits.key_frame << 5 |
+                  (pic_param->pic_fields.bits.key_frame == 0 ? 1 : 0) << 5 |    /* 0 indicate an intra frame in VP8 stream/spec($9.1)*/
                   pic_param->pic_fields.bits.filter_type << 4 |
                   (pic_param->pic_fields.bits.version == 3) << 1 | /* full pixel mode for version 3 */
                   !!pic_param->pic_fields.bits.version << 0); /* version 0: 6 tap */
@@ -2964,7 +2964,7 @@ gen8_mfd_vp8_bsd_object(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     int i, log2num;
-    unsigned int offset = slice_param->slice_data_offset;
+    unsigned int offset = slice_param->slice_data_offset + ((slice_param->macroblock_offset + 7 ) >> 3);
 
     assert(slice_param->num_of_partitions >= 2);
     assert(slice_param->num_of_partitions <= 9);
@@ -2974,7 +2974,8 @@ gen8_mfd_vp8_bsd_object(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 22);
     OUT_BCS_BATCH(batch, MFD_VP8_BSD_OBJECT | (22 - 2));
     OUT_BCS_BATCH(batch,
-                  pic_param->bool_coder_ctx.count << 16 | /* Partition 0 CPBAC Entropy Count */
+                  // XXX, when bool_coder_ctx.count (remaining bits in value) is 0, 0 is also expected for CPBAC Entropy Count?
+                  ((8-pic_param->bool_coder_ctx.count)%8) << 16 | /* Partition 0 CPBAC Entropy Count */
                   pic_param->bool_coder_ctx.range <<  8 | /* Partition 0 Count Entropy Range */
                   log2num << 4 |
                   (slice_param->macroblock_offset & 0x7));
