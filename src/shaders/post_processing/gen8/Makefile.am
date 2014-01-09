@@ -28,8 +28,8 @@ INTEL_PP_G8A = \
 	PA_AVS_Buf_3.g8a		\
 	Save_AVS_NV12.g8a		\
 	Save_AVS_PL3.g8a		\
-	Save_AVS_RGBX.g8a		\        
-	Save_AVS_PA.g8a			\        
+	Save_AVS_RGBX.g8a		\
+	Save_AVS_PA.g8a			\
 	Set_AVS_Buf_0123_PL2.g8a	\
 	Set_AVS_Buf_0123_PL3.g8a	\
 	Set_AVS_Buf_0123_BGRA.g8a	\
