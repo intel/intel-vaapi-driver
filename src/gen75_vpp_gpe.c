@@ -359,12 +359,19 @@ gen75_gpe_process(VADriverContextP ctx,
     VAStatus va_status = VA_STATUS_SUCCESS;
 
     va_status = gen75_gpe_process_init(ctx, vpp_gpe_ctx);
-    va_status |=gen75_gpe_process_prepare(ctx, vpp_gpe_ctx);
-    va_status |=gen75_gpe_process_run(ctx, vpp_gpe_ctx);
- 
-    return va_status;
-}
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
 
+    va_status = gen75_gpe_process_prepare(ctx, vpp_gpe_ctx);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    va_status = gen75_gpe_process_run(ctx, vpp_gpe_ctx);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    return VA_STATUS_SUCCESS;
+}
 
 static VAStatus
 gen8_gpe_process_surfaces_setup(VADriverContextP ctx,
@@ -596,10 +603,18 @@ gen8_gpe_process(VADriverContextP ctx,
     VAStatus va_status = VA_STATUS_SUCCESS;
 
     va_status = gen8_gpe_process_init(ctx, vpp_gpe_ctx);
-    va_status |=gen8_gpe_process_prepare(ctx, vpp_gpe_ctx);
-    va_status |=gen8_gpe_process_run(ctx, vpp_gpe_ctx);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
 
-    return va_status;
+    va_status = gen8_gpe_process_prepare(ctx, vpp_gpe_ctx);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    va_status = gen8_gpe_process_run(ctx, vpp_gpe_ctx);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    return VA_STATUS_SUCCESS;
 }
 
 static VAStatus
