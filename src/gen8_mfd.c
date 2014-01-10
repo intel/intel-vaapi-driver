@@ -2965,6 +2965,15 @@ gen8_mfd_vp8_bsd_object(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     int i, log2num;
     unsigned int offset = slice_param->slice_data_offset + ((slice_param->macroblock_offset + 7 ) >> 3);
+    unsigned int used_bits = 8-pic_param->bool_coder_ctx.count;
+    unsigned int partition_size_0 = slice_param->partition_size[0];
+
+    assert(pic_param->bool_coder_ctx.count >= 0 && pic_param->bool_coder_ctx.count <= 7);
+    if (used_bits == 8) {
+        used_bits = 0;
+        offset += 1;
+        partition_size_0 -= 1;
+    }
 
     assert(slice_param->num_of_partitions >= 2);
     assert(slice_param->num_of_partitions <= 9);
@@ -2974,8 +2983,7 @@ gen8_mfd_vp8_bsd_object(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 22);
     OUT_BCS_BATCH(batch, MFD_VP8_BSD_OBJECT | (22 - 2));
     OUT_BCS_BATCH(batch,
-                  // XXX, when bool_coder_ctx.count (remaining bits in value) is 0, 0 is also expected for CPBAC Entropy Count?
-                  ((8-pic_param->bool_coder_ctx.count)%8) << 16 | /* Partition 0 CPBAC Entropy Count */
+                  used_bits << 16 | /* Partition 0 CPBAC Entropy Count */
                   pic_param->bool_coder_ctx.range <<  8 | /* Partition 0 Count Entropy Range */
                   log2num << 4 |
                   (slice_param->macroblock_offset & 0x7));
@@ -2983,7 +2991,10 @@ gen8_mfd_vp8_bsd_object(VADriverContextP ctx,
                   pic_param->bool_coder_ctx.value << 24 | /* Partition 0 Count Entropy Value */
                   0);
 
-    for (i = 0; i < 9; i++) {
+    OUT_BCS_BATCH(batch, partition_size_0);
+    OUT_BCS_BATCH(batch, offset);
+    offset += partition_size_0;
+    for (i = 1; i < 9; i++) {
         if (i < slice_param->num_of_partitions) {
             OUT_BCS_BATCH(batch, slice_param->partition_size[i]);
             OUT_BCS_BATCH(batch, offset);
