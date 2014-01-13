@@ -268,6 +268,7 @@ gen5_fill_avc_ref_idx_state(
 )
 {
     unsigned int i, n, frame_idx;
+    int found;
 
     for (i = 0, n = 0; i < ref_list_count; i++) {
         const VAPictureH264 * const va_pic = &ref_list[i];
@@ -275,16 +276,21 @@ gen5_fill_avc_ref_idx_state(
         if (va_pic->flags & VA_PICTURE_H264_INVALID)
             continue;
 
+        found = 0;
         for (frame_idx = 0; frame_idx < MAX_GEN_REFERENCE_FRAMES; frame_idx++) {
             const GenFrameStore * const fs = &frame_store[frame_idx];
             if (fs->surface_id != VA_INVALID_ID &&
                 fs->surface_id == va_pic->picture_id) {
-                assert(frame_idx == fs->frame_store_id);
+                found = 1;
                 break;
             }
         }
-        assert(frame_idx < MAX_GEN_REFERENCE_FRAMES);
-        state[n++] = get_ref_idx_state_1(va_pic, frame_idx);
+
+        if (found) {
+            state[n++] = get_ref_idx_state_1(va_pic, frame_idx);
+        } else {
+            WARN_ONCE("Invalid Slice reference frame list !!!. It is not included in DPB \n");
+        }
     }
 
     for (; n < 32; n++)
