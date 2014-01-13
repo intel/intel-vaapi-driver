@@ -420,6 +420,7 @@ intel_update_avc_frame_store_index(VADriverContextP ctx,
         /* add the new reference frame into the internal DPB */
         if (!found) {
             int frame_idx;
+            int slot_found;
             struct object_surface *obj_surface = decode_state->reference_objects[i];
 
             /* 
@@ -428,60 +429,29 @@ intel_update_avc_frame_store_index(VADriverContextP ctx,
              */
             i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
+            slot_found = 0;
+            frame_idx = -1;
             /* Find a free frame store index */
-            for (frame_idx = 0; frame_idx < MAX_GEN_REFERENCE_FRAMES; frame_idx++) {
-                for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
-                    if (frame_store[j].surface_id == VA_INVALID_ID ||
-                        frame_store[j].obj_surface == NULL)
-                        continue;
-
-                    if (frame_store[j].frame_store_id == frame_idx) /* the store index is in use */
-                        break;
-                }
-
-                if (j == MAX_GEN_REFERENCE_FRAMES)
-                    break;
-            }
-
-            assert(frame_idx < MAX_GEN_REFERENCE_FRAMES);
-
             for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
                 if (frame_store[j].surface_id == VA_INVALID_ID ||
                     frame_store[j].obj_surface == NULL) {
-                    frame_store[j].surface_id = ref_pic->picture_id;
-                    frame_store[j].frame_store_id = frame_idx;
-                    frame_store[j].obj_surface = obj_surface;
+                    frame_idx = j;
+                    slot_found = 1;
                     break;
                 }
             }
-        }
-    }
 
-    /* sort */
-    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES - 1; i++) {
-        if (frame_store[i].surface_id != VA_INVALID_ID &&
-            frame_store[i].obj_surface != NULL &&
-            frame_store[i].frame_store_id == i)
-            continue;
 
-        for (j = i + 1; j < MAX_GEN_REFERENCE_FRAMES; j++) {
-            if (frame_store[j].surface_id != VA_INVALID_ID &&
-                frame_store[j].obj_surface != NULL &&
-                frame_store[j].frame_store_id == i) {
-                VASurfaceID id = frame_store[i].surface_id;
-                int frame_idx = frame_store[i].frame_store_id;
-                struct object_surface *obj_surface = frame_store[i].obj_surface;
-
-                frame_store[i].surface_id = frame_store[j].surface_id;
-                frame_store[i].frame_store_id = frame_store[j].frame_store_id;
-                frame_store[i].obj_surface = frame_store[j].obj_surface;
-                frame_store[j].surface_id = id;
+	    if (slot_found) {
+                frame_store[j].surface_id = ref_pic->picture_id;
                 frame_store[j].frame_store_id = frame_idx;
                 frame_store[j].obj_surface = obj_surface;
-                break;
-            }
+            } else {
+                WARN_ONCE("Not free slot for DPB reference list!!!\n");
+	    }
         }
     }
+
 }
 
 void
