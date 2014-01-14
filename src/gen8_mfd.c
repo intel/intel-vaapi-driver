@@ -2770,6 +2770,11 @@ gen8_mfd_vp8_decode_init(VADriverContextP ctx,
     assert(width_in_mbs > 0 && width_in_mbs <= 256); /* 4K */
     assert(height_in_mbs > 0 && height_in_mbs <= 256);
 
+    intel_update_vp8_frame_store_index(ctx,
+                                       decode_state,
+                                       pic_param,
+                                       gen7_mfd_context->reference_surface);
+
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);

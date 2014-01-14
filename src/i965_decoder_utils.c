@@ -493,6 +493,58 @@ intel_update_vc1_frame_store_index(VADriverContextP ctx,
 
 }
 
+void
+intel_update_vp8_frame_store_index(VADriverContextP ctx,
+                                   struct decode_state *decode_state,
+                                   VAPictureParameterBufferVP8 *pic_param,
+                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES])
+{
+    struct object_surface *obj_surface;
+    int i;
+
+    obj_surface = decode_state->reference_objects[0];
+
+    if (pic_param->last_ref_frame == VA_INVALID_ID ||
+        !obj_surface ||
+        !obj_surface->bo) {
+        frame_store[0].surface_id = VA_INVALID_ID;
+        frame_store[0].obj_surface = NULL;
+    } else {
+        frame_store[0].surface_id = pic_param->last_ref_frame;
+        frame_store[0].obj_surface = obj_surface;
+    }
+
+    obj_surface = decode_state->reference_objects[1];
+
+    if (pic_param->golden_ref_frame == VA_INVALID_ID ||
+        !obj_surface ||
+        !obj_surface->bo) {
+        frame_store[1].surface_id = frame_store[0].surface_id;
+        frame_store[1].obj_surface = frame_store[0].obj_surface;
+    } else {
+        frame_store[1].surface_id = pic_param->golden_ref_frame;
+        frame_store[1].obj_surface = obj_surface;
+    }
+
+    obj_surface = decode_state->reference_objects[2];
+
+    if (pic_param->alt_ref_frame == VA_INVALID_ID ||
+        !obj_surface ||
+        !obj_surface->bo) {
+        frame_store[2].surface_id = frame_store[0].surface_id;
+        frame_store[2].obj_surface = frame_store[0].obj_surface;
+    } else {
+        frame_store[2].surface_id = pic_param->alt_ref_frame;
+        frame_store[2].obj_surface = obj_surface;
+    }
+
+    for (i = 3; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        frame_store[i].surface_id = frame_store[i % 2].surface_id;
+        frame_store[i].obj_surface = frame_store[i % 2].obj_surface;
+    }
+
+}
+
 static VAStatus
 intel_decoder_check_avc_parameter(VADriverContextP ctx,
                                   struct decode_state *decode_state)
