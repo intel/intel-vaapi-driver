@@ -2998,7 +2998,8 @@ gen8_mfd_vp8_bsd_object(VADriverContextP ctx,
 
     OUT_BCS_BATCH(batch, partition_size_0);
     OUT_BCS_BATCH(batch, offset);
-    offset += partition_size_0;
+    //partion sizes in bytes are present after the above first partition when there are more than one token partition
+    offset += (partition_size_0 + 3 * (slice_param->num_of_partitions - 2));
     for (i = 1; i < 9; i++) {
         if (i < slice_param->num_of_partitions) {
             OUT_BCS_BATCH(batch, slice_param->partition_size[i]);
