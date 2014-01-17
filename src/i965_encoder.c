@@ -367,6 +367,13 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     for (i = 0; i < obj_config->num_attribs; i++) {
         if (obj_config->attrib_list[i].type == VAConfigAttribRateControl) {
             encoder_context->rate_control_mode = obj_config->attrib_list[i].value;
+
+            if (encoder_context->codec == CODEC_MPEG2 &&
+                encoder_context->rate_control_mode & VA_RC_CBR) {
+                WARN_ONCE("Don't support CBR for MPEG-2 encoding\n");
+                encoder_context->rate_control_mode &= ~VA_RC_CBR;
+            }
+
             break;
         }
     }

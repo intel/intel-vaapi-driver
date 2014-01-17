@@ -527,7 +527,11 @@ i965_GetConfigAttributes(VADriverContextP ctx,
 
         case VAConfigAttribRateControl:
             if (entrypoint == VAEntrypointEncSlice) {
-                attrib_list[i].value = VA_RC_CBR | VA_RC_CQP;
+                attrib_list[i].value = VA_RC_CQP;
+
+                if (profile != VAProfileMPEG2Main &&
+                    profile != VAProfileMPEG2Simple)
+                    attrib_list[i].value |= VA_RC_CBR;
                 break;
             }
 

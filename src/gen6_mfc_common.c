@@ -391,6 +391,8 @@ void intel_mfc_brc_prepare(struct encode_state *encode_state,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
     if (rate_control_mode == VA_RC_CBR) {
+        assert(encoder_context->codec != CODEC_MPEG2);
+
         /*Programing bit rate control */
         if ( mfc_context->bit_rate_control_context[SLICE_TYPE_I].MaxSizeInWord == 0 ) {
             intel_mfc_bit_rate_control_context_init(encode_state, mfc_context);
