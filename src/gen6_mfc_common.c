@@ -89,8 +89,8 @@ intel_mfc_bit_rate_control_context_init(struct encode_state *encode_state,
                                         struct gen6_mfc_context *mfc_context)
 {
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
-    int height_in_mbs = (mfc_context->surface_state.height + 15) / 16;
+    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
+    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
     float fps =  pSequenceParameter->time_scale * 0.5 / pSequenceParameter->num_units_in_tick ;
     int inter_mb_size = pSequenceParameter->bits_per_second * 1.0 / (fps+4.0) / width_in_mbs / height_in_mbs;
     int intra_mb_size = inter_mb_size * 5.0;
