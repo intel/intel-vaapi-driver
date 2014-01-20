@@ -5114,14 +5114,12 @@ static void
 gen8_pp_upload_constants(VADriverContextP ctx,
                          struct i965_post_processing_context *pp_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     unsigned char *constant_buffer;
     int param_size;
 
     assert(sizeof(struct gen7_pp_static_parameter) == 192);
 
-    if (IS_GEN8(i965->intel.device_id))
-        param_size = sizeof(struct gen7_pp_static_parameter);
+    param_size = sizeof(struct gen7_pp_static_parameter);
 
     dri_bo_map(pp_context->dynamic_state.bo, 1);
     assert(pp_context->dynamic_state.bo->virtual);
