@@ -3033,12 +3033,18 @@ gen8_mfd_vp8_decode_picture(VADriverContextP ctx,
     pic_param = (VAPictureParameterBufferVP8 *)decode_state->pic_param->buffer;
 
     /* one slice per frame */
-    assert(decode_state->num_slice_params == 1);
-    assert(decode_state->slice_params[0]->num_elements == 1);
-    assert(decode_state->slice_params && decode_state->slice_params[0]->buffer);
-    assert(decode_state->slice_datas[0]->bo);
+    if (decode_state->num_slice_params != 1 ||
+        (!decode_state->slice_params ||
+         !decode_state->slice_params[0] ||
+         (decode_state->slice_params[0]->num_elements != 1 || decode_state->slice_params[0]->buffer == NULL)) ||
+        (!decode_state->slice_datas ||
+         !decode_state->slice_datas[0] ||
+         !decode_state->slice_datas[0]->bo) ||
+        !decode_state->probability_data) {
+        WARN_ONCE("Wrong parameters for VP8 decoding\n");
 
-    assert(decode_state->probability_data);
+        return;
+    }
 
     slice_param = (VASliceParameterBufferVP8 *)decode_state->slice_params[0]->buffer;
     slice_data_bo = decode_state->slice_datas[0]->bo;
