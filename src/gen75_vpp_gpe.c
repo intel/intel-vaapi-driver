@@ -281,7 +281,7 @@ gen75_gpe_process_pipeline_setup(VADriverContextP ctx,
     gen75_gpe_process_parameters_fill(ctx, vpp_gpe_ctx);
    
     BEGIN_BATCH(vpp_gpe_ctx->batch, 2);
-    OUT_BATCH(vpp_gpe_ctx->batch, MI_BATCH_BUFFER_START | (2 << 6));
+    OUT_BATCH(vpp_gpe_ctx->batch, MI_BATCH_BUFFER_START | (1 << 8));
     OUT_RELOC(vpp_gpe_ctx->batch,
               vpp_gpe_ctx->vpp_batchbuffer.bo,
               I915_GEM_DOMAIN_COMMAND, 0, 

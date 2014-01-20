@@ -638,7 +638,7 @@ static void gen7_vme_pipeline_programing(VADriverContextP ctx,
     intel_batchbuffer_start_atomic(batch, 0x1000);
     gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
     BEGIN_BATCH(batch, 2);
-    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
+    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8));
     OUT_RELOC(batch,
               vme_context->vme_batchbuffer.bo,
               I915_GEM_DOMAIN_COMMAND, 0, 
@@ -917,7 +917,7 @@ gen7_vme_mpeg2_pipeline_programing(VADriverContextP ctx,
     intel_batchbuffer_start_atomic(batch, 0x1000);
     gen6_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
     BEGIN_BATCH(batch, 2);
-    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
+    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8));
     OUT_RELOC(batch,
               vme_context->vme_batchbuffer.bo,
               I915_GEM_DOMAIN_COMMAND, 0, 

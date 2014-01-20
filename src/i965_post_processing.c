@@ -5419,7 +5419,7 @@ gen6_pp_object_walker(VADriverContextP ctx,
     	ADVANCE_BATCH(batch);
     } else {
 	BEGIN_BATCH(batch, 2);
-	OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
+	OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8));
 	OUT_RELOC(batch, command_buffer, 
               I915_GEM_DOMAIN_COMMAND, 0, 
               0);
