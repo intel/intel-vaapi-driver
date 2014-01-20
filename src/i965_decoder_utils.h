@@ -99,4 +99,11 @@ intel_mpeg2_find_next_slice(struct decode_state *decode_state,
                             int *group_idx,
                             int *element_idx);
 
+
+void
+intel_update_vp8_frame_store_index(VADriverContextP ctx,
+                                   struct decode_state *decode_state,
+                                   VAPictureParameterBufferVP8 *pic_param,
+                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES]);
+
 #endif /* I965_DECODER_UTILS_H */
