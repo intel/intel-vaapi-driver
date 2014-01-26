@@ -547,6 +547,7 @@ intel_update_vp8_frame_store_index(VADriverContextP ctx,
 
 static VAStatus
 intel_decoder_check_avc_parameter(VADriverContextP ctx,
+                                  VAProfile h264_profile,
                                   struct decode_state *decode_state)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -565,6 +566,14 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
 
     if (pic_param->CurrPic.picture_id != decode_state->current_render_target)
         goto error;
+
+    if ((h264_profile != VAProfileH264Baseline)) {
+       if (pic_param->num_slice_groups_minus1 ||
+           pic_param->pic_fields.bits.redundant_pic_cnt_present_flag) {
+           WARN_ONCE("Unsupported the FMO/ASO constraints!!!\n");
+           goto error;
+       }
+    }
 
     for (i = 0; i < 16; i++) {
         if (pic_param->ReferenceFrames[i].flags & VA_PICTURE_H264_INVALID ||
@@ -752,7 +761,7 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
     case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
-        vaStatus = intel_decoder_check_avc_parameter(ctx, decode_state);
+        vaStatus = intel_decoder_check_avc_parameter(ctx, profile, decode_state);
         break;
 
     case VAProfileVC1Simple:
