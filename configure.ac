@@ -76,7 +76,7 @@ PKG_CHECK_MODULES([DRM], [libdrm >= $LIBDRM_VERSION])
 AC_SUBST(LIBDRM_VERSION)
 
 dnl Check for gen4asm
-PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.3], [gen4asm=yes], [gen4asm=no])
+PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.5], [gen4asm=yes], [gen4asm=no])
 AM_CONDITIONAL(HAVE_GEN4ASM, test x$gen4asm = xyes)
 AC_PATH_PROG([GEN4ASM], [intel-gen4asm])
 
