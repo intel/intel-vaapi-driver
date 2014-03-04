@@ -2181,10 +2181,6 @@ gen8_mfd_jpeg_bsd_object(VADriverContextP ctx,
 #ifdef JPEG_WA
 
 VAStatus 
-i965_DestroySurfaces(VADriverContextP ctx,
-                     VASurfaceID *surface_list,
-                     int num_surfaces);
-VAStatus 
 i965_CreateSurfaces(VADriverContextP ctx,
                     int width,
                     int height,

@@ -45,10 +45,6 @@ extern Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_con
 extern Bool gen7_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 VAStatus 
-i965_DestroySurfaces(VADriverContextP ctx,
-                     VASurfaceID *surface_list,
-                     int num_surfaces);
-VAStatus 
 i965_CreateSurfaces(VADriverContextP ctx,
                     int width,
                     int height,

@@ -59,10 +59,6 @@
 #define VA_STATUS_SUCCESS_1                     0xFFFFFFFE
 
 extern VAStatus
-i965_DestroySurfaces(VADriverContextP ctx,
-                     VASurfaceID *surface_list,
-                     int num_surfaces);
-extern VAStatus
 i965_CreateSurfaces(VADriverContextP ctx,
                     int width,
                     int height,

@@ -4423,13 +4423,6 @@ gen8_render_put_subpicture(
     intel_batchbuffer_flush(batch);
 }
 
-/*
- * global functions
- */
-VAStatus 
-i965_DestroySurfaces(VADriverContextP ctx,
-                     VASurfaceID *surface_list,
-                     int num_surfaces);
 void
 intel_render_put_surface(
     VADriverContextP   ctx,

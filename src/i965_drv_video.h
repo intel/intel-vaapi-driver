@@ -410,6 +410,10 @@ extern VAStatus i965_MapBuffer(VADriverContextP ctx,
 
 extern VAStatus i965_UnmapBuffer(VADriverContextP ctx, VABufferID buf_id);
 
+extern VAStatus i965_DestroySurfaces(VADriverContextP ctx,
+                     VASurfaceID *surface_list,
+                     int num_surfaces);
+
 #define I965_SURFACE_MEM_NATIVE             0
 #define I965_SURFACE_MEM_GEM_FLINK          1
 #define I965_SURFACE_MEM_DRM_PRIME          2

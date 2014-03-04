@@ -53,10 +53,6 @@ i965_DeriveImage(VADriverContextP ctx, VABufferID surface, VAImage *out_image);
 extern VAStatus
 i965_DestroyImage(VADriverContextP ctx, VAImageID image);
 
-extern VAStatus
-i965_DestroySurfaces(VADriverContextP ctx,
-                     VASurfaceID *surface_list,
-                     int num_surfaces);
 
 extern VAStatus
 i965_CreateSurfaces(VADriverContextP ctx,

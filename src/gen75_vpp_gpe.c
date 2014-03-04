@@ -59,11 +59,6 @@ i965_CreateSurfaces(VADriverContextP ctx,
                     int num_surfaces,
                     VASurfaceID *surfaces);
 
-extern VAStatus 
-i965_DestroySurfaces(VADriverContextP ctx,
-                     VASurfaceID *surface_list,
-                     int num_surfaces);
-
 /* Shaders information for sharpening */
 static const unsigned int gen75_gpe_sharpening_h_blur[][4] = {
    #include "shaders/post_processing/gen75/sharpening_h_blur.g75b"
