@@ -766,7 +766,7 @@ send (16)
 /* Issue message fence so that the previous write message is committed */
 send (16)
         mb_ind
-        obw_wb
+        mb_wb.0<1>:ud
 	NULL
         data_port(
                 OBR_CACHE_TYPE,
