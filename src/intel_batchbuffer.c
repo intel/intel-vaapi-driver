@@ -192,6 +192,7 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
                 OUT_BATCH(batch, CMD_PIPE_CONTROL | (6 - 2));
 
                 OUT_BATCH(batch,
+                          CMD_PIPE_CONTROL_CS_STALL |
                           CMD_PIPE_CONTROL_WC_FLUSH |
                           CMD_PIPE_CONTROL_TC_FLUSH |
                           CMD_PIPE_CONTROL_DC_FLUSH |
