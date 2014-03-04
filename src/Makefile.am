@@ -76,6 +76,7 @@ source_c = \
 	i965_gpe_utils.c	\
 	i965_post_processing.c	\
 	i965_render.c		\
+	gen8_render.c		\
 	intel_batchbuffer.c	\
 	intel_batchbuffer_dump.c\
 	intel_driver.c		\
