@@ -1050,7 +1050,10 @@ gen8_gpe_idrt(VADriverContextP ctx,
               struct i965_gpe_context *gpe_context,
               struct intel_batchbuffer *batch)
 {
-    BEGIN_BATCH(batch, 4);
+    BEGIN_BATCH(batch, 6);
+
+    OUT_BATCH(batch, CMD_MEDIA_STATE_FLUSH);
+    OUT_BATCH(batch, 0);
 
     OUT_BATCH(batch, CMD_MEDIA_INTERFACE_LOAD | (4 - 2));
     OUT_BATCH(batch, 0);

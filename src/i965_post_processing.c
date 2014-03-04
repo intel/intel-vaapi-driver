@@ -5304,7 +5304,11 @@ gen8_interface_descriptor_load(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = pp_context->batch;
 
-    BEGIN_BATCH(batch, 4);
+    BEGIN_BATCH(batch, 6);
+
+    OUT_BATCH(batch, CMD_MEDIA_STATE_FLUSH);
+    OUT_BATCH(batch, 0);
+
     OUT_BATCH(batch, CMD_MEDIA_INTERFACE_DESCRIPTOR_LOAD | (4 - 2));
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
