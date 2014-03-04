@@ -54,14 +54,6 @@ extern VAStatus
 i965_DestroyImage(VADriverContextP ctx, VAImageID image);
 
 
-extern VAStatus
-i965_CreateSurfaces(VADriverContextP ctx,
-                    int width,
-                    int height,
-                    int format,
-                    int num_surfaces,
-                    VASurfaceID *surfaces);
-
 VAStatus vpp_surface_convert(VADriverContextP ctx,
                              struct object_surface *src_obj_surf,
                              struct object_surface *dst_obj_surf)

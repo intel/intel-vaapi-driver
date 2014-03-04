@@ -44,14 +44,6 @@ extern Bool gen6_mfc_context_init(VADriverContextP ctx, struct intel_encoder_con
 extern Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 extern Bool gen7_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
-VAStatus 
-i965_CreateSurfaces(VADriverContextP ctx,
-                    int width,
-                    int height,
-                    int format,
-                    int num_surfaces,
-                    VASurfaceID *surfaces);
-
 static VAStatus
 intel_encoder_check_yuv_surface(VADriverContextP ctx,
                                 VAProfile profile,

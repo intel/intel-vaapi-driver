@@ -435,6 +435,13 @@ extern VAStatus i965_DestroySurfaces(VADriverContextP ctx,
                      VASurfaceID *surface_list,
                      int num_surfaces);
 
+extern VAStatus i965_CreateSurfaces(VADriverContextP ctx,
+                    int width,
+                    int height,
+                    int format,
+                    int num_surfaces,
+                    VASurfaceID *surfaces);
+
 #define I965_SURFACE_MEM_NATIVE             0
 #define I965_SURFACE_MEM_GEM_FLINK          1
 #define I965_SURFACE_MEM_DRM_PRIME          2

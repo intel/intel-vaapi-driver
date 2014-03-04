@@ -59,14 +59,6 @@ vpp_surface_convert(VADriverContextP ctx,
 
 #define VA_STATUS_SUCCESS_1                     0xFFFFFFFE
 
-extern VAStatus
-i965_CreateSurfaces(VADriverContextP ctx,
-                    int width,
-                    int height,
-                    int format,
-                    int num_surfaces,
-                    VASurfaceID *surfaces);
-
 static const uint32_t pp_null_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/null.g4b.gen5"
 };

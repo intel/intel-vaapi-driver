@@ -51,14 +51,6 @@
 #define CURBE_TOTAL_DATA_LENGTH (4 * 32)        
 #define CURBE_URB_ENTRY_LENGTH  4               
 
-extern VAStatus 
-i965_CreateSurfaces(VADriverContextP ctx,
-                    int width,
-                    int height,
-                    int format,
-                    int num_surfaces,
-                    VASurfaceID *surfaces);
-
 /* Shaders information for sharpening */
 static const unsigned int gen75_gpe_sharpening_h_blur[][4] = {
    #include "shaders/post_processing/gen75/sharpening_h_blur.g75b"

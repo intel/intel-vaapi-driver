@@ -2460,14 +2460,6 @@ gen75_mfd_jpeg_bsd_object(VADriverContextP ctx,
 
 /* Workaround for JPEG decoding on Ivybridge */
 
-VAStatus 
-i965_CreateSurfaces(VADriverContextP ctx,
-                    int width,
-                    int height,
-                    int format,
-                    int num_surfaces,
-                    VASurfaceID *surfaces);
-
 static struct {
     int width;
     int height;
