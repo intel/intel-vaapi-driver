@@ -526,6 +526,15 @@ struct i965_post_processing_context
     int idrt_size;
     unsigned int curbe_offset;
     int curbe_size;
+
+    VAStatus (*intel_post_processing)(VADriverContextP   ctx,
+				struct i965_post_processing_context *pp_context,
+				const struct i965_surface *src_surface,
+				const VARectangle *src_rect,
+				struct i965_surface *dst_surface,
+				const VARectangle *dst_rect,
+				int   pp_index,
+				void * filter_param);
 };
 
 struct i965_proc_context

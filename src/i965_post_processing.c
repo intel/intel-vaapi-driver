@@ -5640,14 +5640,15 @@ i965_post_processing_internal(
     VAStatus va_status;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (IS_GEN8(i965->intel.device_id))
-        va_status = gen8_post_processing(ctx, pp_context, src_surface, src_rect, dst_surface, dst_rect, pp_index, filter_param);
-    else if (IS_GEN6(i965->intel.device_id) ||
-        IS_GEN7(i965->intel.device_id))
-        va_status = gen6_post_processing(ctx, pp_context, src_surface, src_rect, dst_surface, dst_rect, pp_index, filter_param);
-    else
-        va_status = ironlake_post_processing(ctx, pp_context, src_surface, src_rect, dst_surface, dst_rect, pp_index, filter_param);
-    
+    if (pp_context && pp_context->intel_post_processing) {
+        va_status = (pp_context->intel_post_processing)(ctx, pp_context,
+                          src_surface, src_rect,
+                          dst_surface, dst_rect,
+                          pp_index, filter_param);
+    } else {
+        va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
+    }
+
     return va_status;
 }
 
@@ -6385,6 +6386,8 @@ gen8_post_processing_context_init(VADriverContextP ctx,
 	pp_context->vfe_gpu_state.curbe_allocation_size = VPP_CURBE_ALLOCATION_SIZE;
     }
 
+    pp_context->intel_post_processing = gen8_post_processing;
+
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
 
     if (IS_GEN8(i965->intel.device_id))
@@ -6479,12 +6482,14 @@ i965_post_processing_context_init(VADriverContextP ctx,
             pp_context->urb.num_vfe_entries * pp_context->urb.size_vfe_entry;
 	assert(pp_context->urb.cs_start +
 	    pp_context->urb.num_cs_entries * pp_context->urb.size_cs_entry <= URB_SIZE((&i965->intel)));
+        pp_context->intel_post_processing = ironlake_post_processing;
     } else {
 	pp_context->vfe_gpu_state.max_num_threads = 60;
 	pp_context->vfe_gpu_state.num_urb_entries = 59;
 	pp_context->vfe_gpu_state.gpgpu_mode = 0;
 	pp_context->vfe_gpu_state.urb_entry_size = 16 - 1;
 	pp_context->vfe_gpu_state.curbe_allocation_size = VPP_CURBE_ALLOCATION_SIZE;
+        pp_context->intel_post_processing = gen6_post_processing;
     }
     
 
