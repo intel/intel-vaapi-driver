@@ -4433,6 +4433,7 @@ intel_render_put_surface(
 )
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
     int has_done_scaling = 0;
     VASurfaceID out_surface_id = i965_post_processing(ctx,
                                                       obj_surface,
@@ -4453,14 +4454,7 @@ intel_render_put_surface(
             src_rect = dst_rect;
     }
 
-    if (IS_GEN8(i965->intel.device_id))
-        gen8_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
-    else if (IS_GEN7(i965->intel.device_id))
-        gen7_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
-    else if (IS_GEN6(i965->intel.device_id))
-        gen6_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
-    else
-        i965_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
+    render_state->render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
 
     if (out_surface_id != VA_INVALID_ID)
         i965_DestroySurfaces(ctx, &out_surface_id, 1);
@@ -4475,15 +4469,9 @@ intel_render_put_subpicture(
 )
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
 
-    if (IS_GEN8(i965->intel.device_id))
-        gen8_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
-    else if (IS_GEN7(i965->intel.device_id))
-        gen7_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
-    else if (IS_GEN6(i965->intel.device_id))
-        gen6_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
-    else
-        i965_render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
+    render_state->render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
 }
 
 static bool 
@@ -4496,6 +4484,8 @@ gen8_render_init(VADriverContextP ctx)
     unsigned char *kernel_ptr;
     struct i965_kernel *kernel;
 
+    render_state->render_put_surface = gen8_render_put_surface;
+    render_state->render_put_subpicture = gen8_render_put_subpicture;
 
     if (IS_GEN8(i965->intel.device_id)) {
         memcpy(render_state->render_kernels, render_kernels_gen8,
@@ -4574,16 +4564,25 @@ i965_render_init(VADriverContextP ctx)
 
     if (IS_GEN8(i965->intel.device_id)) {
         return gen8_render_init(ctx);
-    } else  if (IS_GEN7(i965->intel.device_id)) 
+    } else  if (IS_GEN7(i965->intel.device_id)) {
         memcpy(render_state->render_kernels,
                (IS_HASWELL(i965->intel.device_id) ? render_kernels_gen7_haswell : render_kernels_gen7),
                sizeof(render_state->render_kernels));
-    else if (IS_GEN6(i965->intel.device_id))
+        render_state->render_put_surface = gen7_render_put_surface;
+        render_state->render_put_subpicture = gen7_render_put_subpicture;
+    } else if (IS_GEN6(i965->intel.device_id)) {
         memcpy(render_state->render_kernels, render_kernels_gen6, sizeof(render_state->render_kernels));
-    else if (IS_IRONLAKE(i965->intel.device_id))
+        render_state->render_put_surface = gen6_render_put_surface;
+        render_state->render_put_subpicture = gen6_render_put_subpicture;
+    } else if (IS_IRONLAKE(i965->intel.device_id)) {
         memcpy(render_state->render_kernels, render_kernels_gen5, sizeof(render_state->render_kernels));
-    else
+        render_state->render_put_surface = i965_render_put_surface;
+        render_state->render_put_subpicture = i965_render_put_subpicture;
+    } else {
         memcpy(render_state->render_kernels, render_kernels_gen4, sizeof(render_state->render_kernels));
+        render_state->render_put_surface = i965_render_put_surface;
+        render_state->render_put_subpicture = i965_render_put_subpicture;
+    }
 
     for (i = 0; i < NUM_RENDER_KERNEL; i++) {
         struct i965_kernel *kernel = &render_state->render_kernels[i];

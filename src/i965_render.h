@@ -118,6 +118,14 @@ struct i965_render_state
     unsigned int scissor_offset;
     int scissor_size;
 
+    void (*render_put_surface)(VADriverContextP ctx, struct object_surface *,
+                               const VARectangle *src_rec,
+                               const VARectangle *dst_rect,
+                               unsigned int flags);
+    void (*render_put_subpicture)(VADriverContextP ctx, struct object_surface *,
+                               const VARectangle *src_rec,
+                               const VARectangle *dst_rect);
+
 };
 
 bool i965_render_init(VADriverContextP ctx);
