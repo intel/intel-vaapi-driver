@@ -28,6 +28,7 @@
  */
 
 #include "sysdeps.h"
+#include <unistd.h>
 
 #ifdef HAVE_VA_X11
 # include "i965_output_dri.h"
@@ -5145,6 +5146,130 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
     return vaStatus;
 }
 
+/* Acquires buffer handle for external API usage (internal implementation) */
+static VAStatus
+i965_acquire_buffer_handle(struct object_buffer *obj_buffer,
+    uint32_t mem_type, VABufferInfo *out_buf_info)
+{
+    struct buffer_store *buffer_store;
+
+    buffer_store = obj_buffer->buffer_store;
+    if (!buffer_store || !buffer_store->bo)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
+    /* Synchronization point */
+    drm_intel_bo_wait_rendering(buffer_store->bo);
+
+    if (obj_buffer->export_refcount > 0) {
+        if (obj_buffer->export_state.mem_type != mem_type)
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    else {
+        VABufferInfo * const buf_info = &obj_buffer->export_state;
+
+        switch (mem_type) {
+        case VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM: {
+            uint32_t name;
+            if (drm_intel_bo_flink(buffer_store->bo, &name) != 0)
+                return VA_STATUS_ERROR_INVALID_BUFFER;
+            buf_info->handle = name;
+            break;
+        }
+        case VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME: {
+            int fd;
+            if (drm_intel_bo_gem_export_to_prime(buffer_store->bo, &fd) != 0)
+                return VA_STATUS_ERROR_INVALID_BUFFER;
+            buf_info->handle = (intptr_t)fd;
+            break;
+        }
+        }
+
+        buf_info->type = obj_buffer->type;
+        buf_info->mem_type = mem_type;
+        buf_info->mem_size =
+            obj_buffer->num_elements * obj_buffer->size_element;
+    }
+
+    obj_buffer->export_refcount++;
+    *out_buf_info = obj_buffer->export_state;
+    return VA_STATUS_SUCCESS;
+}
+
+/* Releases buffer handle after usage (internal implementation) */
+static VAStatus
+i965_release_buffer_handle(struct object_buffer *obj_buffer)
+{
+    if (obj_buffer->export_refcount == 0)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
+    if (--obj_buffer->export_refcount == 0) {
+        VABufferInfo * const buf_info = &obj_buffer->export_state;
+
+        switch (buf_info->mem_type) {
+        case VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME: {
+            close((intptr_t)buf_info->handle);
+            break;
+        }
+        }
+        buf_info->mem_type = 0;
+    }
+    return VA_STATUS_SUCCESS;
+}
+
+/** Acquires buffer handle for external API usage */
+static VAStatus
+i965_AcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id,
+    VABufferInfo *buf_info)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    struct object_buffer * const obj_buffer = BUFFER(buf_id);
+    uint32_t i, mem_type;
+
+    /* List of supported memory types, in preferred order */
+    static const uint32_t mem_types[] = {
+        VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME,
+        VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM,
+        0
+    };
+
+    if (!obj_buffer)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+    /* XXX: only VA surface|image like buffers are supported for now */
+    if (obj_buffer->type != VAImageBufferType)
+        return VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
+
+    if (!buf_info)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (!buf_info->mem_type)
+        mem_type = mem_types[0];
+    else {
+        mem_type = 0;
+        for (i = 0; mem_types[i] != 0; i++) {
+            if (buf_info->mem_type & mem_types[i]) {
+                mem_type = buf_info->mem_type;
+                break;
+            }
+        }
+        if (!mem_type)
+            return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
+    }
+    return i965_acquire_buffer_handle(obj_buffer, mem_type, buf_info);
+}
+
+/** Releases buffer handle after usage from external API */
+static VAStatus
+i965_ReleaseBufferHandle(VADriverContextP ctx, VABufferID buf_id)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    struct object_buffer * const obj_buffer = BUFFER(buf_id);
+
+    if (!obj_buffer)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
+    return i965_release_buffer_handle(obj_buffer);
+}
+
 static int
 i965_os_has_ring_support(VADriverContextP ctx,
                          int ring)
@@ -5670,6 +5795,10 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     vtable->vaGetSurfaceAttributes = i965_GetSurfaceAttributes;
     vtable->vaQuerySurfaceAttributes = i965_QuerySurfaceAttributes;
     vtable->vaCreateSurfaces2 = i965_CreateSurfaces2;
+
+    /* 0.36.0 */
+    vtable->vaAcquireBufferHandle = i965_AcquireBufferHandle;
+    vtable->vaReleaseBufferHandle = i965_ReleaseBufferHandle;
 
     vtable_vpp->vaQueryVideoProcFilters = i965_QueryVideoProcFilters;
     vtable_vpp->vaQueryVideoProcFilterCaps = i965_QueryVideoProcFilterCaps;

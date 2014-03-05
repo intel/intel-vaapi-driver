@@ -287,6 +287,10 @@ struct object_buffer
     int num_elements;
     int size_element;
     VABufferType type;
+
+    /* Export state */
+    unsigned int export_refcount;
+    VABufferInfo export_state;
 };
 
 struct object_image 
