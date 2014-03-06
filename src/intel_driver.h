@@ -192,4 +192,6 @@ struct intel_region
 #define IS_CHERRYVIEW(device_info)      (device_info->is_cherryview)
 #define IS_GEN8(device_info)            (device_info->gen == 8)
 
+#define IS_GEN9(device_info)            (device_info->gen == 9)
+
 #endif /* _INTEL_DRIVER_H_ */
