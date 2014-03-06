@@ -281,4 +281,7 @@ intel_avc_slice_insert_packed_data(VADriverContextP ctx,
                              int slice_index,
                              struct intel_batchbuffer *slice_batch);
 
+extern
+Bool gen9_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+
 #endif	/* _GEN6_MFC_BCS_H_ */
