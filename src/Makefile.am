@@ -82,6 +82,7 @@ source_c = \
 	i965_render.c		\
 	i965_vpp_avs.c		\
 	gen8_render.c		\
+	gen9_render.c		\
 	intel_batchbuffer.c	\
 	intel_batchbuffer_dump.c\
 	intel_driver.c		\

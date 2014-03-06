@@ -155,4 +155,6 @@ gen8_render_set_surface_scs(struct gen8_surface_state *ss);
 
 extern bool gen8_render_init(VADriverContextP ctx);
 
+extern bool gen9_render_init(VADriverContextP ctx);
+
 #endif /* _I965_RENDER_H_ */

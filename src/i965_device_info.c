@@ -266,7 +266,7 @@ static struct hw_codec_info chv_hw_codec_info = {
     .dec_hw_context_init = gen8_dec_hw_context_init,
     .enc_hw_context_init = gen8_enc_hw_context_init,
     .proc_hw_context_init = gen75_proc_context_init,
-    .render_init = gen8_render_init,
+    .render_init = gen9_render_init,
     .post_processing_context_init = gen8_post_processing_context_init,
 
     .max_width = 4096,
