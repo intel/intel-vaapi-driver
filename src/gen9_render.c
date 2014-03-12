@@ -1269,7 +1269,8 @@ gen9_emit_invarient_states(VADriverContextP ctx)
     struct intel_batchbuffer *batch = i965->batch;
 
     BEGIN_BATCH(batch, 1);
-    OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_3D);
+    OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_3D |
+                     GEN9_PIPELINE_SELECTION_MASK);
     ADVANCE_BATCH(batch);
 
     BEGIN_BATCH(batch, 2);
