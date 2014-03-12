@@ -1275,7 +1275,9 @@ gen9_gpe_select(VADriverContextP ctx,
 {
     BEGIN_BATCH(batch, 1);
     OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_MEDIA |
-                     GEN9_PIPELINE_SELECTION_MASK);
+                     GEN9_PIPELINE_SELECTION_MASK |
+                     GEN9_FORCE_MEDIA_AWAKE_ON |
+                     GEN9_FORCE_MEDIA_AWAKE_MASK);
     ADVANCE_BATCH(batch);
 }
 
@@ -1291,4 +1293,17 @@ gen9_gpe_pipeline_setup(VADriverContextP ctx,
     gen8_gpe_vfe_state(ctx, gpe_context, batch);
     gen8_gpe_curbe_load(ctx, gpe_context, batch);
     gen8_gpe_idrt(ctx, gpe_context, batch);
+}
+
+void
+gen9_gpe_pipeline_end(VADriverContextP ctx,
+                      struct i965_gpe_context *gpe_context,
+                      struct intel_batchbuffer *batch)
+{
+    BEGIN_BATCH(batch, 1);
+    OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_MEDIA |
+              GEN9_PIPELINE_SELECTION_MASK |
+              GEN9_FORCE_MEDIA_AWAKE_OFF |
+              GEN9_FORCE_MEDIA_AWAKE_MASK);
+    ADVANCE_BATCH(batch);
 }

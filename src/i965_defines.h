@@ -851,5 +851,8 @@
 
 
 #define GEN9_PIPELINE_SELECTION_MASK        (0x3 << 8)
+#define GEN9_FORCE_MEDIA_AWAKE_MASK         (1 << 13)
+#define GEN9_FORCE_MEDIA_AWAKE_ON           (1 << 5)
+#define GEN9_FORCE_MEDIA_AWAKE_OFF          (0 << 5)
 
 #endif /* _I965_DEFINES_H_ */
