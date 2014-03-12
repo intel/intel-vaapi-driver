@@ -847,8 +847,8 @@ gen9_emit_state_base_address(VADriverContextP ctx)
     struct intel_batchbuffer *batch = i965->batch;
     struct i965_render_state *render_state = &i965->render_state;
 
-    BEGIN_BATCH(batch, 16);
-    OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (16 - 2));
+    BEGIN_BATCH(batch, 19);
+    OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (19 - 2));
     OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* General state base address */
 	OUT_BATCH(batch, 0);
 	OUT_BATCH(batch, 0);
@@ -876,6 +876,11 @@ gen9_emit_state_base_address(VADriverContextP ctx)
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* Dynamic state upper bound */
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* Indirect object upper bound */
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* Instruction access upper bound */
+
+    /* the bindless surface state address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0xFFFF0000);
     ADVANCE_BATCH(batch);
 }
 
