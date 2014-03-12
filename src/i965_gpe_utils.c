@@ -1268,6 +1268,17 @@ gen9_gpe_state_base_address(VADriverContextP ctx,
     ADVANCE_BATCH(batch);
 }
 
+static void
+gen9_gpe_select(VADriverContextP ctx,
+                struct i965_gpe_context *gpe_context,
+                struct intel_batchbuffer *batch)
+{
+    BEGIN_BATCH(batch, 1);
+    OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_MEDIA |
+                     GEN9_PIPELINE_SELECTION_MASK);
+    ADVANCE_BATCH(batch);
+}
+
 void
 gen9_gpe_pipeline_setup(VADriverContextP ctx,
                         struct i965_gpe_context *gpe_context,
@@ -1275,7 +1286,7 @@ gen9_gpe_pipeline_setup(VADriverContextP ctx,
 {
     intel_batchbuffer_emit_mi_flush(batch);
 
-    i965_gpe_select(ctx, gpe_context, batch);
+    gen9_gpe_select(ctx, gpe_context, batch);
     gen9_gpe_state_base_address(ctx, gpe_context, batch);
     gen8_gpe_vfe_state(ctx, gpe_context, batch);
     gen8_gpe_curbe_load(ctx, gpe_context, batch);
