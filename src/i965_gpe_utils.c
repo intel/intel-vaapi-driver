@@ -1207,6 +1207,67 @@ gen8_gpe_load_kernels(VADriverContextP ctx,
     return;
 }
 
+static void
+gen9_gpe_state_base_address(VADriverContextP ctx,
+                            struct i965_gpe_context *gpe_context,
+                            struct intel_batchbuffer *batch)
+{
+    BEGIN_BATCH(batch, 19);
+
+    OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (19 - 2));
+
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);				//General State Base Address
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+
+	/*DW4 Surface state base address */
+    OUT_RELOC(batch, gpe_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
+    OUT_BATCH(batch, 0);
+
+	/*DW6. Dynamic state base address */
+    if (gpe_context->dynamic_state.bo)
+        OUT_RELOC(batch, gpe_context->dynamic_state.bo,
+                  I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
+                  0, BASE_ADDRESS_MODIFY);
+    else
+        OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+
+    OUT_BATCH(batch, 0);
+
+	/*DW8. Indirect Object base address */
+    if (gpe_context->indirect_state.bo)
+        OUT_RELOC(batch, gpe_context->indirect_state.bo,
+                  I915_GEM_DOMAIN_SAMPLER,
+                  0, BASE_ADDRESS_MODIFY);
+    else
+        OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+
+    OUT_BATCH(batch, 0);
+
+	/*DW10. Instruct base address */
+    if (gpe_context->instruction_state.bo)
+        OUT_RELOC(batch, gpe_context->instruction_state.bo,
+                  I915_GEM_DOMAIN_INSTRUCTION,
+                  0, BASE_ADDRESS_MODIFY);
+    else
+        OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+
+    OUT_BATCH(batch, 0);
+
+	/* DW12. Size limitation */
+    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//General State Access Upper Bound
+    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Dynamic State Access Upper Bound
+    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Indirect Object Access Upper Bound
+    OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Instruction Access Upper Bound
+
+    /* the bindless surface state address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0xFFFFF000);
+
+    ADVANCE_BATCH(batch);
+}
+
 void
 gen9_gpe_pipeline_setup(VADriverContextP ctx,
                         struct i965_gpe_context *gpe_context,
@@ -1215,7 +1276,7 @@ gen9_gpe_pipeline_setup(VADriverContextP ctx,
     intel_batchbuffer_emit_mi_flush(batch);
 
     i965_gpe_select(ctx, gpe_context, batch);
-    gen8_gpe_state_base_address(ctx, gpe_context, batch);
+    gen9_gpe_state_base_address(ctx, gpe_context, batch);
     gen8_gpe_vfe_state(ctx, gpe_context, batch);
     gen8_gpe_curbe_load(ctx, gpe_context, batch);
     gen8_gpe_idrt(ctx, gpe_context, batch);
