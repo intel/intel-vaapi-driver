@@ -1207,3 +1207,16 @@ gen8_gpe_load_kernels(VADriverContextP ctx,
     return;
 }
 
+void
+gen9_gpe_pipeline_setup(VADriverContextP ctx,
+                        struct i965_gpe_context *gpe_context,
+                        struct intel_batchbuffer *batch)
+{
+    intel_batchbuffer_emit_mi_flush(batch);
+
+    i965_gpe_select(ctx, gpe_context, batch);
+    gen8_gpe_state_base_address(ctx, gpe_context, batch);
+    gen8_gpe_vfe_state(ctx, gpe_context, batch);
+    gen8_gpe_curbe_load(ctx, gpe_context, batch);
+    gen8_gpe_idrt(ctx, gpe_context, batch);
+}
