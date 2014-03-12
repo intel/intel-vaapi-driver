@@ -648,6 +648,8 @@ static void gen9_vme_pipeline_programing(VADriverContextP ctx,
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
+    gen9_gpe_pipeline_end(ctx, &vme_context->gpe_context, batch);
+
     intel_batchbuffer_end_atomic(batch);
 }
 
@@ -1075,6 +1077,8 @@ gen9_vme_mpeg2_pipeline_programing(VADriverContextP ctx,
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
+
+    gen9_gpe_pipeline_end(ctx, &vme_context->gpe_context, batch);
 
     intel_batchbuffer_end_atomic(batch);
 }
