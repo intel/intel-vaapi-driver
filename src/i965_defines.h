@@ -850,4 +850,6 @@
 
 
 
+#define GEN9_PIPELINE_SELECTION_MASK        (0x3 << 8)
+
 #endif /* _I965_DEFINES_H_ */
