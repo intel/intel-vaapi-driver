@@ -1226,8 +1226,8 @@ gen9_emit_bypass_state(VADriverContextP ctx)
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
-    BEGIN_BATCH(batch, 9);
-    OUT_BATCH(batch, GEN7_3DSTATE_DS | (9 - 2));
+    BEGIN_BATCH(batch, 11);
+    OUT_BATCH(batch, GEN7_3DSTATE_DS | (11 - 2));
     /* DW1. DS shader pointer */
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
@@ -1239,6 +1239,10 @@ gen9_emit_bypass_state(VADriverContextP ctx)
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     /* DW8. DS shader output URB */
+    OUT_BATCH(batch, 0);
+
+    /* Dual-patch kernel start pointer */
+    OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
