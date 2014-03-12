@@ -1276,6 +1276,8 @@ gen9_gpe_select(VADriverContextP ctx,
     BEGIN_BATCH(batch, 1);
     OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_MEDIA |
                      GEN9_PIPELINE_SELECTION_MASK |
+                     GEN9_MEDIA_DOP_GATE_OFF |
+                     GEN9_MEDIA_DOP_GATE_MASK |
                      GEN9_FORCE_MEDIA_AWAKE_ON |
                      GEN9_FORCE_MEDIA_AWAKE_MASK);
     ADVANCE_BATCH(batch);
@@ -1303,6 +1305,8 @@ gen9_gpe_pipeline_end(VADriverContextP ctx,
     BEGIN_BATCH(batch, 1);
     OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_MEDIA |
               GEN9_PIPELINE_SELECTION_MASK |
+              GEN9_MEDIA_DOP_GATE_ON |
+              GEN9_MEDIA_DOP_GATE_MASK |
               GEN9_FORCE_MEDIA_AWAKE_OFF |
               GEN9_FORCE_MEDIA_AWAKE_MASK);
     ADVANCE_BATCH(batch);

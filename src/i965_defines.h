@@ -855,4 +855,8 @@
 #define GEN9_FORCE_MEDIA_AWAKE_ON           (1 << 5)
 #define GEN9_FORCE_MEDIA_AWAKE_OFF          (0 << 5)
 
+#define GEN9_MEDIA_DOP_GATE_MASK            (1 << 12)
+#define GEN9_MEDIA_DOP_GATE_ON              (1 << 4)
+#define GEN9_MEDIA_DOP_GATE_OFF             (0 << 4)
+
 #endif /* _I965_DEFINES_H_ */
