@@ -1702,8 +1702,12 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
     dri_bo *bo;
     int fourcc = pp_get_surface_fourcc(ctx, surface);
     const int Y = 0;
-    const int U = fourcc == VA_FOURCC('Y', 'V', '1', '2') ? 2 : 1;
-    const int V = fourcc == VA_FOURCC('Y', 'V', '1', '2') ? 1 : 2;
+    const int U = ((fourcc == VA_FOURCC('Y', 'V', '1', '2')) ||
+                   (fourcc == VA_FOURCC('Y', 'V', '1', '6')))
+                   ? 2 : 1;
+    const int V = ((fourcc == VA_FOURCC('Y', 'V', '1', '2')) ||
+                   (fourcc == VA_FOURCC('Y', 'V', '1', '6')))
+                   ? 1 : 2;
     const int UV = 1;
     int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
     int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') || fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')); 
@@ -1770,6 +1774,12 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
             height[2] = obj_image->image.height / 2;
             pitch[2] = obj_image->image.pitches[2];
             offset[2] = obj_image->image.offsets[2];
+            if (fourcc == VA_FOURCC('V', 'V', '1', '6')) {
+                width[1] = obj_image->image.width / 2;
+                height[1] = obj_image->image.height;
+                width[2] = obj_image->image.width / 2;
+                height[2] = obj_image->image.height;
+            }
         }
     }
 
@@ -1813,8 +1823,10 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     dri_bo *bo;
     int fourcc = pp_get_surface_fourcc(ctx, surface);
     const int U = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
+                   fourcc == VA_FOURCC('V', 'V', '1', '6') ||
                    fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 2 : 1;
     const int V = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
+                   fourcc == VA_FOURCC('V', 'V', '1', '6') ||
                    fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 1 : 2;
     int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
     int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') || fourcc == VA_FOURCC('U', 'Y', 'V', 'Y'));
@@ -1880,6 +1892,12 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
             height[2] = obj_image->image.height / 2;
             pitch[2] = obj_image->image.pitches[V];
             offset[2] = obj_image->image.offsets[V];
+            if (fourcc == VA_FOURCC('V', 'V', '1', '6')) {
+                width[1] = obj_image->image.width / 2;
+                height[1] = obj_image->image.height;
+                width[2] = obj_image->image.width / 2;
+                height[2] = obj_image->image.height;
+            }
         }
     }
 
@@ -5069,6 +5087,7 @@ i965_image_processing(VADriverContextP ctx,
         case VA_FOURCC('4', '2', '2', 'V'):
         case VA_FOURCC('4', '1', '1', 'P'):
         case VA_FOURCC('4', '4', '4', 'P'):
+        case VA_FOURCC('Y', 'V', '1', '6'):
             status = i965_image_pl3_processing(ctx,
                                                src_surface,
                                                src_rect,
