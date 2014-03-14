@@ -3167,6 +3167,16 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->offsets[2] = w_pitch * obj_surface->y_cb_offset;
         break;
 
+    case VA_FOURCC('Y', 'V', '1', '6'):
+        image->num_planes = 3;
+        image->pitches[0] = w_pitch; /* Y */
+        image->offsets[0] = 0;
+        image->pitches[1] = obj_surface->cb_cr_pitch; /* V */
+        image->offsets[1] = w_pitch * obj_surface->y_cr_offset;
+        image->pitches[2] = obj_surface->cb_cr_pitch; /* U */
+        image->offsets[2] = w_pitch * obj_surface->y_cb_offset;
+        break;
+
     case VA_FOURCC('N', 'V', '1', '2'):
         image->num_planes = 2;
         image->pitches[0] = w_pitch; /* Y */
