@@ -4648,6 +4648,12 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
                 attribs[i].value.value.i = VA_FOURCC('R', 'G', 'B', 'X');
                 i++;
+
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC('Y', 'V', '1', '6');
+                i++;
             }
         }
     } else if (IS_GEN8(i965->intel.device_id)) {
@@ -4757,6 +4763,12 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
                 attribs[i].value.value.i = VA_FOURCC('B', 'G', 'R', 'X');
+                i++;
+
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC('Y', 'V', '1', '6');
                 i++;
             }
         }
