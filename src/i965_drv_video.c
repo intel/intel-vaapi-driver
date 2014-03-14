@@ -367,7 +367,7 @@ va_enc_packed_type_to_idx(int packed_type)
     if (packed_type & VAEncPackedHeaderMiscMask) {
         idx = I965_PACKED_MISC_HEADER_BASE;
         packed_type = (~VAEncPackedHeaderMiscMask & packed_type);
-        assert(packed_type > 0);
+        ASSERT_RET(packed_type > 0, 0);
         idx += (packed_type - 1);
     } else {
         idx = I965_PACKED_HEADER_BASE;
@@ -387,12 +387,12 @@ va_enc_packed_type_to_idx(int packed_type)
 
         default:
             /* Should not get here */
-            assert(0);
+            ASSERT_RET(0, 0);
             break;
         }
     }
 
-    assert(idx < 4);
+    ASSERT_RET(idx < 4, 0);
     return idx;
 }
 
@@ -437,7 +437,7 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
     }
 
     /* If the assert fails then I965_MAX_PROFILES needs to be bigger */
-    assert(i <= I965_MAX_PROFILES);
+    ASSERT_RET(i <= I965_MAX_PROFILES, VA_STATUS_ERROR_OPERATION_FAILED);
     *num_profiles = i;
 
     return VA_STATUS_SUCCESS;
@@ -503,7 +503,7 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
     }
 
     /* If the assert fails then I965_MAX_ENTRYPOINTS needs to be bigger */
-    assert(n <= I965_MAX_ENTRYPOINTS);
+    ASSERT_RET(n <= I965_MAX_ENTRYPOINTS, VA_STATUS_ERROR_OPERATION_FAILED);
     *num_entrypoints = n;
     return n > 0 ? VA_STATUS_SUCCESS : VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
 }
@@ -733,7 +733,7 @@ VAStatus i965_QueryConfigAttributes(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
-    assert(obj_config);
+    ASSERT_RET(obj_config, VA_STATUS_ERROR_INVALID_CONFIG);
     *profile = obj_config->profile;
     *entrypoint = obj_config->entrypoint;
     *num_attribs = obj_config->num_attribs;
@@ -799,9 +799,9 @@ i965_suface_external_memory(VADriverContextP ctx,
         index > memory_attibute->num_buffers)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    assert(obj_surface->orig_width == memory_attibute->width);
-    assert(obj_surface->orig_height == memory_attibute->height);
-    assert(memory_attibute->num_planes >= 1);
+    ASSERT_RET(obj_surface->orig_width == memory_attibute->width, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(obj_surface->orig_height == memory_attibute->height, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(memory_attibute->num_planes >= 1, VA_STATUS_ERROR_INVALID_PARAMETER);
 
     obj_surface->fourcc = memory_attibute->pixel_format;
     obj_surface->width = memory_attibute->pitches[0];
@@ -817,8 +817,8 @@ i965_suface_external_memory(VADriverContextP ctx,
 
     switch (obj_surface->fourcc) {
     case VA_FOURCC('N', 'V', '1', '2'):
-        assert(memory_attibute->num_planes == 2);
-        assert(memory_attibute->pitches[0] == memory_attibute->pitches[1]);
+        ASSERT_RET(memory_attibute->num_planes == 2, VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(memory_attibute->pitches[0] == memory_attibute->pitches[1], VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV420;
         obj_surface->y_cb_offset = obj_surface->height;
@@ -831,8 +831,8 @@ i965_suface_external_memory(VADriverContextP ctx,
 
     case VA_FOURCC('Y', 'V', '1', '2'):
     case VA_FOURCC('I', 'M', 'C', '1'):
-        assert(memory_attibute->num_planes == 3);
-        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+        ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV420;
         obj_surface->y_cr_offset = obj_surface->height;
@@ -846,8 +846,8 @@ i965_suface_external_memory(VADriverContextP ctx,
     case VA_FOURCC('I', '4', '2', '0'):
     case VA_FOURCC('I', 'Y', 'U', 'V'):
     case VA_FOURCC('I', 'M', 'C', '3'):
-        assert(memory_attibute->num_planes == 3);
-        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+        ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV420;
         obj_surface->y_cb_offset = obj_surface->height;
@@ -860,7 +860,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
     case VA_FOURCC('Y', 'U', 'Y', '2'):
     case VA_FOURCC('U', 'Y', 'V', 'Y'):
-        assert(memory_attibute->num_planes == 1);
+        ASSERT_RET(memory_attibute->num_planes == 1, VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV422H;
         obj_surface->y_cb_offset = 0;
@@ -875,7 +875,7 @@ i965_suface_external_memory(VADriverContextP ctx,
     case VA_FOURCC('R', 'G', 'B', 'X'):
     case VA_FOURCC('B', 'G', 'R', 'A'):
     case VA_FOURCC('B', 'G', 'R', 'X'):
-        assert(memory_attibute->num_planes == 1);
+        ASSERT_RET(memory_attibute->num_planes == 1, VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_RGBX;
         obj_surface->y_cb_offset = 0;
@@ -887,7 +887,7 @@ i965_suface_external_memory(VADriverContextP ctx,
         break;
 
     case VA_FOURCC('Y', '8', '0', '0'): /* monochrome surface */
-        assert(memory_attibute->num_planes == 1);
+        ASSERT_RET(memory_attibute->num_planes == 1, VA_STATUS_ERROR_INVALID_PARAMETER);
         
         obj_surface->subsampling = SUBSAMPLE_YUV400;
         obj_surface->y_cb_offset = 0;
@@ -899,8 +899,8 @@ i965_suface_external_memory(VADriverContextP ctx,
         break;
 
     case VA_FOURCC('4', '1', '1', 'P'):
-        assert(memory_attibute->num_planes == 3);
-        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+        ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV411;
         obj_surface->y_cb_offset = 0;
@@ -912,8 +912,8 @@ i965_suface_external_memory(VADriverContextP ctx,
         break;
 
     case VA_FOURCC('4', '2', '2', 'H'):
-        assert(memory_attibute->num_planes == 3);
-        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+        ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV422H;
         obj_surface->y_cb_offset = obj_surface->height;
@@ -938,8 +938,8 @@ i965_suface_external_memory(VADriverContextP ctx,
         break;
 
     case VA_FOURCC('4', '2', '2', 'V'):
-        assert(memory_attibute->num_planes == 3);
-        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+        ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV422H;
         obj_surface->y_cb_offset = obj_surface->height;
@@ -951,8 +951,8 @@ i965_suface_external_memory(VADriverContextP ctx,
         break;
 
     case VA_FOURCC('4', '4', '4', 'P'):
-        assert(memory_attibute->num_planes == 3);
-        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+        ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV444;
         obj_surface->y_cb_offset = obj_surface->height;
@@ -1012,7 +1012,7 @@ bpp_1stplane_by_fourcc(unsigned int fourcc)
             return 1;
 
         default:
-            assert(0);
+            ASSERT_RET(0, 0);
             return 0;
     }
 }
@@ -1039,14 +1039,14 @@ i965_CreateSurfaces2(
     for (i = 0; i < num_attribs && attrib_list; i++) {
         if ((attrib_list[i].type == VASurfaceAttribPixelFormat) &&
             (attrib_list[i].flags & VA_SURFACE_ATTRIB_SETTABLE)) {
-            assert(attrib_list[i].value.type == VAGenericValueTypeInteger);
+            ASSERT_RET(attrib_list[i].value.type == VAGenericValueTypeInteger, VA_STATUS_ERROR_INVALID_PARAMETER);
             expected_fourcc = attrib_list[i].value.value.i;
         }
 
         if ((attrib_list[i].type == VASurfaceAttribMemoryType) &&
             (attrib_list[i].flags & VA_SURFACE_ATTRIB_SETTABLE)) {
             
-            assert(attrib_list[i].value.type == VAGenericValueTypeInteger);
+            ASSERT_RET(attrib_list[i].value.type == VAGenericValueTypeInteger, VA_STATUS_ERROR_INVALID_PARAMETER);
 
             if (attrib_list[i].value.value.i == VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM)
                 memory_type = I965_SURFACE_MEM_GEM_FLINK; /* flinked GEM handle */
@@ -1058,7 +1058,7 @@ i965_CreateSurfaces2(
 
         if ((attrib_list[i].type == VASurfaceAttribExternalBufferDescriptor) &&
             (attrib_list[i].flags == VA_SURFACE_ATTRIB_SETTABLE)) {
-            assert(attrib_list[i].value.type == VAGenericValueTypePointer);
+            ASSERT_RET(attrib_list[i].value.type == VAGenericValueTypePointer, VA_STATUS_ERROR_INVALID_PARAMETER);
             memory_attibute = (VASurfaceAttribExternalBuffers *)attrib_list[i].value.value.p;
         }
     }
@@ -1115,25 +1115,25 @@ i965_CreateSurfaces2(
 
                 if (memory_attibute->pixel_format) {
                     if (expected_fourcc)
-                        assert(memory_attibute->pixel_format == expected_fourcc);
+                        ASSERT_RET(memory_attibute->pixel_format == expected_fourcc, VA_STATUS_ERROR_INVALID_PARAMETER);
                     else
                         expected_fourcc = memory_attibute->pixel_format;
                 }
-                assert(expected_fourcc);
+                ASSERT_RET(expected_fourcc, VA_STATUS_ERROR_INVALID_PARAMETER);
                 if (memory_attibute->pitches[0]) {
                     int bpp_1stplane = bpp_1stplane_by_fourcc(expected_fourcc);
-                    assert(bpp_1stplane);
+                    ASSERT_RET(bpp_1stplane, VA_STATUS_ERROR_INVALID_PARAMETER);
                     obj_surface->width = memory_attibute->pitches[0]/bpp_1stplane;
                     obj_surface->user_h_stride_set = true;
-                    assert(IS_ALIGNED(obj_surface->width, 16));
-                    assert(obj_surface->width >= width);
+                    ASSERT_RET(IS_ALIGNED(obj_surface->width, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
+                    ASSERT_RET(obj_surface->width >= width, VA_STATUS_ERROR_INVALID_PARAMETER);
 
                     if (memory_attibute->offsets[1]) {
-                        assert(!memory_attibute->offsets[0]);
+                        ASSERT_RET(!memory_attibute->offsets[0], VA_STATUS_ERROR_INVALID_PARAMETER);
                         obj_surface->height = memory_attibute->offsets[1]/memory_attibute->pitches[0];
                         obj_surface->user_v_stride_set = true;
-                        assert(IS_ALIGNED(obj_surface->height, 16));
-                        assert(obj_surface->height >= height);
+                        ASSERT_RET(IS_ALIGNED(obj_surface->height, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
+                        ASSERT_RET(obj_surface->height >= height, VA_STATUS_ERROR_INVALID_PARAMETER);
                     }
                 }
             }
@@ -1198,7 +1198,7 @@ i965_DestroySurfaces(VADriverContextP ctx,
     for (i = num_surfaces; i--; ) {
         struct object_surface *obj_surface = SURFACE(surface_list[i]);
 
-        assert(obj_surface);
+        ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
         i965_destroy_surface(&i965->surface_heap, (struct object_base *)obj_surface);
     }
 
@@ -1353,7 +1353,7 @@ i965_DestroySubpicture(VADriverContextP ctx,
     if (!obj_subpic)
         return VA_STATUS_ERROR_INVALID_SUBPICTURE;
 
-    assert(obj_subpic->obj_image);
+    ASSERT_RET(obj_subpic->obj_image, VA_STATUS_ERROR_INVALID_SUBPICTURE);
     i965_destroy_subpic(&i965->subpic_heap, (struct object_base *)obj_subpic);
     return VA_STATUS_SUCCESS;
 }
@@ -1424,7 +1424,7 @@ i965_AssociateSubpicture(VADriverContextP ctx,
     if (!obj_subpic)
         return VA_STATUS_ERROR_INVALID_SUBPICTURE;
     
-    assert(obj_subpic->obj_image);
+    ASSERT_RET(obj_subpic->obj_image, VA_STATUS_ERROR_INVALID_SUBPICTURE);
 
     obj_subpic->src_rect.x      = src_x;
     obj_subpic->src_rect.y      = src_y;
@@ -1714,7 +1714,7 @@ i965_DestroyContext(VADriverContextP ctx, VAContextID context)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_context *obj_context = CONTEXT(context);
 
-    assert(obj_context);
+    ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
 
     if (i965->current_context_id == context)
         i965->current_context_id = VA_INVALID_ID;
@@ -1877,10 +1877,7 @@ i965_BufferSetNumElements(VADriverContextP ctx,
     struct object_buffer *obj_buffer = BUFFER(buf_id);
     VAStatus vaStatus = VA_STATUS_SUCCESS;
 
-    assert(obj_buffer);
-
-    if (!obj_buffer)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
+    ASSERT_RET(obj_buffer, VA_STATUS_ERROR_INVALID_BUFFER);
 
     if ((num_elements < 0) || 
         (num_elements > obj_buffer->max_num_elements)) {
@@ -1904,12 +1901,9 @@ i965_MapBuffer(VADriverContextP ctx,
     struct object_buffer *obj_buffer = BUFFER(buf_id);
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
 
-    assert(obj_buffer && obj_buffer->buffer_store);
-    assert(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer);
-    assert(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer));
-
-    if (!obj_buffer || !obj_buffer->buffer_store)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
+    ASSERT_RET(obj_buffer && obj_buffer->buffer_store, VA_STATUS_ERROR_INVALID_BUFFER);
+    ASSERT_RET(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_INVALID_BUFFER);
+    ASSERT_RET(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer), VA_STATUS_ERROR_INVALID_BUFFER);
 
     if (NULL != obj_buffer->buffer_store->bo) {
         unsigned int tiling, swizzle;
@@ -1921,7 +1915,7 @@ i965_MapBuffer(VADriverContextP ctx,
         else
             dri_bo_map(obj_buffer->buffer_store->bo, 1);
 
-        assert(obj_buffer->buffer_store->bo->virtual);
+        ASSERT_RET(obj_buffer->buffer_store->bo->virtual, VA_STATUS_ERROR_OPERATION_FAILED);
         *pbuf = obj_buffer->buffer_store->bo->virtual;
 
         if (obj_buffer->type == VAEncCodedBufferType) {
@@ -1947,7 +1941,7 @@ i965_MapBuffer(VADriverContextP ctx,
                     delimiter3 = MPEG2_DELIMITER3;
                     delimiter4 = MPEG2_DELIMITER4;
                 } else {
-                    assert(0);
+                    ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
                 }
 
                 for (i = 0; i < obj_buffer->size_element - I965_CODEDBUFFER_HEADER_SIZE - 3 - 0x1000; i++) {
@@ -1989,12 +1983,9 @@ i965_UnmapBuffer(VADriverContextP ctx, VABufferID buf_id)
     if ((buf_id & OBJECT_HEAP_OFFSET_MASK) != BUFFER_ID_OFFSET)
         return VA_STATUS_ERROR_INVALID_BUFFER;
 
-    assert(obj_buffer && obj_buffer->buffer_store);
-    assert(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer);
-    assert(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer));
-
-    if (!obj_buffer || !obj_buffer->buffer_store)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
+    ASSERT_RET(obj_buffer && obj_buffer->buffer_store, VA_STATUS_ERROR_INVALID_BUFFER);
+    ASSERT_RET(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_OPERATION_FAILED);
+    ASSERT_RET(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer), VA_STATUS_ERROR_OPERATION_FAILED);
 
     if (NULL != obj_buffer->buffer_store->bo) {
         unsigned int tiling, swizzle;
@@ -2021,10 +2012,7 @@ i965_DestroyBuffer(VADriverContextP ctx, VABufferID buffer_id)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_buffer *obj_buffer = BUFFER(buffer_id);
 
-    assert(obj_buffer);
-
-    if (!obj_buffer)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
+    ASSERT_RET(obj_buffer, VA_STATUS_ERROR_INVALID_BUFFER);
 
     i965_destroy_buffer(&i965->buffer_heap, (struct object_base *)obj_buffer);
 
@@ -2043,18 +2031,10 @@ i965_BeginPicture(VADriverContextP ctx,
     VAStatus vaStatus;
     int i;
 
-    assert(obj_context);
-
-    if (!obj_context)
-        return VA_STATUS_ERROR_INVALID_CONTEXT;
-
-    assert(obj_surface);
-
-    if (!obj_surface)
-        return VA_STATUS_ERROR_INVALID_SURFACE;
-
+    ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
+    ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
     obj_config = obj_context->obj_config;
-    assert(obj_config);
+    ASSERT_RET(obj_config, VA_STATUS_ERROR_INVALID_CONFIG);
 
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
@@ -2087,8 +2067,7 @@ i965_BeginPicture(VADriverContextP ctx,
         break;
 
     default:
-        assert(0);
-        vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
         break;
     }
 
@@ -2193,10 +2172,7 @@ i965_decoder_render_picture(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
     
-    assert(obj_context);
-
-    if (!obj_context)
-        return VA_STATUS_ERROR_INVALID_CONTEXT;
+    ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
 
     for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
@@ -2266,8 +2242,8 @@ i965_encoder_render_packed_header_parameter_buffer(VADriverContextP ctx,
 {
     struct encode_state *encode = &obj_context->codec_state.encode;
 
-    assert(obj_buffer->buffer_store->bo == NULL);
-    assert(obj_buffer->buffer_store->buffer);
+    ASSERT_RET(obj_buffer->buffer_store->bo == NULL, VA_STATUS_ERROR_INVALID_BUFFER);
+    ASSERT_RET(obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_INVALID_BUFFER);
     i965_release_buffer_store(&encode->packed_header_param[type_index]);
     i965_reference_buffer_store(&encode->packed_header_param[type_index], obj_buffer->buffer_store);
 
@@ -2282,8 +2258,8 @@ i965_encoder_render_packed_header_data_buffer(VADriverContextP ctx,
 {
     struct encode_state *encode = &obj_context->codec_state.encode;
 
-    assert(obj_buffer->buffer_store->bo == NULL);
-    assert(obj_buffer->buffer_store->buffer);
+    ASSERT_RET(obj_buffer->buffer_store->bo == NULL, VA_STATUS_ERROR_INVALID_BUFFER);
+    ASSERT_RET(obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_INVALID_BUFFER);
     i965_release_buffer_store(&encode->packed_header_data[type_index]);
     i965_reference_buffer_store(&encode->packed_header_data[type_index], obj_buffer->buffer_store);
 
@@ -2298,8 +2274,8 @@ i965_encoder_render_misc_parameter_buffer(VADriverContextP ctx,
     struct encode_state *encode = &obj_context->codec_state.encode;
     VAEncMiscParameterBuffer *param = NULL;
 
-    assert(obj_buffer->buffer_store->bo == NULL);
-    assert(obj_buffer->buffer_store->buffer);
+    ASSERT_RET(obj_buffer->buffer_store->bo == NULL, VA_STATUS_ERROR_INVALID_BUFFER);
+    ASSERT_RET(obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_INVALID_BUFFER);
 
     param = (VAEncMiscParameterBuffer *)obj_buffer->buffer_store->buffer;
 
@@ -2323,10 +2299,7 @@ i965_encoder_render_picture(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
     int i;
 
-    assert(obj_context);
-
-    if (!obj_context)
-        return VA_STATUS_ERROR_INVALID_CONTEXT;
+    ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
 
     for (i = 0; i < num_buffers; i++) {  
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
@@ -2372,11 +2345,12 @@ i965_encoder_render_picture(VADriverContextP ctx,
         {
             struct encode_state *encode = &obj_context->codec_state.encode;
 
-            assert(encode->last_packed_header_type == VAEncPackedHeaderSequence ||
+            ASSERT_RET(encode->last_packed_header_type == VAEncPackedHeaderSequence ||
                    encode->last_packed_header_type == VAEncPackedHeaderPicture ||
                    encode->last_packed_header_type == VAEncPackedHeaderSlice ||
                    (((encode->last_packed_header_type & VAEncPackedHeaderMiscMask) == VAEncPackedHeaderMiscMask) &&
-                    ((encode->last_packed_header_type & (~VAEncPackedHeaderMiscMask)) != 0)));
+                    ((encode->last_packed_header_type & (~VAEncPackedHeaderMiscMask)) != 0)),
+                    VA_STATUS_ERROR_ENCODING_ERROR);
             vaStatus = i965_encoder_render_packed_header_data_buffer(ctx, 
                                                                      obj_context,
                                                                      obj_buffer,
@@ -2415,10 +2389,7 @@ i965_proc_render_picture(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
-    assert(obj_context);
-
-    if (!obj_context)
-        return VA_STATUS_ERROR_INVALID_CONTEXT;
+    ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
 
     for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
@@ -2452,16 +2423,13 @@ i965_RenderPicture(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
 
     obj_context = CONTEXT(context);
-    assert(obj_context);
-
-    if (!obj_context)
-        return VA_STATUS_ERROR_INVALID_CONTEXT;
+    ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
 
     if (num_buffers <= 0)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     obj_config = obj_context->obj_config;
-    assert(obj_config);
+    ASSERT_RET(obj_config, VA_STATUS_ERROR_INVALID_CONFIG);
 
     if (VAEntrypointVideoProc == obj_config->entrypoint) {
         vaStatus = i965_proc_render_picture(ctx, context, buffers, num_buffers);
@@ -2481,18 +2449,14 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
     struct object_context *obj_context = CONTEXT(context);
     struct object_config *obj_config;
 
-    assert(obj_context);
-
-    if (!obj_context)
-        return VA_STATUS_ERROR_INVALID_CONTEXT;
-
+    ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
     obj_config = obj_context->obj_config;
-    assert(obj_config);
+    ASSERT_RET(obj_config, VA_STATUS_ERROR_INVALID_CONFIG);
 
     if (obj_context->codec_type == CODEC_PROC) {
-        assert(VAEntrypointVideoProc == obj_config->entrypoint);
+        ASSERT_RET(VAEntrypointVideoProc == obj_config->entrypoint, VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT);
     } else if (obj_context->codec_type == CODEC_ENC) {
-        assert(VAEntrypointEncSlice == obj_config->entrypoint);
+        ASSERT_RET(VAEntrypointEncSlice == obj_config->entrypoint, VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT);
 
         if (!(obj_context->codec_state.encode.pic_param ||
                 obj_context->codec_state.encode.pic_param_ext)) {
@@ -2523,7 +2487,7 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
         }
     }
 
-    assert(obj_context->hw_context->run);
+    ASSERT_RET(obj_context->hw_context->run, VA_STATUS_ERROR_OPERATION_FAILED);
     return obj_context->hw_context->run(ctx, obj_config->profile, &obj_context->codec_state, obj_context->hw_context);
 }
 
@@ -2534,7 +2498,7 @@ i965_SyncSurface(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_surface *obj_surface = SURFACE(render_target);
 
-    assert(obj_surface);
+    ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
 
     if(obj_surface->bo)
         drm_intel_bo_wait_rendering(obj_surface->bo);
@@ -2550,7 +2514,7 @@ i965_QuerySurfaceStatus(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_surface *obj_surface = SURFACE(render_target);
 
-    assert(obj_surface);
+    ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
 
     if (obj_surface->bo) {
         if (drm_intel_bo_busy(obj_surface->bo)){
@@ -2910,7 +2874,7 @@ i965_CreateImage(VADriverContextP ctx,
     return va_status;
 }
 
-void 
+VAStatus
 i965_check_alloc_surface_bo(VADriverContextP ctx,
                             struct object_surface *obj_surface,
                             int tiled,
@@ -2921,26 +2885,27 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
     int region_width, region_height;
 
     if (obj_surface->bo) {
-        assert(obj_surface->fourcc);
-        assert(obj_surface->fourcc == fourcc);
-        assert(obj_surface->subsampling == subsampling);
-        return;
+        ASSERT_RET(obj_surface->fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
+        ASSERT_RET(obj_surface->fourcc == fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
+        ASSERT_RET(obj_surface->subsampling == subsampling, VA_STATUS_ERROR_INVALID_SURFACE);
+        return VA_STATUS_SUCCESS;
     }
 
     obj_surface->x_cb_offset = 0; /* X offset is always 0 */
     obj_surface->x_cr_offset = 0;
 
     if ((tiled && !obj_surface->user_disable_tiling)) {
-        assert(fourcc != VA_FOURCC('I', '4', '2', '0') &&
+        ASSERT_RET(fourcc != VA_FOURCC('I', '4', '2', '0') &&
                fourcc != VA_FOURCC('I', 'Y', 'U', 'V') &&
-               fourcc != VA_FOURCC('Y', 'V', '1', '2'));
+               fourcc != VA_FOURCC('Y', 'V', '1', '2'),
+               VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT);
         if (obj_surface->user_h_stride_set) {
-            assert(IS_ALIGNED(obj_surface->width, 128));
+            ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
         } else
             obj_surface->width = ALIGN(obj_surface->orig_width, 128);
 
         if (obj_surface->user_v_stride_set) {
-            assert(IS_ALIGNED(obj_surface->height, 32));
+            ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
         } else
             obj_surface->height = ALIGN(obj_surface->orig_height, 32);
 
@@ -3070,7 +3035,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         default:
             /* Never get here */
-            assert(0);
+            ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT);
             break;
         }
     } else {
@@ -3139,7 +3104,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         default:
             /* Never get here */
-            assert(0);
+            ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT);
             break;
         }
     }
@@ -3170,6 +3135,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
     obj_surface->fourcc = fourcc;
     obj_surface->subsampling = subsampling;
     assert(obj_surface->bo);
+    return VA_STATUS_SUCCESS;
 }
 
 VAStatus i965_DeriveImage(VADriverContextP ctx,
@@ -3194,10 +3160,13 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         unsigned int fourcc = VA_FOURCC('Y', 'V', '1', '2');
         i965_guess_surface_format(ctx, surface, &fourcc, &is_tiled);
         int sampling = get_sampling_from_fourcc(fourcc);
-        i965_check_alloc_surface_bo(ctx, obj_surface, is_tiled, fourcc, sampling);
+        va_status = i965_check_alloc_surface_bo(ctx, obj_surface, is_tiled, fourcc, sampling);
     }
 
-    assert(obj_surface->fourcc);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    ASSERT_RET(obj_surface->fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
 
     w_pitch = obj_surface->width;
 
@@ -3430,7 +3399,7 @@ get_sampling_from_fourcc(unsigned int fourcc)
         break;
     default:
         /* Never get here */
-        assert(0);
+        ASSERT_RET(0, 0);
         break;
 
     }
@@ -3452,7 +3421,7 @@ memcpy_pic(uint8_t *dst, unsigned int dst_stride,
     }
 }
 
-static void
+static VAStatus
 get_image_i420(struct object_image *obj_image, uint8_t *image_data,
                struct object_surface *obj_surface,
                const VARectangle *rect)
@@ -3462,11 +3431,12 @@ get_image_i420(struct object_image *obj_image, uint8_t *image_data,
     const int U = obj_image->image.format.fourcc == obj_surface->fourcc ? 1 : 2;
     const int V = obj_image->image.format.fourcc == obj_surface->fourcc ? 2 : 1;
     unsigned int tiling, swizzle;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     if (!obj_surface->bo)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
-    assert(obj_surface->fourcc);
+    ASSERT_RET(obj_surface->fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     if (tiling != I915_TILING_NONE)
@@ -3475,7 +3445,7 @@ get_image_i420(struct object_image *obj_image, uint8_t *image_data,
         dri_bo_map(obj_surface->bo, 0);
 
     if (!obj_surface->bo->virtual)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     /* Dest VA image has either I420 or YV12 format.
        Source VA surface alway has I420 format */
@@ -3511,18 +3481,21 @@ get_image_i420(struct object_image *obj_image, uint8_t *image_data,
         drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
     else
         dri_bo_unmap(obj_surface->bo);
+
+    return va_status;
 }
 
-static void
+static VAStatus
 get_image_nv12(struct object_image *obj_image, uint8_t *image_data,
                struct object_surface *obj_surface,
                const VARectangle *rect)
 {
     uint8_t *dst[2], *src[2];
     unsigned int tiling, swizzle;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     if (!obj_surface->bo)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     assert(obj_surface->fourcc);
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
@@ -3533,7 +3506,7 @@ get_image_nv12(struct object_image *obj_image, uint8_t *image_data,
         dri_bo_map(obj_surface->bo, 0);
 
     if (!obj_surface->bo->virtual)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     /* Both dest VA image and source surface have NV12 format */
     dst[0] = image_data + obj_image->image.offsets[0];
@@ -3559,18 +3532,21 @@ get_image_nv12(struct object_image *obj_image, uint8_t *image_data,
         drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
     else
         dri_bo_unmap(obj_surface->bo);
+
+    return va_status;
 }
 
-static void
+static VAStatus
 get_image_yuy2(struct object_image *obj_image, uint8_t *image_data,
                struct object_surface *obj_surface,
                const VARectangle *rect)
 {
     uint8_t *dst, *src;
     unsigned int tiling, swizzle;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     if (!obj_surface->bo)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     assert(obj_surface->fourcc);
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
@@ -3581,7 +3557,7 @@ get_image_yuy2(struct object_image *obj_image, uint8_t *image_data,
         dri_bo_map(obj_surface->bo, 0);
 
     if (!obj_surface->bo->virtual)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     /* Both dest VA image and source surface have YUYV format */
     dst = image_data + obj_image->image.offsets[0];
@@ -3598,6 +3574,8 @@ get_image_yuy2(struct object_image *obj_image, uint8_t *image_data,
         drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
     else
         dri_bo_unmap(obj_surface->bo);
+
+    return va_status;
 }
 
 static VAStatus 
@@ -3611,6 +3589,7 @@ i965_sw_getimage(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     struct object_surface *obj_surface = SURFACE(surface);
     if (!obj_surface)
@@ -3632,7 +3611,6 @@ i965_sw_getimage(VADriverContextP ctx,
     if (obj_surface->fourcc != obj_image->image.format.fourcc)
         return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
 
-    VAStatus va_status;
     void *image_data = NULL;
 
     va_status = i965_MapBuffer(ctx, obj_image->image.buf, &image_data);
@@ -3669,7 +3647,10 @@ i965_sw_getimage(VADriverContextP ctx,
         break;
     }
 
-    i965_UnmapBuffer(ctx, obj_image->image.buf);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    va_status = i965_UnmapBuffer(ctx, obj_image->image.buf);
     return va_status;
 }
 
@@ -3685,7 +3666,7 @@ i965_hw_getimage(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_surface src_surface;
     struct i965_surface dst_surface;
-    VAStatus va_status;
+    VAStatus va_status = VA_STATUS_SUCCESS;
     VARectangle rect;
     struct object_surface *obj_surface = SURFACE(surface);
     struct object_image *obj_image = IMAGE(image);
@@ -3742,7 +3723,7 @@ i965_GetImage(VADriverContextP ctx,
               VAImageID image)
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
-    VAStatus va_status;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     if (HAS_ACCELERATED_GETIMAGE(i965))
         va_status = i965_hw_getimage(ctx,
@@ -3760,7 +3741,7 @@ i965_GetImage(VADriverContextP ctx,
     return va_status;
 }
 
-static void
+static VAStatus
 put_image_i420(struct object_surface *obj_surface,
                const VARectangle *dst_rect,
                struct object_image *obj_image, uint8_t *image_data,
@@ -3771,13 +3752,13 @@ put_image_i420(struct object_surface *obj_surface,
     const int U = obj_image->image.format.fourcc == obj_surface->fourcc ? 1 : 2;
     const int V = obj_image->image.format.fourcc == obj_surface->fourcc ? 2 : 1;
     unsigned int tiling, swizzle;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
-    if (!obj_surface->bo)
-        return;
+    ASSERT_RET(obj_surface->bo, VA_STATUS_ERROR_INVALID_SURFACE);
 
-    assert(obj_surface->fourcc);
-    assert(dst_rect->width == src_rect->width);
-    assert(dst_rect->height == src_rect->height);
+    ASSERT_RET(obj_surface->fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
+    ASSERT_RET(dst_rect->width == src_rect->width, VA_STATUS_ERROR_UNIMPLEMENTED);
+    ASSERT_RET(dst_rect->height == src_rect->height, VA_STATUS_ERROR_UNIMPLEMENTED);
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     if (tiling != I915_TILING_NONE)
@@ -3786,7 +3767,7 @@ put_image_i420(struct object_surface *obj_surface,
         dri_bo_map(obj_surface->bo, 0);
 
     if (!obj_surface->bo->virtual)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     /* Dest VA image has either I420 or YV12 format.
        Source VA surface alway has I420 format */
@@ -3822,9 +3803,11 @@ put_image_i420(struct object_surface *obj_surface,
         drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
     else
         dri_bo_unmap(obj_surface->bo);
+
+    return va_status;
 }
 
-static void
+static VAStatus
 put_image_nv12(struct object_surface *obj_surface,
                const VARectangle *dst_rect,
                struct object_image *obj_image, uint8_t *image_data,
@@ -3832,13 +3815,14 @@ put_image_nv12(struct object_surface *obj_surface,
 {
     uint8_t *dst[2], *src[2];
     unsigned int tiling, swizzle;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     if (!obj_surface->bo)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
-    assert(obj_surface->fourcc);
-    assert(dst_rect->width == src_rect->width);
-    assert(dst_rect->height == src_rect->height);
+    ASSERT_RET(obj_surface->fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
+    ASSERT_RET(dst_rect->width == src_rect->width, VA_STATUS_ERROR_UNIMPLEMENTED);
+    ASSERT_RET(dst_rect->height == src_rect->height, VA_STATUS_ERROR_UNIMPLEMENTED);
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     if (tiling != I915_TILING_NONE)
@@ -3847,7 +3831,7 @@ put_image_nv12(struct object_surface *obj_surface,
         dri_bo_map(obj_surface->bo, 0);
 
     if (!obj_surface->bo->virtual)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     /* Both dest VA image and source surface have NV12 format */
     dst[0] = (uint8_t *)obj_surface->bo->virtual;
@@ -3873,9 +3857,11 @@ put_image_nv12(struct object_surface *obj_surface,
         drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
     else
         dri_bo_unmap(obj_surface->bo);
+
+    return va_status;
 }
 
-static void
+static VAStatus
 put_image_yuy2(struct object_surface *obj_surface,
                const VARectangle *dst_rect,
                struct object_image *obj_image, uint8_t *image_data,
@@ -3883,13 +3869,12 @@ put_image_yuy2(struct object_surface *obj_surface,
 {
     uint8_t *dst, *src;
     unsigned int tiling, swizzle;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
-    if (!obj_surface->bo)
-        return;
-
-    assert(obj_surface->fourcc);
-    assert(dst_rect->width == src_rect->width);
-    assert(dst_rect->height == src_rect->height);
+    ASSERT_RET(obj_surface->bo, VA_STATUS_ERROR_INVALID_SURFACE);
+    ASSERT_RET(obj_surface->fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
+    ASSERT_RET(dst_rect->width == src_rect->width, VA_STATUS_ERROR_UNIMPLEMENTED);
+    ASSERT_RET(dst_rect->height == src_rect->height, VA_STATUS_ERROR_UNIMPLEMENTED);
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
     if (tiling != I915_TILING_NONE)
@@ -3898,7 +3883,7 @@ put_image_yuy2(struct object_surface *obj_surface,
         dri_bo_map(obj_surface->bo, 0);
 
     if (!obj_surface->bo->virtual)
-        return;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     /* Both dest VA image and source surface have YUY2 format */
     dst = (uint8_t *)obj_surface->bo->virtual;
@@ -3915,6 +3900,8 @@ put_image_yuy2(struct object_surface *obj_surface,
         drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
     else
         dri_bo_unmap(obj_surface->bo);
+
+    return va_status;
 }
 
 
@@ -3933,13 +3920,12 @@ i965_sw_putimage(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface = SURFACE(surface);
-
-    if (!obj_surface)
-        return VA_STATUS_ERROR_INVALID_SURFACE;
-
     struct object_image *obj_image = IMAGE(image);
-    if (!obj_image)
-        return VA_STATUS_ERROR_INVALID_IMAGE;
+    VAStatus va_status = VA_STATUS_SUCCESS;
+    void *image_data = NULL;
+
+    ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
+    ASSERT_RET(obj_image, VA_STATUS_ERROR_INVALID_IMAGE);
 
     if (src_x < 0 || src_y < 0)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
@@ -3964,7 +3950,7 @@ i965_sw_putimage(VADriverContextP ctx,
 
     else {
         /* VA is surface not used for decoding, use same VA image format */
-        i965_check_alloc_surface_bo(
+        va_status = i965_check_alloc_surface_bo(
             ctx,
             obj_surface,
             0, /* XXX: don't use tiled surface */
@@ -3972,8 +3958,8 @@ i965_sw_putimage(VADriverContextP ctx,
             get_sampling_from_fourcc (obj_image->image.format.fourcc));
     }
 
-    VAStatus va_status;
-    void *image_data = NULL;
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
 
     va_status = i965_MapBuffer(ctx, obj_image->image.buf, &image_data);
     if (va_status != VA_STATUS_SUCCESS)
@@ -3992,20 +3978,22 @@ i965_sw_putimage(VADriverContextP ctx,
     switch (obj_image->image.format.fourcc) {
     case VA_FOURCC('Y','V','1','2'):
     case VA_FOURCC('I','4','2','0'):
-        put_image_i420(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        va_status = put_image_i420(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
         break;
     case VA_FOURCC('N','V','1','2'):
-        put_image_nv12(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        va_status = put_image_nv12(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
         break;
     case VA_FOURCC('Y','U','Y','2'):
-        put_image_yuy2(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        va_status = put_image_yuy2(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
         break;
     default:
         va_status = VA_STATUS_ERROR_OPERATION_FAILED;
         break;
     }
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
 
-    i965_UnmapBuffer(ctx, obj_image->image.buf);
+    va_status = i965_UnmapBuffer(ctx, obj_image->image.buf);
     return va_status;
 }
 
@@ -4029,11 +4017,8 @@ i965_hw_putimage(VADriverContextP ctx,
     VAStatus va_status = VA_STATUS_SUCCESS;
     VARectangle src_rect, dst_rect;
 
-    if (!obj_surface)
-        return VA_STATUS_ERROR_INVALID_SURFACE;
-
-    if (!obj_image || !obj_image->bo)
-        return VA_STATUS_ERROR_INVALID_IMAGE;
+    ASSERT_RET(obj_surface,VA_STATUS_ERROR_INVALID_SURFACE);
+    ASSERT_RET(obj_image && obj_image->bo, VA_STATUS_ERROR_INVALID_IMAGE);
 
     if (src_x < 0 ||
         src_y < 0 ||
@@ -4059,7 +4044,7 @@ i965_hw_putimage(VADriverContextP ctx,
                                     surface_sampling);
     }
 
-    assert(obj_surface->fourcc);
+    ASSERT_RET(obj_surface->fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
 
     src_surface.base = (struct object_base *)obj_image;
     src_surface.type = I965_SURFACE_TYPE_IMAGE;
@@ -4182,10 +4167,7 @@ i965_BufferInfo(
     i965 = i965_driver_data(ctx);
     obj_buffer = BUFFER(buf_id);
 
-    assert(obj_buffer);
-
-    if (!obj_buffer)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
+    ASSERT_RET(obj_buffer, VA_STATUS_ERROR_INVALID_BUFFER);
 
     *type = obj_buffer->type;
     *size = obj_buffer->size_element;
@@ -4214,15 +4196,15 @@ i965_LockSurface(
     struct object_surface *obj_surface = NULL;
     VAImage tmpImage;
 
-    assert(fourcc);
-    assert(luma_stride);
-    assert(chroma_u_stride);
-    assert(chroma_v_stride);
-    assert(luma_offset);
-    assert(chroma_u_offset);
-    assert(chroma_v_offset);
-    assert(buffer_name);
-    assert(buffer);
+    ASSERT_RET(fourcc, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(luma_stride, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(chroma_u_stride, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(chroma_v_stride, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(luma_offset, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(chroma_u_offset, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(chroma_v_offset, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(buffer_name, VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET(buffer, VA_STATUS_ERROR_INVALID_PARAMETER);
 
     tmpImage.image_id = VA_INVALID_ID;
 
@@ -5118,9 +5100,10 @@ VAStatus i965_QueryVideoProcPipelineCaps(
         } else if (base->type == VAProcFilterDeinterlacing) {
             VAProcFilterParameterBufferDeinterlacing *deint = (VAProcFilterParameterBufferDeinterlacing *)base;
 
-            assert(deint->algorithm == VAProcDeinterlacingBob ||
+            ASSERT_RET(deint->algorithm == VAProcDeinterlacingBob ||
                    deint->algorithm == VAProcDeinterlacingMotionAdaptive ||
-                   deint->algorithm == VAProcDeinterlacingMotionCompensated);
+                   deint->algorithm == VAProcDeinterlacingMotionCompensated,
+                   VA_STATUS_ERROR_INVALID_PARAMETER);
             
             if (deint->algorithm == VAProcDeinterlacingMotionAdaptive ||
                 deint->algorithm == VAProcDeinterlacingMotionCompensated);

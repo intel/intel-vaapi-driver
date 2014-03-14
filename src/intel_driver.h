@@ -76,6 +76,13 @@ struct intel_batchbuffer;
 #define True 1
 #define False 0
 
+#define ASSERT_RET(value, fail_ret) do {    \
+        if (!(value)) {                 \
+            assert(0);                      \
+            return fail_ret;                \
+        }                                   \
+    } while (0)
+
 #define SET_BLOCKED_SIGSET()   do {     \
         sigset_t bl_mask;               \
         sigfillset(&bl_mask);           \

@@ -373,7 +373,7 @@ i965_driver_data(VADriverContextP ctx)
     return (struct i965_driver_data *)(ctx->pDriverData);
 }
 
-void 
+VAStatus
 i965_check_alloc_surface_bo(VADriverContextP ctx,
                             struct object_surface *obj_surface,
                             int tiled,
