@@ -776,7 +776,8 @@ i965_surface_native_memory(VADriverContextP ctx,
     // todo, should we disable tiling for 422 format?
     if (expected_fourcc == VA_FOURCC('I', '4', '2', '0') ||
         expected_fourcc == VA_FOURCC('I', 'Y', 'U', 'V') ||
-        expected_fourcc == VA_FOURCC('Y', 'V', '1', '2'))
+        expected_fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
+        expected_fourcc == VA_FOURCC('Y', 'V', '1', '6'))
         tiling = 0;
 		
     i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, get_sampling_from_fourcc(expected_fourcc));
@@ -917,6 +918,19 @@ i965_suface_external_memory(VADriverContextP ctx,
         obj_surface->subsampling = SUBSAMPLE_YUV422H;
         obj_surface->y_cb_offset = obj_surface->height;
         obj_surface->y_cr_offset = memory_attibute->offsets[2] / obj_surface->width;
+        obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+        obj_surface->cb_cr_height = obj_surface->orig_height;
+        obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
+
+        break;
+
+    case VA_FOURCC('Y', 'V', '1', '6'):
+        assert(memory_attibute->num_planes == 3);
+        assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
+
+        obj_surface->subsampling = SUBSAMPLE_YUV422H;
+        obj_surface->y_cr_offset = memory_attibute->offsets[1] / obj_surface->width;
+        obj_surface->y_cb_offset = memory_attibute->offsets[2] / obj_surface->width;
         obj_surface->cb_cr_width = obj_surface->orig_width / 2;
         obj_surface->cb_cr_height = obj_surface->orig_height;
         obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
@@ -3004,6 +3018,15 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             region_height = obj_surface->height + obj_surface->height / 2;
             break;
 
+        case VA_FOURCC('Y', 'V', '1', '6'):
+            obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height;
+            obj_surface->y_cr_offset = obj_surface->height;
+            obj_surface->y_cb_offset = obj_surface->y_cr_offset + ALIGN(obj_surface->cb_cr_height, 32) / 2;
+            obj_surface->cb_cr_pitch = obj_surface->width / 2;
+            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32);
+            break;
+
         case VA_FOURCC('Y', 'V', '1', '2'):
         case VA_FOURCC('I', '4', '2', '0'):
             if (fourcc == VA_FOURCC('Y', 'V', '1', '2')) {
@@ -3297,6 +3320,7 @@ get_sampling_from_fourcc(unsigned int fourcc)
     case VA_FOURCC('Y', 'U', 'Y', '2'):
     case VA_FOURCC('U', 'Y', 'V', 'Y'):
     case VA_FOURCC('4', '2', '2', 'H'):
+    case VA_FOURCC('Y', 'V', '1', '6'):
         surface_sampling = SUBSAMPLE_YUV422H;
         break;
     case VA_FOURCC('4', '2', '2', 'V'):
