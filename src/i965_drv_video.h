@@ -228,6 +228,10 @@ struct object_surface
     int cb_cr_width;
     int cb_cr_height;
     int cb_cr_pitch;
+    /* user specified attributes see: VASurfaceAttribExternalBuffers/VA_SURFACE_ATTRIB_MEM_TYPE_VA */
+    uint32_t user_disable_tiling : 1;
+    uint32_t user_h_stride_set   : 1;
+    uint32_t user_v_stride_set   : 1;
 };
 
 struct object_buffer 

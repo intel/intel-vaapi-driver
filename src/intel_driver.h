@@ -67,6 +67,7 @@
 struct intel_batchbuffer;
 
 #define ALIGN(i, n)    (((i) + (n) - 1) & ~((n) - 1))
+#define IS_ALIGNED(i, n) (((i) & ((n)-1)) == 0)
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))

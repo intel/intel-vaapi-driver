@@ -983,6 +983,40 @@ i965_suface_external_memory(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+/* byte-per-pixel of the first plane */
+static int
+bpp_1stplane_by_fourcc(unsigned int fourcc)
+{
+    switch (fourcc) {
+        case VA_FOURCC_RGBA:
+        case VA_FOURCC_RGBX:
+        case VA_FOURCC_BGRA:
+        case VA_FOURCC_BGRX:
+        case VA_FOURCC_ARGB:
+        case VA_FOURCC_XRGB:
+        case VA_FOURCC_ABGR:
+        case VA_FOURCC_XBGR:
+        case VA_FOURCC_AYUV:
+            return 4;
+
+        case VA_FOURCC_UYVY:
+        case VA_FOURCC_YUY2:
+            return 2;
+
+        case VA_FOURCC_YV12:
+        case VA_FOURCC_IMC3:
+        case VA_FOURCC_IYUV:
+        case VA_FOURCC_NV12:
+        case VA_FOURCC_NV11:
+        case VA_FOURCC('Y', 'V', '1', '6'):
+            return 1;
+
+        default:
+            assert(0);
+            return 0;
+    }
+}
+
 static VAStatus
 i965_CreateSurfaces2(
     VADriverContextP    ctx,
@@ -1018,6 +1052,8 @@ i965_CreateSurfaces2(
                 memory_type = I965_SURFACE_MEM_GEM_FLINK; /* flinked GEM handle */
             else if (attrib_list[i].value.value.i == VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME)
                 memory_type = I965_SURFACE_MEM_DRM_PRIME; /* drm prime fd */
+            else if (attrib_list[i].value.value.i == VA_SURFACE_ATTRIB_MEM_TYPE_VA)
+                memory_type = I965_SURFACE_MEM_NATIVE; /* va native memory, to be allocated */
         }
 
         if ((attrib_list[i].type == VASurfaceAttribExternalBufferDescriptor) &&
@@ -1051,6 +1087,9 @@ i965_CreateSurfaces2(
         obj_surface->status = VASurfaceReady;
         obj_surface->orig_width = width;
         obj_surface->orig_height = height;
+        obj_surface->user_disable_tiling = false;
+        obj_surface->user_h_stride_set = false;
+        obj_surface->user_v_stride_set = false;
 
         obj_surface->subpic_render_idx = 0;
         for(j = 0; j < I965_MAX_SUBPIC_SUM; j++){
@@ -1070,6 +1109,34 @@ i965_CreateSurfaces2(
 
         switch (memory_type) {
         case I965_SURFACE_MEM_NATIVE:
+            if (memory_attibute) {
+                if (!(memory_attibute->flags & VA_SURFACE_EXTBUF_DESC_ENABLE_TILING))
+                    obj_surface->user_disable_tiling = true;
+
+                if (memory_attibute->pixel_format) {
+                    if (expected_fourcc)
+                        assert(memory_attibute->pixel_format == expected_fourcc);
+                    else
+                        expected_fourcc = memory_attibute->pixel_format;
+                }
+                assert(expected_fourcc);
+                if (memory_attibute->pitches[0]) {
+                    int bpp_1stplane = bpp_1stplane_by_fourcc(expected_fourcc);
+                    assert(bpp_1stplane);
+                    obj_surface->width = memory_attibute->pitches[0]/bpp_1stplane;
+                    obj_surface->user_h_stride_set = true;
+                    assert(IS_ALIGNED(obj_surface->width, 16));
+                    assert(obj_surface->width >= width);
+
+                    if (memory_attibute->offsets[1]) {
+                        assert(!memory_attibute->offsets[0]);
+                        obj_surface->height = memory_attibute->offsets[1]/memory_attibute->pitches[0];
+                        obj_surface->user_v_stride_set = true;
+                        assert(IS_ALIGNED(obj_surface->height, 16));
+                        assert(obj_surface->height >= height);
+                    }
+                }
+            }
             i965_surface_native_memory(ctx,
                                        obj_surface,
                                        format,
@@ -2863,13 +2930,20 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
     obj_surface->x_cb_offset = 0; /* X offset is always 0 */
     obj_surface->x_cr_offset = 0;
 
-    if (tiled) {
+    if ((tiled && !obj_surface->user_disable_tiling)) {
         assert(fourcc != VA_FOURCC('I', '4', '2', '0') &&
                fourcc != VA_FOURCC('I', 'Y', 'U', 'V') &&
                fourcc != VA_FOURCC('Y', 'V', '1', '2'));
+        if (obj_surface->user_h_stride_set) {
+            assert(IS_ALIGNED(obj_surface->width, 128));
+        } else
+            obj_surface->width = ALIGN(obj_surface->orig_width, 128);
 
-        obj_surface->width = ALIGN(obj_surface->orig_width, 128);
-        obj_surface->height = ALIGN(obj_surface->orig_height, 32);
+        if (obj_surface->user_v_stride_set) {
+            assert(IS_ALIGNED(obj_surface->height, 32));
+        } else
+            obj_surface->height = ALIGN(obj_surface->orig_height, 32);
+
         region_height = obj_surface->height;
 
         switch (fourcc) {
@@ -3072,7 +3146,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
     obj_surface->size = ALIGN(region_width * region_height, 0x1000);
 
-    if (tiled) {
+    if ((tiled && !obj_surface->user_disable_tiling)) {
         uint32_t tiling_mode = I915_TILING_Y; /* always uses Y-tiled format */
         unsigned long pitch;
 
