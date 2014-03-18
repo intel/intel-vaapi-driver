@@ -166,7 +166,7 @@ EXTRA_DIST = \
 	$(INTEL_G7A)		\
 	$(INTEL_G7B)		\
 	$(INTEL_G7B_HASWELL)	\
-	$(INTEL_G8A))		\
+	$(INTEL_G8A)		\
 	$(INTEL_G8B)		\
 	$(NULL)
 
