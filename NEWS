@@ -1,5 +1,12 @@
-libva-intel-driver NEWS -- summary of changes.  2013-12-16
+libva-intel-driver NEWS -- summary of changes.  2014-03-DD
 Copyright (C) 2009-2013 Intel Corporation
+
+Version 1.3.0 - DD.Mar.2014
+* Add support for Broadwell
+  - Decoding: H.264/MPEG-2/VC-1/JPEG/VP8
+  - Encoding: H.264/MPEG-2
+  - VPP: CSC/scaling/NoiseReduction/Deinterlacing{Bob, MotionAdaptive, MotionCompensated}/Sharpening/ColorBalance
+* Fix the wrong setting in MI_BATCH_BATCH_START
 
 Version 1.2.2 - 16.Dec.2013
 * Motion compensation DI on HSW
