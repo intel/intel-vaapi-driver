@@ -845,7 +845,7 @@ gen8_mfd_avc_decode_init(VADriverContextP ctx,
     obj_surface = decode_state->render_object;
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
     /* initial uv component for YUV400 case */
     if (pic_param->seq_fields.bits.chroma_format_idc == 0) {
@@ -994,7 +994,7 @@ gen8_mfd_mpeg2_decode_init(VADriverContextP ctx,
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
     dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
@@ -1330,7 +1330,7 @@ gen8_mfd_vc1_decode_init(VADriverContextP ctx,
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
     gen8_mfd_init_vc1_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
@@ -1886,7 +1886,7 @@ gen8_mfd_jpeg_decode_init(VADriverContextP ctx,
     struct object_surface *obj_surface;
     VAPictureParameterBufferJPEGBaseline *pic_param;
     int subsampling = SUBSAMPLE_YUV420;
-    int fourcc = VA_FOURCC('I', 'M', 'C', '3');
+    int fourcc = VA_FOURCC_IMC3;
 
     pic_param = (VAPictureParameterBufferJPEGBaseline *)decode_state->pic_param->buffer;
 
@@ -1903,31 +1903,31 @@ gen8_mfd_jpeg_decode_init(VADriverContextP ctx,
         if (h1 == 2 && h2 == 1 && h3 == 1 &&
             v1 == 2 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV420;
-            fourcc = VA_FOURCC('I', 'M', 'C', '3');
+            fourcc = VA_FOURCC_IMC3;
         } else if (h1 == 2 && h2 == 1 && h3 == 1 &&
                    v1 == 1 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV422H;
-            fourcc = VA_FOURCC('4', '2', '2', 'H');
+            fourcc = VA_FOURCC_422H;
         } else if (h1 == 1 && h2 == 1 && h3 == 1 &&
                    v1 == 1 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV444;
-            fourcc = VA_FOURCC('4', '4', '4', 'P');
+            fourcc = VA_FOURCC_444P;
         } else if (h1 == 4 && h2 == 1 && h3 == 1 &&
                    v1 == 1 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV411;
-            fourcc = VA_FOURCC('4', '1', '1', 'P');
+            fourcc = VA_FOURCC_411P;
         } else if (h1 == 1 && h2 == 1 && h3 == 1 &&
                    v1 == 2 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV422V;
-            fourcc = VA_FOURCC('4', '2', '2', 'V');
+            fourcc = VA_FOURCC_422V;
         } else if (h1 == 2 && h2 == 1 && h3 == 1 &&
                    v1 == 2 && v2 == 2 && v3 == 2) {
             subsampling = SUBSAMPLE_YUV422H;
-            fourcc = VA_FOURCC('4', '2', '2', 'H');
+            fourcc = VA_FOURCC_422H;
         } else if (h2 == 2 && h2 == 2 && h3 == 2 &&
                    v1 == 2 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV422V;
-            fourcc = VA_FOURCC('4', '2', '2', 'V');
+            fourcc = VA_FOURCC_422V;
         } else
             assert(0);
     }
@@ -2230,7 +2230,7 @@ gen8_jpeg_wa_init(VADriverContextP ctx,
 
     obj_surface = SURFACE(gen7_mfd_context->jpeg_wa_surface_id);
     assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
     gen7_mfd_context->jpeg_wa_surface_object = obj_surface;
 
     if (!gen7_mfd_context->jpeg_wa_slice_data_bo) {
@@ -2773,7 +2773,7 @@ gen8_mfd_vp8_decode_init(VADriverContextP ctx,
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
     gen7_mfd_context->post_deblocking_output.bo = obj_surface->bo;

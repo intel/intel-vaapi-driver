@@ -1022,7 +1022,7 @@ gen7_mfc_mpeg2_prepare(VADriverContextP ctx,
 
     /* reconstructed surface */
     obj_surface = encode_state->reconstructed_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
     mfc_context->pre_deblocking_output.bo = obj_surface->bo;
     dri_bo_reference(mfc_context->pre_deblocking_output.bo);
     mfc_context->surface_state.width = obj_surface->orig_width;

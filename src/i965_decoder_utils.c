@@ -427,7 +427,7 @@ intel_update_avc_frame_store_index(VADriverContextP ctx,
              * Sometimes a dummy frame comes from the upper layer library, call i965_check_alloc_surface_bo()
              * to ake sure the store buffer is allocated for this reference frame
              */
-            i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+            i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
             slot_found = 0;
             frame_idx = -1;

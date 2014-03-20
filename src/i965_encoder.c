@@ -77,7 +77,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     if (!obj_surface || !obj_surface->bo)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+    if (obj_surface->fourcc == VA_FOURCC_NV12) {
         unsigned int tiling = 0, swizzle = 0;
 
         dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
@@ -112,7 +112,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     obj_surface = SURFACE(encoder_context->input_yuv_surface);
     encode_state->input_yuv_object = obj_surface;
     assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
     
     dst_surface.base = (struct object_base *)obj_surface;
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;

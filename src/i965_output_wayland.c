@@ -237,7 +237,7 @@ va_GetSurfaceBufferWl(
         return VA_STATUS_ERROR_INVALID_SURFACE;
 
     switch (obj_surface->fourcc) {
-    case VA_FOURCC('N','V','1','2'):
+    case VA_FOURCC_NV12:
         drm_format = WL_DRM_FORMAT_NV12;
         offsets[0] = 0;
         pitches[0] = obj_surface->width;
@@ -246,14 +246,14 @@ va_GetSurfaceBufferWl(
         offsets[2] = 0;
         pitches[2] = 0;
         break;
-    case VA_FOURCC('Y','V','1','2'):
-    case VA_FOURCC('I','4','2','0'):
-    case VA_FOURCC('I','M','C','1'):
-    case VA_FOURCC('I','M','C','3'):
-    case VA_FOURCC('4','2','2','H'):
-    case VA_FOURCC('4','2','2','V'):
-    case VA_FOURCC('4','1','1','P'):
-    case VA_FOURCC('4','4','4','P'):
+    case VA_FOURCC_YV12:
+    case VA_FOURCC_I420:
+    case VA_FOURCC_IMC1:
+    case VA_FOURCC_IMC3:
+    case VA_FOURCC_422H:
+    case VA_FOURCC_422V:
+    case VA_FOURCC_411P:
+    case VA_FOURCC_444P:
         switch (obj_surface->subsampling) {
         case SUBSAMPLE_YUV411:
             drm_format = WL_DRM_FORMAT_YUV411;

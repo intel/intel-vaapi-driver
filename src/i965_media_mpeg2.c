@@ -515,7 +515,7 @@ i965_media_mpeg2_surface_setup(VADriverContextP ctx,
     int w = obj_surface->width;
     int h = obj_surface->height;
 
-    i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC('I','4','2','0'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC_I420, SUBSAMPLE_YUV420);
 
     if (picture_structure == MPEG_FRAME) {
 	i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,

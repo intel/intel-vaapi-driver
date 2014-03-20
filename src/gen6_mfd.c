@@ -840,7 +840,7 @@ gen6_mfd_avc_decode_init(VADriverContextP ctx,
     obj_surface = decode_state->render_object;
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
     /* initial uv component for YUV400 case */
     if (pic_param->seq_fields.bits.chroma_format_idc == 0) {
@@ -993,7 +993,7 @@ gen6_mfd_mpeg2_decode_init(VADriverContextP ctx,
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
     dri_bo_unreference(gen6_mfd_context->pre_deblocking_output.bo);
     gen6_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
@@ -1306,7 +1306,7 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
     gen6_mfd_init_vc1_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen6_mfd_context->post_deblocking_output.bo);

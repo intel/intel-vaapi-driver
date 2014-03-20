@@ -876,7 +876,7 @@ i965_render_src_surfaces_state(
     i965_render_src_surface_state(ctx, 1, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);     /* Y */
     i965_render_src_surface_state(ctx, 2, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);
 
-    if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+    if (obj_surface->fourcc == VA_FOURCC_NV12) {
         i965_render_src_surface_state(ctx, 3, region,
                                       region_pitch * obj_surface->y_cb_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
@@ -1098,11 +1098,11 @@ i965_render_upload_constants(VADriverContextP ctx,
     constant_buffer = render_state->curbe.bo->virtual;
 
     if (obj_surface->subsampling == SUBSAMPLE_YUV400) {
-        assert(obj_surface->fourcc == VA_FOURCC('Y', '8', '0', '0'));
+        assert(obj_surface->fourcc == VA_FOURCC_Y800);
 
         constant_buffer[0] = 2;
     } else {
-        if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'))
+        if (obj_surface->fourcc == VA_FOURCC_NV12)
             constant_buffer[0] = 1;
         else
             constant_buffer[0] = 0;

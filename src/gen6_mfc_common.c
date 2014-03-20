@@ -554,7 +554,7 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
 
     /* Setup current frame and current direct mv buffer*/
     obj_surface = encode_state->reconstructed_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC('N','V','1','2'), SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
     if ( obj_surface->private_data == NULL) {
         gen6_avc_surface = calloc(sizeof(GenAvcSurface), 1);

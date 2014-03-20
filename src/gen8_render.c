@@ -276,7 +276,7 @@ gen8_render_src_surfaces_state(
     gen8_render_src_surface_state(ctx, 1, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);     /* Y */
     gen8_render_src_surface_state(ctx, 2, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);
 
-    if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+    if (obj_surface->fourcc == VA_FOURCC_NV12) {
         gen8_render_src_surface_state(ctx, 3, region,
                                       region_pitch * obj_surface->y_cb_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
@@ -791,11 +791,11 @@ gen8_render_upload_constants(VADriverContextP ctx,
     constant_buffer = (unsigned short *) cc_ptr;
 
     if (obj_surface->subsampling == SUBSAMPLE_YUV400) {
-        assert(obj_surface->fourcc == VA_FOURCC('Y', '8', '0', '0'));
+        assert(obj_surface->fourcc == VA_FOURCC_Y800);
 
         *constant_buffer = 2;
     } else {
-        if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'))
+        if (obj_surface->fourcc == VA_FOURCC_NV12)
             *constant_buffer = 1;
         else
             *constant_buffer = 0;
