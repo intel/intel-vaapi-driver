@@ -859,4 +859,9 @@
 #define GEN9_MEDIA_DOP_GATE_ON              (1 << 4)
 #define GEN9_MEDIA_DOP_GATE_OFF             (0 << 4)
 
+#define GEN9_SBE_ACTIVE_COMPONENT_NONE          0
+#define GEN9_SBE_ACTIVE_COMPONENT_XY            1
+#define GEN9_SBE_ACTIVE_COMPONENT_XYZ           2
+#define GEN9_SBE_ACTIVE_COMPONENT_XYZW          3
+
 #endif /* _I965_DEFINES_H_ */
