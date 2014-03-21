@@ -103,6 +103,26 @@ INTEL_G8B =				\
 	exa_wm_yuv_rgb.g8b		\
 	exa_wm_write.g8b 
 
+INTEL_G9A =				\
+	exa_wm_src_affine.g9a 		\
+	exa_wm_src_sample_planar.g9a 	\
+	exa_wm_src_sample_argb.g9a 	\
+	exa_wm_yuv_color_balance.g9a	\
+	exa_wm_write.g9a 		\
+	exa_wm_yuv_rgb.g9a
+
+INTEL_G9I = $(INTEL_G4I)
+
+INTEL_G9S = $(INTEL_G9A:%.g9a=%.g9s)
+
+INTEL_G9B =				\
+	exa_wm_src_affine.g9b 		\
+	exa_wm_src_sample_planar.g9b 	\
+	exa_wm_src_sample_argb.g9b 	\
+	exa_wm_yuv_color_balance.g9b	\
+	exa_wm_yuv_rgb.g9b		\
+	exa_wm_write.g9b
+
 TARGETS  =
 if HAVE_GEN4ASM
 TARGETS += $(INTEL_G4B)
@@ -111,6 +131,7 @@ TARGETS += $(INTEL_G6B)
 TARGETS += $(INTEL_G7B)
 TARGETS += $(INTEL_G7B_HASWELL)
 TARGETS += $(INTEL_G8B)
+TARGETS += $(INTEL_G9B)
 endif
 
 all-local: $(TARGETS)
@@ -147,6 +168,12 @@ $(INTEL_G8S): $(INTEL_G8A) $(INTEL_G8I)
 .g8s.g8b:
 	$(AM_V_GEN)$(GEN4ASM) -g 8 -o $@ $<
 
+$(INTEL_G9S): $(INTEL_G9A) $(INTEL_G9I)
+.g9a.g9s:
+	$(AM_V_GEN)m4 $< > $@
+.g9s.g9b:
+	$(AM_V_GEN)$(GEN4ASM) -g 9 -o $@ $<
+
 endif
 
 CLEANFILES = \
@@ -154,6 +181,7 @@ CLEANFILES = \
 	$(INTEL_G6S)		\
 	$(INTEL_G7S)		\
 	$(INTEL_G8S)		\
+	$(INTEL_G9S)		\
 	$(NULL)
 
 EXTRA_DIST = \
@@ -168,6 +196,8 @@ EXTRA_DIST = \
 	$(INTEL_G7B_HASWELL)	\
 	$(INTEL_G8A)		\
 	$(INTEL_G8B)		\
+	$(INTEL_G9A))		\
+	$(INTEL_G9B)		\
 	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
