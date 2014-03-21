@@ -1230,6 +1230,70 @@ struct gen8_surface_state2
     } ss7;
 };
 
+struct gen9_surface_state2
+{
+    struct {
+        unsigned int pad0:16;
+        unsigned int y_offset:4;
+        unsigned int x_offset:7;
+        unsigned int pad1:3;
+        unsigned int rotation:2;
+    } ss0;
+
+    struct {
+        unsigned int cbcr_pixel_offset_v_direction:2;
+        unsigned int picture_structure:2;
+        unsigned int width:14;
+        unsigned int height:14;
+    } ss1;
+
+    struct {
+        unsigned int tile_walk:1;
+        unsigned int tiled_surface:1;
+        unsigned int half_pitch_for_chroma:1;
+        unsigned int pitch:18;
+        unsigned int address_ctrl:1; /* clamp or mirror mode */
+        unsigned int memory_compression_enable:1;
+        unsigned int memory_compression_mode:1;
+        unsigned int cbcr_pixel_offset_v_direction_msb:1;
+        unsigned int cbcr_pixel_offset_u_direction:1;
+        unsigned int interleave_chroma:1;
+        unsigned int surface_format:5;
+    } ss2;
+
+    struct {
+        unsigned int y_offset_for_cb:14;
+        unsigned int pad0:2;
+        unsigned int x_offset_for_cb:14;
+        unsigned int pad1:2;
+    } ss3;
+
+    struct {
+        unsigned int y_offset_for_cr:15;
+        unsigned int pad0:1;
+        unsigned int x_offset_for_cr:14;
+        unsigned int pad1:2;
+    } ss4;
+
+    struct {
+        unsigned int surface_object_mocs:7;
+	unsigned int pad0:11;
+	unsigned int tr_mode:2;
+	unsigned int pad1:10;
+	unsigned int vert_line_stride_offset:1;
+	unsigned int vert_line_stride:1;
+    } ss5;
+
+    struct {
+        unsigned int base_addr;
+    } ss6;
+
+    struct {
+        unsigned int base_addr_high:16;
+	unsigned int pad0:16;
+    } ss7;
+};
+
 struct gen8_sampler_state
 {
    struct
