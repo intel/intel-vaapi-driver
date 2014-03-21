@@ -3161,10 +3161,9 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         i965_guess_surface_format(ctx, surface, &fourcc, &is_tiled);
         int sampling = get_sampling_from_fourcc(fourcc);
         va_status = i965_check_alloc_surface_bo(ctx, obj_surface, is_tiled, fourcc, sampling);
+        if (va_status != VA_STATUS_SUCCESS)
+            return va_status;
     }
-
-    if (va_status != VA_STATUS_SUCCESS)
-        return va_status;
 
     ASSERT_RET(obj_surface->fourcc, VA_STATUS_ERROR_INVALID_SURFACE);
 
