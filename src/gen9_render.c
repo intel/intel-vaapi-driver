@@ -53,17 +53,17 @@ static const uint32_t sf_kernel_static_gen9[][4] ={
 
 };
 static const uint32_t ps_kernel_static_gen9[][4] = {
-#include "shaders/render/exa_wm_src_affine.g8b"
-#include "shaders/render/exa_wm_src_sample_planar.g8b"
-#include "shaders/render/exa_wm_yuv_color_balance.g8b"
-#include "shaders/render/exa_wm_yuv_rgb.g8b"
-#include "shaders/render/exa_wm_write.g8b"
+#include "shaders/render/exa_wm_src_affine.g9b"
+#include "shaders/render/exa_wm_src_sample_planar.g9b"
+#include "shaders/render/exa_wm_yuv_color_balance.g9b"
+#include "shaders/render/exa_wm_yuv_rgb.g9b"
+#include "shaders/render/exa_wm_write.g9b"
 };
 
 static const uint32_t ps_subpic_kernel_static_gen9[][4] = {
-#include "shaders/render/exa_wm_src_affine.g8b"
-#include "shaders/render/exa_wm_src_sample_argb.g8b"
-#include "shaders/render/exa_wm_write.g8b"
+#include "shaders/render/exa_wm_src_affine.g9b"
+#include "shaders/render/exa_wm_src_sample_argb.g9b"
+#include "shaders/render/exa_wm_write.g9b"
 };
 
 
