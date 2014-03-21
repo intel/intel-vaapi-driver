@@ -1337,8 +1337,8 @@ gen9_emit_sf_state(VADriverContextP ctx)
     ADVANCE_BATCH(batch);
 
 
-    BEGIN_BATCH(batch, 4);
-    OUT_BATCH(batch, GEN7_3DSTATE_SBE | (4 - 2));
+    BEGIN_BATCH(batch, 6);
+    OUT_BATCH(batch, GEN7_3DSTATE_SBE | (6 - 2));
     OUT_BATCH(batch,
 	      (GEN8_SBE_FORCE_URB_ENTRY_READ_LENGTH) |
 	      (GEN8_SBE_FORCE_URB_ENTRY_READ_OFFSET) |
@@ -1346,6 +1346,8 @@ gen9_emit_sf_state(VADriverContextP ctx)
               (1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT) |
               (1 << GEN8_SBE_URB_ENTRY_READ_OFFSET_SHIFT));
     OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, GEN9_SBE_ACTIVE_COMPONENT_XYZW);
     OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
