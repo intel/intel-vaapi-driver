@@ -1294,6 +1294,130 @@ struct gen9_surface_state2
     } ss7;
 };
 
+struct gen9_surface_state
+{
+    struct {
+        unsigned int pad0:6;
+        unsigned int media_boundary_pixel_mode:2;
+        unsigned int render_cache_read_write:1;
+        unsigned int sampler_l2bypass_disable:1;
+        unsigned int vert_line_stride_ofs:1;
+        unsigned int vert_line_stride:1;
+        unsigned int tile_walk:1;
+        unsigned int tiled_surface:1;
+        unsigned int horizontal_alignment:2;
+        /* Field 16 */
+        unsigned int vertical_alignment:2;
+        unsigned int surface_format:9;     /**< BRW_SURFACEFORMAT_x */
+        unsigned int astc_enable:1;
+        unsigned int is_array:1;
+        unsigned int surface_type:3;       /**< BRW_SURFACE_1D/2D/3D/CUBE */
+    } ss0;
+
+    struct {
+        unsigned int surface_qpitch:15;
+        unsigned int pad0:4;
+        unsigned int base_mip_level:5;
+        unsigned int surface_mocs:7;
+        unsigned int pad1:1;
+    } ss1;
+
+    struct {
+        unsigned int width:14;
+        unsigned int pad0:2;
+        unsigned int height:14;
+        unsigned int pad1:2;
+    } ss2;
+
+    struct {
+        unsigned int pitch:18;
+        unsigned int pad:3;
+        unsigned int depth:11;
+    } ss3;
+
+    struct {
+        unsigned int multisample_position_palette_index:3;
+        unsigned int num_multisamples:3;
+        unsigned int multisampled_surface_storage_format:1;
+        unsigned int render_target_view_extent:11;
+        unsigned int min_array_elt:11;
+        unsigned int rotation:2;
+        unsigned int force_ncmp_reduce_type:1;
+    } ss4;
+
+    struct {
+        unsigned int mip_count:4;
+        unsigned int min_lod:4;
+        unsigned int miptail_start_lod:4;
+        unsigned int pad0:2;
+        unsigned int coherence_type:1;
+        unsigned int pad1:3;
+        unsigned int tr_mode:2;
+        unsigned int ewa_disable_cube:1;
+        unsigned int y_offset:3;
+        unsigned int pad2:1;
+        unsigned int x_offset:7;
+    } ss5;
+
+    struct {
+        unsigned int y_offset_uv_plane:14;
+        unsigned int pad0:2;
+        unsigned int x_offset_uv_plane:14;
+        unsigned int pad1:1;
+        unsigned int separate_uv_plane:1;
+    } ss6;
+
+    struct {
+        unsigned int resource_min_lod:12;
+        unsigned int pad0:4;
+        unsigned int shader_chanel_select_a:3;
+        unsigned int shader_chanel_select_b:3;
+        unsigned int shader_chanel_select_g:3;
+        unsigned int shader_chanel_select_r:3;
+        unsigned int pad1:2;
+        unsigned int memory_compression_enable:1;
+        unsigned int memory_compression_mode:1;
+    } ss7;
+
+    struct {
+        unsigned int base_addr;
+    } ss8;
+
+    struct {
+        unsigned int base_addr_high;
+    } ss9;
+
+    struct {
+        unsigned int quilt_width:5;
+        unsigned int quilt_height:5;
+        unsigned int pad0:6;
+        unsigned int pad1:16;
+    } ss10;
+
+    struct {
+        unsigned int y_offset_v_plane:14;
+        unsigned int pad0:2;
+        unsigned int x_offset_v_plane:14;
+        unsigned int pad1:2;
+    } ss11;
+
+    struct {
+        unsigned int pad0;
+    } ss12;
+
+    struct {
+        unsigned int pad0;
+    } ss13;
+
+    struct {
+        unsigned int pad0;
+    } ss14;
+
+    struct {
+        unsigned int pad0;
+    } ss15;
+};
+
 struct gen8_sampler_state
 {
    struct
@@ -2086,5 +2210,9 @@ struct gen8_sampler_8x8_avs {
 #define SURFACE_STATE_PADDED_SIZE_0_GEN8        ALIGN(sizeof(struct gen8_surface_state), 32)
 #define SURFACE_STATE_PADDED_SIZE_1_GEN8        ALIGN(sizeof(struct gen8_surface_state2), 32)
 #define SURFACE_STATE_PADDED_SIZE_GEN8          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN8, SURFACE_STATE_PADDED_SIZE_1_GEN8)
+
+#define SURFACE_STATE_PADDED_SIZE_0_GEN9        ALIGN(sizeof(struct gen9_surface_state), 32)
+#define SURFACE_STATE_PADDED_SIZE_1_GEN9        ALIGN(sizeof(struct gen9_surface_state2), 32)
+#define SURFACE_STATE_PADDED_SIZE_GEN9          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN9, SURFACE_STATE_PADDED_SIZE_1_GEN9)
 
 #endif /* _I965_STRUCTS_H_ */
