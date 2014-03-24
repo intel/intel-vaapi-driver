@@ -163,7 +163,7 @@ gen75_proc_picture(VADriverContextP ctx,
 
     if (!obj_dst_surf->bo) {
         unsigned int is_tiled = 0;
-        unsigned int fourcc = VA_FOURCC('N','V','1','2');
+        unsigned int fourcc = VA_FOURCC_NV12;
         int sampling = SUBSAMPLE_YUV420;
         i965_check_alloc_surface_bo(ctx, obj_dst_surf, is_tiled, fourcc, sampling);
     }  
@@ -197,8 +197,8 @@ gen75_proc_picture(VADriverContextP ctx,
            filter->type == VAProcFilterColorBalance){
            gen75_vpp_vebox(ctx, proc_ctx);
        }else if(filter->type == VAProcFilterSharpening){
-           if (obj_src_surf->fourcc != VA_FOURCC('N', 'V', '1', '2') ||
-               obj_dst_surf->fourcc != VA_FOURCC('N', 'V', '1', '2')) {
+           if (obj_src_surf->fourcc != VA_FOURCC_NV12 ||
+               obj_dst_surf->fourcc != VA_FOURCC_NV12) {
                status = VA_STATUS_ERROR_UNIMPLEMENTED;
                goto error;
            }

@@ -469,18 +469,18 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     struct object_image *obj_image;
     dri_bo *bo;
     int fourcc = pp_get_surface_fourcc(ctx, surface);
-    const int U = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
-                   fourcc == VA_FOURCC('Y', 'V', '1', '6') ||
-                   fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 2 : 1;
-    const int V = (fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
-                   fourcc == VA_FOURCC('Y', 'V', '1', '6') ||
-                   fourcc == VA_FOURCC('I', 'M', 'C', '1')) ? 1 : 2;
-    int interleaved_uv = fourcc == VA_FOURCC('N', 'V', '1', '2');
-    int packed_yuv = (fourcc == VA_FOURCC('Y', 'U', 'Y', '2') || fourcc == VA_FOURCC('U', 'Y', 'V', 'Y'));
-    int rgbx_format = (fourcc == VA_FOURCC('R', 'G', 'B', 'A') ||
-                              fourcc == VA_FOURCC('R', 'G', 'B', 'X') ||
-                              fourcc == VA_FOURCC('B', 'G', 'R', 'A') ||
-                              fourcc == VA_FOURCC('B', 'G', 'R', 'X'));
+    const int U = (fourcc == VA_FOURCC_YV12 ||
+                   fourcc == VA_FOURCC_YV16 ||
+                   fourcc == VA_FOURCC_IMC1) ? 2 : 1;
+    const int V = (fourcc == VA_FOURCC_YV12 ||
+                   fourcc == VA_FOURCC_YV16 ||
+                   fourcc == VA_FOURCC_IMC1) ? 1 : 2;
+    int interleaved_uv = fourcc == VA_FOURCC_NV12;
+    int packed_yuv = (fourcc == VA_FOURCC_YUY2 || fourcc == VA_FOURCC_UYVY);
+    int rgbx_format = (fourcc == VA_FOURCC_RGBA ||
+                              fourcc == VA_FOURCC_RGBX ||
+                              fourcc == VA_FOURCC_BGRA ||
+                              fourcc == VA_FOURCC_BGRX);
 
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = (struct object_surface *)surface->base;
@@ -540,7 +540,7 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
             height[2] = obj_image->image.height / 2;
             pitch[2] = obj_image->image.pitches[V];
             offset[2] = obj_image->image.offsets[V];
-            if (fourcc == VA_FOURCC('Y', 'V', '1', '6')) {
+            if (fourcc == VA_FOURCC_YV16) {
                 width[1] = obj_image->image.width / 2;
                 height[1] = obj_image->image.height;
                 width[2] = obj_image->image.width / 2;
@@ -559,8 +559,8 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     		struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
 		/* the format is MSB: X-B-G-R */
 		pp_static_parameter->grf2.save_avs_rgb_swap = 0;
-		if ((fourcc == VA_FOURCC('B', 'G', 'R', 'A')) ||
-                        (fourcc == VA_FOURCC('B', 'G', 'R', 'X'))) {
+		if ((fourcc == VA_FOURCC_BGRA) ||
+                        (fourcc == VA_FOURCC_BGRX)) {
 			/* It is stored as MSB: X-R-G-B */
 			pp_static_parameter->grf2.save_avs_rgb_swap = 1;
 		}
@@ -589,11 +589,11 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         int format0 = SURFACE_FORMAT_Y8_UNORM;
 
         switch (fourcc) {
-        case VA_FOURCC('Y', 'U', 'Y', '2'):
+        case VA_FOURCC_YUY2:
             format0 = SURFACE_FORMAT_YCRCB_NORMAL;
             break;
 
-        case VA_FOURCC('U', 'Y', 'V', 'Y'):
+        case VA_FOURCC_UYVY:
             format0 = SURFACE_FORMAT_YCRCB_SWAPY;
             break;
 
@@ -605,8 +605,8 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
 	    /* Only R8G8B8A8_UNORM is supported for BGRX or RGBX */
 	    format0 = SURFACE_FORMAT_R8G8B8A8_UNORM;
 	    pp_static_parameter->grf2.src_avs_rgb_swap = 0;
-	    if ((fourcc == VA_FOURCC('B', 'G', 'R', 'A')) ||
-                (fourcc == VA_FOURCC('B', 'G', 'R', 'X'))) {
+	    if ((fourcc == VA_FOURCC_BGRA) ||
+                (fourcc == VA_FOURCC_BGRX)) {
 		pp_static_parameter->grf2.src_avs_rgb_swap = 1;
 	    }
 	}
@@ -751,11 +751,11 @@ static void gen7_update_src_surface_uv_offset(VADriverContextP    ctx,
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     int fourcc = pp_get_surface_fourcc(ctx, surface);
 
-    if (fourcc == VA_FOURCC('Y', 'U', 'Y', '2')) {
+    if (fourcc == VA_FOURCC_YUY2) {
         pp_static_parameter->grf2.di_destination_packed_y_component_offset = 0;
         pp_static_parameter->grf2.di_destination_packed_u_component_offset = 1;
         pp_static_parameter->grf2.di_destination_packed_v_component_offset = 3;
-    } else if (fourcc == VA_FOURCC('U', 'Y', 'V', 'Y')) {
+    } else if (fourcc == VA_FOURCC_UYVY) {
         pp_static_parameter->grf2.di_destination_packed_y_component_offset = 1;
         pp_static_parameter->grf2.di_destination_packed_u_component_offset = 0;
         pp_static_parameter->grf2.di_destination_packed_v_component_offset = 2;

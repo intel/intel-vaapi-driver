@@ -681,7 +681,7 @@ vpp_gpe_process_sharpening(VADriverContextP ctx,
        assert(obj_surf);
 
        if (obj_surf) {
-           i965_check_alloc_surface_bo(ctx, obj_surf, 1, VA_FOURCC('N','V','1','2'),
+           i965_check_alloc_surface_bo(ctx, obj_surf, 1, VA_FOURCC_NV12,
                                        SUBSAMPLE_YUV420);
            vpp_gpe_ctx->surface_tmp_object = obj_surf;
        }
