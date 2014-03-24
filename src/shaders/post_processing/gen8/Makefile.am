@@ -12,6 +12,11 @@ INTEL_PP_G8B = \
 	pa_to_pa.g8b		\
 	$(NULL)
 
+INTEL_PP_PRE_G8B =		\
+	sharpening_h_blur.g8b	\
+	sharpening_unmask.g8b	\
+	sharpening_v_blur.g8b
+
 INTEL_PP_G8A = \
 	EOT.g8a				\
 	PL2_AVS_Buf_0.g8a		\
@@ -63,7 +68,10 @@ $(INTEL_PP_GEN8_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G8A)
 CLEANFILES = $(INTEL_PP_GEN7_ASM)
 
 EXTRA_DIST = \
-	$(INTEL_PP_G8B)
+	$(INTEL_PP_ASM)	\
+	$(INTEL_PP_G8A)	\
+	$(INTEL_PP_G8B) \
+	$(INTEL_PP_PRE_G8B)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in

@@ -1,7 +1,7 @@
 VME_CORE	= batchbuffer.asm intra_frame.asm inter_frame.asm
 VME7_CORE	= batchbuffer.asm intra_frame_ivb.asm inter_frame_ivb.asm inter_bframe_ivb.asm mpeg2_inter_ivb.asm
 VME75_CORE	= batchbuffer.asm intra_frame_haswell.asm inter_frame_haswell.asm inter_bframe_haswell.asm mpeg2_inter_haswell.asm
-VME8_CORE	= intra_frame_gen8.asm	inter_frame_gen8.asm inter_bframe_gen8.asm 
+VME8_CORE	= intra_frame_gen8.asm	inter_frame_gen8.asm inter_bframe_gen8.asm mpeg2_inter_gen8.asm
 
 INTEL_G6B	= batchbuffer.g6b intra_frame.g6b inter_frame.g6b
 INTEL_G6A	= batchbuffer.g6a intra_frame.g6a inter_frame.g6a
