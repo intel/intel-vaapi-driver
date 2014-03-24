@@ -1892,7 +1892,7 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
             height[2] = obj_image->image.height / 2;
             pitch[2] = obj_image->image.pitches[V];
             offset[2] = obj_image->image.offsets[V];
-            if (fourcc == VA_FOURCC_YV16) {
+            if (fourcc == VA_FOURCC_YV16 || fourcc == VA_FOURCC_422H) {
                 width[1] = obj_image->image.width / 2;
                 height[1] = obj_image->image.height;
                 width[2] = obj_image->image.width / 2;
