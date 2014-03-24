@@ -121,6 +121,7 @@ source_h = \
 	object_heap.h           \
 	sysdeps.h		\
 	va_backend_compat.h	\
+	i965_fourcc.h           \
 	$(NULL)
 
 i965_drv_video_la_LTLIBRARIES	= i965_drv_video.la

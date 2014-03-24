@@ -143,19 +143,19 @@ typedef struct {
 static const i965_image_format_map_t
 i965_image_formats_map[I965_MAX_IMAGE_FORMATS + 1] = {
     { I965_SURFACETYPE_YUV,
-      { VA_FOURCC('Y','V','1','2'), VA_LSB_FIRST, 12, } },
+      { VA_FOURCC_YV12, VA_LSB_FIRST, 12, } },
     { I965_SURFACETYPE_YUV,
-      { VA_FOURCC('I','4','2','0'), VA_LSB_FIRST, 12, } },
+      { VA_FOURCC_I420, VA_LSB_FIRST, 12, } },
     { I965_SURFACETYPE_YUV,
-      { VA_FOURCC('N','V','1','2'), VA_LSB_FIRST, 12, } },
+      { VA_FOURCC_NV12, VA_LSB_FIRST, 12, } },
     { I965_SURFACETYPE_YUV,
-      { VA_FOURCC('Y','U','Y','2'), VA_LSB_FIRST, 16, } },
+      { VA_FOURCC_YUY2, VA_LSB_FIRST, 16, } },
     { I965_SURFACETYPE_YUV,
-      { VA_FOURCC('U','Y','V','Y'), VA_LSB_FIRST, 16, } },
+      { VA_FOURCC_UYVY, VA_LSB_FIRST, 16, } },
     { I965_SURFACETYPE_RGBA,
-      { VA_FOURCC('R','G','B','X'), VA_LSB_FIRST, 32, 24, 0x000000ff, 0x0000ff00, 0x00ff0000 } },
+      { VA_FOURCC_RGBX, VA_LSB_FIRST, 32, 24, 0x000000ff, 0x0000ff00, 0x00ff0000 } },
     { I965_SURFACETYPE_RGBA,
-      { VA_FOURCC('B','G','R','X'), VA_LSB_FIRST, 32, 24, 0x00ff0000, 0x0000ff00, 0x000000ff } },
+      { VA_FOURCC_BGRX, VA_LSB_FIRST, 32, 24, 0x00ff0000, 0x0000ff00, 0x000000ff } },
 };
 
 /* List of supported subpicture formats */
@@ -173,23 +173,23 @@ typedef struct {
 static const i965_subpic_format_map_t
 i965_subpic_formats_map[I965_MAX_SUBPIC_FORMATS + 1] = {
     { I965_SURFACETYPE_INDEXED, I965_SURFACEFORMAT_P4A4_UNORM,
-      { VA_FOURCC('I','A','4','4'), VA_MSB_FIRST, 8, },
+      { VA_FOURCC_IA44, VA_MSB_FIRST, 8, },
       COMMON_SUBPICTURE_FLAGS },
     { I965_SURFACETYPE_INDEXED, I965_SURFACEFORMAT_A4P4_UNORM,
-      { VA_FOURCC('A','I','4','4'), VA_MSB_FIRST, 8, },
+      { VA_FOURCC_AI44, VA_MSB_FIRST, 8, },
       COMMON_SUBPICTURE_FLAGS },
     { I965_SURFACETYPE_INDEXED, I965_SURFACEFORMAT_P8A8_UNORM,
-      { VA_FOURCC('I','A','8','8'), VA_MSB_FIRST, 16, },
+      { VA_FOURCC_IA88, VA_MSB_FIRST, 16, },
       COMMON_SUBPICTURE_FLAGS },
     { I965_SURFACETYPE_INDEXED, I965_SURFACEFORMAT_A8P8_UNORM,
-      { VA_FOURCC('A','I','8','8'), VA_MSB_FIRST, 16, },
+      { VA_FOURCC_AI88, VA_MSB_FIRST, 16, },
       COMMON_SUBPICTURE_FLAGS },
      { I965_SURFACETYPE_RGBA, I965_SURFACEFORMAT_B8G8R8A8_UNORM,
-      { VA_FOURCC('B','G','R','A'), VA_LSB_FIRST, 32,
+      { VA_FOURCC_BGRA, VA_LSB_FIRST, 32,
         32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 },
       COMMON_SUBPICTURE_FLAGS },
     { I965_SURFACETYPE_RGBA, I965_SURFACEFORMAT_R8G8B8A8_UNORM,
-      { VA_FOURCC('R','G','B','A'), VA_LSB_FIRST, 32,
+      { VA_FOURCC_RGBA, VA_LSB_FIRST, 32,
         32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 },
       COMMON_SUBPICTURE_FLAGS },
 };
@@ -774,10 +774,10 @@ i965_surface_native_memory(VADriverContextP ctx,
         return VA_STATUS_SUCCESS;
 
     // todo, should we disable tiling for 422 format?
-    if (expected_fourcc == VA_FOURCC('I', '4', '2', '0') ||
-        expected_fourcc == VA_FOURCC('I', 'Y', 'U', 'V') ||
-        expected_fourcc == VA_FOURCC('Y', 'V', '1', '2') ||
-        expected_fourcc == VA_FOURCC('Y', 'V', '1', '6'))
+    if (expected_fourcc == VA_FOURCC_I420 ||
+        expected_fourcc == VA_FOURCC_IYUV ||
+        expected_fourcc == VA_FOURCC_YV12 ||
+        expected_fourcc == VA_FOURCC_YV16)
         tiling = 0;
 		
     i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, get_sampling_from_fourcc(expected_fourcc));
@@ -816,7 +816,7 @@ i965_suface_external_memory(VADriverContextP ctx,
     obj_surface->x_cr_offset = 0;
 
     switch (obj_surface->fourcc) {
-    case VA_FOURCC('N', 'V', '1', '2'):
+    case VA_FOURCC_NV12:
         ASSERT_RET(memory_attibute->num_planes == 2, VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(memory_attibute->pitches[0] == memory_attibute->pitches[1], VA_STATUS_ERROR_INVALID_PARAMETER);
 
@@ -829,8 +829,8 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('Y', 'V', '1', '2'):
-    case VA_FOURCC('I', 'M', 'C', '1'):
+    case VA_FOURCC_YV12:
+    case VA_FOURCC_IMC1:
         ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
@@ -843,9 +843,9 @@ i965_suface_external_memory(VADriverContextP ctx,
         
         break;
 
-    case VA_FOURCC('I', '4', '2', '0'):
-    case VA_FOURCC('I', 'Y', 'U', 'V'):
-    case VA_FOURCC('I', 'M', 'C', '3'):
+    case VA_FOURCC_I420:
+    case VA_FOURCC_IYUV:
+    case VA_FOURCC_IMC3:
         ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
@@ -858,8 +858,8 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('Y', 'U', 'Y', '2'):
-    case VA_FOURCC('U', 'Y', 'V', 'Y'):
+    case VA_FOURCC_YUY2:
+    case VA_FOURCC_UYVY:
         ASSERT_RET(memory_attibute->num_planes == 1, VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV422H;
@@ -871,10 +871,10 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('R', 'G', 'B', 'A'):
-    case VA_FOURCC('R', 'G', 'B', 'X'):
-    case VA_FOURCC('B', 'G', 'R', 'A'):
-    case VA_FOURCC('B', 'G', 'R', 'X'):
+    case VA_FOURCC_RGBA:
+    case VA_FOURCC_RGBX:
+    case VA_FOURCC_BGRA:
+    case VA_FOURCC_BGRX:
         ASSERT_RET(memory_attibute->num_planes == 1, VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_RGBX;
@@ -886,7 +886,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('Y', '8', '0', '0'): /* monochrome surface */
+    case VA_FOURCC_Y800: /* monochrome surface */
         ASSERT_RET(memory_attibute->num_planes == 1, VA_STATUS_ERROR_INVALID_PARAMETER);
         
         obj_surface->subsampling = SUBSAMPLE_YUV400;
@@ -898,7 +898,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('4', '1', '1', 'P'):
+    case VA_FOURCC_411P:
         ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
@@ -911,7 +911,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('4', '2', '2', 'H'):
+    case VA_FOURCC_422H:
         ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
@@ -924,7 +924,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('Y', 'V', '1', '6'):
+    case VA_FOURCC_YV16:
         assert(memory_attibute->num_planes == 3);
         assert(memory_attibute->pitches[1] == memory_attibute->pitches[2]);
 
@@ -937,7 +937,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('4', '2', '2', 'V'):
+    case VA_FOURCC_422V:
         ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
@@ -950,7 +950,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
         break;
 
-    case VA_FOURCC('4', '4', '4', 'P'):
+    case VA_FOURCC_444P:
         ASSERT_RET(memory_attibute->num_planes == 3, VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
@@ -1008,7 +1008,7 @@ bpp_1stplane_by_fourcc(unsigned int fourcc)
         case VA_FOURCC_IYUV:
         case VA_FOURCC_NV12:
         case VA_FOURCC_NV11:
-        case VA_FOURCC('Y', 'V', '1', '6'):
+        case VA_FOURCC_YV16:
             return 1;
 
         default:
@@ -1241,7 +1241,7 @@ i965_guess_surface_format(VADriverContextP ctx,
     struct object_context *obj_context = NULL;
     struct object_config *obj_config = NULL;
 
-    *fourcc = VA_FOURCC('Y', 'V', '1', '2');
+    *fourcc = VA_FOURCC_YV12;
     *is_tiled = 0;
 
     if (i965->current_context_id == VA_INVALID_ID)
@@ -1261,7 +1261,7 @@ i965_guess_surface_format(VADriverContextP ctx,
     if (IS_GEN6(i965->intel.device_id) ||
         IS_GEN7(i965->intel.device_id) ||
         IS_GEN8(i965->intel.device_id)) {
-        *fourcc = VA_FOURCC('N', 'V', '1', '2');
+        *fourcc = VA_FOURCC_NV12;
         *is_tiled = 1;
         return;
     }
@@ -1269,12 +1269,12 @@ i965_guess_surface_format(VADriverContextP ctx,
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
-        *fourcc = VA_FOURCC('I', '4', '2', '0');
+        *fourcc = VA_FOURCC_I420;
         *is_tiled = 0;
         break;
 
     default:
-        *fourcc = VA_FOURCC('N', 'V', '1', '2');
+        *fourcc = VA_FOURCC_NV12;
         *is_tiled = 0;
         break;
     }
@@ -2750,8 +2750,8 @@ i965_CreateImage(VADriverContextP ctx,
 
     awidth = ALIGN(width, 64);
 
-    if ((format->fourcc == VA_FOURCC('Y','V','1','2')) ||
-    		(format->fourcc == VA_FOURCC('I','4','2','0'))) {
+    if ((format->fourcc == VA_FOURCC_YV12) ||
+    		(format->fourcc == VA_FOURCC_I420)) {
 	if (awidth % 128 != 0) {
 		awidth = ALIGN(width, 128);	
 	}
@@ -2766,8 +2766,8 @@ i965_CreateImage(VADriverContextP ctx,
     memset(image->component_order, 0, sizeof(image->component_order));
 
     switch (format->fourcc) {
-    case VA_FOURCC('I','A','4','4'):
-    case VA_FOURCC('A','I','4','4'):
+    case VA_FOURCC_IA44:
+    case VA_FOURCC_AI44:
         image->num_planes = 1;
         image->pitches[0] = awidth;
         image->offsets[0] = 0;
@@ -2778,8 +2778,8 @@ i965_CreateImage(VADriverContextP ctx,
         image->component_order[1]  = 'G';
         image->component_order[2]  = 'B';
         break;
-    case VA_FOURCC('I','A','8','8'):
-    case VA_FOURCC('A','I','8','8'):
+    case VA_FOURCC_IA88:
+    case VA_FOURCC_AI88:
         image->num_planes = 1;
         image->pitches[0] = awidth * 2;
         image->offsets[0] = 0;
@@ -2790,18 +2790,18 @@ i965_CreateImage(VADriverContextP ctx,
         image->component_order[1]  = 'G';
         image->component_order[2]  = 'B';
         break;
-    case VA_FOURCC('A','R','G','B'):
-    case VA_FOURCC('A','B','G','R'):
-    case VA_FOURCC('B','G','R','A'):
-    case VA_FOURCC('R','G','B','A'):
-    case VA_FOURCC('B','G','R','X'):
-    case VA_FOURCC('R','G','B','X'):
+    case VA_FOURCC_ARGB:
+    case VA_FOURCC_ABGR:
+    case VA_FOURCC_BGRA:
+    case VA_FOURCC_RGBA:
+    case VA_FOURCC_BGRX:
+    case VA_FOURCC_RGBX:
         image->num_planes = 1;
         image->pitches[0] = awidth * 4;
         image->offsets[0] = 0;
         image->data_size  = image->offsets[0] + image->pitches[0] * aheight;
         break;
-    case VA_FOURCC('Y','V','1','2'):
+    case VA_FOURCC_YV12:
         image->num_planes = 3;
         image->pitches[0] = awidth;
         image->offsets[0] = 0;
@@ -2811,7 +2811,7 @@ i965_CreateImage(VADriverContextP ctx,
         image->offsets[2] = size + size2;
         image->data_size  = size + 2 * size2;
         break;
-    case VA_FOURCC('I','4','2','0'):
+    case VA_FOURCC_I420:
         image->num_planes = 3;
         image->pitches[0] = awidth;
         image->offsets[0] = 0;
@@ -2821,7 +2821,7 @@ i965_CreateImage(VADriverContextP ctx,
         image->offsets[2] = size + size2;
         image->data_size  = size + 2 * size2;
         break;
-    case VA_FOURCC('N','V','1','2'):
+    case VA_FOURCC_NV12:
         image->num_planes = 2;
         image->pitches[0] = awidth;
         image->offsets[0] = 0;
@@ -2829,8 +2829,8 @@ i965_CreateImage(VADriverContextP ctx,
         image->offsets[1] = size;
         image->data_size  = size + 2 * size2;
         break;
-    case VA_FOURCC('Y','U','Y','2'):
-    case VA_FOURCC('U','Y','V','Y'):
+    case VA_FOURCC_YUY2:
+    case VA_FOURCC_UYVY:
         image->num_planes = 1;
         image->pitches[0] = awidth * 2;
         image->offsets[0] = 0;
@@ -2895,9 +2895,9 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
     obj_surface->x_cr_offset = 0;
 
     if ((tiled && !obj_surface->user_disable_tiling)) {
-        ASSERT_RET(fourcc != VA_FOURCC('I', '4', '2', '0') &&
-               fourcc != VA_FOURCC('I', 'Y', 'U', 'V') &&
-               fourcc != VA_FOURCC('Y', 'V', '1', '2'),
+        ASSERT_RET(fourcc != VA_FOURCC_I420 &&
+               fourcc != VA_FOURCC_IYUV &&
+               fourcc != VA_FOURCC_YV12,
                VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT);
         if (obj_surface->user_h_stride_set) {
             ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
@@ -2912,7 +2912,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
         region_height = obj_surface->height;
 
         switch (fourcc) {
-        case VA_FOURCC('N', 'V', '1', '2'):
+        case VA_FOURCC_NV12:
             assert(subsampling == SUBSAMPLE_YUV420);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -2924,7 +2924,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             
             break;
 
-        case VA_FOURCC('I', 'M', 'C', '1'):
+        case VA_FOURCC_IMC1:
             assert(subsampling == SUBSAMPLE_YUV420);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -2936,7 +2936,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
             break;
 
-        case VA_FOURCC('I', 'M', 'C', '3'):
+        case VA_FOURCC_IMC3:
             assert(subsampling == SUBSAMPLE_YUV420);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -2948,7 +2948,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             
             break;
 
-        case VA_FOURCC('4', '2', '2', 'H'):
+        case VA_FOURCC_422H:
             assert(subsampling == SUBSAMPLE_YUV422H);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -2960,7 +2960,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
             break;
 
-        case VA_FOURCC('4', '2', '2', 'V'):
+        case VA_FOURCC_422V:
             assert(subsampling == SUBSAMPLE_YUV422V);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width;
@@ -2972,7 +2972,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
             break;
 
-        case VA_FOURCC('4', '1', '1', 'P'):
+        case VA_FOURCC_411P:
             assert(subsampling == SUBSAMPLE_YUV411);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width / 4;
@@ -2984,7 +2984,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
             break;
 
-        case VA_FOURCC('4', '4', '4', 'P'):
+        case VA_FOURCC_444P:
             assert(subsampling == SUBSAMPLE_YUV444);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width;
@@ -2996,7 +2996,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
             break;
 
-        case VA_FOURCC('Y', '8', '0', '0'):
+        case VA_FOURCC_Y800:
             assert(subsampling == SUBSAMPLE_YUV400);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = 0;
@@ -3008,8 +3008,8 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
             break;
 
-        case VA_FOURCC('Y', 'U', 'Y', '2'):
-        case VA_FOURCC('U', 'Y', 'V', 'Y'):
+        case VA_FOURCC_YUY2:
+        case VA_FOURCC_UYVY:
             assert(subsampling == SUBSAMPLE_YUV422H);
             obj_surface->width = ALIGN(obj_surface->orig_width * 2, 128);
             obj_surface->cb_cr_pitch = obj_surface->width;
@@ -3022,10 +3022,10 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             
             break;
 
-        case VA_FOURCC('R', 'G', 'B', 'A'):
-        case VA_FOURCC('R', 'G', 'B', 'X'):
-        case VA_FOURCC('B', 'G', 'R', 'A'):
-        case VA_FOURCC('B', 'G', 'R', 'X'):
+        case VA_FOURCC_RGBA:
+        case VA_FOURCC_RGBX:
+        case VA_FOURCC_BGRA:
+        case VA_FOURCC_BGRX:
             assert(subsampling == SUBSAMPLE_RGBX);
 
             obj_surface->width = ALIGN(obj_surface->orig_width * 4, 128);
@@ -3048,7 +3048,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
         region_height = obj_surface->height;
 
         switch (fourcc) {
-        case VA_FOURCC('N', 'V', '1', '2'):
+        case VA_FOURCC_NV12:
             obj_surface->y_cb_offset = obj_surface->height;
             obj_surface->y_cr_offset = obj_surface->height;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -3057,7 +3057,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             region_height = obj_surface->height + obj_surface->height / 2;
             break;
 
-        case VA_FOURCC('Y', 'V', '1', '6'):
+        case VA_FOURCC_YV16:
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
             obj_surface->cb_cr_height = obj_surface->orig_height;
             obj_surface->y_cr_offset = obj_surface->height;
@@ -3066,9 +3066,9 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32);
             break;
 
-        case VA_FOURCC('Y', 'V', '1', '2'):
-        case VA_FOURCC('I', '4', '2', '0'):
-            if (fourcc == VA_FOURCC('Y', 'V', '1', '2')) {
+        case VA_FOURCC_YV12:
+        case VA_FOURCC_I420:
+            if (fourcc == VA_FOURCC_YV12) {
                 obj_surface->y_cr_offset = obj_surface->height;
                 obj_surface->y_cb_offset = obj_surface->height + obj_surface->height / 4;
             } else {
@@ -3082,8 +3082,8 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             region_height = obj_surface->height + obj_surface->height / 2;
             break;
 
-        case VA_FOURCC('Y', 'U', 'Y', '2'):
-        case VA_FOURCC('U', 'Y', 'V', 'Y'):
+        case VA_FOURCC_YUY2:
+        case VA_FOURCC_UYVY:
             obj_surface->width = ALIGN(obj_surface->orig_width * 2, 16);
             obj_surface->y_cb_offset = 0;
             obj_surface->y_cr_offset = 0;
@@ -3093,10 +3093,10 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             region_width = obj_surface->width;
             region_height = obj_surface->height;
             break;
-        case VA_FOURCC('R', 'G', 'B', 'A'):
-        case VA_FOURCC('R', 'G', 'B', 'X'):
-        case VA_FOURCC('B', 'G', 'R', 'A'):
-        case VA_FOURCC('B', 'G', 'R', 'X'):
+        case VA_FOURCC_RGBA:
+        case VA_FOURCC_RGBX:
+        case VA_FOURCC_BGRA:
+        case VA_FOURCC_BGRX:
             obj_surface->width = ALIGN(obj_surface->orig_width * 4, 16);
             region_width = obj_surface->width;
             region_height = obj_surface->height;
@@ -3157,7 +3157,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
 
     if (!obj_surface->bo) {
         unsigned int is_tiled = 0;
-        unsigned int fourcc = VA_FOURCC('Y', 'V', '1', '2');
+        unsigned int fourcc = VA_FOURCC_YV12;
         i965_guess_surface_format(ctx, surface, &fourcc, &is_tiled);
         int sampling = get_sampling_from_fourcc(fourcc);
         va_status = i965_check_alloc_surface_bo(ctx, obj_surface, is_tiled, fourcc, sampling);
@@ -3199,7 +3199,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     image->format.bits_per_pixel = 12;
 
     switch (image->format.fourcc) {
-    case VA_FOURCC('Y', 'V', '1', '2'):
+    case VA_FOURCC_YV12:
         image->num_planes = 3;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
@@ -3209,7 +3209,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->offsets[2] = w_pitch * obj_surface->y_cb_offset;
         break;
 
-    case VA_FOURCC('Y', 'V', '1', '6'):
+    case VA_FOURCC_YV16:
         image->num_planes = 3;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
@@ -3219,7 +3219,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->offsets[2] = w_pitch * obj_surface->y_cb_offset;
         break;
 
-    case VA_FOURCC('N', 'V', '1', '2'):
+    case VA_FOURCC_NV12:
         image->num_planes = 2;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
@@ -3227,7 +3227,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->offsets[1] = w_pitch * obj_surface->y_cb_offset;
         break;
 
-    case VA_FOURCC('I', '4', '2', '0'):
+    case VA_FOURCC_I420:
         image->num_planes = 3;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
@@ -3236,16 +3236,16 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->pitches[2] = obj_surface->cb_cr_pitch; /* V */
         image->offsets[2] = w_pitch * obj_surface->y_cr_offset;
         break;
-    case VA_FOURCC('Y', 'U', 'Y', '2'):
-    case VA_FOURCC('U', 'Y', 'V', 'Y'):
+    case VA_FOURCC_YUY2:
+    case VA_FOURCC_UYVY:
         image->num_planes = 1;
         image->pitches[0] = obj_surface->width; /* Y, width is aligned already */
         image->offsets[0] = 0;
         break;
-    case VA_FOURCC('R', 'G', 'B', 'A'):
-    case VA_FOURCC('R', 'G', 'B', 'X'):
-    case VA_FOURCC('B', 'G', 'R', 'A'):
-    case VA_FOURCC('B', 'G', 'R', 'X'):
+    case VA_FOURCC_RGBA:
+    case VA_FOURCC_RGBX:
+    case VA_FOURCC_BGRA:
+    case VA_FOURCC_BGRX:
         image->num_planes = 1;
         image->pitches[0] = obj_surface->width;
         break;
@@ -3361,39 +3361,39 @@ get_sampling_from_fourcc(unsigned int fourcc)
     int surface_sampling = -1;
 
     switch (fourcc) {
-    case VA_FOURCC('N', 'V', '1', '2'):
-    case VA_FOURCC('Y', 'V', '1', '2'):
-    case VA_FOURCC('I', '4', '2', '0'):
-    case VA_FOURCC('I', 'Y', 'U', 'V'):
-    case VA_FOURCC('I', 'M', 'C', '1'):
-    case VA_FOURCC('I', 'M', 'C', '3'):
+    case VA_FOURCC_NV12:
+    case VA_FOURCC_YV12:
+    case VA_FOURCC_I420:
+    case VA_FOURCC_IYUV:
+    case VA_FOURCC_IMC1:
+    case VA_FOURCC_IMC3:
         surface_sampling = SUBSAMPLE_YUV420;
         break;
-    case VA_FOURCC('Y', 'U', 'Y', '2'):
-    case VA_FOURCC('U', 'Y', 'V', 'Y'):
-    case VA_FOURCC('4', '2', '2', 'H'):
-    case VA_FOURCC('Y', 'V', '1', '6'):
+    case VA_FOURCC_YUY2:
+    case VA_FOURCC_UYVY:
+    case VA_FOURCC_422H:
+    case VA_FOURCC_YV16:
         surface_sampling = SUBSAMPLE_YUV422H;
         break;
-    case VA_FOURCC('4', '2', '2', 'V'):
+    case VA_FOURCC_422V:
         surface_sampling = SUBSAMPLE_YUV422V;
         break;
         
-    case VA_FOURCC('4', '4', '4', 'P'):
+    case VA_FOURCC_444P:
         surface_sampling = SUBSAMPLE_YUV444;
         break;
 
-    case VA_FOURCC('4', '1', '1', 'P'):
+    case VA_FOURCC_411P:
         surface_sampling = SUBSAMPLE_YUV411;
         break;
 
-    case VA_FOURCC('Y', '8', '0', '0'):
+    case VA_FOURCC_Y800:
         surface_sampling = SUBSAMPLE_YUV400;
         break;
-    case VA_FOURCC('R','G','B','A'):
-    case VA_FOURCC('R','G','B','X'):
-    case VA_FOURCC('B','G','R','A'):
-    case VA_FOURCC('B','G','R','X'):
+    case VA_FOURCC_RGBA:
+    case VA_FOURCC_RGBX:
+    case VA_FOURCC_BGRA:
+    case VA_FOURCC_BGRX:
     surface_sampling = SUBSAMPLE_RGBX; 
         break;
     default:
@@ -3623,20 +3623,20 @@ i965_sw_getimage(VADriverContextP ctx,
     rect.height = height;
 
     switch (obj_image->image.format.fourcc) {
-    case VA_FOURCC('Y','V','1','2'):
-    case VA_FOURCC('I','4','2','0'):
+    case VA_FOURCC_YV12:
+    case VA_FOURCC_I420:
         /* I420 is native format for MPEG-2 decoded surfaces */
         if (render_state->interleaved_uv)
             goto operation_failed;
         get_image_i420(obj_image, image_data, obj_surface, &rect);
         break;
-    case VA_FOURCC('N','V','1','2'):
+    case VA_FOURCC_NV12:
         /* NV12 is native format for H.264 decoded surfaces */
         if (!render_state->interleaved_uv)
             goto operation_failed;
         get_image_nv12(obj_image, image_data, obj_surface, &rect);
         break;
-    case VA_FOURCC('Y','U','Y','2'):
+    case VA_FOURCC_YUY2:
         /* YUY2 is the format supported by overlay plane */
         get_image_yuy2(obj_image, image_data, obj_surface, &rect);
         break;
@@ -3975,14 +3975,14 @@ i965_sw_putimage(VADriverContextP ctx,
     dest_rect.height = dest_height;
      
     switch (obj_image->image.format.fourcc) {
-    case VA_FOURCC('Y','V','1','2'):
-    case VA_FOURCC('I','4','2','0'):
+    case VA_FOURCC_YV12:
+    case VA_FOURCC_I420:
         va_status = put_image_i420(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
         break;
-    case VA_FOURCC('N','V','1','2'):
+    case VA_FOURCC_NV12:
         va_status = put_image_nv12(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
         break;
-    case VA_FOURCC('Y','U','Y','2'):
+    case VA_FOURCC_YUY2:
         va_status = put_image_yuy2(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
         break;
     default:
@@ -4341,7 +4341,7 @@ i965_GetSurfaceAttributes(
                 if (IS_G4X(i965->intel.device_id)) {
                     if (obj_config->profile == VAProfileMPEG2Simple ||
                         obj_config->profile == VAProfileMPEG2Main) {
-                        attrib_list[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+                        attrib_list[i].value.value.i = VA_FOURCC_I420;
                     } else {
                         assert(0);
                         attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
@@ -4349,31 +4349,31 @@ i965_GetSurfaceAttributes(
                 } else if (IS_IRONLAKE(i965->intel.device_id)) {
                     if (obj_config->profile == VAProfileMPEG2Simple ||
                         obj_config->profile == VAProfileMPEG2Main) {
-                        attrib_list[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+                        attrib_list[i].value.value.i = VA_FOURCC_I420;
                     } else if (obj_config->profile == VAProfileH264ConstrainedBaseline ||
                                obj_config->profile == VAProfileH264Main ||
                                obj_config->profile == VAProfileH264High) {
-                        attrib_list[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+                        attrib_list[i].value.value.i = VA_FOURCC_NV12;
                     } else if (obj_config->profile == VAProfileNone) {
-                        attrib_list[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+                        attrib_list[i].value.value.i = VA_FOURCC_NV12;
                     } else {
                         assert(0);
                         attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
                     }
                 } else if (IS_GEN6(i965->intel.device_id)) {
-                    attrib_list[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');                    
+                    attrib_list[i].value.value.i = VA_FOURCC_NV12;
                 } else if (IS_GEN7(i965->intel.device_id) ||
                            IS_GEN8(i965->intel.device_id)) {
                     if (obj_config->profile == VAProfileJPEGBaseline)
                         attrib_list[i].value.value.i = 0; /* internal format */
                     else
-                        attrib_list[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+                        attrib_list[i].value.value.i = VA_FOURCC_NV12;
                 }
             } else {
                 if (IS_G4X(i965->intel.device_id)) {
                     if (obj_config->profile == VAProfileMPEG2Simple ||
                         obj_config->profile == VAProfileMPEG2Main) {
-                        if (attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0')) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC_I420) {
                             attrib_list[i].value.value.i = 0;
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         }
@@ -4384,27 +4384,27 @@ i965_GetSurfaceAttributes(
                 } else if (IS_IRONLAKE(i965->intel.device_id)) {
                     if (obj_config->profile == VAProfileMPEG2Simple ||
                         obj_config->profile == VAProfileMPEG2Main) {
-                        if (attrib_list[i].value.value.i != VA_FOURCC('I', '4', '2', '0')) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC_I420) {
                             attrib_list[i].value.value.i = 0;                            
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         }
                     } else if (obj_config->profile == VAProfileH264ConstrainedBaseline ||
                                obj_config->profile == VAProfileH264Main ||
                                obj_config->profile == VAProfileH264High) {
-                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2')) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC_NV12) {
                             attrib_list[i].value.value.i = 0;
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         }
                     } else if (obj_config->profile == VAProfileNone) {
                         switch (attrib_list[i].value.value.i) {
-                        case VA_FOURCC('N', 'V', '1', '2'):
-                        case VA_FOURCC('I', '4', '2', '0'):
-                        case VA_FOURCC('Y', 'V', '1', '2'):
-                        case VA_FOURCC('Y', 'U', 'Y', '2'):
-                        case VA_FOURCC('B', 'G', 'R', 'A'):
-                        case VA_FOURCC('B', 'G', 'R', 'X'):
-                        case VA_FOURCC('R', 'G', 'B', 'X'):
-                        case VA_FOURCC('R', 'G', 'B', 'A'):
+                        case VA_FOURCC_NV12:
+                        case VA_FOURCC_I420:
+                        case VA_FOURCC_YV12:
+                        case VA_FOURCC_YUY2:
+                        case VA_FOURCC_BGRA:
+                        case VA_FOURCC_BGRX:
+                        case VA_FOURCC_RGBX:
+                        case VA_FOURCC_RGBA:
                             break;
                         default:
                             attrib_list[i].value.value.i = 0;                            
@@ -4419,14 +4419,14 @@ i965_GetSurfaceAttributes(
                     if (obj_config->entrypoint == VAEntrypointEncSlice ||
                         obj_config->entrypoint == VAEntrypointVideoProc) {
                         switch (attrib_list[i].value.value.i) {
-                        case VA_FOURCC('N', 'V', '1', '2'):
-                        case VA_FOURCC('I', '4', '2', '0'):
-                        case VA_FOURCC('Y', 'V', '1', '2'):
-                        case VA_FOURCC('Y', 'U', 'Y', '2'):
-                        case VA_FOURCC('B', 'G', 'R', 'A'):
-                        case VA_FOURCC('B', 'G', 'R', 'X'):
-                        case VA_FOURCC('R', 'G', 'B', 'X'):
-                        case VA_FOURCC('R', 'G', 'B', 'A'):
+                        case VA_FOURCC_NV12:
+                        case VA_FOURCC_I420:
+                        case VA_FOURCC_YV12:
+                        case VA_FOURCC_YUY2:
+                        case VA_FOURCC_BGRA:
+                        case VA_FOURCC_BGRX:
+                        case VA_FOURCC_RGBX:
+                        case VA_FOURCC_RGBA:
                             break;
                         default:
                             attrib_list[i].value.value.i = 0;                            
@@ -4434,7 +4434,7 @@ i965_GetSurfaceAttributes(
                             break;
                         }
                     } else {
-                        if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2')) {
+                        if (attrib_list[i].value.value.i != VA_FOURCC_NV12) {
                             attrib_list[i].value.value.i = 0;
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         }
@@ -4444,9 +4444,9 @@ i965_GetSurfaceAttributes(
                     if (obj_config->entrypoint == VAEntrypointEncSlice ||
                         obj_config->entrypoint == VAEntrypointVideoProc) {
                         switch (attrib_list[i].value.value.i) {
-                        case VA_FOURCC('N', 'V', '1', '2'):
-                        case VA_FOURCC('I', '4', '2', '0'):
-                        case VA_FOURCC('Y', 'V', '1', '2'):
+                        case VA_FOURCC_NV12:
+                        case VA_FOURCC_I420:
+                        case VA_FOURCC_YV12:
                             break;
                         default:
                             attrib_list[i].value.value.i = 0;                            
@@ -4458,7 +4458,7 @@ i965_GetSurfaceAttributes(
                             attrib_list[i].value.value.i = 0;   /* JPEG decoding always uses an internal format */
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         } else {
-                            if (attrib_list[i].value.value.i != VA_FOURCC('N', 'V', '1', '2')) {
+                            if (attrib_list[i].value.value.i != VA_FOURCC_NV12) {
                                 attrib_list[i].value.value.i = 0;
                                 attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                             }
@@ -4529,7 +4529,7 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+            attribs[i].value.value.i = VA_FOURCC_I420;
             i++;
         }
     } else if (IS_IRONLAKE(i965->intel.device_id)) {
@@ -4539,7 +4539,7 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+            attribs[i].value.value.i = VA_FOURCC_I420;
             i++;
             
             break;
@@ -4550,20 +4550,20 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
 
         case VAProfileNone:
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+            attribs[i].value.value.i = VA_FOURCC_I420;
             i++;
 
             break;
@@ -4576,45 +4576,45 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
         } else if (obj_config->entrypoint == VAEntrypointEncSlice ||  /* encode */
                    obj_config->entrypoint == VAEntrypointVideoProc) { /* vpp */ 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+            attribs[i].value.value.i = VA_FOURCC_I420;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('Y', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_YV12;
             i++;
 
             if (obj_config->entrypoint == VAEntrypointVideoProc) {
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('Y', 'U', 'Y', '2');
+                attribs[i].value.value.i = VA_FOURCC_YUY2;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('R', 'G', 'B', 'A');
+                attribs[i].value.value.i = VA_FOURCC_RGBA;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('R', 'G', 'B', 'X');
+                attribs[i].value.value.i = VA_FOURCC_RGBX;
                 i++;
             }
         }
@@ -4624,49 +4624,49 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('I', 'M', 'C', '3');
+                attribs[i].value.value.i = VA_FOURCC_IMC3;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('I', 'M', 'C', '1');
+                attribs[i].value.value.i = VA_FOURCC_IMC1;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('Y', '8', '0', '0');
+                attribs[i].value.value.i = VA_FOURCC_Y800;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('4', '1', '1', 'P');
+                attribs[i].value.value.i = VA_FOURCC_411P;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('4', '2', '2', 'H');
+                attribs[i].value.value.i = VA_FOURCC_422H;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('4', '2', '2', 'V');
+                attribs[i].value.value.i = VA_FOURCC_422V;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('4', '4', '4', 'P');
+                attribs[i].value.value.i = VA_FOURCC_444P;
                 i++;
             } else {
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+                attribs[i].value.value.i = VA_FOURCC_NV12;
                 i++;
             }
         } else if (obj_config->entrypoint == VAEntrypointEncSlice ||  /* encode */
@@ -4674,50 +4674,50 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+            attribs[i].value.value.i = VA_FOURCC_I420;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('Y', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_YV12;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('I', 'M', 'C', '3');
+            attribs[i].value.value.i = VA_FOURCC_IMC3;
             i++;
 
             if (obj_config->entrypoint == VAEntrypointVideoProc) {
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('Y', 'U', 'Y', '2');
+                attribs[i].value.value.i = VA_FOURCC_YUY2;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('R', 'G', 'B', 'A');
+                attribs[i].value.value.i = VA_FOURCC_RGBA;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('R', 'G', 'B', 'X');
+                attribs[i].value.value.i = VA_FOURCC_RGBX;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('Y', 'V', '1', '6');
+                attribs[i].value.value.i = VA_FOURCC_YV16;
                 i++;
             }
         }
@@ -4727,49 +4727,49 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('I', 'M', 'C', '3');
+                attribs[i].value.value.i = VA_FOURCC_IMC3;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('I', 'M', 'C', '1');
+                attribs[i].value.value.i = VA_FOURCC_IMC1;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('Y', '8', '0', '0');
+                attribs[i].value.value.i = VA_FOURCC_Y800;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('4', '1', '1', 'P');
+                attribs[i].value.value.i = VA_FOURCC_411P;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('4', '2', '2', 'H');
+                attribs[i].value.value.i = VA_FOURCC_422H;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('4', '2', '2', 'V');
+                attribs[i].value.value.i = VA_FOURCC_422V;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('4', '4', '4', 'P');
+                attribs[i].value.value.i = VA_FOURCC_444P;
                 i++;
             } else {
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+                attribs[i].value.value.i = VA_FOURCC_NV12;
                 i++;
             }
         } else if (obj_config->entrypoint == VAEntrypointEncSlice ||  /* encode */
@@ -4778,62 +4778,62 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('N', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('I', '4', '2', '0');
+            attribs[i].value.value.i = VA_FOURCC_I420;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('Y', 'V', '1', '2');
+            attribs[i].value.value.i = VA_FOURCC_YV12;
             i++;
 
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
             attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC('I', 'M', 'C', '3');
+            attribs[i].value.value.i = VA_FOURCC_IMC3;
             i++;
 
             if (obj_config->entrypoint == VAEntrypointVideoProc) {
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('Y', 'U', 'Y', '2');
+                attribs[i].value.value.i = VA_FOURCC_YUY2;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('R', 'G', 'B', 'A');
+                attribs[i].value.value.i = VA_FOURCC_RGBA;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('R', 'G', 'B', 'X');
+                attribs[i].value.value.i = VA_FOURCC_RGBX;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('B', 'G', 'R', 'A');
+                attribs[i].value.value.i = VA_FOURCC_BGRA;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('B', 'G', 'R', 'X');
+                attribs[i].value.value.i = VA_FOURCC_BGRX;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-                attribs[i].value.value.i = VA_FOURCC('Y', 'V', '1', '6');
+                attribs[i].value.value.i = VA_FOURCC_YV16;
                 i++;
             }
         }

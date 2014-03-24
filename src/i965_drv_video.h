@@ -40,6 +40,7 @@
 #include "i965_mutext.h"
 #include "object_heap.h"
 #include "intel_driver.h"
+#include "i965_fourcc.h"
 
 #define I965_MAX_PROFILES                       20
 #define I965_MAX_ENTRYPOINTS                    5
