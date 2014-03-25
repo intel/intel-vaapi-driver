@@ -1186,6 +1186,9 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
              proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
              proc_ctx->filter_iecp_amp = filter;
              proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
+         } else if (filter->type == VAProcFilterSkinToneEnhancement) {
+             proc_ctx->filters_mask |= VPP_IECP_STD_STE;
+             proc_ctx->filter_iecp_std = filter;
          }
     }
 
@@ -1483,6 +1486,9 @@ VAStatus gen8_vebox_process_picture(VADriverContextP ctx,
              proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
              proc_ctx->filter_iecp_amp = filter;
              proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
+         } else if (filter->type == VAProcFilterSkinToneEnhancement) {
+             proc_ctx->filters_mask |= VPP_IECP_STD_STE;
+             proc_ctx->filter_iecp_std = filter;
          }
     }
 
