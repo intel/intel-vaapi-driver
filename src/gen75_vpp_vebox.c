@@ -237,40 +237,179 @@ void hsw_veb_iecp_std_table(VADriverContextP ctx, struct intel_vebox_context *pr
     if(!(proc_ctx->filters_mask & VPP_IECP_STD_STE)){ 
         memset(p_table, 0, 29 * 4);
     }else{
-        *p_table ++ = 0x9a6e39f0;
-        *p_table ++ = 0x400c0000;
-        *p_table ++ = 0x00001180;
-        *p_table ++ = 0xfe2f2e00;
-        *p_table ++ = 0x000000ff;
+        //DWord 0
+        *p_table ++ = ( 154 << 24 |   // V_Mid
+                        110 << 16 |   // U_Mid
+                        14 << 10  |   // Hue_Max
+                        31 << 4   |   // Sat_Max
+                        0 << 3    |   // Reserved
+                        0 << 2    |   // Output Control is set to output the 1=STD score /0=Output Pixels
+                        1 << 1    |   // Set STE Enable
+                        1 );          // Set STD Enable
 
-        *p_table ++ = 0x00140000;
-        *p_table ++ = 0xd82e0000;
-        *p_table ++ = 0x8285ecec;
-        *p_table ++ = 0x00008282;
-        *p_table ++ = 0x00000000;
+        //DWord 1
+        *p_table ++ = ( 0 << 31   |   // Reserved
+                        4 << 28   |   // Diamond Margin
+                        0 << 21   |   // Diamond_du
+                        3 << 18   |   // HS_Margin
+                        79 << 10  |   // Cos(alpha)
+                        0 << 8    |   // Reserved
+                        101 );        // Sin(alpha)
 
-        *p_table ++ = 0x02117000;
-        *p_table ++ = 0xa38fec96;
-        *p_table ++ = 0x0000c8c8;
-        *p_table ++ = 0x00000000;
-        *p_table ++ = 0x01478000;
- 
-        *p_table ++ = 0x0007c306;
-        *p_table ++ = 0x00000000;
-        *p_table ++ = 0x00000000;
-        *p_table ++ = 0x1c1bd000;
-        *p_table ++ = 0x00000000;
+        //DWord 2
+        *p_table ++ = ( 0 << 21   |   // Reserved
+                        100 << 13 |   // Diamond_alpha
+                        35 << 7   |   // Diamond_Th
+                        0 );
 
-        *p_table ++ = 0x00000000;
-        *p_table ++ = 0x00000000;
-        *p_table ++ = 0x0007cf80;
-        *p_table ++ = 0x00000000;
-        *p_table ++ = 0x00000000;
+        //DWord 3
+        *p_table ++ = ( 254 << 24 |   // Y_point_3
+                        47 << 16  |   // Y_point_2
+                        46 << 8   |   // Y_point_1
+                        1 << 7    |   // VY_STD_Enable
+                        0 );          // Reserved
 
-        *p_table ++ = 0x1c080000;
-        *p_table ++ = 0x00000000;
-        *p_table ++ = 0x00000000;
-        *p_table ++ = 0x00000000;
+        //DWord 4
+        *p_table ++ = ( 0 << 18   |   // Reserved
+                        31 << 13  |   // Y_slope_2
+                        31 << 8   |   // Y_slope_1
+                        255 );        // Y_point_4
+
+        //DWord 5
+        *p_table ++ = ( 400 << 16 |   // INV_Skin_types_margin = 20* Skin_Type_margin => 20*20
+                        3300 );       // INV_Margin_VYL => 1/Margin_VYL
+
+        //DWord 6
+        *p_table ++ = ( 216 << 24 |   // P1L
+                        46 << 16  |   // P0L
+                        1600 );       // INV_Margin_VYU
+
+        //DWord 7
+        *p_table ++ = ( 130 << 24 |   // B1L
+                        133 << 16 |   // B0L
+                        236 << 8  |   // P3L
+                        236 );        // P2L
+
+        //DWord 8
+        *p_table ++ = ( 0 << 27      |   // Reserved
+                        0x7FB << 16  |   // S0L (11 bits, Default value: -5 = FBh, pad it with 1s to make it 11bits)
+                        130 << 8     |   // B3L
+                        130 );
+
+        //DWord 9
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        0 << 11   |    // S2L
+                        0);            // S1L
+
+        //DWord 10
+        *p_table ++ = ( 0 << 27   |    // Reserved
+                        66 << 19  |    // P1U
+                        46 << 11  |    // P0U
+                        0 );           // S3
+
+        //DWord 11
+        *p_table ++ = ( 163 << 24 |    // B1U
+                        143 << 16 |    // B0U
+                        236 << 8  |    // P3U
+                        150 );         // P2U
+
+        //DWord 12
+        *p_table ++ = ( 0 << 27   |    // Reserved
+                        256 << 16 |    // S0U
+                        200 << 8  |    // B3U
+                        200 );         // B2U
+
+        //DWord 13
+        *p_table ++ = ( 0 << 22     |    // Reserved
+                        0x74D << 11 |    // S2U (11 bits, Default value -179 = F4Dh)
+                        113 );           // S1U
+
+        //DWoord 14
+        *p_table ++ = ( 0 << 28   |    // Reserved
+                        20 << 20  |    // Skin_types_margin
+                        120 << 12 |    // Skin_types_thresh
+                        1 << 11   |    // Skin_Types_Enable
+                        0 );           // S3U
+
+        //DWord 15
+        *p_table ++ = ( 0 << 31     |    // Reserved
+                        0x3F8 << 21 |    // SATB1 (10 bits, default 8, optimized value -8)
+                        31 << 14    |    // SATP3
+                        6 << 7      |    // SATP2
+                        0x7A );          // SATP1 (7 bits, default 6, optimized value -6)
+
+        //DWord 16
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        297 << 20 |    // SATS0
+                        124 << 10 |    // SATB3
+                        8 );           // SATB2
+
+        //DWord 17
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        297 << 11 |    // SATS2
+                        85 );          // SATS1
+
+        //DWord 18
+        *p_table ++ = ( 14 << 25    |    // HUEP3
+                        6 << 18     |    // HUEP2
+                        0x7A << 11  |    // HUEP1 (7 bits, default value -6 = 7Ah)
+                        256 );           // SATS3
+
+        //DWord 19
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        256 << 20 |    // HUEB3
+                        8 << 10   |    // HUEB2
+                        0x3F8 );       // HUEB1 (10 bits, default value 8, optimized value -8)
+
+        //DWord 20
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        85 << 11  |    // HUES1
+                        384 );         // HUES
+
+        //DWord 21
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3
+                        384 );         // HUES2
+
+        //DWord 22
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        0 << 21   |    // SATB1_DARK
+                        31 << 14  |    // SATP3_DARK
+                        31 << 7   |    // SATP2_DARK
+                        0x7B );        // SATP1_DARK (7 bits, default value -11 = FF5h, optimized value -5)
+
+        //DWord 23
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        305 << 20 |    // SATS0_DARK
+                        124 << 10 |    // SATB3_DARK
+                        124 );         // SATB2_DARK
+
+        //DWord 24
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // SATS2_DARK
+                        220 );         // SATS1_DARK
+
+        //DWord 25
+        *p_table ++ = ( 14 << 25  |    // HUEP3_DARK
+                        14 << 18  |    // HUEP2_DARK
+                        14 << 11  |    // HUEP1_DARK
+                        256 );         // SATS3_DARK
+
+        //DWord 26
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        56 << 20  |    // HUEB3_DARK
+                        56 << 10  |    // HUEB2_DARK
+                        56 );          // HUEB1_DARK
+
+        //DWord 27
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES1_DARK
+                        256 );         // HUES0_DARK
+
+        //DWord 28
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3_DARK
+                        256 );         // HUES2_DARK
     }
 }
 
