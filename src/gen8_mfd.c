@@ -2938,16 +2938,16 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
     }
 
     OUT_BCS_BATCH(batch,
-                  pic_param->loop_filter_deltas_ref_frame[3] << 24 |
-                  pic_param->loop_filter_deltas_ref_frame[2] << 16 |
-                  pic_param->loop_filter_deltas_ref_frame[1] <<  8 |
-                  pic_param->loop_filter_deltas_ref_frame[0] <<  0);
+                  (pic_param->loop_filter_deltas_ref_frame[3] & 0x7f) << 24 |
+                  (pic_param->loop_filter_deltas_ref_frame[2] & 0x7f) << 16 |
+                  (pic_param->loop_filter_deltas_ref_frame[1] & 0x7f) <<  8 |
+                  (pic_param->loop_filter_deltas_ref_frame[0] & 0x7f) <<  0);
 
     OUT_BCS_BATCH(batch,
-                  pic_param->loop_filter_deltas_mode[3] << 24 |
-                  pic_param->loop_filter_deltas_mode[2] << 16 |
-                  pic_param->loop_filter_deltas_mode[1] <<  8 |
-                  pic_param->loop_filter_deltas_mode[0] <<  0);
+                  (pic_param->loop_filter_deltas_mode[3] & 0x7f) << 24 |
+                  (pic_param->loop_filter_deltas_mode[2] & 0x7f) << 16 |
+                  (pic_param->loop_filter_deltas_mode[1] & 0x7f) <<  8 |
+                  (pic_param->loop_filter_deltas_mode[0] & 0x7f) <<  0);
 
     /* segmentation id stream base address, DW35-DW37 */
     OUT_BCS_BATCH(batch, 0);
