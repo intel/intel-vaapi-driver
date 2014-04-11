@@ -327,6 +327,9 @@
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS          CMD(3, 0, 0x2c)
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS          CMD(3, 0, 0x2d)
 
+#define GEN7_3DSTATE_VF                                 CMD(3, 0, 0x0c)
+#define GEN8_3DSTATE_VF_INSTANCING                      CMD(3, 0, 0x49)
+
 #define MFX(pipeline, op, sub_opa, sub_opb)     \
     (3 << 29 |                                  \
      (pipeline) << 27 |                         \
