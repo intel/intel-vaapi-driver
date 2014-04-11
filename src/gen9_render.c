@@ -1098,7 +1098,7 @@ gen9_emit_urb(VADriverContextP ctx)
     OUT_BATCH(batch,
               (num_urb_entries << GEN7_URB_ENTRY_NUMBER_SHIFT) |
               (4 - 1) << GEN7_URB_ENTRY_SIZE_SHIFT |
-              (1 << GEN7_URB_STARTING_ADDRESS_SHIFT));
+              (4 << GEN7_URB_STARTING_ADDRESS_SHIFT));
    ADVANCE_BATCH(batch);
 
    BEGIN_BATCH(batch, 2);
