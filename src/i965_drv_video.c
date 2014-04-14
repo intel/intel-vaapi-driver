@@ -3243,6 +3243,10 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
 
     case VA_FOURCC_I420:
     case VA_FOURCC_422H:
+    case VA_FOURCC_IMC3:
+    case VA_FOURCC_444P:
+    case VA_FOURCC_422V:
+    case VA_FOURCC_411P:
         image->num_planes = 3;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
@@ -3251,8 +3255,10 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         image->pitches[2] = obj_surface->cb_cr_pitch; /* V */
         image->offsets[2] = w_pitch * obj_surface->y_cr_offset;
         break;
+
     case VA_FOURCC_YUY2:
     case VA_FOURCC_UYVY:
+    case VA_FOURCC_Y800:
         image->num_planes = 1;
         image->pitches[0] = obj_surface->width; /* Y, width is aligned already */
         image->offsets[0] = 0;
