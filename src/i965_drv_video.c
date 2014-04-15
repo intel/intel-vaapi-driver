@@ -2281,7 +2281,7 @@ i965_encoder_render_misc_parameter_buffer(VADriverContextP ctx,
 
     param = (VAEncMiscParameterBuffer *)obj_buffer->buffer_store->buffer;
 
-    if (param->type > ARRAY_ELEMS(encode->misc_param))
+    if (param->type >= ARRAY_ELEMS(encode->misc_param))
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     i965_release_buffer_store(&encode->misc_param[param->type]);
