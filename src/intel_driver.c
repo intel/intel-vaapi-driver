@@ -67,6 +67,8 @@ static void intel_driver_get_revid(struct intel_driver_data *intel, int *value)
 	return;
 }
 
+extern const struct intel_device_info *i965_get_device_info(int devid);
+
 bool 
 intel_driver_init(VADriverContextP ctx)
 {
@@ -91,6 +93,11 @@ intel_driver_init(VADriverContextP ctx)
     pthread_mutex_init(&intel->ctxmutex, NULL);
 
     intel_driver_get_param(intel, I915_PARAM_CHIPSET_ID, &intel->device_id);
+    intel->device_info = i965_get_device_info(intel->device_id);
+
+    if (!intel->device_info)
+        return false;
+
     if (intel_driver_get_param(intel, I915_PARAM_HAS_EXECBUF2, &has_exec2))
         intel->has_exec2 = has_exec2;
     if (intel_driver_get_param(intel, I915_PARAM_HAS_BSD, &has_bsd))

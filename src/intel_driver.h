@@ -116,6 +116,20 @@ struct intel_batchbuffer;
         }                                       \
     } while (0)
 
+struct intel_device_info
+{
+    int gen;
+    int gt;
+
+    unsigned int urb_size;
+    unsigned int max_wm_threads;
+
+    unsigned int is_g4x         : 1; /* gen4 */
+    unsigned int is_ivybridge   : 1; /* gen7 */
+    unsigned int is_baytrail    : 1; /* gen7 */
+    unsigned int is_haswell     : 1; /* gen7 */
+};
+
 struct intel_driver_data 
 {
     int fd;
@@ -134,6 +148,8 @@ struct intel_driver_data
     unsigned int has_bsd    : 1; /* Flag: has bitstream decoder for H.264? */
     unsigned int has_blt    : 1; /* Flag: has BLT unit? */
     unsigned int has_vebox  : 1; /* Flag: has VEBOX unit */
+
+    const struct intel_device_info *device_info;
 };
 
 bool intel_driver_init(VADriverContextP ctx);

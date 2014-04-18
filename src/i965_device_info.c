@@ -187,3 +187,115 @@ i965_get_codec_info(int devid)
         return NULL;
     }
 }
+
+static const struct intel_device_info g4x_device_info = {
+    .gen = 4,
+
+    .urb_size = 384,
+    .max_wm_threads = 50,       /* 10 * 5 */
+
+    .is_g4x = 1,
+};
+
+static const struct intel_device_info ilk_device_info = {
+    .gen = 5,
+
+    .urb_size = 1024,
+    .max_wm_threads = 72,       /* 12 * 6 */
+};
+
+static const struct intel_device_info snb_gt1_device_info = {
+    .gen = 6,
+    .gt = 1,
+
+    .urb_size = 1024,
+    .max_wm_threads = 40,
+};
+
+static const struct intel_device_info snb_gt2_device_info = {
+    .gen = 6,
+    .gt = 2,
+
+    .urb_size = 1024,
+    .max_wm_threads = 80,
+};
+
+static const struct intel_device_info ivb_gt1_device_info = {
+    .gen = 7,
+    .gt = 1,
+
+    .urb_size = 4096,
+    .max_wm_threads = 48,
+
+    .is_ivybridge = 1,
+};
+
+static const struct intel_device_info ivb_gt2_device_info = {
+    .gen = 7,
+    .gt = 2,
+
+    .urb_size = 4096,
+    .max_wm_threads = 172,
+
+    .is_ivybridge = 1,
+};
+
+static const struct intel_device_info byt_device_info = {
+    .gen = 7,
+    .gt = 1,
+
+    .urb_size = 4096,
+    .max_wm_threads = 48,
+
+    .is_ivybridge = 1,
+    .is_baytrail = 1,
+};
+
+static const struct intel_device_info hsw_gt1_device_info = {
+    .gen = 7,
+    .gt = 1,
+
+    .urb_size = 4096,
+    .max_wm_threads = 102,
+
+    .is_haswell = 1,
+};
+
+static const struct intel_device_info hsw_gt2_device_info = {
+    .gen = 7,
+    .gt = 2,
+
+    .urb_size = 4096,
+    .max_wm_threads = 204,
+
+    .is_haswell = 1,
+};
+
+static const struct intel_device_info hsw_gt3_device_info = {
+    .gen = 7,
+    .gt = 3,
+
+    .urb_size = 4096,
+    .max_wm_threads = 408,
+
+    .is_haswell = 1,
+};
+
+static const struct intel_device_info bdw_device_info = {
+    .gen = 8,
+
+    .urb_size = 4096,
+    .max_wm_threads = 64,       /* per PSD */
+};
+
+const struct intel_device_info *
+i965_get_device_info(int devid)
+{
+    switch (devid) {
+#undef CHIPSET
+#define CHIPSET(id, family, dev, str) case id: return &dev##_device_info;
+#include "i965_pciids.h"
+    default:
+        return NULL;
+    }
+}
