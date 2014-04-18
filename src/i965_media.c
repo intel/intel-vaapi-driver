@@ -60,7 +60,7 @@ i965_media_urb_layout(VADriverContextP ctx, struct i965_media_context *media_con
     unsigned int vfe_fence, cs_fence;
 
     vfe_fence = media_context->urb.cs_start;
-    cs_fence = URB_SIZE((&i965->intel));
+    cs_fence = i965->intel.device_info->urb_size;
 
     BEGIN_BATCH(batch, 3);
     OUT_BATCH(batch, CMD_URB_FENCE | UF0_VFE_REALLOC | UF0_CS_REALLOC | 1);

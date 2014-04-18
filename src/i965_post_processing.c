@@ -5212,7 +5212,7 @@ i965_post_processing_context_init(VADriverContextP ctx,
     };
 
     if (IS_IRONLAKE(i965->intel.device_id)) {
-	pp_context->urb.size = URB_SIZE((&i965->intel));
+	pp_context->urb.size = i965->intel.device_info->urb_size;
 	pp_context->urb.num_vfe_entries = 32;
 	pp_context->urb.size_vfe_entry = 1;     /* in 512 bits unit */
 	pp_context->urb.num_cs_entries = 1;
@@ -5221,7 +5221,7 @@ i965_post_processing_context_init(VADriverContextP ctx,
 	pp_context->urb.cs_start = pp_context->urb.vfe_start + 
             pp_context->urb.num_vfe_entries * pp_context->urb.size_vfe_entry;
 	assert(pp_context->urb.cs_start +
-	    pp_context->urb.num_cs_entries * pp_context->urb.size_cs_entry <= URB_SIZE((&i965->intel)));
+           pp_context->urb.num_cs_entries * pp_context->urb.size_cs_entry <= i965->intel.device_info->urb_size);
         pp_context->intel_post_processing = ironlake_post_processing;
     } else {
 	pp_context->vfe_gpu_state.max_num_threads = 60;

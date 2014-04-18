@@ -217,7 +217,7 @@ i965_avc_hw_scoreboard_urb_layout(VADriverContextP ctx, struct i965_h264_context
     unsigned int vfe_fence, cs_fence;
 
     vfe_fence = avc_hw_scoreboard_context->urb.cs_start;
-    cs_fence = URB_SIZE((&i965->intel));
+    cs_fence = i965->intel.device_info->urb_size;
 
     BEGIN_BATCH(batch, 3);
     OUT_BATCH(batch, CMD_URB_FENCE | UF0_VFE_REALLOC | UF0_CS_REALLOC | 1);
@@ -429,7 +429,7 @@ i965_avc_hw_scoreboard_decode_init(VADriverContextP ctx, void *h264_context)
         avc_hw_scoreboard_context->urb.cs_start = avc_hw_scoreboard_context->urb.vfe_start + 
             avc_hw_scoreboard_context->urb.num_vfe_entries * avc_hw_scoreboard_context->urb.size_vfe_entry;
         assert(avc_hw_scoreboard_context->urb.cs_start + 
-               avc_hw_scoreboard_context->urb.num_cs_entries * avc_hw_scoreboard_context->urb.size_cs_entry <= URB_SIZE((&i965->intel)));
+               avc_hw_scoreboard_context->urb.num_cs_entries * avc_hw_scoreboard_context->urb.size_cs_entry <= i965->intel.device_info->urb_size);
     }
 }
 

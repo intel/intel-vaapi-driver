@@ -1013,7 +1013,7 @@ i965_media_mpeg2_dec_context_init(VADriverContextP ctx, struct i965_media_contex
     media_context->urb.cs_start = media_context->urb.vfe_start + 
         media_context->urb.num_vfe_entries * media_context->urb.size_vfe_entry;
     assert(media_context->urb.cs_start + 
-           media_context->urb.num_cs_entries * media_context->urb.size_cs_entry <= URB_SIZE((&i965->intel)));
+           media_context->urb.num_cs_entries * media_context->urb.size_cs_entry <= i965->intel.device_info->urb_size);
 
     /* hook functions */
     media_context->media_states_setup = i965_media_mpeg2_states_setup;

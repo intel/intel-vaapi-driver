@@ -821,10 +821,4 @@
 #define SUBSAMPLE_YUV411        5
 #define SUBSAMPLE_RGBX          6
 
-#define URB_SIZE(intel)         (IS_GEN7(intel->device_id) ? 4096 :     \
-                                 IS_GEN8(intel->device_id) ? 4096 :     \
-                                 IS_GEN6(intel->device_id) ? 1024 :     \
-                                 IS_IRONLAKE(intel->device_id) ? 1024 : \
-                                 IS_G4X(intel->device_id) ? 384 : 256)
-
 #endif /* _I965_DEFINES_H_ */
