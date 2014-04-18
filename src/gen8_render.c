@@ -1377,7 +1377,7 @@ gen8_emit_wm_state(VADriverContextP ctx, int kernel)
     unsigned int num_samples = 0;
     unsigned int max_threads;
 
-    max_threads = render_state->max_wm_threads - 2;
+    max_threads = i965->intel.device_info->max_wm_threads - 2;
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, GEN8_3DSTATE_PSEXTRA | (2 - 2));
@@ -1783,14 +1783,6 @@ gen8_render_init(VADriverContextP ctx)
     render_state->instruction_state.end_offset = end_offset;
 
     dri_bo_unmap(render_state->instruction_state.bo);
-
-
-    if (IS_GEN8(i965->intel.device_id)) {
-        render_state->max_wm_threads = 64;
-    } else {
-        /* should never get here !!! */
-        assert(0);
-    }
 
     return true;
 }

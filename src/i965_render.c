@@ -478,7 +478,7 @@ i965_subpic_render_wm_unit(VADriverContextP ctx)
         wm_state->wm4.sampler_count = (render_state->wm.sampler_count + 3) / 4;
     }
 
-    wm_state->wm5.max_threads = render_state->max_wm_threads - 1;
+    wm_state->wm5.max_threads = i965->intel.device_info->max_wm_threads - 1;
     wm_state->wm5.thread_dispatch_enable = 1;
     wm_state->wm5.enable_16_pix = 1;
     wm_state->wm5.enable_8_pix = 0;
@@ -542,7 +542,7 @@ i965_render_wm_unit(VADriverContextP ctx)
         wm_state->wm4.sampler_count = (render_state->wm.sampler_count + 3) / 4;
     }
 
-    wm_state->wm5.max_threads = render_state->max_wm_threads - 1;
+    wm_state->wm5.max_threads = i965->intel.device_info->max_wm_threads - 1;
     wm_state->wm5.thread_dispatch_enable = 1;
     wm_state->wm5.enable_16_pix = 1;
     wm_state->wm5.enable_8_pix = 0;
@@ -2117,7 +2117,7 @@ gen6_emit_wm_state(VADriverContextP ctx, int kernel)
               (5 << GEN6_3DSTATE_WM_BINDING_TABLE_ENTRY_COUNT_SHIFT));
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, (6 << GEN6_3DSTATE_WM_DISPATCH_START_GRF_0_SHIFT)); /* DW4 */
-    OUT_BATCH(batch, ((render_state->max_wm_threads - 1) << GEN6_3DSTATE_WM_MAX_THREADS_SHIFT) |
+    OUT_BATCH(batch, ((i965->intel.device_info->max_wm_threads - 1) << GEN6_3DSTATE_WM_MAX_THREADS_SHIFT) |
               GEN6_3DSTATE_WM_DISPATCH_ENABLE |
               GEN6_3DSTATE_WM_16_DISPATCH_ENABLE);
     OUT_BATCH(batch, (1 << GEN6_3DSTATE_WM_NUM_SF_OUTPUTS_SHIFT) |
@@ -2899,7 +2899,7 @@ gen7_emit_wm_state(VADriverContextP ctx, int kernel)
               (5 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT));
     OUT_BATCH(batch, 0); /* scratch space base offset */
     OUT_BATCH(batch, 
-              ((render_state->max_wm_threads - 1) << max_threads_shift) | num_samples |
+              ((i965->intel.device_info->max_wm_threads - 1) << max_threads_shift) | num_samples |
               GEN7_PS_PUSH_CONSTANT_ENABLE |
               GEN7_PS_ATTRIBUTE_ENABLE |
               GEN7_PS_16_DISPATCH_ENABLE);
@@ -3186,29 +3186,6 @@ i965_render_init(VADriverContextP ctx)
                       "constant buffer",
                       4096, 64);
     assert(render_state->curbe.bo);
-
-    if (IS_HSW_GT1(i965->intel.device_id)) {
-        render_state->max_wm_threads = 102;
-    } else if (IS_HSW_GT2(i965->intel.device_id)) {
-        render_state->max_wm_threads = 204;
-    } else if (IS_HSW_GT3(i965->intel.device_id)) {
-        render_state->max_wm_threads = 408;
-    } else if (IS_IVB_GT1(i965->intel.device_id) || IS_BAYTRAIL(i965->intel.device_id)) {
-        render_state->max_wm_threads = 48;
-    } else if (IS_IVB_GT2(i965->intel.device_id)) {
-        render_state->max_wm_threads = 172;
-    } else if (IS_SNB_GT1(i965->intel.device_id)) {
-        render_state->max_wm_threads = 40;
-    } else if (IS_SNB_GT2(i965->intel.device_id)) {
-        render_state->max_wm_threads = 80;
-    } else if (IS_IRONLAKE(i965->intel.device_id)) {
-        render_state->max_wm_threads = 72; /* 12 * 6 */
-    } else if (IS_G4X(i965->intel.device_id)) {
-        render_state->max_wm_threads = 50; /* 12 * 5 */
-    } else {
-        /* should never get here !!! */
-        assert(0);
-    }
 
     return true;
 }

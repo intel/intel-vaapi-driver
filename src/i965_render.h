@@ -79,8 +79,6 @@ struct i965_render_state
 
     struct i965_kernel render_kernels[3];
     
-    int max_wm_threads;
-
     struct {
         dri_bo *bo;
         int bo_size;
