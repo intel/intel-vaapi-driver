@@ -29,10 +29,14 @@
 
 extern struct hw_context *i965_proc_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, struct object_config *);
+extern bool genx_render_init(VADriverContextP);
+
 static const struct hw_codec_info g4x_hw_codec_info = {
     .dec_hw_context_init = g4x_dec_hw_context_init,
     .enc_hw_context_init = NULL,
     .proc_hw_context_init = NULL,
+    .render_init = genx_render_init,
+
     .max_width = 2048,
     .max_height = 2048,
 
@@ -46,6 +50,8 @@ static const struct hw_codec_info ilk_hw_codec_info = {
     .dec_hw_context_init = ironlake_dec_hw_context_init,
     .enc_hw_context_init = NULL,
     .proc_hw_context_init = i965_proc_context_init,
+    .render_init = genx_render_init,
+
     .max_width = 2048,
     .max_height = 2048,
 
@@ -63,6 +69,8 @@ static const struct hw_codec_info snb_hw_codec_info = {
     .dec_hw_context_init = gen6_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
     .proc_hw_context_init = i965_proc_context_init,
+    .render_init = genx_render_init,
+
     .max_width = 2048,
     .max_height = 2048,
 
@@ -88,6 +96,8 @@ static const struct hw_codec_info ivb_hw_codec_info = {
     .dec_hw_context_init = gen7_dec_hw_context_init,
     .enc_hw_context_init = gen7_enc_hw_context_init,
     .proc_hw_context_init = i965_proc_context_init,
+    .render_init = genx_render_init,
+
     .max_width = 4096,
     .max_height = 4096,
 
@@ -117,6 +127,8 @@ static const struct hw_codec_info hsw_hw_codec_info = {
     .dec_hw_context_init = gen75_dec_hw_context_init,
     .enc_hw_context_init = gen75_enc_hw_context_init,
     .proc_hw_context_init = gen75_proc_context_init,
+    .render_init = genx_render_init,
+
     .max_width = 4096,
     .max_height = 4096,
 
@@ -149,6 +161,8 @@ static const struct hw_codec_info bdw_hw_codec_info = {
     .dec_hw_context_init = gen8_dec_hw_context_init,
     .enc_hw_context_init = gen8_enc_hw_context_init,
     .proc_hw_context_init = gen75_proc_context_init,
+    .render_init = gen8_render_init,
+
     .max_width = 4096,
     .max_height = 4096,
 

@@ -3132,82 +3132,19 @@ intel_render_put_subpicture(
     render_state->render_put_subpicture(ctx, obj_surface, src_rect, dst_rect);
 }
 
-
-bool 
-i965_render_init(VADriverContextP ctx)
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_render_state *render_state = &i965->render_state;
-    int i;
-
-    /* kernel */
-    assert(NUM_RENDER_KERNEL == (sizeof(render_kernels_gen5) / 
-                                 sizeof(render_kernels_gen5[0])));
-    assert(NUM_RENDER_KERNEL == (sizeof(render_kernels_gen6) / 
-                                 sizeof(render_kernels_gen6[0])));
-
-    if (IS_GEN8(i965->intel.device_info)) {
-        return gen8_render_init(ctx);
-    } else  if (IS_GEN7(i965->intel.device_info)) {
-        memcpy(render_state->render_kernels,
-               (IS_HASWELL(i965->intel.device_info) ? render_kernels_gen7_haswell : render_kernels_gen7),
-               sizeof(render_state->render_kernels));
-        render_state->render_put_surface = gen7_render_put_surface;
-        render_state->render_put_subpicture = gen7_render_put_subpicture;
-    } else if (IS_GEN6(i965->intel.device_info)) {
-        memcpy(render_state->render_kernels, render_kernels_gen6, sizeof(render_state->render_kernels));
-        render_state->render_put_surface = gen6_render_put_surface;
-        render_state->render_put_subpicture = gen6_render_put_subpicture;
-    } else if (IS_IRONLAKE(i965->intel.device_info)) {
-        memcpy(render_state->render_kernels, render_kernels_gen5, sizeof(render_state->render_kernels));
-        render_state->render_put_surface = i965_render_put_surface;
-        render_state->render_put_subpicture = i965_render_put_subpicture;
-    } else {
-        memcpy(render_state->render_kernels, render_kernels_gen4, sizeof(render_state->render_kernels));
-        render_state->render_put_surface = i965_render_put_surface;
-        render_state->render_put_subpicture = i965_render_put_subpicture;
-    }
-
-    for (i = 0; i < NUM_RENDER_KERNEL; i++) {
-        struct i965_kernel *kernel = &render_state->render_kernels[i];
-
-        if (!kernel->size)
-            continue;
-
-        kernel->bo = dri_bo_alloc(i965->intel.bufmgr, 
-                                  kernel->name, 
-                                  kernel->size, 0x1000);
-        assert(kernel->bo);
-        dri_bo_subdata(kernel->bo, 0, kernel->size, kernel->bin);
-    }
-
-    /* constant buffer */
-    render_state->curbe.bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "constant buffer",
-                      4096, 64);
-    assert(render_state->curbe.bo);
-
-    return true;
-}
-
-void 
-i965_render_terminate(VADriverContextP ctx)
+static void
+genx_render_terminate(VADriverContextP ctx)
 {
     int i;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
-
-    if (IS_GEN8(i965->intel.device_info)) {
-        gen8_render_terminate(ctx);
-        return;
-    } 
 
     dri_bo_unreference(render_state->curbe.bo);
     render_state->curbe.bo = NULL;
 
     for (i = 0; i < NUM_RENDER_KERNEL; i++) {
         struct i965_kernel *kernel = &render_state->render_kernels[i];
-        
+
         dri_bo_unreference(kernel->bo);
         kernel->bo = NULL;
     }
@@ -3239,3 +3176,76 @@ i965_render_terminate(VADriverContextP ctx)
     }
 }
 
+bool 
+genx_render_init(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+    int i;
+
+    /* kernel */
+    assert(NUM_RENDER_KERNEL == (sizeof(render_kernels_gen5) / 
+                                 sizeof(render_kernels_gen5[0])));
+    assert(NUM_RENDER_KERNEL == (sizeof(render_kernels_gen6) / 
+                                 sizeof(render_kernels_gen6[0])));
+
+    if (IS_GEN7(i965->intel.device_info)) {
+        memcpy(render_state->render_kernels,
+               (IS_HASWELL(i965->intel.device_info) ? render_kernels_gen7_haswell : render_kernels_gen7),
+               sizeof(render_state->render_kernels));
+        render_state->render_put_surface = gen7_render_put_surface;
+        render_state->render_put_subpicture = gen7_render_put_subpicture;
+    } else if (IS_GEN6(i965->intel.device_info)) {
+        memcpy(render_state->render_kernels, render_kernels_gen6, sizeof(render_state->render_kernels));
+        render_state->render_put_surface = gen6_render_put_surface;
+        render_state->render_put_subpicture = gen6_render_put_subpicture;
+    } else if (IS_IRONLAKE(i965->intel.device_info)) {
+        memcpy(render_state->render_kernels, render_kernels_gen5, sizeof(render_state->render_kernels));
+        render_state->render_put_surface = i965_render_put_surface;
+        render_state->render_put_subpicture = i965_render_put_subpicture;
+    } else {
+        memcpy(render_state->render_kernels, render_kernels_gen4, sizeof(render_state->render_kernels));
+        render_state->render_put_surface = i965_render_put_surface;
+        render_state->render_put_subpicture = i965_render_put_subpicture;
+    }
+
+    render_state->render_terminate = genx_render_terminate;
+
+    for (i = 0; i < NUM_RENDER_KERNEL; i++) {
+        struct i965_kernel *kernel = &render_state->render_kernels[i];
+
+        if (!kernel->size)
+            continue;
+
+        kernel->bo = dri_bo_alloc(i965->intel.bufmgr, 
+                                  kernel->name, 
+                                  kernel->size, 0x1000);
+        assert(kernel->bo);
+        dri_bo_subdata(kernel->bo, 0, kernel->size, kernel->bin);
+    }
+
+    /* constant buffer */
+    render_state->curbe.bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "constant buffer",
+                      4096, 64);
+    assert(render_state->curbe.bo);
+
+    return true;
+}
+
+bool
+i965_render_init(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    return i965->codec_info->render_init(ctx);
+}
+
+void
+i965_render_terminate(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+
+    render_state->render_terminate(ctx);
+}

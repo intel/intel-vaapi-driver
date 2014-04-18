@@ -1721,6 +1721,40 @@ gen8_render_put_subpicture(
     intel_batchbuffer_flush(batch);
 }
 
+static void
+gen8_render_terminate(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_render_state *render_state = &i965->render_state;
+
+    dri_bo_unreference(render_state->vb.vertex_buffer);
+    render_state->vb.vertex_buffer = NULL;
+
+    dri_bo_unreference(render_state->wm.surface_state_binding_table_bo);
+    render_state->wm.surface_state_binding_table_bo = NULL;
+
+    if (render_state->instruction_state.bo) {
+        dri_bo_unreference(render_state->instruction_state.bo);
+        render_state->instruction_state.bo = NULL;
+    }
+
+    if (render_state->dynamic_state.bo) {
+        dri_bo_unreference(render_state->dynamic_state.bo);
+        render_state->dynamic_state.bo = NULL;
+    }
+
+    if (render_state->indirect_state.bo) {
+        dri_bo_unreference(render_state->indirect_state.bo);
+        render_state->indirect_state.bo = NULL;
+    }
+
+    if (render_state->draw_region) {
+        dri_bo_unreference(render_state->draw_region->bo);
+        free(render_state->draw_region);
+        render_state->draw_region = NULL;
+    }
+}
+
 bool
 gen8_render_init(VADriverContextP ctx)
 {
@@ -1733,6 +1767,7 @@ gen8_render_init(VADriverContextP ctx)
 
     render_state->render_put_surface = gen8_render_put_surface;
     render_state->render_put_subpicture = gen8_render_put_subpicture;
+    render_state->render_terminate = gen8_render_terminate;
 
     if (IS_GEN8(i965->intel.device_info)) {
         memcpy(render_state->render_kernels, render_kernels_gen8,
@@ -1786,39 +1821,3 @@ gen8_render_init(VADriverContextP ctx)
 
     return true;
 }
-
-
-void
-gen8_render_terminate(VADriverContextP ctx)
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_render_state *render_state = &i965->render_state;
-
-    dri_bo_unreference(render_state->vb.vertex_buffer);
-    render_state->vb.vertex_buffer = NULL;
-
-    dri_bo_unreference(render_state->wm.surface_state_binding_table_bo);
-    render_state->wm.surface_state_binding_table_bo = NULL;
-
-    if (render_state->instruction_state.bo) {
-        dri_bo_unreference(render_state->instruction_state.bo);
-        render_state->instruction_state.bo = NULL;
-    }
-
-    if (render_state->dynamic_state.bo) {
-        dri_bo_unreference(render_state->dynamic_state.bo);
-        render_state->dynamic_state.bo = NULL;
-    }
-
-    if (render_state->indirect_state.bo) {
-        dri_bo_unreference(render_state->indirect_state.bo);
-        render_state->indirect_state.bo = NULL;
-    }
-
-    if (render_state->draw_region) {
-        dri_bo_unreference(render_state->draw_region->bo);
-        free(render_state->draw_region);
-        render_state->draw_region = NULL;
-    }
-}
-
