@@ -4194,8 +4194,7 @@ gen6_pp_upload_constants(VADriverContextP ctx,
     assert(sizeof(struct pp_static_parameter) == 128);
     assert(sizeof(struct gen7_pp_static_parameter) == 192);
 
-    if (IS_GEN7(i965->intel.device_info) ||
-        IS_GEN8(i965->intel.device_info))
+    if (IS_GEN7(i965->intel.device_info))
         param_size = sizeof(struct gen7_pp_static_parameter);
     else
         param_size = sizeof(struct pp_static_parameter);
@@ -4278,8 +4277,7 @@ gen6_pp_curbe_load(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int param_size;
 
-    if (IS_GEN7(i965->intel.device_info) ||
-        IS_GEN8(i965->intel.device_info))
+    if (IS_GEN7(i965->intel.device_info))
         param_size = sizeof(struct gen7_pp_static_parameter);
     else
         param_size = sizeof(struct pp_static_parameter);
@@ -4365,8 +4363,7 @@ gen6_pp_object_walker(VADriverContextP ctx,
     dri_bo *command_buffer;
     unsigned int *command_ptr;
 
-    if (IS_GEN7(i965->intel.device_info) ||
-        IS_GEN8(i965->intel.device_info))
+    if (IS_GEN7(i965->intel.device_info))
         param_size = sizeof(struct gen7_pp_inline_parameter);
     else
         param_size = sizeof(struct pp_inline_parameter);
@@ -4408,23 +4405,13 @@ gen6_pp_object_walker(VADriverContextP ctx,
 
     dri_bo_unmap(command_buffer);
 
-    if (IS_GEN8(i965->intel.device_info)) {
-	BEGIN_BATCH(batch, 3);
-	OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
-	OUT_RELOC(batch, command_buffer, 
-              I915_GEM_DOMAIN_COMMAND, 0, 
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8));
+    OUT_RELOC(batch, command_buffer,
+              I915_GEM_DOMAIN_COMMAND, 0,
               0);
-	OUT_BATCH(batch, 0);
-    	ADVANCE_BATCH(batch);
-    } else {
-	BEGIN_BATCH(batch, 2);
-	OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8));
-	OUT_RELOC(batch, command_buffer, 
-              I915_GEM_DOMAIN_COMMAND, 0, 
-              0);
-    	ADVANCE_BATCH(batch);
-    }
-    
+    ADVANCE_BATCH(batch);
+
     dri_bo_unreference(command_buffer);
 
     /* Have to execute the batch buffer here becuase MI_BATCH_BUFFER_END
@@ -4567,8 +4554,7 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     br13 |= pitch;
 
     if (IS_GEN6(i965->intel.device_info) ||
-        IS_GEN7(i965->intel.device_info) ||
-        IS_GEN8(i965->intel.device_info)) {
+        IS_GEN7(i965->intel.device_info)) {
         intel_batchbuffer_start_atomic_blt(batch, 48);
         BEGIN_BLT_BATCH(batch, 12);
     } else {
@@ -5252,8 +5238,7 @@ i965_post_processing_context_init(VADriverContextP ctx,
     }
 
     /* static & inline parameters */
-    if (IS_GEN7(i965->intel.device_info) ||
-        IS_GEN8(i965->intel.device_info)) {
+    if (IS_GEN7(i965->intel.device_info)) {
         pp_context->pp_static_parameter = calloc(sizeof(struct gen7_pp_static_parameter), 1);
         pp_context->pp_inline_parameter = calloc(sizeof(struct gen7_pp_inline_parameter), 1);
     } else {

@@ -1234,8 +1234,7 @@ gen8_pp_curbe_load(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int param_size = 64;
 
-    if (IS_GEN8(i965->intel.device_info))
-        param_size = sizeof(struct gen7_pp_static_parameter);
+    param_size = sizeof(struct gen7_pp_static_parameter);
 
     BEGIN_BATCH(batch, 4);
     OUT_BATCH(batch, CMD_MEDIA_CURBE_LOAD | (4 - 2));
@@ -1258,8 +1257,6 @@ gen8_pp_object_walker(VADriverContextP ctx,
     unsigned int *command_ptr;
 
     param_size = sizeof(struct gen7_pp_inline_parameter);
-    if (IS_GEN8(i965->intel.device_info))
-        param_size = sizeof(struct gen7_pp_inline_parameter);
 
     x_steps = pp_context->pp_x_steps(pp_context->private_context);
     y_steps = pp_context->pp_y_steps(pp_context->private_context);
@@ -1300,14 +1297,12 @@ gen8_pp_object_walker(VADriverContextP ctx,
 
     dri_bo_unmap(command_buffer);
 
-    if (IS_GEN8(i965->intel.device_info)) {
-	BEGIN_BATCH(batch, 3);
-	OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
-	OUT_RELOC(batch, command_buffer,
-		  I915_GEM_DOMAIN_COMMAND, 0, 0);
-	OUT_BATCH(batch, 0);
-	ADVANCE_BATCH(batch);
-    }
+    BEGIN_BATCH(batch, 3);
+    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
+    OUT_RELOC(batch, command_buffer,
+              I915_GEM_DOMAIN_COMMAND, 0, 0);
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
 
     dri_bo_unreference(command_buffer);
 
@@ -1427,12 +1422,7 @@ gen8_post_processing_context_init(VADriverContextP ctx,
 
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
 
-    if (IS_GEN8(i965->intel.device_info))
-        memcpy(pp_context->pp_modules, pp_modules_gen8, sizeof(pp_context->pp_modules));
-    else {
-        /* should never get here !!! */
-        assert(0);
-    }
+    memcpy(pp_context->pp_modules, pp_modules_gen8, sizeof(pp_context->pp_modules));
 
     kernel_size = 4096 ;
 
@@ -1481,10 +1471,8 @@ gen8_post_processing_context_init(VADriverContextP ctx,
     dri_bo_unmap(pp_context->instruction_state.bo);
 
     /* static & inline parameters */
-    if (IS_GEN8(i965->intel.device_info)) {
-        pp_context->pp_static_parameter = calloc(sizeof(struct gen7_pp_static_parameter), 1);
-        pp_context->pp_inline_parameter = calloc(sizeof(struct gen7_pp_inline_parameter), 1);
-    }
+    pp_context->pp_static_parameter = calloc(sizeof(struct gen7_pp_static_parameter), 1);
+    pp_context->pp_inline_parameter = calloc(sizeof(struct gen7_pp_inline_parameter), 1);
 
     pp_context->pp_dndi_context.current_out_surface = VA_INVALID_SURFACE;
     pp_context->pp_dndi_context.current_out_obj_surface = NULL;

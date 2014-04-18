@@ -1540,8 +1540,7 @@ i965_clear_dest_region(VADriverContextP ctx)
     br13 |= pitch;
 
     if (IS_GEN6(i965->intel.device_info) ||
-        IS_GEN7(i965->intel.device_info) ||
-        IS_GEN8(i965->intel.device_info)) {
+        IS_GEN7(i965->intel.device_info)) {
         intel_batchbuffer_start_atomic_blt(batch, 24);
         BEGIN_BLT_BATCH(batch, 6);
     } else {
