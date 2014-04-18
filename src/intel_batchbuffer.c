@@ -87,7 +87,7 @@ intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size
     batch->flag = flag;
     batch->run = drm_intel_bo_mrb_exec;
 
-    if (IS_GEN6(intel->device_id) &&
+    if (IS_GEN6(intel->device_info) &&
         flag == I915_EXEC_RENDER)
         batch->wa_render_bo = dri_bo_alloc(intel->bufmgr,
                                            "wa scratch",
@@ -183,11 +183,11 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
 {
     struct intel_driver_data *intel = batch->intel; 
 
-    if (IS_GEN6(intel->device_id) ||
-        IS_GEN7(intel->device_id) ||
-        IS_GEN8(intel->device_id)) {
+    if (IS_GEN6(intel->device_info) ||
+        IS_GEN7(intel->device_info) ||
+        IS_GEN8(intel->device_info)) {
         if (batch->flag == I915_EXEC_RENDER) {
-            if (IS_GEN8(intel->device_id)) {
+            if (IS_GEN8(intel->device_info)) {
                 BEGIN_BATCH(batch, 6);
                 OUT_BATCH(batch, CMD_PIPE_CONTROL | (6 - 2));
 
@@ -202,7 +202,7 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
                 OUT_BATCH(batch, 0); /* write data */
                 OUT_BATCH(batch, 0);
                 ADVANCE_BATCH(batch);
-            } else if (IS_GEN6(intel->device_id)) {
+            } else if (IS_GEN6(intel->device_info)) {
                 assert(batch->wa_render_bo);
 
                 BEGIN_BATCH(batch, 4 * 3);

@@ -152,7 +152,7 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
     */
     p_table = (unsigned int *)proc_ctx->dndi_state_table.ptr;
 
-     if (IS_HASWELL(i965->intel.device_id))
+     if (IS_HASWELL(i965->intel.device_info))
          *p_table ++ = 0;               // reserved  . w0
 
     *p_table ++ = ( 140 << 24 |    // denoise STAD threshold . w1
@@ -224,7 +224,7 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
                     13 << 6   |  // chr temp diff th
                     7 );         // chr temp diff low
 
-    if (IS_GEN8(i965->intel.device_id))
+    if (IS_GEN8(i965->intel.device_info))
         *p_table ++ = 0;         // parameters for hot pixel, 
 }
 

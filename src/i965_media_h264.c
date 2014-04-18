@@ -852,7 +852,7 @@ i965_media_h264_dec_context_init(VADriverContextP ctx, struct i965_media_context
                                     sizeof(h264_avc_kernels_gen5[0])));
     assert(NUM_AVC_MC_INTERFACES == (sizeof(avc_mc_kernel_offset_gen5) /
                                      sizeof(avc_mc_kernel_offset_gen5[0])));
-    if (IS_IRONLAKE(i965->intel.device_id)) {
+    if (IS_IRONLAKE(i965->intel.device_info)) {
         memcpy(i965_h264_context->avc_kernels, h264_avc_kernels_gen5, sizeof(i965_h264_context->avc_kernels));
         avc_mc_kernel_offset = avc_mc_kernel_offset_gen5;
         intra_kernel_header = &intra_kernel_header_gen5;
@@ -886,7 +886,7 @@ i965_media_h264_dec_context_init(VADriverContextP ctx, struct i965_media_context
     media_context->free_private_context = i965_media_h264_free_private_context;
 
     /* URB */
-    if (IS_IRONLAKE(i965->intel.device_id)) {
+    if (IS_IRONLAKE(i965->intel.device_info)) {
         media_context->urb.num_vfe_entries = 63;
     } else {
         media_context->urb.num_vfe_entries = 23;

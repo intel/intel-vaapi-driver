@@ -77,7 +77,7 @@ i965_media_state_base_address(VADriverContextP ctx, struct i965_media_context *m
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct intel_batchbuffer *batch = media_context->base.batch;
 
-    if (IS_IRONLAKE(i965->intel.device_id)) {
+    if (IS_IRONLAKE(i965->intel.device_info)) {
         BEGIN_BATCH(batch, 8);
         OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | 6);
         OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);

@@ -942,7 +942,7 @@ gen7_mfd_mpeg2_pic_state(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferMPEG2 *)decode_state->pic_param->buffer;
 
-    if (IS_HASWELL(i965->intel.device_id)) {
+    if (IS_HASWELL(i965->intel.device_info)) {
         /* XXX: disable concealment for now */
         slice_concealment_disable_bit = 1;
     }
@@ -1086,7 +1086,7 @@ gen7_mfd_mpeg2_bsd_object(VADriverContextP ctx,
                   (slice_param->macroblock_offset & 0x7));
     OUT_BCS_BATCH(batch,
                   (slice_param->quantiser_scale_code << 24) |
-                  (IS_HASWELL(i965->intel.device_id) ? (vpos1 << 8 | hpos1) : 0));
+                  (IS_HASWELL(i965->intel.device_info) ? (vpos1 << 8 | hpos1) : 0));
     ADVANCE_BCS_BATCH(batch);
 }
 

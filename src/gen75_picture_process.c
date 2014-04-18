@@ -86,9 +86,9 @@ gen75_vpp_vebox(VADriverContextP ctx,
      proc_ctx->vpp_vebox_ctx->surface_input_object = proc_ctx->surface_pipeline_input_object;
      proc_ctx->vpp_vebox_ctx->surface_output_object  = proc_ctx->surface_render_output_object;
 
-     if (IS_HASWELL(i965->intel.device_id))
+     if (IS_HASWELL(i965->intel.device_info))
          va_status = gen75_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
-     else if (IS_GEN8(i965->intel.device_id))
+     else if (IS_GEN8(i965->intel.device_info))
          va_status = gen8_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
  
      return va_status;

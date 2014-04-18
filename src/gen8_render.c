@@ -1734,7 +1734,7 @@ gen8_render_init(VADriverContextP ctx)
     render_state->render_put_surface = gen8_render_put_surface;
     render_state->render_put_subpicture = gen8_render_put_subpicture;
 
-    if (IS_GEN8(i965->intel.device_id)) {
+    if (IS_GEN8(i965->intel.device_info)) {
         memcpy(render_state->render_kernels, render_kernels_gen8,
 			sizeof(render_state->render_kernels));
     }

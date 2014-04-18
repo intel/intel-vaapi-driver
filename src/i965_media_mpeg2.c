@@ -988,7 +988,7 @@ i965_media_mpeg2_dec_context_init(VADriverContextP ctx, struct i965_media_contex
                                      sizeof(mpeg2_vld_kernels_gen5[0])));
     assert(NUM_MPEG2_VLD_KERNELS <= MAX_INTERFACE_DESC);
 
-    if (IS_IRONLAKE(i965->intel.device_id))
+    if (IS_IRONLAKE(i965->intel.device_info))
         memcpy(i965_mpeg2_context->vld_kernels, mpeg2_vld_kernels_gen5, sizeof(i965_mpeg2_context->vld_kernels));
     else
         memcpy(i965_mpeg2_context->vld_kernels, mpeg2_vld_kernels_gen4, sizeof(i965_mpeg2_context->vld_kernels));

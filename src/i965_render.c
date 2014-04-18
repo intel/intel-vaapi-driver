@@ -341,7 +341,7 @@ i965_render_vs_unit(VADriverContextP ctx)
     vs_state = render_state->vs.state->virtual;
     memset(vs_state, 0, sizeof(*vs_state));
 
-    if (IS_IRONLAKE(i965->intel.device_id))
+    if (IS_IRONLAKE(i965->intel.device_info))
         vs_state->thread4.nr_urb_entries = URB_VS_ENTRIES >> 2;
     else
         vs_state->thread4.nr_urb_entries = URB_VS_ENTRIES;
@@ -455,7 +455,7 @@ i965_subpic_render_wm_unit(VADriverContextP ctx)
 
     wm_state->thread1.single_program_flow = 1; /* XXX */
 
-    if (IS_IRONLAKE(i965->intel.device_id))
+    if (IS_IRONLAKE(i965->intel.device_info))
         wm_state->thread1.binding_table_entry_count = 0; /* hardware requirement */
     else
         wm_state->thread1.binding_table_entry_count = 7;
@@ -472,7 +472,7 @@ i965_subpic_render_wm_unit(VADriverContextP ctx)
     wm_state->wm4.stats_enable = 0;
     wm_state->wm4.sampler_state_pointer = render_state->wm.sampler->offset >> 5; 
 
-    if (IS_IRONLAKE(i965->intel.device_id)) {
+    if (IS_IRONLAKE(i965->intel.device_info)) {
         wm_state->wm4.sampler_count = 0;        /* hardware requirement */
     } else {
         wm_state->wm4.sampler_count = (render_state->wm.sampler_count + 3) / 4;
@@ -519,7 +519,7 @@ i965_render_wm_unit(VADriverContextP ctx)
 
     wm_state->thread1.single_program_flow = 1; /* XXX */
 
-    if (IS_IRONLAKE(i965->intel.device_id))
+    if (IS_IRONLAKE(i965->intel.device_info))
         wm_state->thread1.binding_table_entry_count = 0;        /* hardware requirement */
     else
         wm_state->thread1.binding_table_entry_count = 7;
@@ -536,7 +536,7 @@ i965_render_wm_unit(VADriverContextP ctx)
     wm_state->wm4.stats_enable = 0;
     wm_state->wm4.sampler_state_pointer = render_state->wm.sampler->offset >> 5; 
 
-    if (IS_IRONLAKE(i965->intel.device_id)) {
+    if (IS_IRONLAKE(i965->intel.device_info)) {
         wm_state->wm4.sampler_count = 0;        /* hardware requirement */
     } else {
         wm_state->wm4.sampler_count = (render_state->wm.sampler_count + 3) / 4;
@@ -828,12 +828,12 @@ i965_render_src_surface_state(
     assert(ss_bo->virtual);
     ss = (char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index);
 
-    if (IS_GEN7(i965->intel.device_id)) {
+    if (IS_GEN7(i965->intel.device_info)) {
         gen7_render_set_surface_state(ss,
                                       region, offset,
                                       w, h,
                                       pitch, format, flags);
-        if (IS_HASWELL(i965->intel.device_id))
+        if (IS_HASWELL(i965->intel.device_info))
             gen7_render_set_surface_scs(ss);
         dri_bo_emit_reloc(ss_bo,
                           I915_GEM_DOMAIN_SAMPLER, 0,
@@ -943,12 +943,12 @@ i965_render_dest_surface_state(VADriverContextP ctx, int index)
     assert(ss_bo->virtual);
     ss = (char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index);
 
-    if (IS_GEN7(i965->intel.device_id)) {
+    if (IS_GEN7(i965->intel.device_info)) {
         gen7_render_set_surface_state(ss,
                                       dest_region->bo, 0,
                                       dest_region->width, dest_region->height,
                                       dest_region->pitch, format, 0);
-        if (IS_HASWELL(i965->intel.device_id))
+        if (IS_HASWELL(i965->intel.device_info))
             gen7_render_set_surface_scs(ss);
         dri_bo_emit_reloc(ss_bo,
                           I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
@@ -1230,7 +1230,7 @@ i965_render_state_base_address(VADriverContextP ctx)
     struct intel_batchbuffer *batch = i965->batch;
     struct i965_render_state *render_state = &i965->render_state;
 
-    if (IS_IRONLAKE(i965->intel.device_id)) {
+    if (IS_IRONLAKE(i965->intel.device_info)) {
         BEGIN_BATCH(batch, 8);
         OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | 6);
         OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
@@ -1394,7 +1394,7 @@ i965_render_vertex_elements(VADriverContextP ctx)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965->batch;
 
-    if (IS_IRONLAKE(i965->intel.device_id)) {
+    if (IS_IRONLAKE(i965->intel.device_info)) {
         BEGIN_BATCH(batch, 5);
         OUT_BATCH(batch, CMD_VERTEX_ELEMENTS | 3);
         /* offset 0: X,Y -> {X, Y, 1.0, 1.0} */
@@ -1486,7 +1486,7 @@ i965_render_startup(VADriverContextP ctx)
               ((4 * 4) << VB0_BUFFER_PITCH_SHIFT));
     OUT_RELOC(batch, render_state->vb.vertex_buffer, I915_GEM_DOMAIN_VERTEX, 0, 0);
 
-    if (IS_IRONLAKE(i965->intel.device_id))
+    if (IS_IRONLAKE(i965->intel.device_info))
         OUT_RELOC(batch, render_state->vb.vertex_buffer, I915_GEM_DOMAIN_VERTEX, 0, 12 * 4);
     else
         OUT_BATCH(batch, 3);
@@ -1536,9 +1536,9 @@ i965_clear_dest_region(VADriverContextP ctx)
 
     br13 |= pitch;
 
-    if (IS_GEN6(i965->intel.device_id) ||
-        IS_GEN7(i965->intel.device_id) ||
-        IS_GEN8(i965->intel.device_id)) {
+    if (IS_GEN6(i965->intel.device_info) ||
+        IS_GEN7(i965->intel.device_info) ||
+        IS_GEN8(i965->intel.device_info)) {
         intel_batchbuffer_start_atomic_blt(batch, 24);
         BEGIN_BLT_BATCH(batch, 6);
     } else {
@@ -2553,7 +2553,7 @@ gen7_emit_urb(VADriverContextP ctx)
     struct intel_batchbuffer *batch = i965->batch;
     unsigned int num_urb_entries = 32;
 
-    if (IS_HASWELL(i965->intel.device_id))
+    if (IS_HASWELL(i965->intel.device_info))
         num_urb_entries = 64;
 
     BEGIN_BATCH(batch, 2);
@@ -2862,7 +2862,7 @@ gen7_emit_wm_state(VADriverContextP ctx, int kernel)
     unsigned int max_threads_shift = GEN7_PS_MAX_THREADS_SHIFT_IVB;
     unsigned int num_samples = 0;
 
-    if (IS_HASWELL(i965->intel.device_id)) {
+    if (IS_HASWELL(i965->intel.device_info)) {
         max_threads_shift = GEN7_PS_MAX_THREADS_SHIFT_HSW;
         num_samples = 1 << GEN7_PS_SAMPLE_MASK_SHIFT_HSW;
     }
@@ -3146,19 +3146,19 @@ i965_render_init(VADriverContextP ctx)
     assert(NUM_RENDER_KERNEL == (sizeof(render_kernels_gen6) / 
                                  sizeof(render_kernels_gen6[0])));
 
-    if (IS_GEN8(i965->intel.device_id)) {
+    if (IS_GEN8(i965->intel.device_info)) {
         return gen8_render_init(ctx);
-    } else  if (IS_GEN7(i965->intel.device_id)) {
+    } else  if (IS_GEN7(i965->intel.device_info)) {
         memcpy(render_state->render_kernels,
-               (IS_HASWELL(i965->intel.device_id) ? render_kernels_gen7_haswell : render_kernels_gen7),
+               (IS_HASWELL(i965->intel.device_info) ? render_kernels_gen7_haswell : render_kernels_gen7),
                sizeof(render_state->render_kernels));
         render_state->render_put_surface = gen7_render_put_surface;
         render_state->render_put_subpicture = gen7_render_put_subpicture;
-    } else if (IS_GEN6(i965->intel.device_id)) {
+    } else if (IS_GEN6(i965->intel.device_info)) {
         memcpy(render_state->render_kernels, render_kernels_gen6, sizeof(render_state->render_kernels));
         render_state->render_put_surface = gen6_render_put_surface;
         render_state->render_put_subpicture = gen6_render_put_subpicture;
-    } else if (IS_IRONLAKE(i965->intel.device_id)) {
+    } else if (IS_IRONLAKE(i965->intel.device_info)) {
         memcpy(render_state->render_kernels, render_kernels_gen5, sizeof(render_state->render_kernels));
         render_state->render_put_surface = i965_render_put_surface;
         render_state->render_put_subpicture = i965_render_put_subpicture;
@@ -3197,7 +3197,7 @@ i965_render_terminate(VADriverContextP ctx)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
 
-    if (IS_GEN8(i965->intel.device_id)) {
+    if (IS_GEN8(i965->intel.device_info)) {
         gen8_render_terminate(ctx);
         return;
     } 

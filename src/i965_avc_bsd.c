@@ -793,7 +793,7 @@ i965_avc_bsd_object(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (IS_IRONLAKE(i965->intel.device_id))
+    if (IS_IRONLAKE(i965->intel.device_info))
         ironlake_avc_bsd_object(ctx, decode_state, pic_param, slice_param, slice_index, i965_h264_context);
     else
         g4x_avc_bsd_object(ctx, decode_state, pic_param, slice_param, slice_index, i965_h264_context);

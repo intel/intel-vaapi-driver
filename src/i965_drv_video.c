@@ -1116,9 +1116,9 @@ i965_guess_surface_format(VADriverContextP ctx,
     if (!obj_config)
         return;
 
-    if (IS_GEN6(i965->intel.device_id) ||
-        IS_GEN7(i965->intel.device_id) ||
-        IS_GEN8(i965->intel.device_id)) {
+    if (IS_GEN6(i965->intel.device_info) ||
+        IS_GEN7(i965->intel.device_info) ||
+        IS_GEN8(i965->intel.device_info)) {
         *fourcc = VA_FOURCC_NV12;
         *is_tiled = 1;
         return;
@@ -1500,7 +1500,7 @@ i965_CreateContext(VADriverContextP ctx,
         render_state->interleaved_uv = 1;
         break;
     default:
-        render_state->interleaved_uv = !!(IS_GEN6(i965->intel.device_id) || IS_GEN7(i965->intel.device_id) || IS_GEN8(i965->intel.device_id));
+        render_state->interleaved_uv = !!(IS_GEN6(i965->intel.device_info) || IS_GEN7(i965->intel.device_info) || IS_GEN8(i965->intel.device_info));
         break;
     }
 
@@ -4213,7 +4213,7 @@ i965_GetSurfaceAttributes(
             attrib_list[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
 
             if (attrib_list[i].value.value.i == 0) {
-                if (IS_G4X(i965->intel.device_id)) {
+                if (IS_G4X(i965->intel.device_info)) {
                     if (obj_config->profile == VAProfileMPEG2Simple ||
                         obj_config->profile == VAProfileMPEG2Main) {
                         attrib_list[i].value.value.i = VA_FOURCC_I420;
@@ -4221,7 +4221,7 @@ i965_GetSurfaceAttributes(
                         assert(0);
                         attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
                     }
-                } else if (IS_IRONLAKE(i965->intel.device_id)) {
+                } else if (IS_IRONLAKE(i965->intel.device_info)) {
                     if (obj_config->profile == VAProfileMPEG2Simple ||
                         obj_config->profile == VAProfileMPEG2Main) {
                         attrib_list[i].value.value.i = VA_FOURCC_I420;
@@ -4235,17 +4235,17 @@ i965_GetSurfaceAttributes(
                         assert(0);
                         attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
                     }
-                } else if (IS_GEN6(i965->intel.device_id)) {
+                } else if (IS_GEN6(i965->intel.device_info)) {
                     attrib_list[i].value.value.i = VA_FOURCC_NV12;
-                } else if (IS_GEN7(i965->intel.device_id) ||
-                           IS_GEN8(i965->intel.device_id)) {
+                } else if (IS_GEN7(i965->intel.device_info) ||
+                           IS_GEN8(i965->intel.device_info)) {
                     if (obj_config->profile == VAProfileJPEGBaseline)
                         attrib_list[i].value.value.i = 0; /* internal format */
                     else
                         attrib_list[i].value.value.i = VA_FOURCC_NV12;
                 }
             } else {
-                if (IS_G4X(i965->intel.device_id)) {
+                if (IS_G4X(i965->intel.device_info)) {
                     if (obj_config->profile == VAProfileMPEG2Simple ||
                         obj_config->profile == VAProfileMPEG2Main) {
                         if (attrib_list[i].value.value.i != VA_FOURCC_I420) {
@@ -4256,7 +4256,7 @@ i965_GetSurfaceAttributes(
                         assert(0);
                         attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
                     }
-                } else if (IS_IRONLAKE(i965->intel.device_id)) {
+                } else if (IS_IRONLAKE(i965->intel.device_info)) {
                     if (obj_config->profile == VAProfileMPEG2Simple ||
                         obj_config->profile == VAProfileMPEG2Main) {
                         if (attrib_list[i].value.value.i != VA_FOURCC_I420) {
@@ -4290,7 +4290,7 @@ i965_GetSurfaceAttributes(
                         assert(0);
                         attrib_list[i].flags = VA_SURFACE_ATTRIB_NOT_SUPPORTED;
                     }
-                } else if (IS_GEN6(i965->intel.device_id)) {
+                } else if (IS_GEN6(i965->intel.device_info)) {
                     if (obj_config->entrypoint == VAEntrypointEncSlice ||
                         obj_config->entrypoint == VAEntrypointVideoProc) {
                         switch (attrib_list[i].value.value.i) {
@@ -4314,8 +4314,8 @@ i965_GetSurfaceAttributes(
                             attrib_list[i].flags &= ~VA_SURFACE_ATTRIB_SETTABLE;
                         }
                     }
-                } else if (IS_GEN7(i965->intel.device_id) ||
-                           IS_GEN8(i965->intel.device_id)) {
+                } else if (IS_GEN7(i965->intel.device_info) ||
+                           IS_GEN8(i965->intel.device_info)) {
                     if (obj_config->entrypoint == VAEntrypointEncSlice ||
                         obj_config->entrypoint == VAEntrypointVideoProc) {
                         switch (attrib_list[i].value.value.i) {
@@ -4398,7 +4398,7 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
     if (attribs == NULL)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
-    if (IS_G4X(i965->intel.device_id)) {
+    if (IS_G4X(i965->intel.device_info)) {
         if (obj_config->profile == VAProfileMPEG2Simple ||
             obj_config->profile == VAProfileMPEG2Main) {
             attribs[i].type = VASurfaceAttribPixelFormat;
@@ -4407,7 +4407,7 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].value.value.i = VA_FOURCC_I420;
             i++;
         }
-    } else if (IS_IRONLAKE(i965->intel.device_id)) {
+    } else if (IS_IRONLAKE(i965->intel.device_info)) {
         switch (obj_config->profile) {
         case VAProfileMPEG2Simple:
         case VAProfileMPEG2Main:
@@ -4446,7 +4446,7 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
         default:
             break;
         }
-    } else if (IS_GEN6(i965->intel.device_id)) {
+    } else if (IS_GEN6(i965->intel.device_info)) {
         if (obj_config->entrypoint == VAEntrypointVLD) { /* decode */
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
@@ -4493,7 +4493,7 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 i++;
             }
         }
-    } else if (IS_GEN7(i965->intel.device_id)) {
+    } else if (IS_GEN7(i965->intel.device_info)) {
         if (obj_config->entrypoint == VAEntrypointVLD) { /* decode */
             if (obj_config->profile == VAProfileJPEGBaseline) {
                 attribs[i].type = VASurfaceAttribPixelFormat;
@@ -4596,7 +4596,7 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 i++;
             }
         }
-    } else if (IS_GEN8(i965->intel.device_id)) {
+    } else if (IS_GEN8(i965->intel.device_info)) {
         if (obj_config->entrypoint == VAEntrypointVLD) { /* decode */
             if (obj_config->profile == VAProfileJPEGBaseline) {
                 attribs[i].type = VASurfaceAttribPixelFormat;

@@ -525,7 +525,7 @@ VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
     int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
     int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
 
-    if (IS_GEN6(i965->intel.device_id)) {
+    if (IS_GEN6(i965->intel.device_info)) {
 	/* On the SNB it should be fixed to 128 for the DMV buffer */
 	width_in_mbs = 128;
     }

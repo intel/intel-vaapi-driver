@@ -617,9 +617,9 @@ vpp_gpe_process(VADriverContextP ctx,
                   struct vpp_gpe_context * vpp_gpe_ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    if (IS_HASWELL(i965->intel.device_id))
+    if (IS_HASWELL(i965->intel.device_info))
        return gen75_gpe_process(ctx, vpp_gpe_ctx);
-    else if (IS_GEN8(i965->intel.device_id))
+    else if (IS_GEN8(i965->intel.device_info))
        return gen8_gpe_process(ctx, vpp_gpe_ctx);
 
      return VA_STATUS_ERROR_UNIMPLEMENTED;
@@ -657,9 +657,9 @@ vpp_gpe_process_sharpening(VADriverContextP ctx,
      if(vpp_gpe_ctx->is_first_frame){
          vpp_gpe_ctx->sub_shader_sum = 3;
          struct i965_kernel * vpp_kernels;
-         if (IS_HASWELL(i965->intel.device_id))
+         if (IS_HASWELL(i965->intel.device_info))
              vpp_kernels = gen75_vpp_sharpening_kernels;
-         else if (IS_GEN8(i965->intel.device_id))
+         else if (IS_GEN8(i965->intel.device_info))
              vpp_kernels = gen8_vpp_sharpening_kernels;
 
          vpp_gpe_ctx->gpe_load_kernels(ctx,
@@ -882,8 +882,8 @@ vpp_gpe_context_init(VADriverContextP ctx)
     struct vpp_gpe_context  *vpp_gpe_ctx = calloc(1, sizeof(struct vpp_gpe_context));
     struct i965_gpe_context *gpe_ctx = &(vpp_gpe_ctx->gpe_ctx);
 
-    assert(IS_HASWELL(i965->intel.device_id) ||
-           IS_GEN8(i965->intel.device_id));
+    assert(IS_HASWELL(i965->intel.device_info) ||
+           IS_GEN8(i965->intel.device_info));
 
     vpp_gpe_ctx->surface_tmp = VA_INVALID_ID;
     vpp_gpe_ctx->surface_tmp_object = NULL;
@@ -896,7 +896,7 @@ vpp_gpe_context_init(VADriverContextP ctx)
     gpe_ctx->vfe_state.urb_entry_size = 59 - 1;
     gpe_ctx->vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
  
-    if (IS_HASWELL(i965->intel.device_id)) {
+    if (IS_HASWELL(i965->intel.device_info)) {
         vpp_gpe_ctx->gpe_context_init     = i965_gpe_context_init;
         vpp_gpe_ctx->gpe_context_destroy  = i965_gpe_context_destroy;
         vpp_gpe_ctx->gpe_load_kernels     = i965_gpe_load_kernels;
@@ -907,7 +907,7 @@ vpp_gpe_context_init(VADriverContextP ctx)
         gpe_ctx->idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
         gpe_ctx->idrt.entry_size = sizeof(struct gen6_interface_descriptor_data);
 
-    } else if (IS_GEN8(i965->intel.device_id)) {
+    } else if (IS_GEN8(i965->intel.device_info)) {
         vpp_gpe_ctx->gpe_context_init     = gen8_gpe_context_init;
         vpp_gpe_ctx->gpe_context_destroy  = gen8_gpe_context_destroy;
         vpp_gpe_ctx->gpe_load_kernels     = gen8_gpe_load_kernels;
