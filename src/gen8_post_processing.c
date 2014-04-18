@@ -1373,7 +1373,7 @@ gen8_post_processing(
     return va_status;
 }
 
-void
+static void
 gen8_post_processing_context_finalize(struct i965_post_processing_context *pp_context)
 {
     dri_bo_unreference(pp_context->surface_state_binding_table.bo);
@@ -1410,7 +1410,7 @@ gen8_post_processing_context_finalize(struct i965_post_processing_context *pp_co
 
 void
 gen8_post_processing_context_init(VADriverContextP ctx,
-                                  struct i965_post_processing_context *pp_context,
+                                  void *data,
                                   struct intel_batchbuffer *batch)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -1418,6 +1418,7 @@ gen8_post_processing_context_init(VADriverContextP ctx,
     unsigned int kernel_offset, end_offset;
     unsigned char *kernel_ptr;
     struct pp_module *pp_module;
+    struct i965_post_processing_context *pp_context = data;
 
     {
 	pp_context->vfe_gpu_state.max_num_threads = 60;
@@ -1428,6 +1429,7 @@ gen8_post_processing_context_init(VADriverContextP ctx,
     }
 
     pp_context->intel_post_processing = gen8_post_processing;
+    pp_context->finalize = gen8_post_processing_context_finalize;
 
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen8));
 

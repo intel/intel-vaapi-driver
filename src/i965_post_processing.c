@@ -5184,11 +5184,7 @@ i965_post_processing_terminate(VADriverContextP ctx)
     struct i965_post_processing_context *pp_context = i965->pp_context;
 
     if (pp_context) {
-        if (IS_GEN8(i965->intel.device_info)) {
-            gen8_post_processing_context_finalize(pp_context);
-        } else {
-	    i965_post_processing_context_finalize(pp_context);
-        }
+        pp_context->finalize(pp_context);
         free(pp_context);
     }
 
@@ -5197,18 +5193,14 @@ i965_post_processing_terminate(VADriverContextP ctx)
 
 #define VPP_CURBE_ALLOCATION_SIZE	32
 
-static void
+void
 i965_post_processing_context_init(VADriverContextP ctx,
-                                  struct i965_post_processing_context *pp_context,
+                                  void *data,
                                   struct intel_batchbuffer *batch)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
-
-    if (IS_GEN8(i965->intel.device_info)) {
-        gen8_post_processing_context_init(ctx, pp_context, batch);
-        return;
-    };
+    struct i965_post_processing_context *pp_context = data;
 
     if (IS_IRONLAKE(i965->intel.device_info)) {
 	pp_context->urb.size = i965->intel.device_info->urb_size;
@@ -5230,7 +5222,8 @@ i965_post_processing_context_init(VADriverContextP ctx,
 	pp_context->vfe_gpu_state.curbe_allocation_size = VPP_CURBE_ALLOCATION_SIZE;
         pp_context->intel_post_processing = gen6_post_processing;
     }
-    
+
+    pp_context->finalize = i965_post_processing_context_finalize;
 
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen5));
     assert(NUM_PP_MODULES == ARRAY_ELEMS(pp_modules_gen6));
@@ -5286,7 +5279,7 @@ i965_post_processing_init(VADriverContextP ctx)
     if (HAS_PP(i965)) {
         if (pp_context == NULL) {
             pp_context = calloc(1, sizeof(*pp_context));
-            i965_post_processing_context_init(ctx, pp_context, i965->pp_batch);
+            i965->codec_info->post_processing_context_init(ctx, pp_context, i965->pp_batch);
             i965->pp_context = pp_context;
         }
     }
@@ -5574,13 +5567,14 @@ i965_proc_context_destroy(void *hw_context)
 struct hw_context *
 i965_proc_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct i965_proc_context *proc_context = calloc(1, sizeof(struct i965_proc_context));
 
     proc_context->base.destroy = i965_proc_context_destroy;
     proc_context->base.run = i965_proc_picture;
     proc_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
-    i965_post_processing_context_init(ctx, &proc_context->pp_context, proc_context->base.batch);
+    i965->codec_info->post_processing_context_init(ctx, &proc_context->pp_context, proc_context->base.batch);
 
     return (struct hw_context *)proc_context;
 }

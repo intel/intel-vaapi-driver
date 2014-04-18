@@ -535,6 +535,7 @@ struct i965_post_processing_context
 				const VARectangle *dst_rect,
 				int   pp_index,
 				void * filter_param);
+    void (*finalize)(struct i965_post_processing_context *pp_context);
 };
 
 struct i965_proc_context
@@ -574,14 +575,5 @@ void
 i965_post_processing_terminate(VADriverContextP ctx);
 bool
 i965_post_processing_init(VADriverContextP ctx);
-
-
-extern void
-gen8_post_processing_context_init(VADriverContextP ctx,
-                                  struct i965_post_processing_context *pp_context,
-                                  struct intel_batchbuffer *batch);
-
-extern void
-gen8_post_processing_context_finalize(struct i965_post_processing_context *pp_context);
 
 #endif /* __I965_POST_PROCESSING_H__ */
