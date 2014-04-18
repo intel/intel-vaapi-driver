@@ -5130,6 +5130,7 @@ i965_Init(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     int i;
+    const char *chipset;
 
     for (i = 0; i < ARRAY_ELEMS(i965_sub_ops); i++) {
         if ((i965_sub_ops[i].display_type == 0 ||
@@ -5139,9 +5140,19 @@ i965_Init(VADriverContextP ctx)
     }
 
     if (i == ARRAY_ELEMS(i965_sub_ops)) {
-        sprintf(i965->va_vendor, "%s %s driver - %d.%d.%d",
+        switch (i965->intel.device_id) {
+#undef CHIPSET
+#define CHIPSET(id, family, dev, str) case id: chipset = str; break;
+#include "i965_pciids.h"
+        default:
+            chipset = "Unknown Intel Chipset";
+            break;
+        }
+
+        sprintf(i965->va_vendor, "%s %s driver for %s - %d.%d.%d",
                 INTEL_STR_DRIVER_VENDOR,
                 INTEL_STR_DRIVER_NAME,
+                chipset,
                 INTEL_DRIVER_MAJOR_VERSION,
                 INTEL_DRIVER_MINOR_VERSION,
                 INTEL_DRIVER_MICRO_VERSION);
