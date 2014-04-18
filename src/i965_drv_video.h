@@ -322,7 +322,7 @@ struct i965_driver_data
     struct object_heap buffer_heap;
     struct object_heap image_heap;
     struct object_heap subpic_heap;
-    struct hw_codec_info *codec_info;
+    const struct hw_codec_info *codec_info;
 
     _I965Mutex render_mutex;
     _I965Mutex pp_mutex;

@@ -67,6 +67,7 @@ source_c = \
 	i965_avc_hw_scoreboard.c\
 	i965_avc_ildb.c		\
 	i965_decoder_utils.c	\
+	i965_device_info.c	\
 	i965_drv_video.c	\
 	i965_encoder.c		\
 	i965_encoder_utils.c	\
@@ -109,6 +110,7 @@ source_h = \
 	i965_media_mpeg2.h      \
 	i965_mutext.h		\
 	i965_gpe_utils.h	\
+	i965_pciids.h		\
 	i965_post_processing.h	\
 	i965_render.h           \
 	i965_structs.h		\

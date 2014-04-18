@@ -214,152 +214,6 @@ get_subpic_format(const VAImageFormat *va_format)
     return NULL;
 }
 
-extern struct hw_context *i965_proc_context_init(VADriverContextP, struct object_config *);
-extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, struct object_config *);
-static struct hw_codec_info g4x_hw_codec_info = {
-    .dec_hw_context_init = g4x_dec_hw_context_init,
-    .enc_hw_context_init = NULL,
-    .proc_hw_context_init = NULL,
-    .max_width = 2048,
-    .max_height = 2048,
-
-    .has_mpeg2_decoding = 1,
-
-    .num_filters = 0,
-};
-
-extern struct hw_context *ironlake_dec_hw_context_init(VADriverContextP, struct object_config *);
-static struct hw_codec_info ironlake_hw_codec_info = {
-    .dec_hw_context_init = ironlake_dec_hw_context_init,
-    .enc_hw_context_init = NULL,
-    .proc_hw_context_init = i965_proc_context_init,
-    .max_width = 2048,
-    .max_height = 2048,
-
-    .has_mpeg2_decoding = 1,
-    .has_h264_decoding = 1,
-    .has_vpp = 1,
-    .has_accelerated_putimage = 1,
-
-    .num_filters = 0,
-};
-
-extern struct hw_context *gen6_dec_hw_context_init(VADriverContextP, struct object_config *);
-extern struct hw_context *gen6_enc_hw_context_init(VADriverContextP, struct object_config *);
-static struct hw_codec_info gen6_hw_codec_info = {
-    .dec_hw_context_init = gen6_dec_hw_context_init,
-    .enc_hw_context_init = gen6_enc_hw_context_init,
-    .proc_hw_context_init = i965_proc_context_init,
-    .max_width = 2048,
-    .max_height = 2048,
-
-    .has_mpeg2_decoding = 1,
-    .has_h264_decoding = 1,
-    .has_h264_encoding = 1,
-    .has_vc1_decoding = 1,
-    .has_vpp = 1,
-    .has_accelerated_getimage = 1,
-    .has_accelerated_putimage = 1,
-    .has_tiled_surface = 1,
-
-    .num_filters = 2,
-    .filters = {
-        { VAProcFilterNoiseReduction, I965_RING_NULL },
-        { VAProcFilterDeinterlacing, I965_RING_NULL },
-    },
-};
-
-extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, struct object_config *);
-extern struct hw_context *gen7_enc_hw_context_init(VADriverContextP, struct object_config *);
-static struct hw_codec_info gen7_hw_codec_info = {
-    .dec_hw_context_init = gen7_dec_hw_context_init,
-    .enc_hw_context_init = gen7_enc_hw_context_init,
-    .proc_hw_context_init = i965_proc_context_init,
-    .max_width = 4096,
-    .max_height = 4096,
-
-    .has_mpeg2_decoding = 1,
-    .has_mpeg2_encoding = 1,
-    .has_h264_decoding = 1,
-    .has_h264_encoding = 1,
-    .has_vc1_decoding = 1,
-    .has_jpeg_decoding = 1,
-    .has_vpp = 1,
-    .has_accelerated_getimage = 1,
-    .has_accelerated_putimage = 1,
-    .has_tiled_surface = 1,
-    .has_di_motion_adptive = 1,
-
-    .num_filters = 2,
-    .filters = {
-        { VAProcFilterNoiseReduction, I965_RING_NULL },
-        { VAProcFilterDeinterlacing, I965_RING_NULL },
-    },
-};
-
-extern struct hw_context *gen75_proc_context_init(VADriverContextP, struct object_config *);
-static struct hw_codec_info gen75_hw_codec_info = {
-    .dec_hw_context_init = gen75_dec_hw_context_init,
-    .enc_hw_context_init = gen75_enc_hw_context_init,
-    .proc_hw_context_init = gen75_proc_context_init,
-    .max_width = 4096,
-    .max_height = 4096,
-
-    .has_mpeg2_decoding = 1,
-    .has_mpeg2_encoding = 1,
-    .has_h264_decoding = 1,
-    .has_h264_encoding = 1,
-    .has_vc1_decoding = 1,
-    .has_jpeg_decoding = 1,
-    .has_vpp = 1,
-    .has_accelerated_getimage = 1,
-    .has_accelerated_putimage = 1,
-    .has_tiled_surface = 1,
-    .has_di_motion_adptive = 1,
-    .has_di_motion_compensated = 1,
-
-    .num_filters = 5,
-    .filters = {
-        { VAProcFilterNoiseReduction, I965_RING_VEBOX },
-        { VAProcFilterDeinterlacing, I965_RING_VEBOX },
-        { VAProcFilterSharpening, I965_RING_NULL },
-        { VAProcFilterColorBalance, I965_RING_VEBOX},
-        { VAProcFilterSkinToneEnhancement, I965_RING_VEBOX},
-    },
-};
-
-/* TODO: Add the separate call back function for Gen8 */
-static struct hw_codec_info gen8_hw_codec_info = {
-    .dec_hw_context_init = gen8_dec_hw_context_init,
-    .enc_hw_context_init = gen8_enc_hw_context_init,
-    .proc_hw_context_init = gen75_proc_context_init,
-    .max_width = 4096,
-    .max_height = 4096,
-
-    .has_mpeg2_decoding = 1,
-    .has_mpeg2_encoding = 1,
-    .has_h264_decoding = 1,
-    .has_h264_encoding = 1,
-    .has_vc1_decoding = 1,
-    .has_jpeg_decoding = 1,
-    .has_vpp = 1,
-    .has_accelerated_getimage = 1,
-    .has_accelerated_putimage = 1,
-    .has_tiled_surface = 1,
-    .has_di_motion_adptive = 1,
-    .has_di_motion_compensated = 1,
-    .has_vp8_decoding = 1,
-
-    .num_filters = 5,
-    .filters = {
-        { VAProcFilterNoiseReduction, I965_RING_VEBOX },
-        { VAProcFilterDeinterlacing, I965_RING_VEBOX },
-        { VAProcFilterSharpening, I965_RING_NULL }, /* need to rebuild the shader for BDW */
-        { VAProcFilterColorBalance, I965_RING_VEBOX},
-        { VAProcFilterSkinToneEnhancement, I965_RING_VEBOX},
-    },
-};
-
 #define I965_PACKED_HEADER_BASE         0
 #define I965_PACKED_MISC_HEADER_BASE    3
 
@@ -5137,24 +4991,16 @@ VAStatus i965_QueryVideoProcPipelineCaps(
     return VA_STATUS_SUCCESS;
 }
 
+extern const struct hw_codec_info *i965_get_codec_info(int devid);
+
 static bool
 i965_driver_data_init(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
 
-    if (IS_GEN8(i965->intel.device_id))
-        i965->codec_info = &gen8_hw_codec_info;
-    else if (IS_HASWELL(i965->intel.device_id))
-	i965->codec_info = &gen75_hw_codec_info;
-    else if (IS_G4X(i965->intel.device_id))
-        i965->codec_info = &g4x_hw_codec_info;
-    else if (IS_IRONLAKE(i965->intel.device_id))
-        i965->codec_info = &ironlake_hw_codec_info;
-    else if (IS_GEN6(i965->intel.device_id))
-        i965->codec_info = &gen6_hw_codec_info;
-    else if (IS_GEN7(i965->intel.device_id))
-        i965->codec_info = &gen7_hw_codec_info;
-    else
+    i965->codec_info = i965_get_codec_info(i965->intel.device_id);
+
+    if (!i965->codec_info)
         return false;
 
     if (object_heap_init(&i965->config_heap,
