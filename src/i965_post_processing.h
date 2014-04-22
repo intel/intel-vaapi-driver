@@ -380,7 +380,7 @@ struct gen7_pp_static_parameter
         unsigned int di_destination_packed_y_component_offset:8;
         unsigned int di_destination_packed_u_component_offset:8;
         unsigned int di_destination_packed_v_component_offset:8;
-        unsigned int pad0:8;
+        unsigned int alpha:8;
     } grf2;
 
     struct {
