@@ -85,6 +85,7 @@ struct gen7_mfd_context
     GenBuffer           bsd_mpc_row_store_scratch_buffer;
     GenBuffer           mpr_row_store_scratch_buffer;
     GenBuffer           bitplane_read_buffer;
+    GenBuffer           segmentation_buffer;
     
     VASurfaceID jpeg_wa_surface_id;
     struct object_surface *jpeg_wa_surface_object;

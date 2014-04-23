@@ -827,3 +827,27 @@ intel_mpeg2_find_next_slice(struct decode_state *decode_state,
 
     return NULL;
 }
+
+/* Ensure the segmentation buffer is large enough for the supplied
+   number of MBs, or re-allocate it */
+bool
+intel_ensure_vp8_segmentation_buffer(VADriverContextP ctx, GenBuffer *buf,
+    unsigned int mb_width, unsigned int mb_height)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    /* The segmentation map is a 64-byte aligned linear buffer, with
+       each cache line holding only 8 bits for 4 continuous MBs */
+    const unsigned int buf_size = ((mb_width + 3) / 4) * 64 * mb_height;
+
+    if (buf->valid) {
+        if (buf->bo && buf->bo->size >= buf_size)
+            return true;
+        drm_intel_bo_unreference(buf->bo);
+        buf->valid = false;
+    }
+
+    buf->bo = drm_intel_bo_alloc(i965->intel.bufmgr, "segmentation map",
+        buf_size, 0x1000);
+    buf->valid = buf->bo != NULL;
+    return buf->valid;
+}

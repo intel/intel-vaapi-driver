@@ -2785,6 +2785,9 @@ gen8_mfd_vp8_decode_init(VADriverContextP ctx,
     dri_bo_reference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.valid = pic_param->pic_fields.bits.loop_filter_disable;
 
+    intel_ensure_vp8_segmentation_buffer(ctx,
+        &gen7_mfd_context->segmentation_buffer, width_in_mbs, height_in_mbs);
+
     /* The same as AVC */
     dri_bo_unreference(gen7_mfd_context->intra_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -2838,6 +2841,13 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
     int i, j,log2num;
     unsigned int quantization_value[4][6];
 
+    /* There is no safe way to error out if the segmentation buffer
+       could not be allocated. So, instead of aborting, simply decode
+       something even if the result may look totally inacurate */
+    const unsigned int enable_segmentation =
+        pic_param->pic_fields.bits.segmentation_enabled &&
+        gen7_mfd_context->segmentation_buffer.valid;
+        
     log2num = (int)log2(slice_param->num_of_partitions - 1);
 
     BEGIN_BCS_BATCH(batch, 38);
@@ -2854,8 +2864,10 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
                   pic_param->pic_fields.bits.mb_no_coeff_skip << 10 |
                   pic_param->pic_fields.bits.update_mb_segmentation_map << 9 |
                   pic_param->pic_fields.bits.segmentation_enabled << 8 |
-                  0 << 7 | /* segmentation id streamin disabled */
-                  0 << 6 | /* segmentation id streamout disabled */
+                  (enable_segmentation &&
+                   !pic_param->pic_fields.bits.update_mb_segmentation_map) << 7 |
+                  (enable_segmentation &&
+                   pic_param->pic_fields.bits.update_mb_segmentation_map) << 6 |
                   (pic_param->pic_fields.bits.key_frame == 0 ? 1 : 0) << 5 |    /* 0 indicate an intra frame in VP8 stream/spec($9.1)*/
                   pic_param->pic_fields.bits.filter_type << 4 |
                   (pic_param->pic_fields.bits.version == 3) << 1 | /* full pixel mode for version 3 */
@@ -2950,9 +2962,18 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
                   (pic_param->loop_filter_deltas_mode[0] & 0x7f) <<  0);
 
     /* segmentation id stream base address, DW35-DW37 */
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
+    if (enable_segmentation) {
+        OUT_BCS_RELOC(batch, gen7_mfd_context->segmentation_buffer.bo,
+                      0, I915_GEM_DOMAIN_INSTRUCTION,
+                      0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
+    else {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -3142,6 +3163,9 @@ gen8_mfd_context_destroy(void *hw_context)
     dri_bo_unreference(gen7_mfd_context->bitplane_read_buffer.bo);
     gen7_mfd_context->bitplane_read_buffer.bo = NULL;
 
+    dri_bo_unreference(gen7_mfd_context->segmentation_buffer.bo);
+    gen7_mfd_context->segmentation_buffer.bo = NULL;
+
     dri_bo_unreference(gen7_mfd_context->jpeg_wa_slice_data_bo);
 
     intel_batchbuffer_free(gen7_mfd_context->base.batch);
@@ -3174,6 +3198,7 @@ gen8_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     }
 
     gen7_mfd_context->jpeg_wa_surface_id = VA_INVALID_SURFACE;
+    gen7_mfd_context->segmentation_buffer.valid = 0;
 
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:

@@ -106,4 +106,8 @@ intel_update_vp8_frame_store_index(VADriverContextP ctx,
                                    VAPictureParameterBufferVP8 *pic_param,
                                    GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES]);
 
+bool
+intel_ensure_vp8_segmentation_buffer(VADriverContextP ctx, GenBuffer *buf,
+    unsigned int mb_width, unsigned int mb_height);
+
 #endif /* I965_DECODER_UTILS_H */
