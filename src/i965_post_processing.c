@@ -40,10 +40,7 @@
 #include "i965_render.h"
 #include "intel_media.h"
 
-#define HAS_PP(ctx) (IS_IRONLAKE((ctx)->intel.device_info) ||     \
-                     IS_GEN6((ctx)->intel.device_info) ||         \
-                     IS_GEN7((ctx)->intel.device_info) ||         \
-                     IS_GEN8((ctx)->intel.device_info))
+#define HAS_VPP(ctx) ((ctx)->codec_info->has_vpp)
 
 #define SURFACE_STATE_PADDED_SIZE               MAX(SURFACE_STATE_PADDED_SIZE_GEN8,\
 			MAX(SURFACE_STATE_PADDED_SIZE_GEN6, SURFACE_STATE_PADDED_SIZE_GEN7))
@@ -4638,7 +4635,7 @@ i965_scaling_processing(
     assert(src_surface_obj->fourcc == VA_FOURCC_NV12);
     assert(dst_surface_obj->fourcc == VA_FOURCC_NV12);
 
-    if (HAS_PP(i965) && (flags & I965_PP_FLAG_AVS)) {
+    if (HAS_VPP(i965) && (flags & I965_PP_FLAG_AVS)) {
         struct i965_surface src_surface;
         struct i965_surface dst_surface;
 
@@ -4681,7 +4678,7 @@ i965_post_processing(
     
     *has_done_scaling = 0;
 
-    if (HAS_PP(i965)) {
+    if (HAS_VPP(i965)) {
         VAStatus status;
         struct i965_surface src_surface;
         struct i965_surface dst_surface;
@@ -5073,7 +5070,7 @@ i965_image_processing(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus status = VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    if (HAS_PP(i965)) {
+    if (HAS_VPP(i965)) {
         int fourcc = pp_get_surface_fourcc(ctx, src_surface);
 
         _i965LockMutex(&i965->pp_mutex);
@@ -5276,7 +5273,7 @@ i965_post_processing_init(VADriverContextP ctx)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = i965->pp_context;
 
-    if (HAS_PP(i965)) {
+    if (HAS_VPP(i965)) {
         if (pp_context == NULL) {
             pp_context = calloc(1, sizeof(*pp_context));
             i965->codec_info->post_processing_context_init(ctx, pp_context, i965->pp_batch);
