@@ -295,10 +295,137 @@ static struct pp_module pp_modules_gen9[] = {
     },
 };
 
+static void
+gen9_pp_pipeline_select(VADriverContextP ctx,
+                        struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    BEGIN_BATCH(batch, 1);
+    OUT_BATCH(batch,
+              CMD_PIPELINE_SELECT |
+              PIPELINE_SELECT_MEDIA |
+              GEN9_FORCE_MEDIA_AWAKE_ON |
+              GEN9_MEDIA_DOP_GATE_OFF |
+              GEN9_PIPELINE_SELECTION_MASK |
+              GEN9_MEDIA_DOP_GATE_MASK |
+              GEN9_FORCE_MEDIA_AWAKE_MASK);
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen9_pp_state_base_address(VADriverContextP ctx,
+                           struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    BEGIN_BATCH(batch, 19);
+    OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (19 - 2));
+    /* DW1 Generate state address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    /* DW4. Surface state address */
+    OUT_RELOC(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
+    OUT_BATCH(batch, 0);
+    /* DW6. Dynamic state address */
+    OUT_RELOC(batch, pp_context->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
+              0, 0 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
+
+    /* DW8. Indirect object address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
+
+    /* DW10. Instruction base address */
+    OUT_RELOC(batch, pp_context->instruction_state.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
+
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
+
+    /* Bindless surface state base address */
+    OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0xfffff000);
+
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen9_pp_end_pipeline(VADriverContextP ctx,
+                     struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    BEGIN_BATCH(batch, 1);
+    OUT_BATCH(batch,
+              CMD_PIPELINE_SELECT |
+              PIPELINE_SELECT_MEDIA |
+              GEN9_FORCE_MEDIA_AWAKE_OFF |
+              GEN9_MEDIA_DOP_GATE_ON |
+              GEN9_PIPELINE_SELECTION_MASK |
+              GEN9_MEDIA_DOP_GATE_MASK |
+              GEN9_FORCE_MEDIA_AWAKE_MASK);
+    ADVANCE_BATCH(batch);
+}
+
+static void
+gen9_pp_pipeline_setup(VADriverContextP ctx,
+                       struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+    intel_batchbuffer_emit_mi_flush(batch);
+    gen9_pp_pipeline_select(ctx, pp_context);
+    gen9_pp_state_base_address(ctx, pp_context);
+    gen8_pp_vfe_state(ctx, pp_context);
+    gen8_pp_curbe_load(ctx, pp_context);
+    gen8_interface_descriptor_load(ctx, pp_context);
+    gen8_pp_object_walker(ctx, pp_context);
+    gen9_pp_end_pipeline(ctx, pp_context);
+    intel_batchbuffer_end_atomic(batch);
+}
+
+static VAStatus
+gen9_post_processing(VADriverContextP ctx,
+                     struct i965_post_processing_context *pp_context,
+                     const struct i965_surface *src_surface,
+                     const VARectangle *src_rect,
+                     struct i965_surface *dst_surface,
+                     const VARectangle *dst_rect,
+                     int pp_index,
+                     void * filter_param)
+{
+    VAStatus va_status;
+
+    va_status = gen8_pp_initialize(ctx, pp_context,
+                                   src_surface,
+                                   src_rect,
+                                   dst_surface,
+                                   dst_rect,
+                                   pp_index,
+                                   filter_param);
+
+    if (va_status == VA_STATUS_SUCCESS) {
+        gen8_pp_states_setup(ctx, pp_context);
+        gen9_pp_pipeline_setup(ctx, pp_context);
+    }
+
+    return va_status;
+}
+
 void
 gen9_post_processing_context_init(VADriverContextP ctx,
                                   void *data,
                                   struct intel_batchbuffer *batch)
 {
+    struct i965_post_processing_context *pp_context = data;
+
     gen8_post_processing_context_common_init(ctx, data, pp_modules_gen9, ARRAY_ELEMS(pp_modules_gen9), batch);
+
+    pp_context->intel_post_processing = gen9_post_processing;
 }
