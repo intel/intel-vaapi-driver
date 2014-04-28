@@ -5360,7 +5360,6 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
     vtable->vaTerminate = i965_Terminate;
     vtable->vaQueryConfigEntrypoints = i965_QueryConfigEntrypoints;
     vtable->vaQueryConfigProfiles = i965_QueryConfigProfiles;
-    vtable->vaQueryConfigEntrypoints = i965_QueryConfigEntrypoints;
     vtable->vaQueryConfigAttributes = i965_QueryConfigAttributes;
     vtable->vaCreateConfig = i965_CreateConfig;
     vtable->vaDestroyConfig = i965_DestroyConfig;
