@@ -50,6 +50,36 @@ gen8_pp_nv12_blending_initialize(VADriverContextP ctx, struct i965_post_processi
                                  void *filter_param);
 
 void
+gen8_pp_vfe_state(VADriverContextP ctx,
+                  struct i965_post_processing_context *pp_context);
+
+void
+gen8_interface_descriptor_load(VADriverContextP ctx,
+                               struct i965_post_processing_context *pp_context);
+
+void
+gen8_pp_curbe_load(VADriverContextP ctx,
+                   struct i965_post_processing_context *pp_context);
+
+void
+gen8_pp_object_walker(VADriverContextP ctx,
+                      struct i965_post_processing_context *pp_context);
+
+void
+gen8_pp_states_setup(VADriverContextP ctx,
+                     struct i965_post_processing_context *pp_context);
+
+VAStatus
+gen8_pp_initialize(VADriverContextP ctx,
+                   struct i965_post_processing_context *pp_context,
+                   const struct i965_surface *src_surface,
+                   const VARectangle *src_rect,
+                   struct i965_surface *dst_surface,
+                   const VARectangle *dst_rect,
+                   int pp_index,
+                   void *filter_param);
+
+void
 gen8_post_processing_context_common_init(VADriverContextP ctx,
                                          void *data,
                                          struct pp_module *pp_modules,
