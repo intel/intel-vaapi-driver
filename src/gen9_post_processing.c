@@ -43,21 +43,27 @@ static const uint32_t pp_null_gen9[][4] = {
 };
 
 static const uint32_t pp_nv12_load_save_nv12_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl2_to_pl2.g9b"
 };
 
 static const uint32_t pp_nv12_load_save_pl3_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl2_to_pl3.g9b"
 };
 
 static const uint32_t pp_pl3_load_save_nv12_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl3_to_pl2.g9b"
 };
 
 static const uint32_t pp_pl3_load_save_pl3_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl3_to_pl3.g9b"
 };
 
 static const uint32_t pp_nv12_scaling_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl2_to_pl2.g9b"
 };
 
 static const uint32_t pp_nv12_avs_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl2_to_pl2.g9b"
 };
 
 static const uint32_t pp_nv12_dndi_gen9[][4] = {
@@ -67,24 +73,31 @@ static const uint32_t pp_nv12_dn_gen9[][4] = {
 };
 
 static const uint32_t pp_nv12_load_save_pa_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl2_to_pa.g9b"
 };
 
 static const uint32_t pp_pl3_load_save_pa_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl3_to_pa.g9b"
 };
 
 static const uint32_t pp_pa_load_save_nv12_gen9[][4] = {
+#include "shaders/post_processing/gen9/pa_to_pl2.g9b"
 };
 
 static const uint32_t pp_pa_load_save_pl3_gen9[][4] = {
+#include "shaders/post_processing/gen9/pa_to_pl3.g9b"
 };
 
 static const uint32_t pp_pa_load_save_pa_gen9[][4] = {
+#include "shaders/post_processing/gen9/pa_to_pa.g9b"
 };
 
 static const uint32_t pp_rgbx_load_save_nv12_gen9[][4] = {
+#include "shaders/post_processing/gen9/rgbx_to_nv12.g9b"
 };
 
 static const uint32_t pp_nv12_load_save_rgbx_gen9[][4] = {
+#include "shaders/post_processing/gen9/pl2_to_rgbx.g9b"
 };
 
 static const uint32_t pp_nv12_blending_gen9[][4] = {

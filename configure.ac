@@ -186,6 +186,7 @@ AC_OUTPUT([
     src/shaders/post_processing/gen7/Makefile
     src/shaders/post_processing/gen75/Makefile
     src/shaders/post_processing/gen8/Makefile
+    src/shaders/post_processing/gen9/Makefile
     src/shaders/render/Makefile
     src/shaders/utils/Makefile
     src/shaders/vme/Makefile
