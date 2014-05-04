@@ -336,34 +336,35 @@ gen5_fill_avc_ref_idx_state(
     const GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES]
 )
 {
-    unsigned int i, n, frame_idx;
-    int found;
+    int i, j;
 
-    for (i = 0, n = 0; i < ref_list_count; i++) {
+    for (i = 0; i < ref_list_count; i++) {
         const VAPictureH264 * const va_pic = &ref_list[i];
 
-        if (va_pic->flags & VA_PICTURE_H264_INVALID)
+        if ((va_pic->flags & VA_PICTURE_H264_INVALID) ||
+            va_pic->picture_id == VA_INVALID_ID) {
+            state[i] = 0xff;
             continue;
-
-        found = 0;
-        for (frame_idx = 0; frame_idx < MAX_GEN_REFERENCE_FRAMES; frame_idx++) {
-            const GenFrameStore * const fs = &frame_store[frame_idx];
-            if (fs->surface_id != VA_INVALID_ID &&
-                fs->surface_id == va_pic->picture_id) {
-                found = 1;
-                break;
-            }
         }
 
-        if (found) {
-            state[n++] = get_ref_idx_state_1(va_pic, frame_idx);
-        } else {
-            WARN_ONCE("Invalid Slice reference frame list !!!. It is not included in DPB \n");
+        for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
+            if (frame_store[j].surface_id == va_pic->picture_id)
+                break;
+        }
+
+        if (j != MAX_GEN_REFERENCE_FRAMES) { // Found picture in the Frame Store
+            const GenFrameStore * const fs = &frame_store[j];
+            assert(fs->frame_store_id == j); // Current architecture/assumption
+            state[i] = get_ref_idx_state_1(va_pic, fs->frame_store_id);
+        }
+        else {
+            WARN_ONCE("Invalid RefPicListX[] entry!!! It is not included in DPB\n");
+            state[i] = get_ref_idx_state_1(va_pic, 0) | 0x80;
         }
     }
 
-    for (; n < 32; n++)
-        state[n] = 0xff;
+    for (; i < 32; i++)
+        state[i] = 0xff;
 }
 
 /* Emit Reference List Entries (Gen6+: SNB, IVB) */
