@@ -45,4 +45,10 @@
 # define VA_DRM_AUTH_CUSTOM     VA_DUMMY
 #endif
 
+#if !VA_CHECK_VERSION(0,35,1)
+
+#define VAProcFilterSkinToneEnhancement         5
+
+#endif
+
 #endif /* VA_BACKEND_COMPAT_H */
