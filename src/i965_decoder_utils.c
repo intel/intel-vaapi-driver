@@ -451,15 +451,6 @@ intel_update_avc_frame_store_index(VADriverContextP ctx,
 
         /* remove it from the internal DPB */
         if (!found) {
-            struct object_surface *obj_surface = frame_store[i].obj_surface;
-            
-            obj_surface->flags &= ~SURFACE_REFERENCED;
-
-            if ((obj_surface->flags & SURFACE_ALL_MASK) == SURFACE_DISPLAYED) {
-                obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
-                i965_destroy_surface_storage(obj_surface);
-            }
-
             frame_store[i].surface_id = VA_INVALID_ID;
             frame_store[i].frame_store_id = -1;
             frame_store[i].obj_surface = NULL;
