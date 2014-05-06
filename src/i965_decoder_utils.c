@@ -479,12 +479,6 @@ intel_update_avc_frame_store_index(VADriverContextP ctx,
             int slot_found;
             struct object_surface *obj_surface = decode_state->reference_objects[i];
 
-            /* 
-             * Sometimes a dummy frame comes from the upper layer library, call i965_check_alloc_surface_bo()
-             * to ake sure the store buffer is allocated for this reference frame
-             */
-            avc_ensure_surface_bo(ctx, decode_state, obj_surface, pic_param);
-
             slot_found = 0;
             frame_idx = -1;
             /* Find a free frame store index */
@@ -608,6 +602,7 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAPictureParameterBufferH264 *pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
+    VAStatus va_status;
     struct object_surface *obj_surface;	
     int i;
 
@@ -631,28 +626,33 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
        }
     }
 
-    for (i = 0; i < 16; i++) {
-        if (pic_param->ReferenceFrames[i].flags & VA_PICTURE_H264_INVALID ||
-            pic_param->ReferenceFrames[i].picture_id == VA_INVALID_SURFACE)
-            break;
-        else {
+    /* Fill in the reference objects array with the actual VA surface
+       objects with 1:1 correspondance with any entry in ReferenceFrames[],
+       i.e. including "holes" for invalid entries, that are expanded
+       to NULL in the reference_objects[] array */
+    for (i = 0; i < ARRAY_ELEMS(pic_param->ReferenceFrames); i++) {
+        const VAPictureH264 * const va_pic = &pic_param->ReferenceFrames[i];
+
+        obj_surface = NULL;
+        if (!(va_pic->flags & VA_PICTURE_H264_INVALID) &&
+            va_pic->picture_id != VA_INVALID_ID) {
             obj_surface = SURFACE(pic_param->ReferenceFrames[i].picture_id);
-            assert(obj_surface);
-
             if (!obj_surface)
-                goto error;
+                return VA_STATUS_ERROR_INVALID_SURFACE;
 
-            if (!obj_surface->bo) { /* a reference frame  without store buffer */
-                WARN_ONCE("Invalid reference frame!!!\n");
-            }
-
-            decode_state->reference_objects[i] = obj_surface;
+            /*
+             * Sometimes a dummy frame comes from the upper layer
+             * library, call i965_check_alloc_surface_bo() to make
+             * sure the store buffer is allocated for this reference
+             * frame
+             */
+            va_status = avc_ensure_surface_bo(ctx, decode_state, obj_surface,
+                pic_param);
+            if (va_status != VA_STATUS_SUCCESS)
+                return va_status;
         }
+        decode_state->reference_objects[i] = obj_surface;
     }
-
-    for ( ; i < 16; i++)
-        decode_state->reference_objects[i] = NULL;
-
     return VA_STATUS_SUCCESS;
 
 error:
