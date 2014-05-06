@@ -420,88 +420,68 @@ gen6_send_avc_ref_idx_state(
 }
 
 void
-intel_update_avc_frame_store_index(VADriverContextP ctx,
-                                   struct decode_state *decode_state,
-                                   VAPictureParameterBufferH264 *pic_param,
-                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES])
+intel_update_avc_frame_store_index(
+    VADriverContextP              ctx,
+    struct decode_state          *decode_state,
+    VAPictureParameterBufferH264 *pic_param,
+    GenFrameStore                 frame_store[MAX_GEN_REFERENCE_FRAMES]
+)
 {
-    int i, j;
+    GenFrameStore *free_refs[MAX_GEN_REFERENCE_FRAMES];
+    int i, j, n, num_free_refs;
 
-    assert(MAX_GEN_REFERENCE_FRAMES == ARRAY_ELEMS(pic_param->ReferenceFrames));
+    /* Remove obsolete entries from the internal DPB */
+    for (i = 0, n = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        GenFrameStore * const fs = &frame_store[i];
+        if (fs->surface_id == VA_INVALID_ID || !fs->obj_surface) {
+            free_refs[n++] = fs;
+            continue;
+        }
 
-    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
-        int found = 0;
+        // Find whether the current entry is still a valid reference frame
+        for (j = 0; j < ARRAY_ELEMS(decode_state->reference_objects); j++) {
+            struct object_surface * const obj_surface =
+                decode_state->reference_objects[j];
+            if (obj_surface && obj_surface == fs->obj_surface)
+                break;
+        }
 
-        if (frame_store[i].surface_id == VA_INVALID_ID ||
-            frame_store[i].obj_surface == NULL)
+        // ... or remove it
+        if (j == ARRAY_ELEMS(decode_state->reference_objects)) {
+            fs->surface_id = VA_INVALID_ID;
+            fs->obj_surface = NULL;
+            fs->frame_store_id = -1;
+            free_refs[n++] = fs;
+        }
+    }
+    num_free_refs = n;
+
+    /* Append the new reference frames */
+    for (i = 0, n = 0; i < ARRAY_ELEMS(decode_state->reference_objects); i++) {
+        struct object_surface * const obj_surface =
+            decode_state->reference_objects[i];
+        if (!obj_surface)
             continue;
 
-        assert(frame_store[i].frame_store_id != -1);
-
+        // Find whether the current frame is not already in our frame store
         for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
-            VAPictureH264 *ref_pic = &pic_param->ReferenceFrames[j];
-            if (ref_pic->flags & VA_PICTURE_H264_INVALID)
+            GenFrameStore * const fs = &frame_store[j];
+            if (fs->obj_surface == obj_surface)
+                break;
+        }
+
+        // ... or add it
+        if (j == MAX_GEN_REFERENCE_FRAMES) {
+            if (n < num_free_refs) {
+                GenFrameStore * const fs = free_refs[n++];
+                fs->surface_id = obj_surface->base.id;
+                fs->obj_surface = obj_surface;
+                fs->frame_store_id = fs - frame_store;
                 continue;
-
-            if (frame_store[i].surface_id == ref_pic->picture_id) {
-                found = 1;
-                break;
             }
-        }
-
-        /* remove it from the internal DPB */
-        if (!found) {
-            frame_store[i].surface_id = VA_INVALID_ID;
-            frame_store[i].frame_store_id = -1;
-            frame_store[i].obj_surface = NULL;
+            WARN_ONCE("No free slot found for DPB reference list!!!\n");
         }
     }
-
-    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
-        VAPictureH264 *ref_pic = &pic_param->ReferenceFrames[i];
-        int found = 0;
-
-        if (ref_pic->flags & VA_PICTURE_H264_INVALID ||
-            ref_pic->picture_id == VA_INVALID_SURFACE ||
-            decode_state->reference_objects[i] == NULL)
-            continue;
-
-        for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
-            if (frame_store[j].surface_id == ref_pic->picture_id) {
-                found = 1;
-                break;
-            }
-        }
-
-        /* add the new reference frame into the internal DPB */
-        if (!found) {
-            int frame_idx;
-            int slot_found;
-            struct object_surface *obj_surface = decode_state->reference_objects[i];
-
-            slot_found = 0;
-            frame_idx = -1;
-            /* Find a free frame store index */
-            for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
-                if (frame_store[j].surface_id == VA_INVALID_ID ||
-                    frame_store[j].obj_surface == NULL) {
-                    frame_idx = j;
-                    slot_found = 1;
-                    break;
-                }
-            }
-
-
-	    if (slot_found) {
-                frame_store[j].surface_id = ref_pic->picture_id;
-                frame_store[j].frame_store_id = frame_idx;
-                frame_store[j].obj_surface = obj_surface;
-            } else {
-                WARN_ONCE("Not free slot for DPB reference list!!!\n");
-	    }
-        }
-    }
-
 }
 
 void
