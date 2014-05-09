@@ -27,6 +27,11 @@
 #include <stdlib.h>
 #include "i965_drv_video.h"
 
+/* Extra set of chroma formats supported for JPEG decoding (beyond YUV 4:2:0) */
+#define EXTRA_JPEG_DEC_CHROMA_FORMATS \
+    (VA_RT_FORMAT_YUV400 | VA_RT_FORMAT_YUV411 | VA_RT_FORMAT_YUV422 | \
+     VA_RT_FORMAT_YUV444)
+
 extern struct hw_context *i965_proc_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern bool genx_render_init(VADriverContextP);
@@ -115,6 +120,8 @@ static const struct hw_codec_info ivb_hw_codec_info = {
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
 
+    .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
+
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,
     .has_h264_decoding = 1,
@@ -148,6 +155,8 @@ static const struct hw_codec_info hsw_hw_codec_info = {
     .max_height = 4096,
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
+
+    .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,
@@ -186,6 +195,8 @@ static const struct hw_codec_info bdw_hw_codec_info = {
     .max_height = 4096,
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
+
+    .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,

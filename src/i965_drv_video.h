@@ -294,6 +294,8 @@ struct hw_codec_info
     int min_linear_wpitch;
     int min_linear_hpitch;
 
+    unsigned int jpeg_dec_chroma_formats;
+
     unsigned int has_mpeg2_decoding:1;
     unsigned int has_mpeg2_encoding:1;
     unsigned int has_h264_decoding:1;

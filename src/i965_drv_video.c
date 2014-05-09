@@ -446,6 +446,11 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
     uint32_t chroma_formats = VA_RT_FORMAT_YUV420;
 
     switch (profile) {
+    case VAProfileJPEGBaseline:
+        if (HAS_JPEG_DECODING(i965) && entrypoint == VAEntrypointVLD)
+            chroma_formats |= i965->codec_info->jpeg_dec_chroma_formats;
+        break;
+
     default:
         break;
     }
