@@ -602,6 +602,12 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
             chroma_formats |= i965->codec_info->h264_dec_chroma_formats;
         break;
 
+    case VAProfileH264MultiviewHigh:
+    case VAProfileH264StereoHigh:
+        if (HAS_H264_MVC_DECODING(i965) && entrypoint == VAEntrypointVLD)
+            chroma_formats |= i965->codec_info->h264_dec_chroma_formats;
+        break;
+
     case VAProfileJPEGBaseline:
         if (HAS_JPEG_DECODING(i965) && entrypoint == VAEntrypointVLD)
             chroma_formats |= i965->codec_info->jpeg_dec_chroma_formats;
