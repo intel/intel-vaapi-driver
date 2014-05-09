@@ -748,8 +748,10 @@ gen7_mfd_avc_decode_init(VADriverContextP ctx,
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
-    obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
-    obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
+    if (pic_param->pic_fields.bits.reference_pic_flag)
+        obj_surface->flags |= SURFACE_REFERENCED;
+    else
+        obj_surface->flags &= ~SURFACE_REFERENCED;
 
     avc_ensure_surface_bo(ctx, decode_state, obj_surface, pic_param);
     gen7_mfd_init_avc_surface(ctx, pic_param, obj_surface);

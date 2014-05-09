@@ -205,7 +205,6 @@ i965_put_surface_dri(
 
     if (!(g_intel_debug_option_flags & VA_INTEL_DEBUG_OPTION_BENCH))
         dri_vtable->swap_buffer(ctx, dri_drawable);
-    obj_surface->flags |= SURFACE_DISPLAYED;
 
     _i965UnlockMutex(&i965->render_mutex);
 
