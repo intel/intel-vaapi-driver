@@ -366,6 +366,78 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
     return n > 0 ? VA_STATUS_SUCCESS : VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
 }
 
+static VAStatus
+i965_validate_config(VADriverContextP ctx, VAProfile profile,
+    VAEntrypoint entrypoint)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    VAStatus va_status;
+
+    /* Validate profile & entrypoint */
+    switch (profile) {
+    case VAProfileMPEG2Simple:
+    case VAProfileMPEG2Main:
+        if ((HAS_MPEG2_DECODING(i965) && entrypoint == VAEntrypointVLD) ||
+            (HAS_MPEG2_ENCODING(i965) && entrypoint == VAEntrypointEncSlice)) {
+            va_status = VA_STATUS_SUCCESS;
+        } else {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+        break;
+
+    case VAProfileH264ConstrainedBaseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        if ((HAS_H264_DECODING(i965) && entrypoint == VAEntrypointVLD) ||
+            (HAS_H264_ENCODING(i965) && entrypoint == VAEntrypointEncSlice)) {
+            va_status = VA_STATUS_SUCCESS;
+        } else {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+        break;
+
+    case VAProfileVC1Simple:
+    case VAProfileVC1Main:
+    case VAProfileVC1Advanced:
+        if (HAS_VC1_DECODING(i965) && entrypoint == VAEntrypointVLD) {
+            va_status = VA_STATUS_SUCCESS;
+        } else {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+        break;
+
+    case VAProfileNone:
+        if (HAS_VPP(i965) && VAEntrypointVideoProc == entrypoint) {
+            va_status = VA_STATUS_SUCCESS;
+        } else {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+        break;
+
+    case VAProfileJPEGBaseline:
+        if (HAS_JPEG_DECODING(i965) && entrypoint == VAEntrypointVLD) {
+            va_status = VA_STATUS_SUCCESS;
+        } else {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+        break;
+
+    case VAProfileVP8Version0_3:
+        if ((HAS_VP8_DECODING(i965) && entrypoint == VAEntrypointVLD) ||
+            (HAS_VP8_ENCODING(i965) && entrypoint == VAEntrypointEncSlice)) {
+            va_status = VA_STATUS_SUCCESS;
+        } else {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+        break;
+
+    default:
+        va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        break;
+    }
+    return va_status;
+}
+
 VAStatus 
 i965_GetConfigAttributes(VADriverContextP ctx,
                          VAProfile profile,
@@ -373,7 +445,12 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                          VAConfigAttrib *attrib_list,  /* in/out */
                          int num_attribs)
 {
+    VAStatus va_status;
     int i;
+
+    va_status = i965_validate_config(ctx, profile, entrypoint);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
 
     /* Other attributes don't seem to be defined */
     /* What to do if we don't know the attribute? */
@@ -460,73 +537,7 @@ i965_CreateConfig(VADriverContextP ctx,
     int i;
     VAStatus vaStatus;
 
-    /* Validate profile & entrypoint */
-    switch (profile) {
-    case VAProfileMPEG2Simple:
-    case VAProfileMPEG2Main:
-        if ((HAS_MPEG2_DECODING(i965) && VAEntrypointVLD == entrypoint) ||
-            (HAS_MPEG2_ENCODING(i965) && VAEntrypointEncSlice == entrypoint)) {
-            vaStatus = VA_STATUS_SUCCESS;
-        } else {
-            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
-        }
-        break;
-
-    case VAProfileH264ConstrainedBaseline:
-    case VAProfileH264Main:
-    case VAProfileH264High:
-        if ((HAS_H264_DECODING(i965) && VAEntrypointVLD == entrypoint) ||
-            (HAS_H264_ENCODING(i965) && VAEntrypointEncSlice == entrypoint)) {
-            vaStatus = VA_STATUS_SUCCESS;
-        } else {
-            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
-        }
-
-        break;
-
-    case VAProfileVC1Simple:
-    case VAProfileVC1Main:
-    case VAProfileVC1Advanced:
-        if (HAS_VC1_DECODING(i965) && VAEntrypointVLD == entrypoint) {
-            vaStatus = VA_STATUS_SUCCESS;
-        } else {
-            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
-        }
-
-        break;
-
-    case VAProfileNone:
-        if (HAS_VPP(i965) && VAEntrypointVideoProc == entrypoint) {
-            vaStatus = VA_STATUS_SUCCESS;
-        } else {
-            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
-        }
-
-        break;
-
-    case VAProfileJPEGBaseline:
-        if (HAS_JPEG_DECODING(i965) && VAEntrypointVLD == entrypoint) {
-            vaStatus = VA_STATUS_SUCCESS;
-        } else {
-            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
-        }
-
-        break;
-
-    case VAProfileVP8Version0_3:
-        if ((HAS_VP8_DECODING(i965) && VAEntrypointVLD == entrypoint) ||
-            (HAS_VP8_ENCODING(i965) && VAEntrypointEncSlice == entrypoint))
-            vaStatus = VA_STATUS_SUCCESS;
-        else
-            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
-
-        break;
-
-    default:
-        vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
-        break;
-    }
-
+    vaStatus = i965_validate_config(ctx, profile, entrypoint);
     if (VA_STATUS_SUCCESS != vaStatus) {
         return vaStatus;
     }
