@@ -446,6 +446,13 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
     uint32_t chroma_formats = VA_RT_FORMAT_YUV420;
 
     switch (profile) {
+    case VAProfileH264ConstrainedBaseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        if (HAS_H264_DECODING(i965) && entrypoint == VAEntrypointVLD)
+            chroma_formats |= i965->codec_info->h264_dec_chroma_formats;
+        break;
+
     case VAProfileJPEGBaseline:
         if (HAS_JPEG_DECODING(i965) && entrypoint == VAEntrypointVLD)
             chroma_formats |= i965->codec_info->jpeg_dec_chroma_formats;
@@ -1532,6 +1539,7 @@ i965_CreateContext(VADriverContextP ctx,
     struct i965_render_state *render_state = &i965->render_state;
     struct object_config *obj_config = CONFIG(config_id);
     struct object_context *obj_context = NULL;
+    VAConfigAttrib *attrib;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int contextID;
     int i;
@@ -1624,6 +1632,11 @@ i965_CreateContext(VADriverContextP ctx,
             obj_context->hw_context = i965->codec_info->dec_hw_context_init(ctx, obj_config);
         }
     }
+
+    attrib = i965_lookup_config_attribute(obj_config, VAConfigAttribRTFormat);
+    if (!attrib)
+        return VA_STATUS_ERROR_INVALID_CONFIG;
+    obj_context->codec_state.base.chroma_formats = attrib->value;
 
     /* Error recovery */
     if (VA_STATUS_SUCCESS != vaStatus) {

@@ -145,11 +145,15 @@ gen8_mfd_surface_state(VADriverContextP ctx,
     struct object_surface *obj_surface = decode_state->render_object;
     unsigned int y_cb_offset;
     unsigned int y_cr_offset;
+    unsigned int surface_format;
 
     assert(obj_surface);
 
     y_cb_offset = obj_surface->y_cb_offset;
     y_cr_offset = obj_surface->y_cr_offset;
+
+    surface_format = obj_surface->fourcc == VA_FOURCC_Y800 ?
+        MFX_SURFACE_MONOCHROME : MFX_SURFACE_PLANAR_420_8;
 
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFX_SURFACE_STATE | (6 - 2));
@@ -158,7 +162,7 @@ gen8_mfd_surface_state(VADriverContextP ctx,
                   ((obj_surface->orig_height - 1) << 18) |
                   ((obj_surface->orig_width - 1) << 4));
     OUT_BCS_BATCH(batch,
-                  (MFX_SURFACE_PLANAR_420_8 << 28) | /* 420 planar YUV surface */
+                  (surface_format << 28) | /* 420 planar YUV surface */
                   ((standard_select != MFX_FORMAT_JPEG) << 27) | /* interleave chroma, set to 0 for JPEG */
                   (0 << 22) | /* surface object control state, ignored */
                   ((obj_surface->width - 1) << 3) | /* pitch */

@@ -185,25 +185,40 @@ avc_ensure_surface_bo(
 )
 {
     VAStatus va_status;
-    uint32_t hw_fourcc, fourcc, subsample;
+    uint32_t hw_fourcc, fourcc, subsample, chroma_format;
 
     /* Validate chroma format */
     switch (pic_param->seq_fields.bits.chroma_format_idc) {
     case 0: // Grayscale
         fourcc = VA_FOURCC_Y800;
         subsample = SUBSAMPLE_YUV400;
+        chroma_format = VA_RT_FORMAT_YUV400;
         break;
     case 1: // YUV 4:2:0
         fourcc = VA_FOURCC_NV12;
         subsample = SUBSAMPLE_YUV420;
+        chroma_format = VA_RT_FORMAT_YUV420;
         break;
     default:
         return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
     }
 
-    /* XXX: always allocate NV12 (YUV 4:2:0) surfaces for now */
-    hw_fourcc = VA_FOURCC_NV12;
-    subsample = SUBSAMPLE_YUV420;
+    /* Determine the HW surface format, bound to VA config needs */
+    if ((decode_state->base.chroma_formats & chroma_format) == chroma_format)
+        hw_fourcc = fourcc;
+    else {
+        hw_fourcc = 0;
+        switch (fourcc) {
+        case VA_FOURCC_Y800: // Implement with an NV12 surface
+            if (decode_state->base.chroma_formats & VA_RT_FORMAT_YUV420) {
+                hw_fourcc = VA_FOURCC_NV12;
+                subsample = SUBSAMPLE_YUV420;
+            }
+            break;
+        }
+    }
+    if (!hw_fourcc)
+        return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
 
     /* (Re-)allocate the underlying surface buffer store, if necessary */
     if (!obj_surface->bo || obj_surface->fourcc != hw_fourcc) {
