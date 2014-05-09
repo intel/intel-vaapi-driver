@@ -438,6 +438,20 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
     return va_status;
 }
 
+static uint32_t
+i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
+    VAEntrypoint entrypoint)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    uint32_t chroma_formats = VA_RT_FORMAT_YUV420;
+
+    switch (profile) {
+    default:
+        break;
+    }
+    return chroma_formats;
+}
+
 VAStatus 
 i965_GetConfigAttributes(VADriverContextP ctx,
                          VAProfile profile,
@@ -457,7 +471,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
     for (i = 0; i < num_attribs; i++) {
         switch (attrib_list[i].type) {
         case VAConfigAttribRTFormat:
-            attrib_list[i].value = VA_RT_FORMAT_YUV420;
+            attrib_list[i].value = i965_get_default_chroma_formats(ctx,
+                profile, entrypoint);
             break;
 
         case VAConfigAttribRateControl:
@@ -498,29 +513,49 @@ i965_destroy_config(struct object_heap *heap, struct object_base *obj)
     object_heap_free(heap, obj);
 }
 
-static VAStatus 
-i965_update_attribute(struct object_config *obj_config, VAConfigAttrib *attrib)
+static VAConfigAttrib *
+i965_lookup_config_attribute(struct object_config *obj_config,
+    VAConfigAttribType type)
 {
     int i;
 
-    /* Check existing attrbiutes */
     for (i = 0; i < obj_config->num_attribs; i++) {
-        if (obj_config->attrib_list[i].type == attrib->type) {
-            /* Update existing attribute */
-            obj_config->attrib_list[i].value = attrib->value;
-            return VA_STATUS_SUCCESS;
-        }
+        VAConfigAttrib * const attrib = &obj_config->attrib_list[i];
+        if (attrib->type == type)
+            return attrib;
     }
+    return NULL;
+}
 
-    if (obj_config->num_attribs < I965_MAX_CONFIG_ATTRIBUTES) {
-        i = obj_config->num_attribs;
-        obj_config->attrib_list[i].type = attrib->type;
-        obj_config->attrib_list[i].value = attrib->value;
-        obj_config->num_attribs++;
+static VAStatus
+i965_append_config_attribute(struct object_config *obj_config,
+    const VAConfigAttrib *new_attrib)
+{
+    VAConfigAttrib *attrib;
+
+    if (obj_config->num_attribs >= I965_MAX_CONFIG_ATTRIBUTES)
+        return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+
+    attrib = &obj_config->attrib_list[obj_config->num_attribs++];
+    attrib->type = new_attrib->type;
+    attrib->value = new_attrib->value;
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+i965_ensure_config_attribute(struct object_config *obj_config,
+    const VAConfigAttrib *new_attrib)
+{
+    VAConfigAttrib *attrib;
+
+    /* Check for existing attributes */
+    attrib = i965_lookup_config_attribute(obj_config, new_attrib->type);
+    if (attrib) {
+        /* Update existing attribute */
+        attrib->value = new_attrib->value;
         return VA_STATUS_SUCCESS;
     }
-
-    return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+    return i965_append_config_attribute(obj_config, new_attrib);
 }
 
 VAStatus 
@@ -552,16 +587,23 @@ i965_CreateConfig(VADriverContextP ctx,
 
     obj_config->profile = profile;
     obj_config->entrypoint = entrypoint;
-    obj_config->attrib_list[0].type = VAConfigAttribRTFormat;
-    obj_config->attrib_list[0].value = VA_RT_FORMAT_YUV420;
-    obj_config->num_attribs = 1;
+    obj_config->num_attribs = 0;
 
-    for(i = 0; i < num_attribs; i++) {
-        vaStatus = i965_update_attribute(obj_config, &(attrib_list[i]));
-
-        if (VA_STATUS_SUCCESS != vaStatus) {
+    for (i = 0; i < num_attribs; i++) {
+        vaStatus = i965_ensure_config_attribute(obj_config, &attrib_list[i]);
+        if (vaStatus != VA_STATUS_SUCCESS)
             break;
-        }
+    }
+
+    if (vaStatus == VA_STATUS_SUCCESS) {
+        VAConfigAttrib attrib, *attrib_found;
+        attrib.type = VAConfigAttribRTFormat;
+        attrib.value = i965_get_default_chroma_formats(ctx, profile, entrypoint);
+        attrib_found = i965_lookup_config_attribute(obj_config, attrib.type);
+        if (!attrib_found || !attrib_found->value)
+            vaStatus = i965_append_config_attribute(obj_config, &attrib);
+        else if (!(attrib_found->value & attrib.value))
+            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
     }
 
     /* Error recovery */
