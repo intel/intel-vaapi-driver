@@ -955,8 +955,10 @@ i965_CreateSurfaces2(
            obj_surface->obj_subpic[j] = NULL;
         }
 
-        obj_surface->width = ALIGN(width, 16);
-        obj_surface->height = ALIGN(height, 16);
+        assert(i965->codec_info->min_linear_wpitch);
+        assert(i965->codec_info->min_linear_hpitch);
+        obj_surface->width = ALIGN(width, i965->codec_info->min_linear_wpitch);
+        obj_surface->height = ALIGN(height, i965->codec_info->min_linear_hpitch);
         obj_surface->flags = SURFACE_REFERENCED;
         obj_surface->fourcc = 0;
         obj_surface->bo = NULL;
@@ -2606,7 +2608,7 @@ i965_CreateImage(VADriverContextP ctx,
     image->image_id       = image_id;
     image->buf            = VA_INVALID_ID;
 
-    awidth = ALIGN(width, 64);
+    awidth = ALIGN(width, i965->codec_info->min_linear_wpitch);
 
     if ((format->fourcc == VA_FOURCC_YV12) ||
     		(format->fourcc == VA_FOURCC_I420)) {
@@ -2615,7 +2617,7 @@ i965_CreateImage(VADriverContextP ctx,
 	}
     }
 
-    aheight = ALIGN(height, 16);
+    aheight = ALIGN(height, i965->codec_info->min_linear_hpitch);
     size    = awidth * aheight;
     size2    = (awidth / 2) * (aheight / 2);
 
@@ -2952,7 +2954,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         case VA_FOURCC_YUY2:
         case VA_FOURCC_UYVY:
-            obj_surface->width = ALIGN(obj_surface->orig_width * 2, 16);
+            obj_surface->width = ALIGN(obj_surface->orig_width * 2, i965->codec_info->min_linear_wpitch);
             obj_surface->y_cb_offset = 0;
             obj_surface->y_cr_offset = 0;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -2965,7 +2967,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
         case VA_FOURCC_RGBX:
         case VA_FOURCC_BGRA:
         case VA_FOURCC_BGRX:
-            obj_surface->width = ALIGN(obj_surface->orig_width * 4, 16);
+            obj_surface->width = ALIGN(obj_surface->orig_width * 4, i965->codec_info->min_linear_wpitch);
             region_width = obj_surface->width;
             region_height = obj_surface->height;
             break;

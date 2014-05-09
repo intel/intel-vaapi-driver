@@ -291,6 +291,8 @@ struct hw_codec_info
 
     int max_width;
     int max_height;
+    int min_linear_wpitch;
+    int min_linear_hpitch;
 
     unsigned int has_mpeg2_decoding:1;
     unsigned int has_mpeg2_encoding:1;

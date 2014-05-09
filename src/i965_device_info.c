@@ -40,6 +40,8 @@ static const struct hw_codec_info g4x_hw_codec_info = {
 
     .max_width = 2048,
     .max_height = 2048,
+    .min_linear_wpitch = 16,
+    .min_linear_hpitch = 16,
 
     .has_mpeg2_decoding = 1,
 
@@ -58,6 +60,8 @@ static const struct hw_codec_info ilk_hw_codec_info = {
 
     .max_width = 2048,
     .max_height = 2048,
+    .min_linear_wpitch = 16,
+    .min_linear_hpitch = 16,
 
     .has_mpeg2_decoding = 1,
     .has_h264_decoding = 1,
@@ -78,6 +82,8 @@ static const struct hw_codec_info snb_hw_codec_info = {
 
     .max_width = 2048,
     .max_height = 2048,
+    .min_linear_wpitch = 16,
+    .min_linear_hpitch = 16,
 
     .has_mpeg2_decoding = 1,
     .has_h264_decoding = 1,
@@ -106,6 +112,8 @@ static const struct hw_codec_info ivb_hw_codec_info = {
 
     .max_width = 4096,
     .max_height = 4096,
+    .min_linear_wpitch = 64,
+    .min_linear_hpitch = 16,
 
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,
@@ -138,6 +146,8 @@ static const struct hw_codec_info hsw_hw_codec_info = {
 
     .max_width = 4096,
     .max_height = 4096,
+    .min_linear_wpitch = 64,
+    .min_linear_hpitch = 16,
 
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,
@@ -174,6 +184,8 @@ static const struct hw_codec_info bdw_hw_codec_info = {
 
     .max_width = 4096,
     .max_height = 4096,
+    .min_linear_wpitch = 64,
+    .min_linear_hpitch = 16,
 
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,
