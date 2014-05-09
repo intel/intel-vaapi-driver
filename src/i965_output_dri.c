@@ -207,11 +207,6 @@ i965_put_surface_dri(
         dri_vtable->swap_buffer(ctx, dri_drawable);
     obj_surface->flags |= SURFACE_DISPLAYED;
 
-    if ((obj_surface->flags & SURFACE_ALL_MASK) == SURFACE_DISPLAYED) {
-        obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
-        i965_destroy_surface_storage(obj_surface);
-    }
-
     _i965UnlockMutex(&i965->render_mutex);
 
     return VA_STATUS_SUCCESS;
