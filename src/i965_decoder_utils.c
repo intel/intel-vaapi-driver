@@ -139,7 +139,7 @@ mpeg2_set_reference_surfaces(
         ref_frames[n++].surface_id = ref_frames[0].surface_id;
     }
 
-    if (pic_param->picture_coding_extension.bits.progressive_frame)
+    if (pic_param->picture_coding_extension.bits.frame_pred_frame_dct)
         return;
 
     ref_frames[2].surface_id = VA_INVALID_ID;
