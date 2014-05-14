@@ -861,6 +861,7 @@ bpp_1stplane_by_fourcc(unsigned int fourcc)
         case VA_FOURCC_YUY2:
             return 2;
 
+        case VA_FOURCC_Y800:
         case VA_FOURCC_YV12:
         case VA_FOURCC_IMC3:
         case VA_FOURCC_IYUV:
@@ -2868,13 +2869,13 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         case VA_FOURCC_Y800:
             assert(subsampling == SUBSAMPLE_YUV400);
-            obj_surface->cb_cr_pitch = obj_surface->width;
+            obj_surface->cb_cr_pitch = 0;
             obj_surface->cb_cr_width = 0;
             obj_surface->cb_cr_height = 0;
-            obj_surface->y_cb_offset = obj_surface->height;
-            obj_surface->y_cr_offset = obj_surface->y_cb_offset + ALIGN(obj_surface->cb_cr_height, 32);
+            obj_surface->y_cb_offset = 0;
+            obj_surface->y_cr_offset = 0;
             region_width = obj_surface->width;
-            region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32) * 2;
+            region_height = obj_surface->height;
 
             break;
 

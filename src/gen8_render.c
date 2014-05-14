@@ -276,6 +276,9 @@ gen8_render_src_surfaces_state(
     gen8_render_src_surface_state(ctx, 1, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);     /* Y */
     gen8_render_src_surface_state(ctx, 2, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);
 
+    if (obj_surface->fourcc == VA_FOURCC_Y800) /* single plane for grayscale */
+        return;
+
     if (obj_surface->fourcc == VA_FOURCC_NV12) {
         gen8_render_src_surface_state(ctx, 3, region,
                                       region_pitch * obj_surface->y_cb_offset,
