@@ -428,4 +428,7 @@ extern VAStatus i965_DestroySurfaces(VADriverContextP ctx,
 #define I965_SURFACE_MEM_GEM_FLINK          1
 #define I965_SURFACE_MEM_DRM_PRIME          2
 
+void
+i965_destroy_surface_storage(struct object_surface *obj_surface);
+
 #endif /* _I965_DRV_VIDEO_H_ */

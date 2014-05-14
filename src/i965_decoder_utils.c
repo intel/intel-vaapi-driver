@@ -387,13 +387,9 @@ intel_update_avc_frame_store_index(VADriverContextP ctx,
             obj_surface->flags &= ~SURFACE_REFERENCED;
 
             if ((obj_surface->flags & SURFACE_ALL_MASK) == SURFACE_DISPLAYED) {
-                dri_bo_unreference(obj_surface->bo);
-                obj_surface->bo = NULL;
                 obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
+                i965_destroy_surface_storage(obj_surface);
             }
-
-            if (obj_surface->free_private_data)
-                obj_surface->free_private_data(&obj_surface->private_data);
 
             frame_store[i].surface_id = VA_INVALID_ID;
             frame_store[i].frame_store_id = -1;

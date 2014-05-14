@@ -209,12 +209,8 @@ i965_put_surface_dri(
     obj_surface->flags |= SURFACE_DISPLAYED;
 
     if ((obj_surface->flags & SURFACE_ALL_MASK) == SURFACE_DISPLAYED) {
-        dri_bo_unreference(obj_surface->bo);
-        obj_surface->bo = NULL;
         obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
-
-        if (obj_surface->free_private_data)
-            obj_surface->free_private_data(&obj_surface->private_data);
+        i965_destroy_surface_storage(obj_surface);
     }
 
     _i965UnlockMutex(&i965->render_mutex);

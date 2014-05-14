@@ -603,10 +603,11 @@ VAStatus i965_QueryConfigAttributes(VADriverContextP ctx,
     return vaStatus;
 }
 
-static void 
-i965_destroy_surface(struct object_heap *heap, struct object_base *obj)
+void
+i965_destroy_surface_storage(struct object_surface *obj_surface)
 {
-    struct object_surface *obj_surface = (struct object_surface *)obj;
+    if (!obj_surface)
+        return;
 
     dri_bo_unreference(obj_surface->bo);
     obj_surface->bo = NULL;
@@ -615,7 +616,14 @@ i965_destroy_surface(struct object_heap *heap, struct object_base *obj)
         obj_surface->free_private_data(&obj_surface->private_data);
         obj_surface->private_data = NULL;
     }
+}
 
+static void 
+i965_destroy_surface(struct object_heap *heap, struct object_base *obj)
+{
+    struct object_surface *obj_surface = (struct object_surface *)obj;
+
+    i965_destroy_surface_storage(obj_surface);
     object_heap_free(heap, obj);
 }
 
