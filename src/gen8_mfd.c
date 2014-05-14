@@ -845,18 +845,8 @@ gen8_mfd_avc_decode_init(VADriverContextP ctx,
     obj_surface = decode_state->render_object;
     obj_surface->flags &= ~SURFACE_REF_DIS_MASK;
     obj_surface->flags |= (pic_param->pic_fields.bits.reference_pic_flag ? SURFACE_REFERENCED : 0);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
-    /* initial uv component for YUV400 case */
-    if (pic_param->seq_fields.bits.chroma_format_idc == 0) {
-         unsigned int uv_offset = obj_surface->width * obj_surface->height; 
-         unsigned int uv_size   = obj_surface->width * obj_surface->height / 2; 
-
-         drm_intel_gem_bo_map_gtt(obj_surface->bo);
-         memset(obj_surface->bo->virtual + uv_offset, 0x80, uv_size);
-         drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
-    }
-
+    avc_ensure_surface_bo(ctx, decode_state, obj_surface, pic_param);
     gen8_mfd_init_avc_surface(ctx, pic_param, obj_surface);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);

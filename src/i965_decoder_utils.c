@@ -174,6 +174,58 @@ mpeg2_set_reference_surfaces(
     }
 }
 
+/* Ensure the supplied VA surface has valid storage for decoding the
+   current picture */
+VAStatus
+avc_ensure_surface_bo(
+    VADriverContextP                    ctx,
+    struct decode_state                *decode_state,
+    struct object_surface              *obj_surface,
+    const VAPictureParameterBufferH264 *pic_param
+)
+{
+    VAStatus va_status;
+    uint32_t hw_fourcc, fourcc, subsample;
+
+    /* Validate chroma format */
+    switch (pic_param->seq_fields.bits.chroma_format_idc) {
+    case 0: // Grayscale
+        fourcc = VA_FOURCC_Y800;
+        subsample = SUBSAMPLE_YUV400;
+        break;
+    case 1: // YUV 4:2:0
+        fourcc = VA_FOURCC_NV12;
+        subsample = SUBSAMPLE_YUV420;
+        break;
+    default:
+        return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+    }
+
+    /* XXX: always allocate NV12 (YUV 4:2:0) surfaces for now */
+    hw_fourcc = VA_FOURCC_NV12;
+    subsample = SUBSAMPLE_YUV420;
+
+    /* (Re-)allocate the underlying surface buffer store, if necessary */
+    if (!obj_surface->bo || obj_surface->fourcc != hw_fourcc) {
+        i965_destroy_surface_storage(obj_surface);
+        va_status = i965_check_alloc_surface_bo(ctx, obj_surface, 1,
+            hw_fourcc, subsample);
+        if (va_status != VA_STATUS_SUCCESS)
+            return va_status;
+    }
+
+    /* Fake chroma components if grayscale is implemented on top of NV12 */
+    if (fourcc == VA_FOURCC_Y800 && hw_fourcc == VA_FOURCC_NV12) {
+        const uint32_t uv_offset = obj_surface->width * obj_surface->height;
+        const uint32_t uv_size   = obj_surface->width * obj_surface->height / 2;
+
+        drm_intel_gem_bo_map_gtt(obj_surface->bo);
+        memset(obj_surface->bo->virtual + uv_offset, 0x80, uv_size);
+        drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
+    }
+    return VA_STATUS_SUCCESS;
+}
+
 /* Generate flat scaling matrices for H.264 decoding */
 void
 avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix)
@@ -423,7 +475,7 @@ intel_update_avc_frame_store_index(VADriverContextP ctx,
              * Sometimes a dummy frame comes from the upper layer library, call i965_check_alloc_surface_bo()
              * to ake sure the store buffer is allocated for this reference frame
              */
-            i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+            avc_ensure_surface_bo(ctx, decode_state, obj_surface, pic_param);
 
             slot_found = 0;
             frame_idx = -1;

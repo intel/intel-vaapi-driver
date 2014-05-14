@@ -43,6 +43,14 @@ mpeg2_set_reference_surfaces(
     VAPictureParameterBufferMPEG2 *pic_param
 );
 
+VAStatus
+avc_ensure_surface_bo(
+    VADriverContextP                    ctx,
+    struct decode_state                *decode_state,
+    struct object_surface              *obj_surface,
+    const VAPictureParameterBufferH264 *pic_param
+);
+
 void
 avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix);
 
