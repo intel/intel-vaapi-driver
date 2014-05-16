@@ -11,6 +11,7 @@
 #include "i965_drv_video.h"
 #include "i965_media.h"
 #include "i965_media_h264.h"
+#include "i965_decoder_utils.h"
 
 enum {
     INTRA_16X16 = 0,
@@ -343,7 +344,7 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
     struct object_surface *obj_surface;
     VAPictureParameterBufferH264 *pic_param;
     VAPictureH264 *va_pic;
-    int i, j, w, h;
+    int i, w, h;
     int field_picture;
 
     assert(media_context->private_context);
@@ -375,24 +376,15 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
 
     /* Reference Pictures */
     for (i = 0; i < ARRAY_ELEMS(i965_h264_context->fsid_list); i++) {
-        if (i965_h264_context->fsid_list[i].surface_id != VA_INVALID_ID &&
-            i965_h264_context->fsid_list[i].obj_surface != NULL) {
-            int found = 0;
-            for (j = 0; j < ARRAY_ELEMS(pic_param->ReferenceFrames); j++) {
-                va_pic = &pic_param->ReferenceFrames[j];
-                
-                if (va_pic->flags & VA_PICTURE_H264_INVALID)
-                    continue;
+        struct object_surface * const obj_surface =
+            i965_h264_context->fsid_list[i].obj_surface;
 
-                if (va_pic->picture_id == i965_h264_context->fsid_list[i].surface_id) {
-                    found = 1;
-                    break;
-                }
-            }
+        if (obj_surface) {
+            const VAPictureH264 * const va_pic = avc_find_picture(
+                obj_surface->base.id, pic_param->ReferenceFrames,
+                ARRAY_ELEMS(pic_param->ReferenceFrames));
 
-            assert(found == 1);
-
-            obj_surface = i965_h264_context->fsid_list[i].obj_surface;
+            assert(va_pic != NULL);
             w = obj_surface->width;
             h = obj_surface->height;
             field_picture = !!(va_pic->flags & (VA_PICTURE_H264_TOP_FIELD | VA_PICTURE_H264_BOTTOM_FIELD));

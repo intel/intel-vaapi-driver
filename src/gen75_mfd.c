@@ -664,7 +664,7 @@ gen75_mfd_avc_directmode_state_bplus(VADriverContextP ctx,
     struct object_surface *obj_surface;
     GenAvcSurface *gen7_avc_surface;
     VAPictureH264 *va_pic;
-    int i, j;
+    int i;
 
     BEGIN_BCS_BATCH(batch, 71);
     OUT_BCS_BATCH(batch, MFX_AVC_DIRECTMODE_STATE | (71 - 2));
@@ -704,26 +704,14 @@ gen75_mfd_avc_directmode_state_bplus(VADriverContextP ctx,
 
     /* POC List */
     for (i = 0; i < ARRAY_ELEMS(gen7_mfd_context->reference_surface); i++) {
-        if (gen7_mfd_context->reference_surface[i].surface_id != VA_INVALID_ID) {
-            int found = 0;
+        obj_surface = gen7_mfd_context->reference_surface[i].obj_surface;
 
-            assert(gen7_mfd_context->reference_surface[i].obj_surface != NULL);
+        if (obj_surface) {
+            const VAPictureH264 * const va_pic = avc_find_picture(
+                obj_surface->base.id, pic_param->ReferenceFrames,
+                ARRAY_ELEMS(pic_param->ReferenceFrames));
 
-            for (j = 0; j < ARRAY_ELEMS(pic_param->ReferenceFrames); j++) {
-                va_pic = &pic_param->ReferenceFrames[j];
-                
-                if (va_pic->flags & VA_PICTURE_H264_INVALID)
-                    continue;
-
-                if (va_pic->picture_id == gen7_mfd_context->reference_surface[i].surface_id) {
-                    found = 1;
-                    break;
-                }
-            }
-
-            assert(found == 1);
-            assert(!(va_pic->flags & VA_PICTURE_H264_INVALID));
-            
+            assert(va_pic != NULL);
             OUT_BCS_BATCH(batch, va_pic->TopFieldOrderCnt);
             OUT_BCS_BATCH(batch, va_pic->BottomFieldOrderCnt);
         } else {
@@ -751,7 +739,7 @@ gen75_mfd_avc_directmode_state(VADriverContextP ctx,
     struct object_surface *obj_surface;
     GenAvcSurface *gen7_avc_surface;
     VAPictureH264 *va_pic;
-    int i, j;
+    int i;
 
     if (IS_STEPPING_BPLUS(i965)) {
         gen75_mfd_avc_directmode_state_bplus(ctx, decode_state, pic_param, slice_param,
@@ -811,26 +799,14 @@ gen75_mfd_avc_directmode_state(VADriverContextP ctx,
 
     /* POC List */
     for (i = 0; i < ARRAY_ELEMS(gen7_mfd_context->reference_surface); i++) {
-        if (gen7_mfd_context->reference_surface[i].surface_id != VA_INVALID_ID) {
-            int found = 0;
+        obj_surface = gen7_mfd_context->reference_surface[i].obj_surface;
 
-            assert(gen7_mfd_context->reference_surface[i].obj_surface != NULL);
+        if (obj_surface) {
+            const VAPictureH264 * const va_pic = avc_find_picture(
+                obj_surface->base.id, pic_param->ReferenceFrames,
+                ARRAY_ELEMS(pic_param->ReferenceFrames));
 
-            for (j = 0; j < ARRAY_ELEMS(pic_param->ReferenceFrames); j++) {
-                va_pic = &pic_param->ReferenceFrames[j];
-                
-                if (va_pic->flags & VA_PICTURE_H264_INVALID)
-                    continue;
-
-                if (va_pic->picture_id == gen7_mfd_context->reference_surface[i].surface_id) {
-                    found = 1;
-                    break;
-                }
-            }
-
-            assert(found == 1);
-            assert(!(va_pic->flags & VA_PICTURE_H264_INVALID));
-            
+            assert(va_pic != NULL);
             OUT_BCS_BATCH(batch, va_pic->TopFieldOrderCnt);
             OUT_BCS_BATCH(batch, va_pic->BottomFieldOrderCnt);
         } else {

@@ -378,7 +378,7 @@ i965_avc_bsd_buf_base_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = i965_h264_context->batch;
     struct i965_avc_bsd_context *i965_avc_bsd_context;
-    int i, j;
+    int i;
     VAPictureH264 *va_pic;
     struct object_surface *obj_surface;
     GenAvcSurface *avc_bsd_surface;
@@ -408,24 +408,8 @@ i965_avc_bsd_buf_base_state(VADriverContextP ctx,
         OUT_BCS_BATCH(batch, 0);
 
     for (i = 0; i < ARRAY_ELEMS(i965_h264_context->fsid_list); i++) {
-        if (i965_h264_context->fsid_list[i].surface_id != VA_INVALID_ID &&
-            i965_h264_context->fsid_list[i].obj_surface &&
-            i965_h264_context->fsid_list[i].obj_surface->private_data) {
-            int found = 0;
-            for (j = 0; j < ARRAY_ELEMS(pic_param->ReferenceFrames); j++) {
-                va_pic = &pic_param->ReferenceFrames[j];
-                
-                if (va_pic->flags & VA_PICTURE_H264_INVALID)
-                    continue;
-
-                if (va_pic->picture_id == i965_h264_context->fsid_list[i].surface_id) {
-                    found = 1;
-                    break;
-                }
-            }
-
-            assert(found == 1);
-            obj_surface = i965_h264_context->fsid_list[i].obj_surface;
+        obj_surface = i965_h264_context->fsid_list[i].obj_surface;
+        if (obj_surface && obj_surface->private_data) {
             avc_bsd_surface = obj_surface->private_data;
             
             OUT_BCS_RELOC(batch, avc_bsd_surface->dmv_top,
@@ -480,26 +464,16 @@ i965_avc_bsd_buf_base_state(VADriverContextP ctx,
 
     /* POC List */
     for (i = 0; i < ARRAY_ELEMS(i965_h264_context->fsid_list); i++) {
-        if (i965_h264_context->fsid_list[i].surface_id != VA_INVALID_ID) {
-            int found = 0;
-            for (j = 0; j < ARRAY_ELEMS(pic_param->ReferenceFrames); j++) {
-                va_pic = &pic_param->ReferenceFrames[j];
-                
-                if (va_pic->flags & VA_PICTURE_H264_INVALID)
-                    continue;
+        obj_surface = i965_h264_context->fsid_list[i].obj_surface;
 
-                if (va_pic->picture_id == i965_h264_context->fsid_list[i].surface_id) {
-                    found = 1;
-                    break;
-                }
-            }
+        if (obj_surface) {
+            const VAPictureH264 * const va_pic = avc_find_picture(
+                obj_surface->base.id, pic_param->ReferenceFrames,
+                ARRAY_ELEMS(pic_param->ReferenceFrames));
 
-            assert(found == 1);
-
-            if (!(va_pic->flags & VA_PICTURE_H264_INVALID)) {
-                OUT_BCS_BATCH(batch, va_pic->TopFieldOrderCnt);
-                OUT_BCS_BATCH(batch, va_pic->BottomFieldOrderCnt);
-            } 
+            assert(va_pic != NULL);
+            OUT_BCS_BATCH(batch, va_pic->TopFieldOrderCnt);
+            OUT_BCS_BATCH(batch, va_pic->BottomFieldOrderCnt);
         } else {
             OUT_BCS_BATCH(batch, 0);
             OUT_BCS_BATCH(batch, 0);

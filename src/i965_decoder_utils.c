@@ -254,6 +254,23 @@ avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix)
     memset(&iq_matrix->ScalingList8x8, 16, sizeof(iq_matrix->ScalingList8x8));
 }
 
+/* Finds the VA/H264 picture associated with the specified VA surface id */
+VAPictureH264 *
+avc_find_picture(VASurfaceID id, VAPictureH264 *pic_list, int pic_list_count)
+{
+    int i;
+
+    if (id != VA_INVALID_ID) {
+        for (i = 0; i < pic_list_count; i++) {
+            VAPictureH264 * const va_pic = &pic_list[i];
+            if (va_pic->picture_id == id &&
+                !(va_pic->flags & VA_PICTURE_H264_INVALID))
+                return va_pic;
+        }
+    }
+    return NULL;
+}
+
 /* Get first macroblock bit offset for BSD, minus EPB count (AVC) */
 /* XXX: slice_data_bit_offset does not account for EPB */
 unsigned int

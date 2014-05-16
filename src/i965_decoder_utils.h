@@ -54,6 +54,9 @@ avc_ensure_surface_bo(
 void
 avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix);
 
+VAPictureH264 *
+avc_find_picture(VASurfaceID id, VAPictureH264 *pic_list, int pic_list_count);
+
 unsigned int
 avc_get_first_mb_bit_offset(
     dri_bo                     *slice_data_bo,
