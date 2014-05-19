@@ -62,24 +62,29 @@
     #include "DI_Hist_Save.asm"
 
 ////////////////////////////////////// Save the DN Curr Frame for Next Run ////////////////////////
-    add (4)     pCF_Y_OFFSET<1>:uw          ubSRC_CF_OFFSET<4;4,1>:ub  npDN_YUV:w
-    // check top/bottom field first
-    cmp.e.f0.0 (1)  null<1>:w               ubTFLD_FIRST<0;1,0>:ub     1:w
-    (f0.0) jmpi (1) TOP_FIELD_FIRST
+    // previous frame
+    $for (0; <nY_NUM_OF_ROWS/2; 1) {
+        mov (16) mubMSGHDR_DN(1, %1*16)<1>       ubRESP(nDI_PREV_FRAME_LUMA_OFFSET,%1*16)
+    }
 
-BOTTOM_FIELD_FIRST:
-    $for (0,0; <nY_NUM_OF_ROWS/2; 2,1) {
-        mov (4)     mudMSGHDR_DN(1,%1*4)<1>     udRESP(nDI_CURR_2ND_FIELD_LUMA_OFFSET,%2*4)<4;4,1> // 2nd field luma from current frame (line 0,2)
-        mov (4)     mudMSGHDR_DN(1,%1*4+4)<1>   udRESP(nDI_CURR_FRAME_LUMA_OFFSET+%2,4)<4;4,1> // 1st field luma from current frame (line 1,3)
-    }
-    jmpi (1) SAVE_DN_CURR
-    
-TOP_FIELD_FIRST:
-    $for (0,0; <nY_NUM_OF_ROWS/2; 2,1) {
-        mov (4)     mudMSGHDR_DN(1,%1*4)<1>     udRESP(nDI_CURR_FRAME_LUMA_OFFSET+%2,0)<4;4,1> // 2nd field luma from current frame (line 0,2)
-        mov (4)     mudMSGHDR_DN(1,%1*4+4)<1>   udRESP(nDI_CURR_2ND_FIELD_LUMA_OFFSET,%2*4)<4;4,1> // 1st field luma from current frame (line 1,3)
-    }
-SAVE_DN_CURR:
+    mov (2)     rMSGSRC.0<1>:ud        wORIX<2;2,1>:w               // X origin and Y origin
+    mov (1)     rMSGSRC.2<1>:ud        nDPW_BLOCK_SIZE_DN:ud        // block width and height (16x4)
+    mov (8)     mudMSGHDR_DN(0)<1>     rMSGSRC.0<8;8,1>:ud
+    send (8)    dNULLREG    mMSGHDR_DN   udDUMMY_NULL    nDATAPORT_WRITE    nDPMW_MSGDSC+nDPMW_MSG_LEN_PL_DN_DI+nBI_DESTINATION_Y:ud
+
+    //Write UV through DATAPORT
+    mov (2)     rMSGSRC.0<1>:ud        wORIX<2;2,1>:w               // X origin and Y origin
+    asr (1)     rMSGSRC.1<1>:d         rMSGSRC.1<0;1,0>:d    1:w  // U/V block origin should be half of Y's
+    mov (1)     rMSGSRC.2<1>:ud        nDPR_BLOCK_SIZE_UV:ud        // block width and height (16x2)
+    mov (8)     mudMSGHDR_DN(0)<1>     rMSGSRC.0<8;8,1>:ud
+
+    mov (8) mubMSGHDR_DN(1, 0)<2>      ubRESP(nDI_PREV_FRAME_CHROMA_OFFSET, 1)<16 ;8,2>
+    mov (8) mubMSGHDR_DN(1, 1)<2>      ubRESP(nDI_PREV_FRAME_CHROMA_OFFSET, 16)<16 ;8,2>
+    mov (8) mubMSGHDR_DN(1, 16)<2>      ubRESP(nDI_PREV_FRAME_CHROMA_OFFSET+1, 1)<16 ;8,2>
+    mov (8) mubMSGHDR_DN(1, 17)<2>      ubRESP(nDI_PREV_FRAME_CHROMA_OFFSET+1, 16)<16 ;8,2>
+    send (8)    dNULLREG    mMSGHDR_DN   udDUMMY_NULL    nDATAPORT_WRITE    nDPMW_MSGDSC+nMSGLEN_1+nBI_DESTINATION_UV:ud
+
+    // current frame
     $for (0; <nY_NUM_OF_ROWS/2; 1) {
         mov (16) mubMSGHDR_DN(1, %1*16)<1>       ubRESP(nDI_CURR_FRAME_LUMA_OFFSET,%1*16)
     }
@@ -87,7 +92,7 @@ SAVE_DN_CURR:
     mov (2)     rMSGSRC.0<1>:ud        wORIX<2;2,1>:w               // X origin and Y origin
     mov (1)     rMSGSRC.2<1>:ud        nDPW_BLOCK_SIZE_DN:ud        // block width and height (16x4)
     mov (8)     mudMSGHDR_DN(0)<1>     rMSGSRC.0<8;8,1>:ud
-    send (8)    dNULLREG    mMSGHDR_DN   udDUMMY_NULL    nDATAPORT_WRITE    nDPMW_MSGDSC+nDPMW_MSG_LEN_PL_DN_DI+nBI_DESTINATION_Y:ud
+    send (8)    dNULLREG    mMSGHDR_DN   udDUMMY_NULL    nDATAPORT_WRITE    nDPMW_MSGDSC+nDPMW_MSG_LEN_PL_DN_DI+nBI_DESTINATION_1_Y:ud
 
  		//Write UV through DATAPORT
 		mov (2)     rMSGSRC.0<1>:ud        wORIX<2;2,1>:w               // X origin and Y origin
@@ -99,4 +104,4 @@ SAVE_DN_CURR:
     mov (8) mubMSGHDR_DN(1, 1)<2>      ubRESP(nDI_CURR_FRAME_CHROMA_OFFSET, 16)<16 ;8,2>        
     mov (8) mubMSGHDR_DN(1, 16)<2>      ubRESP(nDI_CURR_FRAME_CHROMA_OFFSET+1, 1)<16 ;8,2>
     mov (8) mubMSGHDR_DN(1, 17)<2>      ubRESP(nDI_CURR_FRAME_CHROMA_OFFSET+1, 16)<16 ;8,2>        
-    send (8)    dNULLREG    mMSGHDR_DN   udDUMMY_NULL    nDATAPORT_WRITE    nDPMW_MSGDSC+nMSGLEN_1+nBI_DESTINATION_UV:ud 
+    send (8)    dNULLREG    mMSGHDR_DN   udDUMMY_NULL    nDATAPORT_WRITE    nDPMW_MSGDSC+nMSGLEN_1+nBI_DESTINATION_1_UV:ud

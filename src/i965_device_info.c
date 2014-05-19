@@ -104,6 +104,7 @@ static const struct hw_codec_info snb_hw_codec_info = {
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,
     .has_tiled_surface = 1,
+    .has_di_motion_adptive = 1,
 
     .num_filters = 2,
     .filters = {
