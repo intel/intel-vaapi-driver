@@ -57,8 +57,8 @@ gen75_vpp_fmt_cvt(VADriverContextP ctx,
          proc_ctx->vpp_fmt_cvt_ctx = i965_proc_context_init(ctx, NULL);
     }
 
-    i965_proc_picture(ctx, profile, codec_state, 
-                      proc_ctx->vpp_fmt_cvt_ctx);
+    va_status = i965_proc_picture(ctx, profile, codec_state,
+                                  proc_ctx->vpp_fmt_cvt_ctx);
 
     return va_status;
 }
