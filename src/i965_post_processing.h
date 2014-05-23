@@ -576,4 +576,11 @@ i965_post_processing_terminate(VADriverContextP ctx);
 bool
 i965_post_processing_init(VADriverContextP ctx);
 
+
+extern VAStatus
+i965_proc_picture(VADriverContextP ctx,
+                  VAProfile profile,
+                  union codec_state *codec_state,
+                  struct hw_context *hw_context);
+
 #endif /* __I965_POST_PROCESSING_H__ */

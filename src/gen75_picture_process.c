@@ -38,12 +38,6 @@
 #include "i965_post_processing.h"
 #include "gen75_picture_process.h"
 
-extern void
-i965_proc_picture(VADriverContextP ctx, 
-                  VAProfile profile, 
-                  union codec_state *codec_state,
-                  struct hw_context *hw_context);
-
 extern struct hw_context *
 i965_proc_context_init(VADriverContextP ctx,
                        struct object_config *obj_config);
