@@ -95,6 +95,117 @@ static int get_sampling_from_fourcc(unsigned int fourcc);
 #define IS_VA_WAYLAND(ctx) \
     (((ctx)->display_type & VA_DISPLAY_MAJOR_MASK) == VA_DISPLAY_WAYLAND)
 
+#define I965_BIT        1
+#define I965_2BITS      (I965_BIT << 1)
+#define I965_4BITS      (I965_BIT << 2)
+#define I965_8BITS      (I965_BIT << 3)
+#define I965_16BITS     (I965_BIT << 4)
+#define I965_32BITS     (I965_BIT << 5)
+
+#define PLANE_0         0
+#define PLANE_1         1
+#define PLANE_2         2
+
+#define OFFSET_0        0
+#define OFFSET_4        4
+#define OFFSET_8        8
+#define OFFSET_16       16
+#define OFFSET_24       24
+
+/* hfactor, vfactor, num_planes, bpp[], num_components, components[] */
+#define I_NV12  2, 2, 2, {I965_8BITS, I965_4BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_1, OFFSET_8} }
+#define I_I420  2, 2, 3, {I965_8BITS, I965_2BITS, I965_2BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_2, OFFSET_0} }
+#define I_IYUV  I_I420
+#define I_IMC3  I_I420
+#define I_YV12  2, 2, 3, {I965_8BITS, I965_2BITS, I965_2BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_2, OFFSET_0}, {PLANE_1, OFFSET_0} }
+#define I_IMC1  I_YV12
+
+#define I_422H  2, 1, 3, {I965_8BITS, I965_4BITS, I965_4BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_2, OFFSET_0} }
+#define I_422V  1, 2, 3, {I965_8BITS, I965_4BITS, I965_4BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_2, OFFSET_0} }
+#define I_YV16  2, 1, 3, {I965_8BITS, I965_4BITS, I965_4BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_2, OFFSET_0}, {PLANE_1, OFFSET_0} }
+#define I_YUY2  2, 1, 1, {I965_32BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_24} }
+#define I_UYVY  2, 1, 1, {I965_32BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_16} }
+
+#define I_444P  1, 1, 3, {I965_8BITS, I965_8BITS, I965_8BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_2, OFFSET_0} }
+
+#define I_411P  4, 1, 3, {I965_8BITS, I965_2BITS, I965_2BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_2, OFFSET_0} }
+
+#define I_Y800  1, 1, 1, {I965_8BITS}, 1, { {PLANE_0, OFFSET_0} }
+
+#define I_RGBA  1, 1, 1, {I965_32BITS}, 4, { {PLANE_0, OFFSET_0}, {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_16}, {PLANE_0, OFFSET_24} }
+#define I_RGBX  1, 1, 1, {I965_32BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_16} }
+#define I_BGRA  1, 1, 1, {I965_32BITS}, 4, { {PLANE_0, OFFSET_16}, {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_0}, {PLANE_0, OFFSET_24} }
+#define I_BGRX  1, 1, 1, {I965_32BITS}, 3, { {PLANE_0, OFFSET_16}, {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_0} }
+
+#define I_ARGB  1, 1, 1, {I965_32BITS}, 4, { {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_16}, {PLANE_0, OFFSET_24}, {PLANE_0, OFFSET_0} }
+#define I_ABGR  1, 1, 1, {I965_32BITS}, 4, { {PLANE_0, OFFSET_24}, {PLANE_0, OFFSET_16}, {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_0} }
+
+#define I_IA88  1, 1, 1, {I965_16BITS}, 2, { {PLANE_0, OFFSET_0}, {PLANE_0, OFFSET_8} }
+#define I_AI88  1, 1, 1, {I965_16BITS}, 2, { {PLANE_0, OFFSET_8}, {PLANE_0, OFFSET_0} }
+
+#define I_IA44  1, 1, 1, {I965_8BITS}, 2, { {PLANE_0, OFFSET_0}, {PLANE_0, OFFSET_4} }
+#define I_AI44  1, 1, 1, {I965_8BITS}, 2, { {PLANE_0, OFFSET_4}, {PLANE_0, OFFSET_0} }
+
+/* flag */
+#define I_S             1
+#define I_I             2
+#define I_SI            (I_S | I_I)
+
+#define DEF_FOUCC_INFO(FOURCC, FORMAT, SUB, FLAG)       { VA_FOURCC_##FOURCC, I965_COLOR_##FORMAT, SUBSAMPLE_##SUB, FLAG, I_##FOURCC }
+#define DEF_YUV(FOURCC, SUB, FLAG)                      DEF_FOUCC_INFO(FOURCC, YUV, SUB, FLAG)
+#define DEF_RGB(FOURCC, SUB, FLAG)                      DEF_FOUCC_INFO(FOURCC, RGB, SUB, FLAG)
+#define DEF_INDEX(FOURCC, SUB, FLAG)                    DEF_FOUCC_INFO(FOURCC, INDEX, SUB, FLAG)
+
+static const i965_fourcc_info i965_fourcc_infos[] = {
+    DEF_YUV(NV12, YUV420, I_SI),
+    DEF_YUV(I420, YUV420, I_SI),
+    DEF_YUV(IYUV, YUV420, I_S),
+    DEF_YUV(IMC3, YUV420, I_S),
+    DEF_YUV(YV12, YUV420, I_SI),
+    DEF_YUV(IMC1, YUV420, I_S),
+
+    DEF_YUV(422H, YUV422H, I_SI),
+    DEF_YUV(422V, YUV422V, I_S),
+    DEF_YUV(YV16, YUV422H, I_S),
+    DEF_YUV(YUY2, YUV422H, I_SI),
+    DEF_YUV(UYVY, YUV422H, I_SI),
+
+    DEF_YUV(444P, YUV444, I_S),
+
+    DEF_YUV(411P, YUV411, I_S),
+
+    DEF_YUV(Y800, YUV400, I_S),
+
+    DEF_RGB(RGBA, RGBX, I_SI),
+    DEF_RGB(RGBX, RGBX, I_SI),
+    DEF_RGB(BGRA, RGBX, I_SI),
+    DEF_RGB(BGRX, RGBX, I_SI),
+
+    DEF_RGB(ARGB, RGBX, I_I),
+    DEF_RGB(ABGR, RGBX, I_I),
+
+    DEF_INDEX(IA88, RGBX, I_I),
+    DEF_INDEX(AI88, RGBX, I_I),
+
+    DEF_INDEX(IA44, RGBX, I_I),
+    DEF_INDEX(AI44, RGBX, I_I)
+};
+
+const i965_fourcc_info *
+get_fourcc_info(unsigned int fourcc)
+{
+    unsigned int i;
+
+    for (i = 0; ARRAY_ELEMS(i965_fourcc_infos); i++) {
+        const i965_fourcc_info * const info = &i965_fourcc_infos[i];
+
+        if (info->fourcc == fourcc)
+            return info;
+    }
+
+    return NULL;
+}
+
 enum {
     I965_SURFACETYPE_RGBA = 1,
     I965_SURFACETYPE_YUV,
@@ -918,35 +1029,12 @@ i965_suface_external_memory(VADriverContextP ctx,
 static int
 bpp_1stplane_by_fourcc(unsigned int fourcc)
 {
-    switch (fourcc) {
-        case VA_FOURCC_RGBA:
-        case VA_FOURCC_RGBX:
-        case VA_FOURCC_BGRA:
-        case VA_FOURCC_BGRX:
-        case VA_FOURCC_ARGB:
-        case VA_FOURCC_XRGB:
-        case VA_FOURCC_ABGR:
-        case VA_FOURCC_XBGR:
-        case VA_FOURCC_AYUV:
-            return 4;
+    const i965_fourcc_info *info = get_fourcc_info(fourcc);
 
-        case VA_FOURCC_UYVY:
-        case VA_FOURCC_YUY2:
-            return 2;
-
-        case VA_FOURCC_Y800:
-        case VA_FOURCC_YV12:
-        case VA_FOURCC_IMC3:
-        case VA_FOURCC_IYUV:
-        case VA_FOURCC_NV12:
-        case VA_FOURCC_NV11:
-        case VA_FOURCC_YV16:
-            return 1;
-
-        default:
-            ASSERT_RET(0, 0);
-            return 0;
-    }
+    if (info && (info->flag & I_S))
+        return info->bpp[0] / 8;
+    else
+        return 0;
 }
 
 static VAStatus
@@ -3315,52 +3403,12 @@ i965_SetImagePalette(VADriverContextP ctx,
 static int 
 get_sampling_from_fourcc(unsigned int fourcc)
 {
-    int surface_sampling = -1;
+    const i965_fourcc_info *info = get_fourcc_info(fourcc);
 
-    switch (fourcc) {
-    case VA_FOURCC_NV12:
-    case VA_FOURCC_YV12:
-    case VA_FOURCC_I420:
-    case VA_FOURCC_IYUV:
-    case VA_FOURCC_IMC1:
-    case VA_FOURCC_IMC3:
-        surface_sampling = SUBSAMPLE_YUV420;
-        break;
-    case VA_FOURCC_YUY2:
-    case VA_FOURCC_UYVY:
-    case VA_FOURCC_422H:
-    case VA_FOURCC_YV16:
-        surface_sampling = SUBSAMPLE_YUV422H;
-        break;
-    case VA_FOURCC_422V:
-        surface_sampling = SUBSAMPLE_YUV422V;
-        break;
-        
-    case VA_FOURCC_444P:
-        surface_sampling = SUBSAMPLE_YUV444;
-        break;
-
-    case VA_FOURCC_411P:
-        surface_sampling = SUBSAMPLE_YUV411;
-        break;
-
-    case VA_FOURCC_Y800:
-        surface_sampling = SUBSAMPLE_YUV400;
-        break;
-    case VA_FOURCC_RGBA:
-    case VA_FOURCC_RGBX:
-    case VA_FOURCC_BGRA:
-    case VA_FOURCC_BGRX:
-    surface_sampling = SUBSAMPLE_RGBX; 
-        break;
-    default:
-        /* Never get here */
-        ASSERT_RET(0, 0);
-        break;
-
-    }
-
-    return surface_sampling;
+    if (info && (info->flag & I_S))
+        return info->subsampling;
+    else
+        return -1;
 }
 
 static inline void
