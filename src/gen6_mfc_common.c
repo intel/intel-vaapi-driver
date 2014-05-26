@@ -1516,3 +1516,50 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
         vme_context->ref_index_in_mb[list_index] = 0;
     }
 }
+
+void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
+                                        struct encode_state *encode_state,
+                                        struct intel_encoder_context *encoder_context,
+                                        int slice_index,
+                                        struct intel_batchbuffer *slice_batch)
+{
+    int count, i, start_index;
+    unsigned int length_in_bits;
+    VAEncPackedHeaderParameterBuffer *param = NULL;
+    unsigned int *header_data = NULL;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+
+    /* If the number of packed data for current slice is zero, return */
+    if (encode_state->slice_rawdata_count[slice_index] == 0)
+        return;
+
+    count = encode_state->slice_rawdata_count[slice_index];
+    start_index = (encode_state->slice_rawdata_index[slice_index] & SLICE_PACKED_DATA_INDEX_MASK);
+
+    for (i = 0; i < count; i++) {
+        unsigned int skip_emul_byte_cnt;
+
+        header_data = (unsigned int *)encode_state->packed_header_data_ext[start_index + i]->buffer;
+
+        param = (VAEncPackedHeaderParameterBuffer *)
+                    (encode_state->packed_header_params_ext[start_index + i]->buffer);
+        length_in_bits = param->bit_length;
+
+        skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+
+        /* as the slice header is still required, the last header flag is set to
+         * zero.
+         */
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   skip_emul_byte_cnt,
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   slice_batch);
+    }
+    return;
+}

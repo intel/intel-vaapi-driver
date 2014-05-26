@@ -271,4 +271,11 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
 extern
 Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
+extern void
+intel_avc_slice_insert_packed_data(VADriverContextP ctx,
+                             struct encode_state *encode_state,
+                             struct intel_encoder_context *encoder_context,
+                             int slice_index,
+                             struct intel_batchbuffer *slice_batch);
+
 #endif	/* _GEN6_MFC_BCS_H_ */

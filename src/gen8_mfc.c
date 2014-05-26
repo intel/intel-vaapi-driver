@@ -1056,6 +1056,8 @@ gen8_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     if ( slice_index == 0)
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
 
+    intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
+
     slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 
     // slice hander
@@ -1110,8 +1112,6 @@ gen8_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                                    tail_data, 1, 8,
                                    1, 1, 1, 0, slice_batch);
     }
-
-
 }
 
 static dri_bo *
@@ -1440,6 +1440,8 @@ gen8_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
     if (slice_index == 0)
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
+
+    intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
     slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
 

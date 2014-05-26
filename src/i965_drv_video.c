@@ -655,6 +655,12 @@ i965_GetConfigAttributes(VADriverContextP ctx,
         case VAConfigAttribEncPackedHeaders:
             if (entrypoint == VAEntrypointEncSlice) {
                 attrib_list[i].value = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
+                if (profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High ||
+                    profile == VAProfileH264MultiviewHigh) {
+                    attrib_list[i].value |= VA_ENC_PACKED_HEADER_RAW_DATA;
+                }
                 break;
             }
 
@@ -2367,6 +2373,9 @@ DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_parameter_ext, pic_param_ext)
 // DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
 DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter_ext, slice_params_ext)
 
+DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(packed_header_params_ext, packed_header_params_ext)
+DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(packed_header_data_ext, packed_header_data_ext)
+
 static VAStatus
 i965_encoder_render_packed_header_parameter_buffer(VADriverContextP ctx,
                                                    struct object_context *obj_context,
@@ -2430,10 +2439,12 @@ i965_encoder_render_picture(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_context *obj_context = CONTEXT(context);
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
+    struct encode_state *encode;
     int i;
 
     ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
 
+    encode = &obj_context->codec_state.encode;
     for (i = 0; i < num_buffers; i++) {  
         struct object_buffer *obj_buffer = BUFFER(buffers[i]);
 
@@ -2459,35 +2470,67 @@ i965_encoder_render_picture(VADriverContextP ctx,
 
         case VAEncSliceParameterBufferType:
             vaStatus = I965_RENDER_ENCODE_BUFFER(slice_parameter_ext);
+            if (vaStatus == VA_STATUS_SUCCESS) {
+                /* When the max number of slices is updated, it also needs
+                 * to reallocate the arrays that is used to store
+                 * the packed data index/count for the slice
+                 */
+                if (encode->max_slice_params_ext > encode->slice_num) {
+                    encode->slice_num = encode->max_slice_params_ext;
+                    encode->slice_rawdata_index = realloc(encode->slice_rawdata_index,
+                                                          encode->slice_num * sizeof(int));
+                    encode->slice_rawdata_count = realloc(encode->slice_rawdata_count,
+                                                          encode->slice_num * sizeof(int));
+                    if ((encode->slice_rawdata_index == NULL) ||
+                        (encode->slice_rawdata_count == NULL)) {
+                        vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
+                        return vaStatus;
+                    }
+                }
+            }
             break;
 
         case VAEncPackedHeaderParameterBufferType:
         {
-            struct encode_state *encode = &obj_context->codec_state.encode;
             VAEncPackedHeaderParameterBuffer *param = (VAEncPackedHeaderParameterBuffer *)obj_buffer->buffer_store->buffer;
             encode->last_packed_header_type = param->type;
 
-            vaStatus = i965_encoder_render_packed_header_parameter_buffer(ctx,
+            if (param->type == VAEncPackedHeaderRawData) {
+                vaStatus = I965_RENDER_ENCODE_BUFFER(packed_header_params_ext);
+            } else {
+                vaStatus = i965_encoder_render_packed_header_parameter_buffer(ctx,
                                                                           obj_context,
                                                                           obj_buffer,
                                                                           va_enc_packed_type_to_idx(encode->last_packed_header_type));
+            }
             break;
         }
 
         case VAEncPackedHeaderDataBufferType:
         {
-            struct encode_state *encode = &obj_context->codec_state.encode;
 
-            ASSERT_RET(encode->last_packed_header_type == VAEncPackedHeaderSequence ||
-                   encode->last_packed_header_type == VAEncPackedHeaderPicture ||
-                   encode->last_packed_header_type == VAEncPackedHeaderSlice ||
+            if (encode->last_packed_header_type == VAEncPackedHeaderRawData) {
+                vaStatus = I965_RENDER_ENCODE_BUFFER(packed_header_data_ext);
+                if (vaStatus == VA_STATUS_SUCCESS) {
+                    /* store the first index of the packed header data for current slice */
+                    if (encode->slice_rawdata_index[encode->num_slice_params_ext] == 0) {
+                        encode->slice_rawdata_index[encode->num_slice_params_ext] =
+                             SLICE_PACKED_DATA_INDEX_TYPE | (encode->num_packed_header_data_ext - 1);
+                    }
+                    encode->slice_rawdata_count[encode->num_slice_params_ext]++;
+                }
+            } else {
+                ASSERT_RET(encode->last_packed_header_type == VAEncPackedHeaderSequence ||
+                    encode->last_packed_header_type == VAEncPackedHeaderPicture ||
+                    encode->last_packed_header_type == VAEncPackedHeaderSlice ||
                    (((encode->last_packed_header_type & VAEncPackedHeaderMiscMask) == VAEncPackedHeaderMiscMask) &&
                     ((encode->last_packed_header_type & (~VAEncPackedHeaderMiscMask)) != 0)),
                     VA_STATUS_ERROR_ENCODING_ERROR);
-            vaStatus = i965_encoder_render_packed_header_data_buffer(ctx, 
+                vaStatus = i965_encoder_render_packed_header_data_buffer(ctx,
                                                                      obj_context,
                                                                      obj_buffer,
                                                                      va_enc_packed_type_to_idx(encode->last_packed_header_type));
+            }
             break;       
         }
 
@@ -2591,6 +2634,11 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
     } else if (obj_context->codec_type == CODEC_ENC) {
         ASSERT_RET(VAEntrypointEncSlice == obj_config->entrypoint, VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT);
 
+        if (obj_context->codec_state.encode.num_packed_header_params_ext !=
+               obj_context->codec_state.encode.num_packed_header_data_ext) {
+            WARN_ONCE("the packed header/data is not paired for encoding!\n");
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
         if (!(obj_context->codec_state.encode.pic_param ||
                 obj_context->codec_state.encode.pic_param_ext)) {
             return VA_STATUS_ERROR_INVALID_PARAMETER;
