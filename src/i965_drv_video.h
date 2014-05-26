@@ -125,6 +125,9 @@ struct decode_state
     struct object_surface *reference_objects[16]; /* Up to 2 reference surfaces are valid for MPEG-2,*/
 };
 
+#define SLICE_PACKED_DATA_INDEX_TYPE    0x80000000
+#define SLICE_PACKED_DATA_INDEX_MASK    0x00FFFFFF
+
 struct encode_state
 {
     struct codec_state_base base;
@@ -145,6 +148,23 @@ struct encode_state
     struct buffer_store **slice_params_ext;
     int max_slice_params_ext;
     int num_slice_params_ext;
+
+    /* For the packed data that needs to be inserted into video clip */
+    /* currently it is mainly for packed raw data */
+    struct buffer_store **packed_header_params_ext;
+    int max_packed_header_params_ext;
+    int num_packed_header_params_ext;
+    struct buffer_store **packed_header_data_ext;
+    int max_packed_header_data_ext;
+    int num_packed_header_data_ext;
+
+    /* the array is determined by max_slice_params_ext */
+    int slice_num;
+    /* This is to store the first index of packed data for one slice */
+    int *slice_rawdata_index;
+    /* This is to store the number of packed data for one slice */
+    int *slice_rawdata_count;
+
     int last_packed_header_type;
 
     struct buffer_store *misc_param[16];

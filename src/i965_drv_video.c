@@ -1636,6 +1636,22 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
             i965_release_buffer_store(&obj_context->codec_state.encode.slice_params_ext[i]);
 
         free(obj_context->codec_state.encode.slice_params_ext);
+        if (obj_context->codec_state.encode.slice_rawdata_index) {
+            free(obj_context->codec_state.encode.slice_rawdata_index);
+            obj_context->codec_state.encode.slice_rawdata_index = NULL;
+        }
+        if (obj_context->codec_state.encode.slice_rawdata_count) {
+            free(obj_context->codec_state.encode.slice_rawdata_count);
+            obj_context->codec_state.encode.slice_rawdata_count = NULL;
+        }
+        for (i = 0; i < obj_context->codec_state.encode.num_packed_header_params_ext; i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_params_ext[i]);
+        free(obj_context->codec_state.encode.packed_header_params_ext);
+
+        for (i = 0; i < obj_context->codec_state.encode.num_packed_header_data_ext; i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_data_ext[i]);
+        free(obj_context->codec_state.encode.packed_header_data_ext);
+
     } else {
         assert(obj_context->codec_state.decode.num_slice_params <= obj_context->codec_state.decode.max_slice_params);
         assert(obj_context->codec_state.decode.num_slice_datas <= obj_context->codec_state.decode.max_slice_datas);
@@ -1754,6 +1770,22 @@ i965_CreateContext(VADriverContextP ctx,
             obj_context->codec_state.encode.max_slice_params = NUM_SLICES;
             obj_context->codec_state.encode.slice_params = calloc(obj_context->codec_state.encode.max_slice_params,
                                                                sizeof(*obj_context->codec_state.encode.slice_params));
+            obj_context->codec_state.encode.max_packed_header_params_ext = NUM_SLICES;
+            obj_context->codec_state.encode.packed_header_params_ext =
+                calloc(obj_context->codec_state.encode.max_packed_header_params_ext,
+                       sizeof(struct buffer_store *));
+
+            obj_context->codec_state.encode.max_packed_header_data_ext = NUM_SLICES;
+            obj_context->codec_state.encode.packed_header_data_ext =
+                calloc(obj_context->codec_state.encode.max_packed_header_data_ext,
+                       sizeof(struct buffer_store *));
+
+            obj_context->codec_state.encode.slice_num = NUM_SLICES;
+            obj_context->codec_state.encode.slice_rawdata_index =
+                calloc(obj_context->codec_state.encode.slice_num, sizeof(int));
+            obj_context->codec_state.encode.slice_rawdata_count =
+                calloc(obj_context->codec_state.encode.slice_num, sizeof(int));
+
             assert(i965->codec_info->enc_hw_context_init);
             obj_context->hw_context = i965->codec_info->enc_hw_context_init(ctx, obj_config);
         } else {
@@ -2187,6 +2219,17 @@ i965_BeginPicture(VADriverContextP ctx,
         obj_context->codec_state.encode.num_slice_params_ext = 0;
         obj_context->codec_state.encode.current_render_target = render_target;     /*This is input new frame*/
         obj_context->codec_state.encode.last_packed_header_type = 0;
+        memset(obj_context->codec_state.encode.slice_rawdata_index, 0,
+               sizeof(int) * obj_context->codec_state.encode.slice_num);
+        memset(obj_context->codec_state.encode.slice_rawdata_count, 0,
+               sizeof(int) * obj_context->codec_state.encode.slice_num);
+
+        for (i = 0; i < obj_context->codec_state.encode.num_packed_header_params_ext; i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_params_ext[i]);
+        for (i = 0; i < obj_context->codec_state.encode.num_packed_header_data_ext; i++)
+            i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_data_ext[i]);
+        obj_context->codec_state.encode.num_packed_header_params_ext = 0;
+        obj_context->codec_state.encode.num_packed_header_data_ext = 0;
     } else {
         obj_context->codec_state.decode.current_render_target = render_target;
         i965_release_buffer_store(&obj_context->codec_state.decode.pic_param);
