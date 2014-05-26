@@ -1034,10 +1034,35 @@ gen7_mfd_mpeg2_qm_state(VADriverContextP ctx,
     }
 }
 
+uint32_t mpeg2_get_slice_data_length(dri_bo *slice_data_bo, VASliceParameterBufferMPEG2 *slice_param)
+{
+    uint8_t *buf;
+    uint32_t buf_offset = slice_param->slice_data_offset + (slice_param->macroblock_offset >> 3);
+    uint32_t buf_size = slice_param->slice_data_size - (slice_param->macroblock_offset >> 3);
+    uint32_t i;
+
+    dri_bo_map(slice_data_bo, 0);
+    buf = (uint8_t *)slice_data_bo->virtual + buf_offset;
+
+    for (i = 3; i < buf_size; i++) {
+        if (buf[i - 3] &&
+            !buf[i - 2] &&
+            !buf[i - 1] &&
+            !buf[i]) {
+            dri_bo_unmap(slice_data_bo);
+            return i - 3 + 1;
+        }
+    }
+
+    dri_bo_unmap(slice_data_bo);
+    return buf_size;
+}
+
 static void
 gen7_mfd_mpeg2_bsd_object(VADriverContextP ctx,
                           VAPictureParameterBufferMPEG2 *pic_param,
                           VASliceParameterBufferMPEG2 *slice_param,
+                          dri_bo *slice_data_bo,
                           VASliceParameterBufferMPEG2 *next_slice_param,
                           struct gen7_mfd_context *gen7_mfd_context)
 {
@@ -1068,7 +1093,7 @@ gen7_mfd_mpeg2_bsd_object(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 5);
     OUT_BCS_BATCH(batch, MFD_MPEG2_BSD_OBJECT | (5 - 2));
     OUT_BCS_BATCH(batch, 
-                  slice_param->slice_data_size - (slice_param->macroblock_offset >> 3));
+                  mpeg2_get_slice_data_length(slice_data_bo, slice_param));
     OUT_BCS_BATCH(batch, 
                   slice_param->slice_data_offset + (slice_param->macroblock_offset >> 3));
     OUT_BCS_BATCH(batch,
@@ -1131,7 +1156,7 @@ gen7_mfd_mpeg2_decode_picture(VADriverContextP ctx,
             else
                 next_slice_param = next_slice_group_param;
 
-            gen7_mfd_mpeg2_bsd_object(ctx, pic_param, slice_param, next_slice_param, gen7_mfd_context);
+            gen7_mfd_mpeg2_bsd_object(ctx, pic_param, slice_param, slice_data_bo, next_slice_param, gen7_mfd_context);
             slice_param++;
         }
     }
