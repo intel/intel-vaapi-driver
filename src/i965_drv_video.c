@@ -2508,7 +2508,11 @@ i965_encoder_render_picture(VADriverContextP ctx,
 
         case VAEncPackedHeaderDataBufferType:
         {
-
+            if (encode->last_packed_header_type == 0) {
+                WARN_ONCE("the packed header data is passed without type!\n");
+                vaStatus = VA_STATUS_ERROR_INVALID_PARAMETER;
+                return vaStatus;
+            }
             if (encode->last_packed_header_type == VAEncPackedHeaderRawData) {
                 vaStatus = I965_RENDER_ENCODE_BUFFER(packed_header_data_ext);
                 if (vaStatus == VA_STATUS_SUCCESS) {
@@ -2531,6 +2535,7 @@ i965_encoder_render_picture(VADriverContextP ctx,
                                                                      obj_buffer,
                                                                      va_enc_packed_type_to_idx(encode->last_packed_header_type));
             }
+            encode->last_packed_header_type = 0;
             break;       
         }
 
