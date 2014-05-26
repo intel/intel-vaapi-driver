@@ -1817,6 +1817,7 @@ static void
 gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                      const struct i965_surface *surface, 
                                      int base_index, int is_target,
+                                     const VARectangle *rect,
                                      int *width, int *height, int *pitch, int *offset)
 {
     struct object_surface *obj_surface;
@@ -1831,21 +1832,21 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = (struct object_surface *)surface->base;
         bo = obj_surface->bo;
-        width[0] = obj_surface->orig_width;
-        height[0] = obj_surface->orig_height;
+        width[0] = MIN(rect->x + rect->width, obj_surface->orig_width);
+        height[0] = MIN(rect->y + rect->height, obj_surface->orig_height);
         pitch[0] = obj_surface->width;
         offset[0] = 0;
 
         if (fourcc_info->num_planes == 1 && is_target)
             width[0] = width[0] * (fourcc_info->bpp[0] / 8); /* surface format is R8 */
 
-        width[1] = obj_surface->cb_cr_width;
-        height[1] = obj_surface->cb_cr_height;
+        width[1] = MIN(rect->x / fourcc_info->hfactor + rect->width / fourcc_info->hfactor, obj_surface->cb_cr_width);
+        height[1] = MIN(rect->y / fourcc_info->vfactor + rect->height / fourcc_info->vfactor, obj_surface->cb_cr_height);
         pitch[1] = obj_surface->cb_cr_pitch;
         offset[1] = obj_surface->y_cb_offset * obj_surface->width;
 
-        width[2] = obj_surface->cb_cr_width;
-        height[2] = obj_surface->cb_cr_height;
+        width[2] = MIN(rect->x / fourcc_info->hfactor + rect->width / fourcc_info->hfactor, obj_surface->cb_cr_width);
+        height[2] = MIN(rect->y / fourcc_info->vfactor + rect->height / fourcc_info->vfactor, obj_surface->cb_cr_height);
         pitch[2] = obj_surface->cb_cr_pitch;
         offset[2] = obj_surface->y_cr_offset * obj_surface->width;
     } else {
@@ -1854,8 +1855,8 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         /* FIXME: add support for ARGB/ABGR image */
         obj_image = (struct object_image *)surface->base;
         bo = obj_image->bo;
-        width[0] = obj_image->image.width;
-        height[0] = obj_image->image.height;
+        width[0] = MIN(rect->x + rect->width, obj_image->image.width);
+        height[0] = MIN(rect->y + rect->height, obj_image->image.height);
         pitch[0] = obj_image->image.pitches[0];
         offset[0] = obj_image->image.offsets[0];
 
@@ -1874,13 +1875,13 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         }
 
         /* Always set width/height although they aren't used for fourcc_info->num_planes == 1 */
-        width[1] = obj_image->image.width / fourcc_info->hfactor;
-        height[1] = obj_image->image.height / fourcc_info->vfactor;
+        width[1] = MIN(rect->x / fourcc_info->hfactor + rect->width / fourcc_info->hfactor, obj_image->image.width / fourcc_info->hfactor);
+        height[1] = MIN(rect->y / fourcc_info->vfactor + rect->height / fourcc_info->vfactor, obj_image->image.height / fourcc_info->vfactor);
         pitch[1] = obj_image->image.pitches[U];
         offset[1] = obj_image->image.offsets[U];
 
-        width[2] = obj_image->image.width / fourcc_info->hfactor;
-        height[2] = obj_image->image.height / fourcc_info->vfactor;
+        width[2] = MIN(rect->x / fourcc_info->hfactor + rect->width / fourcc_info->hfactor, obj_image->image.width / fourcc_info->hfactor);
+        height[2] = MIN(rect->y / fourcc_info->vfactor + rect->height / fourcc_info->vfactor, obj_image->image.height / fourcc_info->vfactor);
         pitch[2] = obj_image->image.pitches[V];
         offset[2] = obj_image->image.offsets[V];
     }
@@ -2750,12 +2751,14 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
 
     /* source surface */
     gen7_pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 0, 0,
+                                         src_rect,
                                          width, height, pitch, offset);
     src_width = width[0];
     src_height = height[0];
 
     /* destination surface */
     gen7_pp_set_media_rw_message_surface(ctx, pp_context, dst_surface, 24, 1,
+                                         dst_rect,
                                          width, height, pitch, offset);
 
     /* sampler 8x8 state */
@@ -2934,9 +2937,9 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
         }
     }
 	
-    pp_static_parameter->grf2.avs_wa_width = dw;
-    pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * dw);
-    pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * dw);
+    pp_static_parameter->grf2.avs_wa_width = src_width;
+    pp_static_parameter->grf2.avs_wa_one_div_256_width = (float) 1.0 / (256 * src_width);
+    pp_static_parameter->grf2.avs_wa_five_div_256_width = (float) 5.0 / (256 * src_width);
     pp_static_parameter->grf2.alpha = 255;
 
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
