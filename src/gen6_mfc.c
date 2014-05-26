@@ -788,8 +788,6 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int i,x,y;
     int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    unsigned char *slice_header = NULL;
-    int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0, 0x0 };
     int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
     int is_intra = slice_type == SLICE_TYPE_I;
@@ -815,14 +813,6 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
 
     intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
-
-    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
-
-    // slice hander
-    mfc_context->insert_object(ctx, encoder_context,
-                               (unsigned int *)slice_header, ALIGN(slice_header_length_in_bits, 32) >> 5, slice_header_length_in_bits & 0x1f,
-                               5,  /* first 5 bytes are start code + nal unit type */
-                               1, 0, 1, slice_batch);
 
     dri_bo_map(vme_context->vme_output.bo , 1);
     msg = (unsigned int *)vme_context->vme_output.bo->virtual;
@@ -869,7 +859,6 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                                    1, 1, 1, 0, slice_batch);
     }
 
-    free(slice_header);
 
 }
 
@@ -1176,8 +1165,6 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
     int last_slice = (pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks) == (width_in_mbs * height_in_mbs);
     int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    unsigned char *slice_header = NULL;
-    int slice_header_length_in_bits = 0;
     unsigned int tail_data[] = { 0x0, 0x0 };
     long head_offset;
     int old_used = intel_batchbuffer_used_size(slice_batch), used;
@@ -1209,21 +1196,6 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
 
     intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
-
-    slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter, pPicParameter, pSliceParameter, &slice_header);
-
-    // slice hander
-    mfc_context->insert_object(ctx,
-                               encoder_context,
-                               (unsigned int *)slice_header,
-                               ALIGN(slice_header_length_in_bits, 32) >> 5,
-                               slice_header_length_in_bits & 0x1f,
-                               5,  /* first 5 bytes are start code + nal unit type */
-                               1,
-                               0,
-                               1,
-                               slice_batch);
-    free(slice_header);
 
     intel_batchbuffer_align(slice_batch, 16); /* aligned by an Oword */
     used = intel_batchbuffer_used_size(slice_batch);

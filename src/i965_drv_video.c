@@ -659,7 +659,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     profile == VAProfileH264Main ||
                     profile == VAProfileH264High ||
                     profile == VAProfileH264MultiviewHigh) {
-                    attrib_list[i].value |= VA_ENC_PACKED_HEADER_RAW_DATA;
+                    attrib_list[i].value |= (VA_ENC_PACKED_HEADER_RAW_DATA |
+                                             VA_ENC_PACKED_HEADER_SLICE);
                 }
                 break;
             }
@@ -1650,6 +1651,12 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
             free(obj_context->codec_state.encode.slice_rawdata_count);
             obj_context->codec_state.encode.slice_rawdata_count = NULL;
         }
+
+        if (obj_context->codec_state.encode.slice_header_index) {
+            free(obj_context->codec_state.encode.slice_header_index);
+            obj_context->codec_state.encode.slice_header_index = NULL;
+        }
+
         for (i = 0; i < obj_context->codec_state.encode.num_packed_header_params_ext; i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_params_ext[i]);
         free(obj_context->codec_state.encode.packed_header_params_ext);
@@ -1790,6 +1797,9 @@ i965_CreateContext(VADriverContextP ctx,
             obj_context->codec_state.encode.slice_rawdata_index =
                 calloc(obj_context->codec_state.encode.slice_num, sizeof(int));
             obj_context->codec_state.encode.slice_rawdata_count =
+                calloc(obj_context->codec_state.encode.slice_num, sizeof(int));
+
+            obj_context->codec_state.encode.slice_header_index =
                 calloc(obj_context->codec_state.encode.slice_num, sizeof(int));
 
             assert(i965->codec_info->enc_hw_context_init);
@@ -2229,6 +2239,8 @@ i965_BeginPicture(VADriverContextP ctx,
                sizeof(int) * obj_context->codec_state.encode.slice_num);
         memset(obj_context->codec_state.encode.slice_rawdata_count, 0,
                sizeof(int) * obj_context->codec_state.encode.slice_num);
+        memset(obj_context->codec_state.encode.slice_header_index, 0,
+               sizeof(int) * obj_context->codec_state.encode.slice_num);
 
         for (i = 0; i < obj_context->codec_state.encode.num_packed_header_params_ext; i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_params_ext[i]);
@@ -2481,7 +2493,10 @@ i965_encoder_render_picture(VADriverContextP ctx,
                                                           encode->slice_num * sizeof(int));
                     encode->slice_rawdata_count = realloc(encode->slice_rawdata_count,
                                                           encode->slice_num * sizeof(int));
+                    encode->slice_header_index = realloc(encode->slice_header_index,
+                                                          encode->slice_num * sizeof(int));
                     if ((encode->slice_rawdata_index == NULL) ||
+                        (encode->slice_header_index == NULL)  ||
                         (encode->slice_rawdata_count == NULL)) {
                         vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
                         return vaStatus;
@@ -2495,7 +2510,8 @@ i965_encoder_render_picture(VADriverContextP ctx,
             VAEncPackedHeaderParameterBuffer *param = (VAEncPackedHeaderParameterBuffer *)obj_buffer->buffer_store->buffer;
             encode->last_packed_header_type = param->type;
 
-            if (param->type == VAEncPackedHeaderRawData) {
+            if ((param->type == VAEncPackedHeaderRawData) ||
+                (param->type == VAEncPackedHeaderSlice)) {
                 vaStatus = I965_RENDER_ENCODE_BUFFER(packed_header_params_ext);
             } else {
                 vaStatus = i965_encoder_render_packed_header_parameter_buffer(ctx,
@@ -2513,7 +2529,8 @@ i965_encoder_render_picture(VADriverContextP ctx,
                 vaStatus = VA_STATUS_ERROR_INVALID_PARAMETER;
                 return vaStatus;
             }
-            if (encode->last_packed_header_type == VAEncPackedHeaderRawData) {
+            if (encode->last_packed_header_type == VAEncPackedHeaderRawData ||
+                encode->last_packed_header_type == VAEncPackedHeaderSlice) {
                 vaStatus = I965_RENDER_ENCODE_BUFFER(packed_header_data_ext);
                 if (vaStatus == VA_STATUS_SUCCESS) {
                     /* store the first index of the packed header data for current slice */
@@ -2522,6 +2539,15 @@ i965_encoder_render_picture(VADriverContextP ctx,
                              SLICE_PACKED_DATA_INDEX_TYPE | (encode->num_packed_header_data_ext - 1);
                     }
                     encode->slice_rawdata_count[encode->num_slice_params_ext]++;
+                    if (encode->last_packed_header_type == VAEncPackedHeaderSlice) {
+                        if (encode->slice_header_index[encode->num_slice_params_ext] == 0) {
+                            encode->slice_header_index[encode->num_slice_params_ext] =
+                                SLICE_PACKED_DATA_INDEX_TYPE | (encode->num_packed_header_data_ext - 1);
+                        } else {
+                            WARN_ONCE("Multi slice header data is passed for"
+                                      " slice %d!\n", encode->num_slice_params_ext);
+                        }
+                    }
                 }
             } else {
                 ASSERT_RET(encode->last_packed_header_type == VAEncPackedHeaderSequence ||

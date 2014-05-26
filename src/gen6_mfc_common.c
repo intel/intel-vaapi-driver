@@ -1528,10 +1528,12 @@ void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
     VAEncPackedHeaderParameterBuffer *param = NULL;
     unsigned int *header_data = NULL;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    int slice_header_index;
 
-    /* If the number of packed data for current slice is zero, return */
-    if (encode_state->slice_rawdata_count[slice_index] == 0)
-        return;
+    if (encode_state->slice_header_index[slice_index] == 0)
+        slice_header_index = -1;
+    else
+        slice_header_index = (encode_state->slice_header_index[slice_index] & SLICE_PACKED_DATA_INDEX_MASK);
 
     count = encode_state->slice_rawdata_count[slice_index];
     start_index = (encode_state->slice_rawdata_index[slice_index] & SLICE_PACKED_DATA_INDEX_MASK);
@@ -1543,6 +1545,11 @@ void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
 
         param = (VAEncPackedHeaderParameterBuffer *)
                     (encode_state->packed_header_params_ext[start_index + i]->buffer);
+
+        /* skip the slice header packed data type as it is lastly inserted */
+        if (param->type == VAEncPackedHeaderSlice)
+            continue;
+
         length_in_bits = param->bit_length;
 
         skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
@@ -1561,5 +1568,53 @@ void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
                                    !param->has_emulation_bytes,
                                    slice_batch);
     }
+
+    if (slice_header_index == -1) {
+        unsigned char *slice_header = NULL;
+        int slice_header_length_in_bits = 0;
+        VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+        VAEncPictureParameterBufferH264 *pPicParameter = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+        VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[slice_index]->buffer;
+
+        /* No slice header data is passed. And the driver needs to generate it */
+        /* For the Normal H264 */
+        slice_header_length_in_bits = build_avc_slice_header(pSequenceParameter,
+                                                             pPicParameter,
+                                                             pSliceParameter,
+                                                             &slice_header);
+        mfc_context->insert_object(ctx, encoder_context,
+                                   (unsigned int *)slice_header,
+                                   ALIGN(slice_header_length_in_bits, 32) >> 5,
+                                   slice_header_length_in_bits & 0x1f,
+                                   5,  /* first 5 bytes are start code + nal unit type */
+                                   1, 0, 1, slice_batch);
+
+        free(slice_header);
+    } else {
+        unsigned int skip_emul_byte_cnt;
+
+        header_data = (unsigned int *)encode_state->packed_header_data_ext[start_index + i]->buffer;
+
+        param = (VAEncPackedHeaderParameterBuffer *)
+                    (encode_state->packed_header_params_ext[start_index + i]->buffer);
+        length_in_bits = param->bit_length;
+
+        /* as the slice header is the last header data for one slice,
+         * the last header flag is set to one.
+         */
+        skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+
+        mfc_context->insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   skip_emul_byte_cnt,
+                                   1,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   slice_batch);
+    }
+
     return;
 }

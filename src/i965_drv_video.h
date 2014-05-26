@@ -165,6 +165,9 @@ struct encode_state
     /* This is to store the number of packed data for one slice */
     int *slice_rawdata_count;
 
+    /* This is to store the index of packed slice header for one slice */
+    int *slice_header_index;
+
     int last_packed_header_type;
 
     struct buffer_store *misc_param[16];
