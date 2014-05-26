@@ -463,18 +463,10 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     struct object_image *obj_image;
     dri_bo *bo;
     int fourcc = pp_get_surface_fourcc(ctx, surface);
-    const int U = (fourcc == VA_FOURCC_YV12 ||
-                   fourcc == VA_FOURCC_YV16 ||
-                   fourcc == VA_FOURCC_IMC1) ? 2 : 1;
-    const int V = (fourcc == VA_FOURCC_YV12 ||
-                   fourcc == VA_FOURCC_YV16 ||
-                   fourcc == VA_FOURCC_IMC1) ? 1 : 2;
-    int interleaved_uv = fourcc == VA_FOURCC_NV12;
-    int packed_yuv = (fourcc == VA_FOURCC_YUY2 || fourcc == VA_FOURCC_UYVY);
-    int rgbx_format = (fourcc == VA_FOURCC_RGBA ||
-                              fourcc == VA_FOURCC_RGBX ||
-                              fourcc == VA_FOURCC_BGRA ||
-                              fourcc == VA_FOURCC_BGRX);
+    const i965_fourcc_info *fourcc_info = get_fourcc_info(fourcc);
+
+    if (fourcc_info == NULL)
+        return;
 
     if (surface->type == I965_SURFACE_TYPE_SURFACE) {
         obj_surface = (struct object_surface *)surface->base;
@@ -484,16 +476,8 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         pitch[0] = obj_surface->width;
         offset[0] = 0;
 
-        if (packed_yuv) {
-            if (is_target)
-                width[0] = obj_surface->orig_width * 2; /* surface format is R8, so double the width */
-            else
-                width[0] = obj_surface->orig_width;     /* surface foramt is YCBCR, width is specified in units of pixels */
-
-        } else if (rgbx_format) {
-	    if (is_target)
-                width[0] = obj_surface->orig_width * 4; /* surface format is R8, so quad the width */
-	}
+        if (fourcc_info->num_planes == 1 && is_target)
+            width[0] = width[0] * (fourcc_info->bpp[0] / 8); /* surface format is R8 */
 
         width[1] = obj_surface->cb_cr_width;
         height[1] = obj_surface->cb_cr_height;
@@ -505,6 +489,9 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         pitch[2] = obj_surface->cb_cr_pitch;
         offset[2] = obj_surface->y_cr_offset * obj_surface->width;
     } else {
+        int U = 0, V = 0;
+
+        /* FIXME: add support for ARGB/ABGR image */
         obj_image = (struct object_image *)surface->base;
         bo = obj_image->bo;
         width[0] = obj_image->image.width;
@@ -512,35 +499,30 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         pitch[0] = obj_image->image.pitches[0];
         offset[0] = obj_image->image.offsets[0];
 
-	if (rgbx_format) {
-	    if (is_target)
-		width[0] = obj_image->image.width * 4; /* surface format is R8, so quad the width */
-	} else if (packed_yuv) {
+        if (fourcc_info->num_planes == 1) {
             if (is_target)
-                width[0] = obj_image->image.width * 2;  /* surface format is R8, so double the width */
-            else
-                width[0] = obj_image->image.width;      /* surface foramt is YCBCR, width is specified in units of pixels */
-        } else if (interleaved_uv) {
-            width[1] = obj_image->image.width / 2;
-            height[1] = obj_image->image.height / 2;
-            pitch[1] = obj_image->image.pitches[1];
-            offset[1] = obj_image->image.offsets[1];
+                width[0] = width[0] * (fourcc_info->bpp[0] / 8); /* surface format is R8 */
+        } else if (fourcc_info->num_planes == 2) {
+            U = 1, V = 1;
         } else {
-            width[1] = obj_image->image.width / 2;
-            height[1] = obj_image->image.height / 2;
-            pitch[1] = obj_image->image.pitches[U];
-            offset[1] = obj_image->image.offsets[U];
-            width[2] = obj_image->image.width / 2;
-            height[2] = obj_image->image.height / 2;
-            pitch[2] = obj_image->image.pitches[V];
-            offset[2] = obj_image->image.offsets[V];
-            if (fourcc == VA_FOURCC_YV16 || fourcc == VA_FOURCC_422H) {
-                width[1] = obj_image->image.width / 2;
-                height[1] = obj_image->image.height;
-                width[2] = obj_image->image.width / 2;
-                height[2] = obj_image->image.height;
-            }
+            assert(fourcc_info->num_components == 3);
+
+            U = fourcc_info->components[1].plane;
+            V = fourcc_info->components[2].plane;
+            assert((U == 1 && V == 2) ||
+                   (U == 2 && V == 1));
         }
+
+        /* Always set width/height although they aren't used for fourcc_info->num_planes == 1 */
+        width[1] = obj_image->image.width / fourcc_info->hfactor;
+        height[1] = obj_image->image.height / fourcc_info->vfactor;
+        pitch[1] = obj_image->image.pitches[U];
+        offset[1] = obj_image->image.offsets[U];
+
+        width[2] = obj_image->image.width / fourcc_info->hfactor;
+        height[2] = obj_image->image.height / fourcc_info->vfactor;
+        pitch[2] = obj_image->image.pitches[V];
+        offset[2] = obj_image->image.offsets[V];
     }
 
     if (is_target) {
@@ -549,34 +531,34 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                                   width[0] / 4, height[0], pitch[0],
                                   I965_SURFACEFORMAT_R8_UINT,
                                   base_index, 1);
-	if (rgbx_format) {
-    		struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
-		/* the format is MSB: X-B-G-R */
-		pp_static_parameter->grf2.save_avs_rgb_swap = 0;
-		if ((fourcc == VA_FOURCC_BGRA) ||
-                        (fourcc == VA_FOURCC_BGRX)) {
-			/* It is stored as MSB: X-R-G-B */
-			pp_static_parameter->grf2.save_avs_rgb_swap = 1;
-		}
-	}
-        if (!packed_yuv && !rgbx_format) {
-            if (interleaved_uv) {
-                gen8_pp_set_surface_state(ctx, pp_context,
-                                          bo, offset[1],
-                                          width[1] / 2, height[1], pitch[1],
-                                          I965_SURFACEFORMAT_R8G8_SINT,
-                                          base_index + 1, 1);
-            } else {
-                gen8_pp_set_surface_state(ctx, pp_context,
-                                          bo, offset[1],
-                                          width[1] / 4, height[1], pitch[1],
-                                          I965_SURFACEFORMAT_R8_SINT,
-                                          base_index + 1, 1);
-                gen8_pp_set_surface_state(ctx, pp_context,
-                                          bo, offset[2],
-                                          width[2] / 4, height[2], pitch[2],
-                                          I965_SURFACEFORMAT_R8_SINT,
-                                          base_index + 2, 1);
+
+        if (fourcc_info->num_planes == 2) {
+            gen8_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[1],
+                                      width[1] / 2, height[1], pitch[1],
+                                      I965_SURFACEFORMAT_R8G8_SINT,
+                                      base_index + 1, 1);
+        } else if (fourcc_info->num_planes == 3) {
+            gen8_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[1],
+                                      width[1] / 4, height[1], pitch[1],
+                                      I965_SURFACEFORMAT_R8_SINT,
+                                      base_index + 1, 1);
+            gen8_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[2],
+                                      width[2] / 4, height[2], pitch[2],
+                                      I965_SURFACEFORMAT_R8_SINT,
+                                      base_index + 2, 1);
+        }
+
+        if (fourcc_info->format == I965_COLOR_RGB) {
+            struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+            /* the format is MSB: X-B-G-R */
+            pp_static_parameter->grf2.save_avs_rgb_swap = 0;
+            if ((fourcc == VA_FOURCC_BGRA) ||
+                (fourcc == VA_FOURCC_BGRX)) {
+                /* It is stored as MSB: X-R-G-B */
+                pp_static_parameter->grf2.save_avs_rgb_swap = 1;
             }
         }
     } else {
@@ -594,7 +576,8 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
         default:
             break;
         }
-	if (rgbx_format) {
+
+	if (fourcc_info->format == I965_COLOR_RGB) {
     	    struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
 	    /* Only R8G8B8A8_UNORM is supported for BGRX or RGBX */
 	    format0 = SURFACE_FORMAT_R8G8B8A8_UNORM;
@@ -604,6 +587,7 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
 		pp_static_parameter->grf2.src_avs_rgb_swap = 1;
 	    }
 	}
+
         gen8_pp_set_surface2_state(ctx, pp_context,
                                    bo, offset[0],
                                    width[0], height[0], pitch[0],
@@ -611,28 +595,26 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                                    format0, 0,
                                    base_index);
 
-        if (!packed_yuv && !rgbx_format) {
-            if (interleaved_uv) {
-                gen8_pp_set_surface2_state(ctx, pp_context,
-                                           bo, offset[1],
-                                           width[1], height[1], pitch[1],
-                                           0, 0,
-                                           SURFACE_FORMAT_R8B8_UNORM, 0,
-                                           base_index + 1);
-            } else {
-                gen8_pp_set_surface2_state(ctx, pp_context,
-                                           bo, offset[1],
-                                           width[1], height[1], pitch[1],
-                                           0, 0,
-                                           SURFACE_FORMAT_R8_UNORM, 0,
-                                           base_index + 1);
-                gen8_pp_set_surface2_state(ctx, pp_context,
-                                           bo, offset[2],
-                                           width[2], height[2], pitch[2],
-                                           0, 0,
-                                           SURFACE_FORMAT_R8_UNORM, 0,
-                                           base_index + 2);
-            }
+        if (fourcc_info->num_planes == 2) {
+            gen8_pp_set_surface2_state(ctx, pp_context,
+                                       bo, offset[1],
+                                       width[1], height[1], pitch[1],
+                                       0, 0,
+                                       SURFACE_FORMAT_R8B8_UNORM, 0,
+                                       base_index + 1);
+        } else if (fourcc_info->num_planes == 3) {
+            gen8_pp_set_surface2_state(ctx, pp_context,
+                                       bo, offset[1],
+                                       width[1], height[1], pitch[1],
+                                       0, 0,
+                                       SURFACE_FORMAT_R8_UNORM, 0,
+                                       base_index + 1);
+            gen8_pp_set_surface2_state(ctx, pp_context,
+                                       bo, offset[2],
+                                       width[2], height[2], pitch[2],
+                                       0, 0,
+                                       SURFACE_FORMAT_R8_UNORM, 0,
+                                       base_index + 2);
         }
     }
 }
