@@ -4553,13 +4553,13 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     br13 |= BR13_8;
     br13 |= pitch;
 
-    if (IS_GEN6(i965->intel.device_info) ||
-        IS_GEN7(i965->intel.device_info)) {
-        intel_batchbuffer_start_atomic_blt(batch, 48);
-        BEGIN_BLT_BATCH(batch, 12);
-    } else {
+    if (IS_IRONLAKE(i965->intel.device_info)) {
         intel_batchbuffer_start_atomic(batch, 48);
         BEGIN_BATCH(batch, 12);
+    } else {
+        /* Will double-check the command if the new chipset is added */
+        intel_batchbuffer_start_atomic_blt(batch, 48);
+        BEGIN_BLT_BATCH(batch, 12);
     }
 
     region_width = obj_surface->width;
