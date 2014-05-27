@@ -1593,10 +1593,10 @@ void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
     } else {
         unsigned int skip_emul_byte_cnt;
 
-        header_data = (unsigned int *)encode_state->packed_header_data_ext[start_index + i]->buffer;
+        header_data = (unsigned int *)encode_state->packed_header_data_ext[slice_header_index]->buffer;
 
         param = (VAEncPackedHeaderParameterBuffer *)
-                    (encode_state->packed_header_params_ext[start_index + i]->buffer);
+                    (encode_state->packed_header_params_ext[slice_header_index]->buffer);
         length_in_bits = param->bit_length;
 
         /* as the slice header is the last header data for one slice,
