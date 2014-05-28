@@ -2489,6 +2489,7 @@ i965_encoder_render_picture(VADriverContextP ctx,
                  * the packed data index/count for the slice
                  */
                 if (encode->max_slice_params_ext > encode->slice_num) {
+                    int slice_num = encode->slice_num;
                     encode->slice_num = encode->max_slice_params_ext;
                     encode->slice_rawdata_index = realloc(encode->slice_rawdata_index,
                                                           encode->slice_num * sizeof(int));
@@ -2496,6 +2497,12 @@ i965_encoder_render_picture(VADriverContextP ctx,
                                                           encode->slice_num * sizeof(int));
                     encode->slice_header_index = realloc(encode->slice_header_index,
                                                           encode->slice_num * sizeof(int));
+                    memset(encode->slice_rawdata_index + slice_num, 0,
+                        sizeof(int) * NUM_SLICES);
+                    memset(encode->slice_rawdata_count + slice_num, 0,
+                        sizeof(int) * NUM_SLICES);
+                    memset(encode->slice_header_index + slice_num, 0,
+                        sizeof(int) * NUM_SLICES);
                     if ((encode->slice_rawdata_index == NULL) ||
                         (encode->slice_header_index == NULL)  ||
                         (encode->slice_rawdata_count == NULL)) {
