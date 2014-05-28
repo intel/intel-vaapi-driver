@@ -137,8 +137,7 @@ i965_put_surface_dri(
      * will get here
      */
     obj_surface = SURFACE(surface);
-    if (!obj_surface || !obj_surface->bo)
-        return VA_STATUS_SUCCESS;
+    ASSERT_RET(obj_surface && obj_surface->bo, VA_STATUS_SUCCESS);
 
     _i965LockMutex(&i965->render_mutex);
 
@@ -204,7 +203,7 @@ i965_put_surface_dri(
         }
     }
 
-    if (!getenv("INTEL_DEBUG_BENCH"))
+    if (!(g_intel_debug_option_flags & VA_INTEL_DEBUG_OPTION_BENCH))
         dri_vtable->swap_buffer(ctx, dri_drawable);
     obj_surface->flags |= SURFACE_DISPLAYED;
 

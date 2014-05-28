@@ -76,9 +76,14 @@ struct intel_batchbuffer;
 #define True 1
 #define False 0
 
+extern uint32_t g_intel_debug_option_flags;
+#define VA_INTEL_DEBUG_OPTION_ASSERT    (1 << 0)
+#define VA_INTEL_DEBUG_OPTION_BENCH     (1 << 1)
+
 #define ASSERT_RET(value, fail_ret) do {    \
-        if (!(value)) {                 \
-            assert(0);                      \
+        if (!(value)) {                     \
+            if (g_intel_debug_option_flags & VA_INTEL_DEBUG_OPTION_ASSERT)       \
+                assert(value);              \
             return fail_ret;                \
         }                                   \
     } while (0)

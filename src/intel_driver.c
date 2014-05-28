@@ -34,6 +34,7 @@
 #include "intel_batchbuffer.h"
 #include "intel_memman.h"
 #include "intel_driver.h"
+uint32_t g_intel_debug_option_flags = 0;
 
 static Bool
 intel_driver_get_param(struct intel_driver_data *intel, int param, int *value)
@@ -75,6 +76,14 @@ intel_driver_init(VADriverContextP ctx)
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct drm_state * const drm_state = (struct drm_state *)ctx->drm_state;
     int has_exec2 = 0, has_bsd = 0, has_blt = 0, has_vebox = 0;
+    char *env_str = NULL;
+
+    g_intel_debug_option_flags = 0;
+    if ((env_str = getenv("VA_INTEL_DEBUG")))
+        g_intel_debug_option_flags = atoi(env_str);
+
+    if (g_intel_debug_option_flags)
+        fprintf(stderr, "g_intel_debug_option_flags:%x\n", g_intel_debug_option_flags);
 
     assert(drm_state);
     assert(VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI1) ||
