@@ -254,6 +254,24 @@ avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix)
     memset(&iq_matrix->ScalingList8x8, 16, sizeof(iq_matrix->ScalingList8x8));
 }
 
+/* Returns a unique picture ID that represents the supplied VA surface object */
+int
+avc_get_picture_id(struct object_surface *obj_surface)
+{
+    int pic_id;
+
+    /* This highly depends on how the internal VA objects are organized.
+
+       Theory of operations:
+       The VA objects are maintained in heaps so that any released VA
+       surface will become free again for future allocation. This means
+       that holes in there are filled in for subsequent allocations.
+       So, this ultimately means that we could just use the Heap ID of
+       the VA surface as the resulting picture ID (16 bits) */
+    pic_id = 1 + (obj_surface->base.id & OBJECT_HEAP_ID_MASK);
+    return (pic_id <= 0xffff) ? pic_id : -1;
+}
+
 /* Finds the VA/H264 picture associated with the specified VA surface id */
 VAPictureH264 *
 avc_find_picture(VASurfaceID id, VAPictureH264 *pic_list, int pic_list_count)
@@ -500,6 +518,87 @@ intel_update_avc_frame_store_index(
             WARN_ONCE("No free slot found for DPB reference list!!!\n");
         }
     }
+}
+
+void
+gen75_update_avc_frame_store_index(
+    VADriverContextP              ctx,
+    struct decode_state          *decode_state,
+    VAPictureParameterBufferH264 *pic_param,
+    GenFrameStore                 frame_store[MAX_GEN_REFERENCE_FRAMES]
+)
+{
+    int i, n;
+
+    /* Construct the Frame Store array, in compact form. i.e. empty or
+       invalid entries are discarded. */
+    for (i = 0, n = 0; i < ARRAY_ELEMS(decode_state->reference_objects); i++) {
+        struct object_surface * const obj_surface =
+            decode_state->reference_objects[i];
+        if (!obj_surface)
+            continue;
+
+        GenFrameStore * const fs = &frame_store[n];
+        fs->surface_id = obj_surface->base.id;
+        fs->obj_surface = obj_surface;
+        fs->frame_store_id = n++;
+    }
+
+    /* Any remaining entry is marked as invalid */
+    for (; n < MAX_GEN_REFERENCE_FRAMES; n++) {
+        GenFrameStore * const fs = &frame_store[n];
+        fs->surface_id = VA_INVALID_ID;
+        fs->obj_surface = NULL;
+        fs->frame_store_id = -1;
+    }
+}
+
+bool
+gen75_fill_avc_picid_list(
+    uint16_t                    pic_ids[16],
+    GenFrameStore               frame_store[MAX_GEN_REFERENCE_FRAMES]
+)
+{
+    int i, pic_id;
+
+    /* Fill in with known picture IDs. The Frame Store array is in
+       compact form, i.e. empty entries are only to be found at the
+       end of the array: there are no holes in the set of active
+       reference frames */
+    for (i = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        GenFrameStore * const fs = &frame_store[i];
+        if (!fs->obj_surface)
+            break;
+        pic_id = avc_get_picture_id(fs->obj_surface);
+        if (pic_id < 0)
+            return false;
+        pic_ids[i] = pic_id;
+    }
+
+    /* When an element of the list is not relevant the value of the
+       picture ID shall be set to 0 */
+    for (; i < MAX_GEN_REFERENCE_FRAMES; i++)
+        pic_ids[i] = 0;
+    return true;
+}
+
+bool
+gen75_send_avc_picid_state(
+    struct intel_batchbuffer   *batch,
+    GenFrameStore               frame_store[MAX_GEN_REFERENCE_FRAMES]
+)
+{
+    uint16_t pic_ids[16];
+
+    if (!gen75_fill_avc_picid_list(pic_ids, frame_store))
+        return false;
+
+    BEGIN_BCS_BATCH(batch, 10);
+    OUT_BCS_BATCH(batch, MFD_AVC_PICID_STATE | (10 - 2));
+    OUT_BCS_BATCH(batch, 0); // enable Picture ID Remapping
+    intel_batchbuffer_data(batch, pic_ids, sizeof(pic_ids));
+    ADVANCE_BCS_BATCH(batch);
+    return true;
 }
 
 void

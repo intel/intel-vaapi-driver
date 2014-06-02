@@ -489,25 +489,13 @@ gen8_mfd_avc_qm_state(VADriverContextP ctx,
     }
 }
 
-static void
+static inline void
 gen8_mfd_avc_picid_state(VADriverContextP ctx,
-                      struct decode_state *decode_state,
-                      struct gen7_mfd_context *gen7_mfd_context)
+    struct decode_state *decode_state,
+    struct gen7_mfd_context *gen7_mfd_context)
 {
-    struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
-
-    BEGIN_BCS_BATCH(batch, 10);
-    OUT_BCS_BATCH(batch, MFD_AVC_PICID_STATE | (10 - 2));
-    OUT_BCS_BATCH(batch, 1); // disable Picture ID Remapping
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    ADVANCE_BCS_BATCH(batch);
+    gen75_send_avc_picid_state(gen7_mfd_context->base.batch,
+        gen7_mfd_context->reference_surface);
 }
 
 static void
@@ -817,7 +805,8 @@ gen8_mfd_avc_decode_init(VADriverContextP ctx,
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
-    intel_update_avc_frame_store_index(ctx, decode_state, pic_param, gen7_mfd_context->reference_surface);
+    gen75_update_avc_frame_store_index(ctx, decode_state, pic_param,
+        gen7_mfd_context->reference_surface);
     width_in_mbs = pic_param->picture_width_in_mbs_minus1 + 1;
     height_in_mbs = pic_param->picture_height_in_mbs_minus1 + 1;
     assert(width_in_mbs > 0 && width_in_mbs <= 256); /* 4K */
@@ -902,8 +891,8 @@ gen8_mfd_avc_decode_picture(VADriverContextP ctx,
     gen8_mfd_pipe_buf_addr_state(ctx, decode_state, MFX_FORMAT_AVC, gen7_mfd_context);
     gen8_mfd_bsp_buf_base_addr_state(ctx, decode_state, MFX_FORMAT_AVC, gen7_mfd_context);
     gen8_mfd_avc_qm_state(ctx, decode_state, gen7_mfd_context);
-    gen8_mfd_avc_img_state(ctx, decode_state, gen7_mfd_context);
     gen8_mfd_avc_picid_state(ctx, decode_state, gen7_mfd_context);
+    gen8_mfd_avc_img_state(ctx, decode_state, gen7_mfd_context);
 
     for (j = 0; j < decode_state->num_slice_params; j++) {
         assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);

@@ -54,6 +54,9 @@ avc_ensure_surface_bo(
 void
 avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix);
 
+int
+avc_get_picture_id(struct object_surface *obj_surface);
+
 VAPictureH264 *
 avc_find_picture(VASurfaceID id, VAPictureH264 *pic_list, int pic_list_count);
 
@@ -96,6 +99,26 @@ intel_update_avc_frame_store_index(VADriverContextP ctx,
                                    struct decode_state *decode_state,
                                    VAPictureParameterBufferH264 *pic_param,
                                    GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES]);
+
+void
+gen75_update_avc_frame_store_index(
+    VADriverContextP                    ctx,
+    struct decode_state                *decode_state,
+    VAPictureParameterBufferH264       *pic_param,
+    GenFrameStore                       frame_store[MAX_GEN_REFERENCE_FRAMES]
+);
+
+bool
+gen75_fill_avc_picid_list(
+    uint16_t                            pic_ids[16],
+    GenFrameStore                       frame_store[MAX_GEN_REFERENCE_FRAMES]
+);
+
+bool
+gen75_send_avc_picid_state(
+    struct intel_batchbuffer           *batch,
+    GenFrameStore                       frame_store[MAX_GEN_REFERENCE_FRAMES]
+);
 
 void
 intel_update_vc1_frame_store_index(VADriverContextP ctx,
