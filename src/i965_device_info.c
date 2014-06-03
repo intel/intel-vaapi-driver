@@ -36,6 +36,10 @@
     (VA_RT_FORMAT_YUV400 | VA_RT_FORMAT_YUV411 | VA_RT_FORMAT_YUV422 | \
      VA_RT_FORMAT_YUV444)
 
+/* Defines VA profile as a 32-bit unsigned integer mask */
+#define VA_PROFILE_MASK(PROFILE) \
+    (1U << VAProfile##PROFILE)
+
 extern struct hw_context *i965_proc_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern bool genx_render_init(VADriverContextP);
@@ -94,6 +98,7 @@ static const struct hw_codec_info snb_hw_codec_info = {
     .min_linear_wpitch = 16,
     .min_linear_hpitch = 16,
 
+    .h264_mvc_dec_profiles = VA_PROFILE_MASK(H264StereoHigh),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
@@ -127,6 +132,7 @@ static const struct hw_codec_info ivb_hw_codec_info = {
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
 
+    .h264_mvc_dec_profiles = VA_PROFILE_MASK(H264StereoHigh),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
@@ -164,6 +170,8 @@ static const struct hw_codec_info hsw_hw_codec_info = {
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
 
+    .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
+                              VA_PROFILE_MASK(H264MultiviewHigh)),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
@@ -179,7 +187,6 @@ static const struct hw_codec_info hsw_hw_codec_info = {
     .has_tiled_surface = 1,
     .has_di_motion_adptive = 1,
     .has_di_motion_compensated = 1,
-    .has_h264_mvc_decoding = 1,
     .has_h264_mvc_encoding = 1,
 
     .num_filters = 5,
@@ -207,6 +214,8 @@ static const struct hw_codec_info bdw_hw_codec_info = {
     .min_linear_wpitch = 64,
     .min_linear_hpitch = 16,
 
+    .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
+                              VA_PROFILE_MASK(H264MultiviewHigh)),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
@@ -223,7 +232,6 @@ static const struct hw_codec_info bdw_hw_codec_info = {
     .has_di_motion_adptive = 1,
     .has_di_motion_compensated = 1,
     .has_vp8_decoding = 1,
-    .has_h264_mvc_decoding = 1,
     .has_h264_mvc_encoding = 1,
 
     .num_filters = 5,

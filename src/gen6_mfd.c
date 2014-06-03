@@ -1858,6 +1858,7 @@ gen6_mfd_decode_picture(VADriverContextP ctx,
     case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
+    case VAProfileH264StereoHigh:
         gen6_mfd_avc_decode_picture(ctx, decode_state, gen6_mfd_context);
         break;
 

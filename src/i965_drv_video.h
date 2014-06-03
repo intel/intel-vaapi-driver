@@ -302,6 +302,7 @@ struct hw_codec_info
     int min_linear_wpitch;
     int min_linear_hpitch;
 
+    unsigned int h264_mvc_dec_profiles;
     unsigned int h264_dec_chroma_formats;
     unsigned int jpeg_dec_chroma_formats;
 
@@ -321,7 +322,6 @@ struct hw_codec_info
     unsigned int has_di_motion_compensated:1;
     unsigned int has_vp8_decoding:1;
     unsigned int has_vp8_encoding:1;
-    unsigned int has_h264_mvc_decoding:1;
     unsigned int has_h264_mvc_encoding:1;
 
     unsigned int num_filters;
