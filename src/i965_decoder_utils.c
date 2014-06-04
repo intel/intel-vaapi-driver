@@ -349,8 +349,24 @@ avc_get_first_mb_bit_offset_with_epb(
 static inline uint8_t
 get_ref_idx_state_1(const VAPictureH264 *va_pic, unsigned int frame_store_id)
 {
+    /* The H.264 standard, and the VA-API specification, allows for at
+       least 3 states for a picture: "used for short-term reference",
+       "used for long-term reference", or considered as not used for
+       reference.
+
+       The latter is used in the MVC inter prediction and inter-view
+       prediction process (H.8.4). This has an incidence on the
+       colZeroFlag variable, as defined in 8.4.1.2.
+
+       Since it is not possible to directly program that flag, let's
+       make the hardware derive this value by assimilating "considered
+       as not used for reference" to a "not used for short-term
+       reference", and subsequently making it "used for long-term
+       reference" to fit the definition of Bit6 here */
+    const unsigned int ref_flags = VA_PICTURE_H264_SHORT_TERM_REFERENCE |
+        VA_PICTURE_H264_LONG_TERM_REFERENCE;
     const unsigned int is_long_term =
-        !!(va_pic->flags & VA_PICTURE_H264_LONG_TERM_REFERENCE);
+        ((va_pic->flags & ref_flags) != VA_PICTURE_H264_SHORT_TERM_REFERENCE);
     const unsigned int is_top_field =
         !!(va_pic->flags & VA_PICTURE_H264_TOP_FIELD);
     const unsigned int is_bottom_field =
