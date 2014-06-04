@@ -78,24 +78,14 @@ gen8_mfd_init_avc_surface(VADriverContextP ctx,
         obj_surface->private_data = gen7_avc_surface;
     }
 
-    gen7_avc_surface->dmv_bottom_flag = (pic_param->pic_fields.bits.field_pic_flag &&
-                                         !pic_param->seq_fields.bits.direct_8x8_inference_flag);
-
+    /* DMV buffers now relate to the whole frame, irrespective of
+       field coding modes */
     if (gen7_avc_surface->dmv_top == NULL) {
         gen7_avc_surface->dmv_top = dri_bo_alloc(i965->intel.bufmgr,
                                                  "direct mv w/r buffer",
                                                  width_in_mbs * height_in_mbs * 128,
                                                  0x1000);
         assert(gen7_avc_surface->dmv_top);
-    }
-
-    if (gen7_avc_surface->dmv_bottom_flag &&
-        gen7_avc_surface->dmv_bottom == NULL) {
-        gen7_avc_surface->dmv_bottom = dri_bo_alloc(i965->intel.bufmgr,
-                                                    "direct mv w/r buffer",
-                                                    width_in_mbs * height_in_mbs * 128,                                                    
-                                                    0x1000);
-        assert(gen7_avc_surface->dmv_bottom);
     }
 }
 
