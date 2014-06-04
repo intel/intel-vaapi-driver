@@ -222,9 +222,11 @@ avc_ensure_surface_bo(
 
     /* (Re-)allocate the underlying surface buffer store, if necessary */
     if (!obj_surface->bo || obj_surface->fourcc != hw_fourcc) {
+        struct i965_driver_data * const i965 = i965_driver_data(ctx);
+
         i965_destroy_surface_storage(obj_surface);
-        va_status = i965_check_alloc_surface_bo(ctx, obj_surface, 1,
-            hw_fourcc, subsample);
+        va_status = i965_check_alloc_surface_bo(ctx, obj_surface,
+            i965->codec_info->has_tiled_surface, hw_fourcc, subsample);
         if (va_status != VA_STATUS_SUCCESS)
             return va_status;
     }
