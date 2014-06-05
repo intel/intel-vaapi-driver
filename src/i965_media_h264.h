@@ -61,6 +61,7 @@ struct i965_h264_context
     struct i965_avc_hw_scoreboard_context avc_hw_scoreboard_context;
     struct i965_avc_ildb_context avc_ildb_context;
 
+    GenFrameStoreContext fs_ctx;
     GenFrameStore fsid_list[MAX_GEN_REFERENCE_FRAMES];
 
     struct i965_kernel avc_kernels[NUM_H264_AVC_KERNELS];

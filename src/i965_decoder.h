@@ -39,6 +39,21 @@ struct gen_frame_store {
     VASurfaceID surface_id;
     int         frame_store_id;
     struct      object_surface *obj_surface;
+
+    /* This represents the time when this frame store was last used to
+       hold a reference frame. This is not connected to a presentation
+       timestamp (PTS), and this is not a common decoding time stamp
+       (DTS) either. It serves the purpose of tracking retired
+       reference frame candidates.
+
+       This is only used for H.264 decoding on platforms before Haswell */
+    uint64_t    ref_age;
+};
+
+typedef struct gen_frame_store_context GenFrameStoreContext;
+struct gen_frame_store_context {
+    uint64_t    age;
+    int         prev_poc;
 };
 
 typedef struct gen_buffer GenBuffer;

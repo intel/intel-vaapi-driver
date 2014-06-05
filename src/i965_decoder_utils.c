@@ -22,10 +22,11 @@
  */
 
 #include "sysdeps.h"
-
+#include <limits.h>
 #include <alloca.h>
 
 #include "intel_batchbuffer.h"
+#include "intel_media.h"
 #include "i965_drv_video.h"
 #include "i965_decoder_utils.h"
 #include "i965_defines.h"
@@ -254,6 +255,21 @@ avc_gen_default_iq_matrix(VAIQMatrixBufferH264 *iq_matrix)
     memset(&iq_matrix->ScalingList8x8, 16, sizeof(iq_matrix->ScalingList8x8));
 }
 
+/* Returns the POC of the supplied VA picture */
+static int
+avc_get_picture_poc(const VAPictureH264 *va_pic)
+{
+    int structure, field_poc[2];
+
+    structure = va_pic->flags &
+        (VA_PICTURE_H264_TOP_FIELD | VA_PICTURE_H264_BOTTOM_FIELD);
+    field_poc[0] = structure != VA_PICTURE_H264_BOTTOM_FIELD ?
+        va_pic->TopFieldOrderCnt : INT_MAX;
+    field_poc[1] = structure != VA_PICTURE_H264_TOP_FIELD ?
+        va_pic->BottomFieldOrderCnt : INT_MAX;
+    return MIN(field_poc[0], field_poc[1]);
+}
+
 /* Returns a unique picture ID that represents the supplied VA surface object */
 int
 avc_get_picture_id(struct object_surface *obj_surface)
@@ -471,68 +487,88 @@ gen6_send_avc_ref_idx_state(
     );
 }
 
+/* Comparison function for sorting out the array of free frame store entries */
+static int
+compare_avc_ref_store_func(const void *p1, const void *p2)
+{
+    const GenFrameStore * const fs1 = *((GenFrameStore **)p1);
+    const GenFrameStore * const fs2 = *((GenFrameStore **)p2);
+
+    return fs1->ref_age - fs2->ref_age;
+}
+
 void
 intel_update_avc_frame_store_index(
     VADriverContextP              ctx,
     struct decode_state          *decode_state,
     VAPictureParameterBufferH264 *pic_param,
-    GenFrameStore                 frame_store[MAX_GEN_REFERENCE_FRAMES]
+    GenFrameStore                 frame_store[MAX_GEN_REFERENCE_FRAMES],
+    GenFrameStoreContext         *fs_ctx
 )
 {
     GenFrameStore *free_refs[MAX_GEN_REFERENCE_FRAMES];
-    int i, j, n, num_free_refs;
+    uint32_t used_refs = 0, add_refs = 0;
+    uint64_t age;
+    int i, n, num_free_refs;
 
-    /* Remove obsolete entries from the internal DPB */
-    for (i = 0, n = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
-        GenFrameStore * const fs = &frame_store[i];
-        if (fs->surface_id == VA_INVALID_ID || !fs->obj_surface) {
-            free_refs[n++] = fs;
-            continue;
-        }
+    /* Detect changes of access unit */
+    const int poc = avc_get_picture_poc(&pic_param->CurrPic);
+    if (fs_ctx->age == 0 || fs_ctx->prev_poc != poc)
+        fs_ctx->age++;
+    fs_ctx->prev_poc = poc;
+    age = fs_ctx->age;
 
-        // Find whether the current entry is still a valid reference frame
-        for (j = 0; j < ARRAY_ELEMS(decode_state->reference_objects); j++) {
-            struct object_surface * const obj_surface =
-                decode_state->reference_objects[j];
-            if (obj_surface && obj_surface == fs->obj_surface)
-                break;
-        }
-
-        // ... or remove it
-        if (j == ARRAY_ELEMS(decode_state->reference_objects)) {
-            fs->surface_id = VA_INVALID_ID;
-            fs->obj_surface = NULL;
-            fs->frame_store_id = -1;
-            free_refs[n++] = fs;
-        }
-    }
-    num_free_refs = n;
-
-    /* Append the new reference frames */
-    for (i = 0, n = 0; i < ARRAY_ELEMS(decode_state->reference_objects); i++) {
+    /* Tag entries that are still available in our Frame Store */
+    for (i = 0; i < ARRAY_ELEMS(decode_state->reference_objects); i++) {
         struct object_surface * const obj_surface =
             decode_state->reference_objects[i];
         if (!obj_surface)
             continue;
 
-        // Find whether the current frame is not already in our frame store
-        for (j = 0; j < MAX_GEN_REFERENCE_FRAMES; j++) {
-            GenFrameStore * const fs = &frame_store[j];
-            if (fs->obj_surface == obj_surface)
-                break;
-        }
-
-        // ... or add it
-        if (j == MAX_GEN_REFERENCE_FRAMES) {
-            if (n < num_free_refs) {
-                GenFrameStore * const fs = free_refs[n++];
-                fs->surface_id = obj_surface->base.id;
+        GenAvcSurface * const avc_surface = obj_surface->private_data;
+        if (avc_surface->frame_store_id >= 0) {
+            GenFrameStore * const fs =
+                &frame_store[avc_surface->frame_store_id];
+            if (fs->surface_id == obj_surface->base.id) {
                 fs->obj_surface = obj_surface;
-                fs->frame_store_id = fs - frame_store;
+                fs->ref_age = age;
+                used_refs |= 1 << fs->frame_store_id;
                 continue;
             }
-            WARN_ONCE("No free slot found for DPB reference list!!!\n");
         }
+        add_refs |= 1 << i;
+    }
+
+    /* Build and sort out the list of retired candidates. The resulting
+       list is ordered by increasing age when they were last used */
+    for (i = 0, n = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        if (!(used_refs & (1 << i))) {
+            GenFrameStore * const fs = &frame_store[i];
+            fs->obj_surface = NULL;
+            free_refs[n++] = fs;
+        }
+    }
+    num_free_refs = n;
+    qsort(&free_refs[0], n, sizeof(free_refs[0]), compare_avc_ref_store_func);
+
+    /* Append the new reference frames */
+    for (i = 0, n = 0; i < ARRAY_ELEMS(decode_state->reference_objects); i++) {
+        struct object_surface * const obj_surface =
+            decode_state->reference_objects[i];
+        if (!obj_surface || !(add_refs & (1 << i)))
+            continue;
+
+        GenAvcSurface * const avc_surface = obj_surface->private_data;
+        if (n < num_free_refs) {
+            GenFrameStore * const fs = free_refs[n++];
+            fs->surface_id = obj_surface->base.id;
+            fs->obj_surface = obj_surface;
+            fs->frame_store_id = fs - frame_store;
+            fs->ref_age = age;
+            avc_surface->frame_store_id = fs->frame_store_id;
+            continue;
+        }
+        WARN_ONCE("No free slot found for DPB reference list!!!\n");
     }
 }
 

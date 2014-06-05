@@ -39,6 +39,7 @@ struct gen_avc_surface
     dri_bo *dmv_top;
     dri_bo *dmv_bottom;
     int dmv_bottom_flag;
+    int frame_store_id; /* only used for H.264 on earlier generations (<HSW) */
 };
 
 extern void gen_free_avc_surface(void **data);

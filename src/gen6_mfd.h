@@ -62,6 +62,7 @@ struct gen6_mfd_context
         VAIQMatrixBufferMPEG2 mpeg2;
     } iq_matrix;
 
+    GenFrameStoreContext fs_ctx;
     GenFrameStore       reference_surface[MAX_GEN_REFERENCE_FRAMES];
     GenBuffer           post_deblocking_output;
     GenBuffer           pre_deblocking_output;

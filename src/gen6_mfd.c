@@ -61,6 +61,7 @@ gen6_mfd_init_avc_surface(VADriverContextP ctx,
 
     if (!gen6_avc_surface) {
         gen6_avc_surface = calloc(sizeof(GenAvcSurface), 1);
+        gen6_avc_surface->frame_store_id = -1;
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = gen6_avc_surface;
     }
@@ -825,7 +826,8 @@ gen6_mfd_avc_decode_init(VADriverContextP ctx,
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
-    intel_update_avc_frame_store_index(ctx, decode_state, pic_param, gen6_mfd_context->reference_surface);
+    intel_update_avc_frame_store_index(ctx, decode_state, pic_param,
+        gen6_mfd_context->reference_surface, &gen6_mfd_context->fs_ctx);
     width_in_mbs = ((pic_param->picture_width_in_mbs_minus1 + 1) & 0xff);
 
     /* Current decoded picture */

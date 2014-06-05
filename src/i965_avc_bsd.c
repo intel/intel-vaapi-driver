@@ -51,6 +51,7 @@ i965_avc_bsd_init_avc_bsd_surface(VADriverContextP ctx,
 
     if (!avc_bsd_surface) {
         avc_bsd_surface = calloc(sizeof(GenAvcSurface), 1);
+        avc_bsd_surface->frame_store_id = -1;
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = avc_bsd_surface;
     }
@@ -795,7 +796,8 @@ i965_avc_bsd_pipeline(VADriverContextP ctx, struct decode_state *decode_state, v
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
-    intel_update_avc_frame_store_index(ctx, decode_state, pic_param, i965_h264_context->fsid_list);
+    intel_update_avc_frame_store_index(ctx, decode_state, pic_param,
+        i965_h264_context->fsid_list, &i965_h264_context->fs_ctx);
 
     i965_h264_context->enable_avc_ildb = 0;
     i965_h264_context->picture.i_flag = 1;

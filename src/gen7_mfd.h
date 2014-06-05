@@ -77,6 +77,7 @@ struct gen7_mfd_context
         VAIQMatrixBufferH264  h264;     /* flat scaling lists (default) */
     } iq_matrix;
 
+    GenFrameStoreContext fs_ctx;
     GenFrameStore       reference_surface[MAX_GEN_REFERENCE_FRAMES];
     GenBuffer           post_deblocking_output;
     GenBuffer           pre_deblocking_output;
