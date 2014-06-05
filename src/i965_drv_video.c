@@ -658,6 +658,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 if (profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
                     profile == VAProfileH264High ||
+                    profile == VAProfileH264StereoHigh ||
                     profile == VAProfileH264MultiviewHigh) {
                     attrib_list[i].value |= (VA_ENC_PACKED_HEADER_RAW_DATA |
                                              VA_ENC_PACKED_HEADER_SLICE);
