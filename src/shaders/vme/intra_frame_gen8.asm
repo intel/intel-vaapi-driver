@@ -127,7 +127,7 @@ mov  (8) vme_msg_1<1>:UD        vme_m1.0<8,8,1>:UD {align1};
 /* m0 */        
 /* 16x16 Source, Intra_harr */
 add  (1) vme_m0.12<1>:UD        vme_m0.12<0,1,0>:ud	INTRA_SAD_HAAR:UD {align1};
-mov  (8) vme_msg_1<1>:UD        vme_m1.0<8,8,1>:UD {align1};
+mov  (8) vme_msg_0<1>:UD        vme_m0.0<8,8,1>:UD {align1};
 
 /* after verification it will be passed by using payload */
 send (8)
