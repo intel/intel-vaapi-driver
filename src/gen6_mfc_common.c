@@ -384,6 +384,50 @@ int intel_mfc_interlace_check(VADriverContextP ctx,
     return 1;
 }
 
+/*
+ * Check whether the parameters related with CBR are updated and decide whether
+ * it needs to reinitialize the configuration related with CBR.
+ * Currently it will check the following parameters:
+ *      bits_per_second
+ *      frame_rate
+ *      gop_configuration(intra_period, ip_period, intra_idr_period)
+ */
+static bool intel_mfc_brc_updated_check(struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context)
+{
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    double cur_fps, cur_bitrate;
+    VAEncSequenceParameterBufferH264 *pSequenceParameter;
+
+
+    if (rate_control_mode != VA_RC_CBR) {
+        return false;
+    }
+
+    pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+
+    cur_bitrate = pSequenceParameter->bits_per_second;
+    cur_fps = (double)pSequenceParameter->time_scale /
+                (2 * (double)pSequenceParameter->num_units_in_tick);
+
+    if ((cur_bitrate == mfc_context->brc.saved_bps) &&
+        (cur_fps == mfc_context->brc.saved_fps) &&
+        (pSequenceParameter->intra_period == mfc_context->brc.saved_intra_period) &&
+        (pSequenceParameter->intra_idr_period == mfc_context->brc.saved_idr_period) &&
+        (pSequenceParameter->intra_period == mfc_context->brc.saved_intra_period)) {
+        /* the parameters related with CBR are not updaetd */
+        return false;
+    }
+
+    mfc_context->brc.saved_ip_period = pSequenceParameter->ip_period;
+    mfc_context->brc.saved_intra_period = pSequenceParameter->intra_period;
+    mfc_context->brc.saved_idr_period = pSequenceParameter->intra_idr_period;
+    mfc_context->brc.saved_fps = cur_fps;
+    mfc_context->brc.saved_bps = cur_bitrate;
+    return true;
+}
+
 void intel_mfc_brc_prepare(struct encode_state *encode_state,
                            struct intel_encoder_context *encoder_context)
 {
@@ -391,16 +435,20 @@ void intel_mfc_brc_prepare(struct encode_state *encode_state,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
     if (rate_control_mode == VA_RC_CBR) {
+        bool brc_updated;
         assert(encoder_context->codec != CODEC_MPEG2);
 
+        brc_updated = intel_mfc_brc_updated_check(encode_state, encoder_context);
+
         /*Programing bit rate control */
-        if ( mfc_context->bit_rate_control_context[SLICE_TYPE_I].MaxSizeInWord == 0 ) {
+        if ((mfc_context->bit_rate_control_context[SLICE_TYPE_I].MaxSizeInWord == 0) ||
+             brc_updated) {
             intel_mfc_bit_rate_control_context_init(encode_state, mfc_context);
             intel_mfc_brc_init(encode_state, encoder_context);
         }
 
         /*Programing HRD control */
-        if ( mfc_context->vui_hrd.i_cpb_size_value == 0 )
+        if ((mfc_context->vui_hrd.i_cpb_size_value == 0) || brc_updated )
             intel_mfc_hrd_context_init(encode_state, encoder_context);    
     }
 }
