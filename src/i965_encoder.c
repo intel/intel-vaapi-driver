@@ -123,6 +123,30 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
 }
 
 static VAStatus
+intel_encoder_check_misc_parameter(VADriverContextP ctx,
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
+{
+
+    if (encode_state->misc_param[VAEncMiscParameterTypeQualityLevel] &&
+        encode_state->misc_param[VAEncMiscParameterTypeQualityLevel]->buffer) {
+        VAEncMiscParameterBuffer* pMiscParam = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeQualityLevel]->buffer;
+        VAEncMiscParameterBufferQualityLevel* param_quality_level = (VAEncMiscParameterBufferQualityLevel*)pMiscParam->data;
+        encoder_context->quality_level = param_quality_level->quality_level;
+
+        if (encoder_context->quality_level == 0)
+            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
+        else if (encoder_context->quality_level > encoder_context->quality_range)
+            goto error;
+   }
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
 intel_encoder_check_avc_parameter(VADriverContextP ctx,
                                   struct encode_state *encode_state,
                                   struct intel_encoder_context *encoder_context)
@@ -278,6 +302,9 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
 
     vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
 
+    if (vaStatus == VA_STATUS_SUCCESS)
+        vaStatus = intel_encoder_check_misc_parameter(ctx, encode_state, encoder_context);
+
 out:    
     return vaStatus;
 }
@@ -335,6 +362,8 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
     encoder_context->is_tmp_id = 0;
     encoder_context->rate_control_mode = VA_RC_NONE;
+    encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
+    encoder_context->quality_range = 1;
 
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
@@ -395,7 +424,13 @@ gen6_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 struct hw_context *
 gen7_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
-    return intel_enc_hw_context_init(ctx, obj_config, gen7_vme_context_init, gen7_mfc_context_init);
+    struct intel_encoder_context *encoder_context;
+
+    encoder_context = (struct intel_encoder_context *)intel_enc_hw_context_init(ctx, obj_config, gen7_vme_context_init, gen7_mfc_context_init);
+
+    encoder_context->quality_range = ENCODER_QUALITY_RANGE;
+
+    return (struct hw_context *)encoder_context;
 }
 
 struct hw_context *

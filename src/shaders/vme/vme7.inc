@@ -54,6 +54,8 @@ define(`SEARCH_CTRL_DUAL_RECORD',       `0x00000300')
 define(`SEARCH_CTRL_DUAL_REFERENCE',    `0x00000700')
 
 define(`REF_REGION_SIZE',               `0x2830:UW')
+define(`MIN_REF_REGION_SIZE',           `0x2020:UW')
+define(`DREF_REGION_SIZE',              `0x2020:UW')
 
 define(`BI_SUB_MB_PART_MASK',           `0x0c000000')
 define(`MAX_NUM_MV',                    `0x00000020')
@@ -132,6 +134,7 @@ define(`orig_y_ub',             `inline_reg0.1')
 define(`transform_8x8_ub',      `inline_reg0.4')
 define(`input_mb_intra_ub',     `inline_reg0.5')
 define(`num_macroblocks',       `inline_reg0.6')
+define(`quality_level_ub',      `inline_reg0.7')
 
 /*
  * GRF 6~11 -- reserved
@@ -291,7 +294,6 @@ define(`mb_mv3',		`r96')
 define(`mb_ref',		`r97')
 define(`mb_ref_win',		`r84')
 
-define(`DREF_REGION_SIZE',               `0x2020:UW')
 define(`PRED_L0',               `0x0':uw)
 define(`PRED_L1',               `0x1':uw)
 define(`PRED_BI',               `0x2':uw)
@@ -317,3 +319,7 @@ define(`INTER_8X16MODE',		`0x02')
 define(`OBR_MESSAGE_FENCE',              `7')
 define(`OBR_MF_NOCOMMIT',		 `0')
 define(`OBR_MF_COMMIT',			 `0x20')
+
+define(`DEFAULT_QUALITY_LEVEL',           `0x01')
+define(`HIGH_QUALITY_LEVEL',              `DEFAULT_QUALITY_LEVEL')
+define(`LOW_QUALITY_LEVEL',               `0x02')

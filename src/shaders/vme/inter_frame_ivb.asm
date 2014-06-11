@@ -391,11 +391,13 @@ mov (1) mb_intra_struct_ub<1>:UB input_mb_intra_ub<0,1,0>:UB {align1};
 
 /* M0 */
 /* IME search */
+cmp.z.f0.0 (1)		null<1>:uw	quality_level_ub<0,1,0>:ub		LOW_QUALITY_LEVEL:uw   {align1};
+(f0.0) jmpi (1) __low_quality_search;
+
+__high_quality_search:
 mov  (1) vme_m0.12<1>:UD   SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};  
 /* 16x16 Source, 1/4 pixel, harr */
 mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};         /* Reference Width&Height, 48x40 */
-
-mov  (1) vme_m0.0<1>:UD		vme_m0.8<0,1,0>:UD      {align1};
 
 mov  (1) vme_m0.0<1>:W		-16:W			{align1};
 mov  (1) vme_m0.2<1>:W		-12:W			{align1};
@@ -405,6 +407,22 @@ and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_AE:uw 
 and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
 (f0.0)	add 	(1)	vme_m0.2<1>:w	vme_m0.2<0,1,0>:w	8:w	{align1};
 
+jmpi __vme_msg;
+
+__low_quality_search:
+mov  (1) vme_m0.12<1>:UD   SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_HALF:UD {align1};  
+/* 16x16 Source, 1/2 pixel, harr */
+mov  (1) vme_m0.22<1>:UW        MIN_REF_REGION_SIZE {align1};         /* Reference Width&Height, 32x32 */
+
+mov  (1) vme_m0.0<1>:W		-8:W			{align1};
+mov  (1) vme_m0.2<1>:W		-8:W			{align1};
+
+and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_AE:uw   {align1};
+(f0.0)	add 	(1)	vme_m0.0<1>:w	vme_m0.0<0,1,0>:w	4:w	{align1};
+and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
+(f0.0)	add 	(1)	vme_m0.2<1>:w	vme_m0.2<0,1,0>:w	4:w	{align1};
+
+__vme_msg:
 mov  (1) vme_m0.4<1>:UD		vme_m0.0<0,1,0>:UD	{align1};
 add  (2) vme_m0.0<1>:w		vme_m0.0<2,2,1>:w	mb_ref_win.16<2,2,1>:w	{align1};
 add  (2) vme_m0.4<1>:w		vme_m0.4<2,2,1>:w	mb_ref_win.16<2,2,1>:w	{align1};

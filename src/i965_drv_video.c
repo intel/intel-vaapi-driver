@@ -627,6 +627,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                          int num_attribs)
 {
     VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
 
     va_status = i965_validate_config(ctx, profile, entrypoint);
@@ -669,6 +670,14 @@ i965_GetConfigAttributes(VADriverContextP ctx,
 	case VAConfigAttribEncMaxRefFrames:
 	    if (entrypoint == VAEntrypointEncSlice) {
 		attrib_list[i].value = (1 << 16) | (1 << 0);
+		break;
+	    }
+
+	case VAConfigAttribEncQualityRange:
+	    if (entrypoint == VAEntrypointEncSlice) {
+		attrib_list[i].value = 1;
+                if(IS_GEN7(i965->intel.device_info))
+                    attrib_list[i].value = ENCODER_QUALITY_RANGE;
 		break;
 	    }
 

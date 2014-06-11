@@ -370,6 +370,7 @@ static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
     unsigned int *mb_cost_table;
     int i;
     VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    unsigned int is_low_quality = (encoder_context->quality_level == ENCODER_LOW_QUALITY);
 
     mb_cost_table = (unsigned int *)vme_context->vme_state_message;
     //building VME state message
@@ -377,8 +378,9 @@ static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
     assert(vme_context->vme_state.bo->virtual);
     vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
 
-    if ((slice_param->slice_type == SLICE_TYPE_P) ||
-        (slice_param->slice_type == SLICE_TYPE_SP)) {
+    if (((slice_param->slice_type == SLICE_TYPE_P) ||
+        (slice_param->slice_type == SLICE_TYPE_SP) &&
+        !is_low_quality)) {
         vme_state_message[0] = 0x01010101;
         vme_state_message[1] = 0x10010101;
         vme_state_message[2] = 0x0F0F0F0F;
@@ -544,7 +546,7 @@ gen7_vme_fill_vme_batchbuffer(VADriverContextP ctx,
    
                 /*inline data */
                 *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
-                *command_ptr++ = ( (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+                *command_ptr++ = ((encoder_context->quality_level << 24) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
 
                 i += 1;
             }
@@ -598,13 +600,18 @@ static void gen7_vme_pipeline_programing(VADriverContextP ctx,
     int s;
     bool allow_hwscore = true;
     int kernel_shader;
+    unsigned int is_low_quality = (encoder_context->quality_level == ENCODER_LOW_QUALITY);
 
-    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
-        pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
-        if ((pSliceParameter->macroblock_address % width_in_mbs)) {
-            allow_hwscore = false;
-            break;
-	}
+    if (is_low_quality)
+        allow_hwscore = false;
+    else {
+        for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+            pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
+            if ((pSliceParameter->macroblock_address % width_in_mbs)) {
+                allow_hwscore = false;
+                break;
+            }
+        }
     }
 
     if ((pSliceParameter->slice_type == SLICE_TYPE_I) ||

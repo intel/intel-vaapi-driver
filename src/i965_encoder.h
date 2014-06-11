@@ -43,6 +43,8 @@ struct intel_encoder_context
     VASurfaceID input_yuv_surface;
     int is_tmp_id;
     unsigned int rate_control_mode;
+    unsigned int quality_level;
+    unsigned int quality_range;
     void *vme_context;
     void *mfc_context;
     void (*vme_context_destroy)(void *vme_context);

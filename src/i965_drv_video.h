@@ -65,6 +65,11 @@
 #define DEFAULT_HUE             0
 #define DEFAULT_SATURATION      50
 
+#define ENCODER_QUALITY_RANGE     2
+#define ENCODER_DEFAULT_QUALITY   1
+#define ENCODER_HIGH_QUALITY      ENCODER_DEFAULT_QUALITY
+#define ENCODER_LOW_QUALITY       2
+
 struct i965_surface
 {
     struct object_base *base;
