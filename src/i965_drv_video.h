@@ -150,7 +150,7 @@ struct encode_state
     int num_slice_params_ext;
 
     /* For the packed data that needs to be inserted into video clip */
-    /* currently it is mainly for packed raw data */
+    /* currently it is mainly to track packed raw data and packed slice_header data. */
     struct buffer_store **packed_header_params_ext;
     int max_packed_header_params_ext;
     int num_packed_header_params_ext;
@@ -162,7 +162,11 @@ struct encode_state
     int slice_num;
     /* This is to store the first index of packed data for one slice */
     int *slice_rawdata_index;
-    /* This is to store the number of packed data for one slice */
+    /* This is to store the number of packed data for one slice.
+     * Both packed rawdata and slice_header data are tracked by this
+     * this variable. That is to say: When one packed slice_header is parsed,
+     * this variable will also be increased.
+     */
     int *slice_rawdata_count;
 
     /* This is to store the index of packed slice header for one slice */
