@@ -408,6 +408,27 @@
 #define VEB_STATE                               VEB(2, 4, 0, 2)
 #define VEB_DNDI_IECP_STATE                     VEB(2, 4, 0, 3)
 
+#define HCP(command)                            \
+    (3 << 29 |                                  \
+     2 << 27 |                                  \
+     7 << 23 |                                  \
+     (command << 16))
+
+#define HCP_PIPE_MODE_SELECT                    HCP(0x00)
+#define HCP_SURFACE_STATE                       HCP(0x01)
+#define HCP_PIPE_BUF_ADDR_STATE                 HCP(0x02)
+#define HCP_IND_OBJ_BASE_ADDR_STATE             HCP(0x03)
+#define HCP_QM_STATE                            HCP(0x04)
+#define HCP_FQM_STATE                           HCP(0x05)
+#define HCP_PIC_STATE                           HCP(0x10)
+#define HCP_TILE_STATE                          HCP(0x11)
+#define HCP_REF_IDX_STATE                       HCP(0x12)
+#define HCP_WEIGHTOFFSET                        HCP(0x13)
+#define HCP_SLICE_STATE                         HCP(0x14)
+#define HCP_BSD_OBJECT                          HCP(0x20)
+#define HCP_PAK_OBJECT                          HCP(0x21)
+#define HCP_INSERT_PAK_OBJECT                   HCP(0x22)
+
 #define I965_DEPTHFORMAT_D32_FLOAT              1
 
 #define BASE_ADDRESS_MODIFY             (1 << 0)
