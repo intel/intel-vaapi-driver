@@ -149,6 +149,12 @@ struct encode_state
     int max_slice_params_ext;
     int num_slice_params_ext;
 
+    /* Check the user-configurable packed_header attribute.
+     * Currently it is mainly used to check whether the packed slice_header data
+     * is provided by user or the driver.
+     * TBD: It will check for the packed SPS/PPS/MISC/RAWDATA and so on.
+     */
+    unsigned int packed_header_flag;
     /* For the packed data that needs to be inserted into video clip */
     /* currently it is mainly to track packed raw data and packed slice_header data. */
     struct buffer_store **packed_header_params_ext;
@@ -158,8 +164,10 @@ struct encode_state
     int max_packed_header_data_ext;
     int num_packed_header_data_ext;
 
+    /* the index of current slice */
+    int slice_index;
     /* the array is determined by max_slice_params_ext */
-    int slice_num;
+    int max_slice_num;
     /* This is to store the first index of packed data for one slice */
     int *slice_rawdata_index;
     /* This is to store the number of packed data for one slice.
