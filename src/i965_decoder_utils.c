@@ -1074,6 +1074,15 @@ intel_decoder_check_vp8_parameter(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static VAStatus
+intel_decoder_check_hevc_parameter(VADriverContextP ctx,
+                                   struct decode_state *decode_state)
+{
+    /* FIXME: implement it later */
+
+    return VA_STATUS_SUCCESS;
+}
+
 VAStatus
 intel_decoder_sanity_check_input(VADriverContextP ctx,
                                  VAProfile profile,
@@ -1119,6 +1128,11 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
 
     case VAProfileVP8Version0_3:
         vaStatus = intel_decoder_check_vp8_parameter(ctx, decode_state);
+        break;
+
+    case VAProfileHEVCMain:
+    case VAProfileHEVCMain10:
+        vaStatus = intel_decoder_check_hevc_parameter(ctx, decode_state);
         break;
 
     default:
