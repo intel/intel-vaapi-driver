@@ -306,10 +306,11 @@ static struct hw_codec_info chv_hw_codec_info = {
     },
 };
 
+extern struct hw_context *gen9_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen9_enc_hw_context_init(VADriverContextP, struct object_config *);
 extern void gen9_post_processing_context_init(VADriverContextP, void *, struct intel_batchbuffer *);
 static struct hw_codec_info skl_hw_codec_info = {
-    .dec_hw_context_init = gen8_dec_hw_context_init,
+    .dec_hw_context_init = gen9_dec_hw_context_init,
     .enc_hw_context_init = gen9_enc_hw_context_init,
     .proc_hw_context_init = gen75_proc_context_init,
     .render_init = gen9_render_init,
