@@ -60,15 +60,15 @@
 #define VME_MSG_LENGTH		32
 
 static const uint32_t gen9_vme_intra_frame[][4] = {
-#include "shaders/vme/intra_frame_gen8.g8b"
+#include "shaders/vme/intra_frame_gen9.g9b"
 };
 
 static const uint32_t gen9_vme_inter_frame[][4] = {
-#include "shaders/vme/inter_frame_gen8.g8b"
+#include "shaders/vme/inter_frame_gen9.g9b"
 };
 
 static const uint32_t gen9_vme_inter_bframe[][4] = {
-#include "shaders/vme/inter_bframe_gen8.g8b"
+#include "shaders/vme/inter_bframe_gen9.g9b"
 };
 
 static struct i965_kernel gen9_vme_kernels[] = {
@@ -96,11 +96,11 @@ static struct i965_kernel gen9_vme_kernels[] = {
 };
 
 static const uint32_t gen9_vme_mpeg2_intra_frame[][4] = {
-#include "shaders/vme/intra_frame_gen8.g8b"
+#include "shaders/vme/intra_frame_gen9.g9b"
 };
 
 static const uint32_t gen9_vme_mpeg2_inter_frame[][4] = {
-#include "shaders/vme/mpeg2_inter_gen8.g8b"
+#include "shaders/vme/mpeg2_inter_gen9.g9b"
 };
 
 static struct i965_kernel gen9_vme_mpeg2_kernels[] = {
