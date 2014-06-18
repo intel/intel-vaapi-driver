@@ -53,11 +53,11 @@
 #define IS_STEPPING_BPLUS(i965)	((i965->intel.revision) >= B0_STEP_REV)
 
 static const uint32_t gen9_mfc_batchbuffer_avc_intra[][4] = {
-#include "shaders/utils/mfc_batchbuffer_avc_intra.g7b"
+#include "shaders/utils/mfc_batchbuffer_avc_intra.g9b"
 };
 
 static const uint32_t gen9_mfc_batchbuffer_avc_inter[][4] = {
-#include "shaders/utils/mfc_batchbuffer_avc_inter.g7b"
+#include "shaders/utils/mfc_batchbuffer_avc_inter.g9b"
 };
 
 static struct i965_kernel gen9_mfc_kernels[] = {

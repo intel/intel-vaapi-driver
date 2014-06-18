@@ -2,6 +2,7 @@ VME_CORE	= batchbuffer.asm intra_frame.asm inter_frame.asm
 VME7_CORE	= batchbuffer.asm intra_frame_ivb.asm inter_frame_ivb.asm inter_bframe_ivb.asm mpeg2_inter_ivb.asm
 VME75_CORE	= batchbuffer.asm intra_frame_haswell.asm inter_frame_haswell.asm inter_bframe_haswell.asm mpeg2_inter_haswell.asm
 VME8_CORE	= intra_frame_gen8.asm	inter_frame_gen8.asm inter_bframe_gen8.asm mpeg2_inter_gen8.asm
+VME9_CORE	= $(VME8_CORE)
 
 INTEL_G6B	= batchbuffer.g6b intra_frame.g6b inter_frame.g6b
 INTEL_G6A	= batchbuffer.g6a intra_frame.g6a inter_frame.g6a
@@ -25,17 +26,24 @@ INTEL_GEN8_INC	= vme8.inc vme75_mpeg2.inc
 INTEL_GEN8_ASM	= $(INTEL_G8A:%.g8a=%.gen8.asm)
 
 
+INTEL_G9B	= intra_frame_gen9.g9b inter_frame_gen9.g9b inter_bframe_gen9.g9b mpeg2_inter_gen9.g9b
+INTEL_G9A	= $(INTEL_G8A)
+INTEL_GEN9_INC	= $(INTEL_GEN8_INC)
+INTEL_GEN9_ASM	= $(INTEL_G9A:%.g9a=%.gen9.asm)
+
+
 TARGETS  =
 if HAVE_GEN4ASM
 TARGETS += $(INTEL_G6B)
 TARGETS += $(INTEL_G7B)
 TARGETS += $(INTEL_G75B)
 TARGETS += $(INTEL_G8B)
+TARGETS += $(INTEL_G9B)
 endif
 
 all-local: $(TARGETS)
 
-SUFFIXES = .g6a .g6b .g7a .g7b .gen6.asm .gen7.asm .g75a .g75b .gen75.asm .g8a .g8b .gen8.asm
+SUFFIXES = .g6a .g6b .g7a .g7b .gen6.asm .gen7.asm .g75a .g75b .gen75.asm .g8a .g8b .gen8.asm .g9a .g9b .gen9.asm
 
 if HAVE_GEN4ASM
 $(INTEL_GEN6_ASM): $(VME_CORE) $(INTEL_GEN6_INC)
@@ -71,9 +79,17 @@ $(INTEL_GEN8_ASM): $(VME8_CORE) $(INTEL_GEN8_INC)
 .gen8.asm.g8b:
 	$(AM_V_GEN)$(GEN4ASM) -g 8 -o $@ $<
 
+$(INTEL_GEN9_ASM): $(VME9_CORE) $(INTEL_GEN9_INC)
+.g9a.gen9.asm:
+	$(AM_V_GEN)cpp -P $< > _vme0.$@ 	&& \
+	m4 _vme0.$@ > $@				&& \
+	rm _vme0.$@
+.gen9.asm.g9b:
+	$(AM_V_GEN)$(GEN4ASM) -g 9 -o $@ $<
+
 endif
 
-CLEANFILES = $(INTEL_GEN6_ASM) $(INTEL_GEN7_ASM) $(INTEL_GEN75_ASM) $(INTEL_GEN8_ASM)
+CLEANFILES = $(INTEL_GEN6_ASM) $(INTEL_GEN7_ASM) $(INTEL_GEN75_ASM) $(INTEL_GEN8_ASM) $(INTEL_GEN9_ASM)
 
 EXTRA_DIST = \
 	$(INTEL_G6A)		\
@@ -84,13 +100,17 @@ EXTRA_DIST = \
 	$(INTEL_G7B)		\
 	$(INTEL_G8A)            \
 	$(INTEL_G8B)            \
+	$(INTEL_G9A)		\
+	$(INTEL_G9B)		\
 	$(INTEL_GEN6_INC)	\
 	$(INTEL_GEN75_INC)	\
 	$(INTEL_GEN7_INC)	\
 	$(INTEL_GEN8_INC)       \
+	$(INTEL_GEN9_INC)	\
 	$(VME75_CORE)		\
 	$(VME7_CORE)		\
 	$(VME8_CORE)            \
+	$(VME9_CORE)		\
 	$(VME_CORE)		\
 	$(NULL)
 
