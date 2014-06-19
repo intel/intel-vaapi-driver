@@ -52,4 +52,12 @@ extern void gen_free_avc_surface(void **data);
 
 extern int intel_format_convert(float src, int out_int_bits, int out_frac_bits,int out_sign_flag);
 
+typedef struct gen_hevc_surface GenHevcSurface;
+struct gen_hevc_surface
+{
+    dri_bo *motion_vector_temporal_bo;
+};
+
+extern void gen_free_hevc_surface(void **data);
+
 #endif /* INTEL_MEDIA_H */
