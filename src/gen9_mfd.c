@@ -29,6 +29,7 @@
 #include "sysdeps.h"
 
 #include <va/va.h>
+#include <va/va_dec_hevc.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
@@ -43,7 +44,21 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
                            struct decode_state *decode_state,
                            struct gen9_hcpd_context *gen9_hcpd_context)
 {
-    /* FIXME: implement it later */
+    VAPictureParameterBufferHEVC *pic_param;
+
+    assert(decode_state->pic_param && decode_state->pic_param->buffer);
+    pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
+
+    gen9_hcpd_context->picture_width_in_pixels = pic_param->pic_width_in_luma_samples;
+    gen9_hcpd_context->picture_height_in_pixels = pic_param->pic_height_in_luma_samples;
+    gen9_hcpd_context->ctb_size = (1 << (pic_param->log2_min_luma_coding_block_size_minus3 +
+                                         3 +
+                                         pic_param->log2_diff_max_min_luma_coding_block_size));
+    gen9_hcpd_context->picture_width_in_ctbs = ALIGN(gen9_hcpd_context->picture_width_in_pixels, gen9_hcpd_context->ctb_size) / gen9_hcpd_context->ctb_size;
+    gen9_hcpd_context->picture_height_in_ctbs = ALIGN(gen9_hcpd_context->picture_height_in_pixels, gen9_hcpd_context->ctb_size) / gen9_hcpd_context->ctb_size;
+    gen9_hcpd_context->min_cb_size = (1 << (pic_param->log2_min_luma_coding_block_size_minus3 + 3));
+    gen9_hcpd_context->picture_width_in_min_cb_minus1 = gen9_hcpd_context->picture_width_in_pixels / gen9_hcpd_context->min_cb_size - 1;
+    gen9_hcpd_context->picture_height_in_min_cb_minus1 = gen9_hcpd_context->picture_height_in_pixels / gen9_hcpd_context->min_cb_size - 1;
 
     return VA_STATUS_SUCCESS;
 }
