@@ -888,4 +888,8 @@
 #define GEN9_SBE_ACTIVE_COMPONENT_XYZ           2
 #define GEN9_SBE_ACTIVE_COMPONENT_XYZW          3
 
+#define HEVC_SLICE_B                            0
+#define HEVC_SLICE_P                            1
+#define HEVC_SLICE_I                            2
+
 #endif /* _I965_DEFINES_H_ */
