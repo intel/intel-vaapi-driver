@@ -253,6 +253,7 @@ gen9_hcpd_context_init(VADriverContextP ctx, struct object_config *object_config
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct gen9_hcpd_context *gen9_hcpd_context = calloc(1, sizeof(struct gen9_hcpd_context));
+    int i;
 
     if (!gen9_hcpd_context)
         return NULL;
@@ -260,6 +261,12 @@ gen9_hcpd_context_init(VADriverContextP ctx, struct object_config *object_config
     gen9_hcpd_context->base.destroy = gen9_hcpd_context_destroy;
     gen9_hcpd_context->base.run = gen9_hcpd_decode_picture;
     gen9_hcpd_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_VEBOX, 0);
+
+    for (i = 0; i < ARRAY_ELEMS(gen9_hcpd_context->reference_surfaces); i++) {
+        gen9_hcpd_context->reference_surfaces[i].surface_id = VA_INVALID_ID;
+        gen9_hcpd_context->reference_surfaces[i].frame_store_id = -1;
+        gen9_hcpd_context->reference_surfaces[i].obj_surface = NULL;
+    }
 
     return (struct hw_context *)gen9_hcpd_context;
 }
