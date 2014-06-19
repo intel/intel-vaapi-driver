@@ -49,6 +49,16 @@ struct gen9_hcpd_context
     uint16_t picture_height_in_min_cb_minus1;
     uint8_t ctb_size;
     uint8_t min_cb_size;
+
+    GenBuffer deblocking_filter_line_buffer;
+    GenBuffer deblocking_filter_tile_line_buffer;
+    GenBuffer deblocking_filter_tile_column_buffer;
+    GenBuffer metadata_line_buffer;
+    GenBuffer metadata_tile_line_buffer;
+    GenBuffer metadata_tile_column_buffer;
+    GenBuffer sao_line_buffer;
+    GenBuffer sao_tile_line_buffer;
+    GenBuffer sao_tile_column_buffer;
 };
 
 #endif /* GEN9_MFD_H */

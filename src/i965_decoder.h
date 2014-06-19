@@ -33,6 +33,23 @@
 #include <intel_bufmgr.h>
 
 #define MAX_GEN_REFERENCE_FRAMES 16
+#define MAX_GEN_HCP_REFERENCE_FRAMES    8
+
+#define ALLOC_GEN_BUFFER(gen_buffer, string, size) do {         \
+        dri_bo_unreference(gen_buffer->bo);                     \
+        gen_buffer->bo = dri_bo_alloc(i965->intel.bufmgr,       \
+                                      string,                   \
+                                      size,                     \
+                                      0x1000);                  \
+        assert(gen_buffer->bo);                                 \
+        gen_buffer->valid = 1;                                  \
+    } while (0);
+
+#define FREE_GEN_BUFFER(gen_buffer) do {        \
+        dri_bo_unreference(gen_buffer->bo);     \
+        gen_buffer->bo = NULL;                  \
+        gen_buffer->valid = 0;                  \
+    } while (0)
 
 typedef struct gen_frame_store GenFrameStore;
 struct gen_frame_store {
