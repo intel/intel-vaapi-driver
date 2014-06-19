@@ -38,6 +38,45 @@
 #include "i965_decoder_utils.h"
 
 #include "gen9_mfd.h"
+#include "intel_media.h"
+
+static void
+gen9_hcpd_init_hevc_surface(VADriverContextP ctx,
+                            VAPictureParameterBufferHEVC *pic_param,
+                            struct object_surface *obj_surface,
+                            struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    GenHevcSurface *gen9_hevc_surface;
+
+    if (!obj_surface)
+        return;
+
+    obj_surface->free_private_data = gen_free_hevc_surface;
+    gen9_hevc_surface = obj_surface->private_data;
+
+    if (!gen9_hevc_surface) {
+        gen9_hevc_surface = calloc(sizeof(GenHevcSurface), 1);
+        obj_surface->private_data = gen9_hevc_surface;
+    }
+
+    if (gen9_hevc_surface->motion_vector_temporal_bo == NULL) {
+        uint32_t size;
+
+        if (gen9_hcpd_context->ctb_size == 16)
+            size = ((gen9_hcpd_context->picture_width_in_pixels + 63) >> 6) *
+                ((gen9_hcpd_context->picture_height_in_pixels + 15) >> 4);
+        else
+            size = ((gen9_hcpd_context->picture_width_in_pixels + 31) >> 5) *
+                ((gen9_hcpd_context->picture_height_in_pixels + 31) >> 5);
+
+        size <<= 6; /* in unit of 64bytes */
+        gen9_hevc_surface->motion_vector_temporal_bo = dri_bo_alloc(i965->intel.bufmgr,
+                                                                    "motion vector temporal buffer",
+                                                                    size,
+                                                                    0x1000);
+    }
+}
 
 static VAStatus
 gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
@@ -45,6 +84,7 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
                            struct gen9_hcpd_context *gen9_hcpd_context)
 {
     VAPictureParameterBufferHEVC *pic_param;
+    struct object_surface *obj_surface;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
@@ -59,6 +99,10 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     gen9_hcpd_context->min_cb_size = (1 << (pic_param->log2_min_luma_coding_block_size_minus3 + 3));
     gen9_hcpd_context->picture_width_in_min_cb_minus1 = gen9_hcpd_context->picture_width_in_pixels / gen9_hcpd_context->min_cb_size - 1;
     gen9_hcpd_context->picture_height_in_min_cb_minus1 = gen9_hcpd_context->picture_height_in_pixels / gen9_hcpd_context->min_cb_size - 1;
+
+    /* Current decoded picture */
+    obj_surface = decode_state->render_object;
+    gen9_hcpd_init_hevc_surface(ctx, pic_param, obj_surface, gen9_hcpd_context);
 
     return VA_STATUS_SUCCESS;
 }

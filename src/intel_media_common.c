@@ -82,3 +82,28 @@ int intel_format_convert(float src, int out_int_bits, int out_frac_bits,int out_
      }
      return output_value;
 }
+
+static pthread_mutex_t free_hevc_surface_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void
+gen_free_hevc_surface(void **data)
+{
+    GenHevcSurface *hevc_surface;
+
+    pthread_mutex_lock(&free_hevc_surface_lock);
+
+    hevc_surface = *data;
+
+    if (!hevc_surface) {
+        pthread_mutex_unlock(&free_hevc_surface_lock);
+        return;
+    }
+
+    dri_bo_unreference(hevc_surface->motion_vector_temporal_bo);
+    hevc_surface->motion_vector_temporal_bo = NULL;
+
+    free(hevc_surface);
+    *data = NULL;
+
+    pthread_mutex_unlock(&free_hevc_surface_lock);
+}
