@@ -40,6 +40,15 @@ struct hw_context;
 struct gen9_hcpd_context
 {
     struct hw_context base;
+
+    uint16_t picture_width_in_pixels;
+    uint16_t picture_height_in_pixels;
+    uint16_t picture_width_in_ctbs;
+    uint16_t picture_height_in_ctbs;
+    uint16_t picture_width_in_min_cb_minus1;
+    uint16_t picture_height_in_min_cb_minus1;
+    uint8_t ctb_size;
+    uint8_t min_cb_size;
 };
 
 #endif /* GEN9_MFD_H */
