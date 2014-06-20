@@ -40,6 +40,26 @@
 #include "gen9_mfd.h"
 #include "intel_media.h"
 
+#define OUT_BUFFER(buf_bo, is_target, ma)  do {                         \
+        if (buf_bo) {                                                   \
+            OUT_BCS_RELOC(batch,                                        \
+                          buf_bo,                                       \
+                          I915_GEM_DOMAIN_RENDER,                       \
+                          is_target ? I915_GEM_DOMAIN_RENDER : 0,       \
+                          0);                                           \
+        } else {                                                        \
+            OUT_BCS_BATCH(batch, 0);                                    \
+        }                                                               \
+        OUT_BCS_BATCH(batch, 0);                                        \
+        if (ma)                                                         \
+            OUT_BCS_BATCH(batch, 0);                                    \
+    } while (0)
+
+#define OUT_BUFFER_MA_TARGET(buf_bo)       OUT_BUFFER(buf_bo, 1, 1)
+#define OUT_BUFFER_MA_REFERENCE(buf_bo)    OUT_BUFFER(buf_bo, 0, 1)
+#define OUT_BUFFER_NMA_TARGET(buf_bo)      OUT_BUFFER(buf_bo, 1, 0)
+#define OUT_BUFFER_NMA_REFERENCE(buf_bo)   OUT_BUFFER(buf_bo, 0, 0)
+
 static void
 gen9_hcpd_init_hevc_surface(VADriverContextP ctx,
                             VAPictureParameterBufferHEVC *pic_param,
@@ -222,6 +242,75 @@ gen9_hcpd_surface_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+static void
+gen9_hcpd_pipe_buf_addr_state(VADriverContextP ctx,
+                              struct decode_state *decode_state,
+                              struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+    struct object_surface *obj_surface;
+    GenHevcSurface *gen9_hevc_surface;
+    int i;
+
+    BEGIN_BCS_BATCH(batch, 95);
+
+    OUT_BCS_BATCH(batch, HCP_PIPE_BUF_ADDR_STATE | (95 - 2));
+
+    obj_surface = decode_state->render_object;
+    assert(obj_surface && obj_surface->bo);
+    gen9_hevc_surface = obj_surface->private_data;
+    assert(gen9_hevc_surface && gen9_hevc_surface->motion_vector_temporal_bo);
+
+    OUT_BUFFER_MA_TARGET(obj_surface->bo); /* DW 1..3 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->deblocking_filter_line_buffer.bo);/* DW 4..6 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->deblocking_filter_tile_line_buffer.bo); /* DW 7..9 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->deblocking_filter_tile_column_buffer.bo); /* DW 10..12 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->metadata_line_buffer.bo);         /* DW 13..15 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->metadata_tile_line_buffer.bo);    /* DW 16..18 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->metadata_tile_column_buffer.bo);  /* DW 19..21 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->sao_line_buffer.bo);              /* DW 22..24 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->sao_tile_line_buffer.bo);         /* DW 25..27 */
+    OUT_BUFFER_MA_TARGET(gen9_hcpd_context->sao_tile_column_buffer.bo);       /* DW 28..30 */
+    OUT_BUFFER_MA_TARGET(gen9_hevc_surface->motion_vector_temporal_bo); /* DW 31..33 */
+    OUT_BUFFER_MA_TARGET(NULL); /* DW 34..36, reserved */
+
+    for (i = 0; i < ARRAY_ELEMS(gen9_hcpd_context->reference_surfaces); i++) {
+        obj_surface = gen9_hcpd_context->reference_surfaces[i].obj_surface;
+
+        if (obj_surface)
+            OUT_BUFFER_NMA_REFERENCE(obj_surface->bo);
+        else
+            OUT_BUFFER_NMA_REFERENCE(NULL);
+    }
+    OUT_BCS_BATCH(batch, 0);    /* DW 53, memory address attributes */
+
+    OUT_BUFFER_MA_REFERENCE(NULL); /* DW 54..56, ignore for decoding mode */
+    OUT_BUFFER_MA_TARGET(NULL);
+    OUT_BUFFER_MA_TARGET(NULL);
+    OUT_BUFFER_MA_TARGET(NULL);
+
+    for (i = 0; i < ARRAY_ELEMS(gen9_hcpd_context->reference_surfaces); i++) {
+        obj_surface = gen9_hcpd_context->reference_surfaces[i].obj_surface;
+        gen9_hevc_surface = NULL;
+
+        if (obj_surface && obj_surface->private_data)
+            gen9_hevc_surface = obj_surface->private_data;
+
+        if (gen9_hevc_surface)
+            OUT_BUFFER_NMA_REFERENCE(gen9_hevc_surface->motion_vector_temporal_bo);
+        else
+            OUT_BUFFER_NMA_REFERENCE(NULL);
+    }
+    OUT_BCS_BATCH(batch, 0);    /* DW 82, memory address attributes */
+
+    OUT_BUFFER_MA_TARGET(NULL);    /* DW 83..85, ignore for HEVC */
+    OUT_BUFFER_MA_TARGET(NULL);    /* DW 86..88, ignore for HEVC */
+    OUT_BUFFER_MA_TARGET(NULL);    /* DW 89..91, ignore for HEVC */
+    OUT_BUFFER_MA_TARGET(NULL);    /* DW 92..94, ignore for HEVC */
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -240,6 +329,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
 
     gen9_hcpd_pipe_mode_select(ctx, decode_state, HCP_CODEC_HEVC, gen9_hcpd_context);
     gen9_hcpd_surface_state(ctx, decode_state, gen9_hcpd_context);
+    gen9_hcpd_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
 
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
