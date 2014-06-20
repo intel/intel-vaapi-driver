@@ -196,6 +196,32 @@ gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+static void
+gen9_hcpd_surface_state(VADriverContextP ctx,
+                        struct decode_state *decode_state,
+                        struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+    struct object_surface *obj_surface = decode_state->render_object;
+    unsigned int y_cb_offset;
+
+    assert(obj_surface);
+
+    y_cb_offset = obj_surface->y_cb_offset;
+
+    BEGIN_BCS_BATCH(batch, 3);
+
+    OUT_BCS_BATCH(batch, HCP_SURFACE_STATE | (3 - 2));
+    OUT_BCS_BATCH(batch,
+                  (0 << 28) |                   /* surface id */
+                  (obj_surface->width - 1));    /* pitch - 1 */
+    OUT_BCS_BATCH(batch,
+                  (SURFACE_FORMAT_PLANAR_420_8 << 28) |
+                  y_cb_offset);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -213,6 +239,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_emit_mi_flush(batch);
 
     gen9_hcpd_pipe_mode_select(ctx, decode_state, HCP_CODEC_HEVC, gen9_hcpd_context);
+    gen9_hcpd_surface_state(ctx, decode_state, gen9_hcpd_context);
 
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
