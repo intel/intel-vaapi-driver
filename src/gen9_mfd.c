@@ -542,6 +542,86 @@ gen9_hcpd_tile_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+static int
+gen9_hcpd_get_reference_picture_frame_id(VAPictureHEVC *ref_pic,
+                                         GenFrameStore frame_store[MAX_GEN_HCP_REFERENCE_FRAMES])
+{
+    int i;
+
+    if (ref_pic->picture_id == VA_INVALID_ID ||
+        (ref_pic->flags & VA_PICTURE_HEVC_INVALID))
+        return 0;
+
+    for (i = 0; i < MAX_GEN_HCP_REFERENCE_FRAMES; i++) {
+        if (ref_pic->picture_id == frame_store[i].surface_id) {
+            assert(frame_store[i].frame_store_id < MAX_GEN_HCP_REFERENCE_FRAMES);
+            return frame_store[i].frame_store_id;
+        }
+    }
+
+    /* Should never get here !!! */
+    assert(0);
+    return 0;
+}
+
+static void
+gen9_hcpd_ref_idx_state_1(struct intel_batchbuffer *batch,
+                          int list,
+                          VAPictureParameterBufferHEVC *pic_param,
+                          VASliceParameterBufferHEVC *slice_param,
+                          GenFrameStore frame_store[MAX_GEN_HCP_REFERENCE_FRAMES])
+{
+    int i;
+    uint8_t num_ref_minus1 = (list ? slice_param->num_ref_idx_l1_active_minus1 : slice_param->num_ref_idx_l0_active_minus1);
+    uint8_t *ref_list = slice_param->RefPicList[list];
+
+    BEGIN_BCS_BATCH(batch, 18);
+
+    OUT_BCS_BATCH(batch, HCP_REF_IDX_STATE | (18 - 2));
+    OUT_BCS_BATCH(batch,
+                  num_ref_minus1 << 1 |
+                  list);
+
+    for (i = 0; i < 16; i++) {
+        if (i < MIN((num_ref_minus1 + 1), 15)) {
+            VAPictureHEVC *ref_pic = &pic_param->ReferenceFrames[ref_list[i]];
+            VAPictureHEVC *curr_pic = &pic_param->CurrPic;
+
+            OUT_BCS_BATCH(batch,
+                          !(ref_pic->flags & VA_PICTURE_HEVC_BOTTOM_FIELD) << 15 |
+                          !!(ref_pic->flags & VA_PICTURE_HEVC_FIELD_PIC) << 14 |
+                          !!(ref_pic->flags & VA_PICTURE_HEVC_LONG_TERM_REFERENCE) << 13 |
+                          0 << 12 |
+                          0 << 11 |
+                          gen9_hcpd_get_reference_picture_frame_id(ref_pic, frame_store) << 8 |
+                          (CLAMP(-128, 127, curr_pic->pic_order_cnt - ref_pic->pic_order_cnt) & 0xff));
+        } else {
+            OUT_BCS_BATCH(batch, 0);
+        }
+    }
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_hcpd_ref_idx_state(VADriverContextP ctx,
+                        VAPictureParameterBufferHEVC *pic_param,
+                        VASliceParameterBufferHEVC *slice_param,
+                        struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+
+    if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_I)
+        return;
+
+    gen9_hcpd_ref_idx_state_1(batch, 0, pic_param, slice_param, gen9_hcpd_context->reference_surfaces);
+
+    if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_P)
+        return;
+
+    gen9_hcpd_ref_idx_state_1(batch, 1, pic_param, slice_param, gen9_hcpd_context->reference_surfaces);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -549,13 +629,18 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
 {
     VAStatus vaStatus;
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+    VAPictureParameterBufferHEVC *pic_param;
+    VASliceParameterBufferHEVC *slice_param;
     dri_bo *slice_data_bo;
-    int j;
+    int i, j;
 
     vaStatus = gen9_hcpd_hevc_decode_init(ctx, decode_state, gen9_hcpd_context);
 
     if (vaStatus != VA_STATUS_SUCCESS)
         goto out;
+
+    assert(decode_state->pic_param && decode_state->pic_param->buffer);
+    pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
 
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
     intel_batchbuffer_emit_mi_flush(batch);
@@ -569,9 +654,16 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
 
     /* Need to double it works or not if the two slice groups have differenct slice data buffers */
     for (j = 0; j < decode_state->num_slice_params; j++) {
+        assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
+        slice_param = (VASliceParameterBufferHEVC *)decode_state->slice_params[j]->buffer;
         slice_data_bo = decode_state->slice_datas[j]->bo;
 
         gen9_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
+
+        for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
+            gen9_hcpd_ref_idx_state(ctx, pic_param, slice_param, gen9_hcpd_context);
+            slice_param++;
+        }
     }
 
     intel_batchbuffer_end_atomic(batch);
