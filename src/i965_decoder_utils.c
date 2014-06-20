@@ -1208,3 +1208,25 @@ intel_ensure_vp8_segmentation_buffer(VADriverContextP ctx, GenBuffer *buf,
     buf->valid = buf->bo != NULL;
     return buf->valid;
 }
+
+void
+hevc_gen_default_iq_matrix(VAIQMatrixBufferHEVC *iq_matrix)
+{
+    /* Flat_4x4_16 */
+    memset(&iq_matrix->ScalingList4x4, 16, sizeof(iq_matrix->ScalingList4x4));
+
+    /* Flat_8x8_16 */
+    memset(&iq_matrix->ScalingList8x8, 16, sizeof(iq_matrix->ScalingList8x8));
+
+    /* Flat_16x16_16 */
+    memset(&iq_matrix->ScalingList16x16, 16, sizeof(iq_matrix->ScalingList16x16));
+
+    /* Flat_32x32_16 */
+    memset(&iq_matrix->ScalingList32x32, 16, sizeof(iq_matrix->ScalingList32x32));
+
+    /* Flat_16x16_dc_16 */
+    memset(&iq_matrix->ScalingListDC16x16, 16, sizeof(iq_matrix->ScalingListDC16x16));
+
+    /* Flat_32x32_dc_16 */
+    memset(&iq_matrix->ScalingListDC32x32, 16, sizeof(iq_matrix->ScalingListDC32x32));
+}
