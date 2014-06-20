@@ -822,6 +822,23 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+static void
+gen9_hcpd_bsd_object(VADriverContextP ctx,
+                     VASliceParameterBufferHEVC *slice_param,
+                     struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 3);
+
+    OUT_BCS_BATCH(batch, HCP_BSD_OBJECT | (3 - 2));
+
+    OUT_BCS_BATCH(batch, slice_param->slice_data_size);
+    OUT_BCS_BATCH(batch, slice_param->slice_data_offset);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -874,6 +891,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
             gen9_hcpd_slice_state(ctx, pic_param, slice_param, next_slice_param, gen9_hcpd_context);
             gen9_hcpd_ref_idx_state(ctx, pic_param, slice_param, gen9_hcpd_context);
             gen9_hcpd_weightoffset_state(ctx, slice_param, gen9_hcpd_context);
+            gen9_hcpd_bsd_object(ctx, slice_param, gen9_hcpd_context);
             slice_param++;
         }
     }
