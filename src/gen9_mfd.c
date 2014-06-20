@@ -173,6 +173,29 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static void
+gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
+                           struct decode_state *decode_state,
+                           int codec,
+                           struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+
+    assert(codec == HCP_CODEC_HEVC);
+
+    BEGIN_BCS_BATCH(batch, 4);
+
+    OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (4 - 2));
+    OUT_BCS_BATCH(batch,
+                  (codec << 5) |
+                  (0 << 3) | /* disable Pic Status / Error Report */
+                  HCP_CODEC_SELECT_DECODE);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -188,6 +211,8 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
 
     intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
     intel_batchbuffer_emit_mi_flush(batch);
+
+    gen9_hcpd_pipe_mode_select(ctx, decode_state, HCP_CODEC_HEVC, gen9_hcpd_context);
 
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);

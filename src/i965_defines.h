@@ -892,4 +892,9 @@
 #define HEVC_SLICE_P                            1
 #define HEVC_SLICE_I                            2
 
+#define HCP_CODEC_HEVC                          0
+
+#define HCP_CODEC_SELECT_DECODE                 0
+#define HCP_CODEC_SELECT_ENCODE                 1
+
 #endif /* _I965_DEFINES_H_ */
