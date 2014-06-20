@@ -409,6 +409,104 @@ gen9_hcpd_hevc_qm_state(VADriverContextP ctx,
     }
 }
 
+static void
+gen9_hcpd_pic_state(VADriverContextP ctx,
+                    struct decode_state *decode_state,
+                    struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+    VAPictureParameterBufferHEVC *pic_param;
+    int max_pcm_size_minus3 = 0, min_pcm_size_minus3 = 0;
+    int pcm_sample_bit_depth_luma_minus1 = 7, pcm_sample_bit_depth_chroma_minus1 = 7;
+    /*
+     * 7.4.3.1
+     *
+     * When not present, the value of loop_filter_across_tiles_enabled_flag
+     * is inferred to be equal to 1.
+     */
+    int loop_filter_across_tiles_enabled_flag = 1;
+
+    assert(decode_state->pic_param && decode_state->pic_param->buffer);
+    pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
+
+    if (pic_param->pic_fields.bits.pcm_enabled_flag) {
+        max_pcm_size_minus3 = pic_param->log2_min_pcm_luma_coding_block_size_minus3 +
+            pic_param->log2_diff_max_min_pcm_luma_coding_block_size;
+        min_pcm_size_minus3 = pic_param->log2_min_pcm_luma_coding_block_size_minus3;
+        pcm_sample_bit_depth_luma_minus1 = (pic_param->pcm_sample_bit_depth_luma_minus1 & 0x0f);
+        pcm_sample_bit_depth_chroma_minus1 = (pic_param->pcm_sample_bit_depth_chroma_minus1 & 0x0f);
+    } else {
+        max_pcm_size_minus3 = MIN(pic_param->log2_min_luma_coding_block_size_minus3 + pic_param->log2_diff_max_min_luma_coding_block_size, 2);
+    }
+
+    if (pic_param->pic_fields.bits.tiles_enabled_flag)
+        loop_filter_across_tiles_enabled_flag = pic_param->pic_fields.bits.loop_filter_across_tiles_enabled_flag;
+
+    BEGIN_BCS_BATCH(batch, 19);
+
+    OUT_BCS_BATCH(batch, HCP_PIC_STATE | (19 - 2));
+
+    OUT_BCS_BATCH(batch,
+                  gen9_hcpd_context->picture_height_in_min_cb_minus1 << 16 |
+                  gen9_hcpd_context->picture_width_in_min_cb_minus1);
+    OUT_BCS_BATCH(batch,
+                  max_pcm_size_minus3 << 10 |
+                  min_pcm_size_minus3 << 8 |
+                  (pic_param->log2_min_transform_block_size_minus2 +
+                   pic_param->log2_diff_max_min_transform_block_size) << 6 |
+                  pic_param->log2_min_transform_block_size_minus2 << 4 |
+                  (pic_param->log2_min_luma_coding_block_size_minus3 +
+                   pic_param->log2_diff_max_min_luma_coding_block_size) << 2 |
+                  pic_param->log2_min_luma_coding_block_size_minus3);
+    OUT_BCS_BATCH(batch, 0); /* DW 3, ignored */
+    OUT_BCS_BATCH(batch,
+                  0 << 27 |
+                  pic_param->pic_fields.bits.strong_intra_smoothing_enabled_flag << 26 |
+                  pic_param->pic_fields.bits.transquant_bypass_enabled_flag << 25 |
+                  pic_param->pic_fields.bits.amp_enabled_flag << 23 |
+                  pic_param->pic_fields.bits.transform_skip_enabled_flag << 22 |
+                  !(pic_param->CurrPic.flags & VA_PICTURE_HEVC_BOTTOM_FIELD) << 21 |
+                  !!(pic_param->CurrPic.flags & VA_PICTURE_HEVC_FIELD_PIC) << 20 |
+                  pic_param->pic_fields.bits.weighted_pred_flag << 19 |
+                  pic_param->pic_fields.bits.weighted_bipred_flag << 18 |
+                  pic_param->pic_fields.bits.tiles_enabled_flag << 17 |
+                  pic_param->pic_fields.bits.entropy_coding_sync_enabled_flag << 16 |
+                  loop_filter_across_tiles_enabled_flag << 15 |
+                  pic_param->pic_fields.bits.sign_data_hiding_enabled_flag << 13 |
+                  pic_param->log2_parallel_merge_level_minus2 << 10 |
+                  pic_param->pic_fields.bits.constrained_intra_pred_flag << 9 |
+                  pic_param->pic_fields.bits.pcm_loop_filter_disabled_flag << 8 |
+                  (pic_param->diff_cu_qp_delta_depth & 0x03) << 6 |
+                  pic_param->pic_fields.bits.cu_qp_delta_enabled_flag << 5 |
+                  pic_param->pic_fields.bits.pcm_enabled_flag << 4 |
+                  pic_param->slice_parsing_fields.bits.sample_adaptive_offset_enabled_flag << 3 |
+                  0);
+    OUT_BCS_BATCH(batch,
+                  pcm_sample_bit_depth_luma_minus1 << 20 |
+                  pcm_sample_bit_depth_chroma_minus1 << 16 |
+                  pic_param->max_transform_hierarchy_depth_inter << 13 |
+                  pic_param->max_transform_hierarchy_depth_intra << 10 |
+                  (pic_param->pps_cr_qp_offset & 0x1f) << 5 |
+                  (pic_param->pps_cb_qp_offset & 0x1f));
+    OUT_BCS_BATCH(batch,
+                  0 << 29 |
+                  0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0); /* DW 10 */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0); /* DW 15 */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -431,6 +529,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
     gen9_hcpd_surface_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_hevc_qm_state(ctx, decode_state, gen9_hcpd_context);
+    gen9_hcpd_pic_state(ctx, decode_state, gen9_hcpd_context);
 
     /* Need to double it works or not if the two slice groups have differenct slice data buffers */
     for (j = 0; j < decode_state->num_slice_params; j++) {
