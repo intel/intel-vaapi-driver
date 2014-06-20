@@ -418,6 +418,13 @@ gen9_hcpd_context_destroy(void *hw_context)
     free(gen9_hcpd_context);
 }
 
+static void
+gen9_hcpd_hevc_context_init(VADriverContextP ctx,
+                            struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    hevc_gen_default_iq_matrix(&gen9_hcpd_context->iq_matrix_hevc);
+}
+
 static struct hw_context *
 gen9_hcpd_context_init(VADriverContextP ctx, struct object_config *object_config)
 {
@@ -436,6 +443,16 @@ gen9_hcpd_context_init(VADriverContextP ctx, struct object_config *object_config
         gen9_hcpd_context->reference_surfaces[i].surface_id = VA_INVALID_ID;
         gen9_hcpd_context->reference_surfaces[i].frame_store_id = -1;
         gen9_hcpd_context->reference_surfaces[i].obj_surface = NULL;
+    }
+
+    switch (object_config->profile) {
+    case VAProfileHEVCMain:
+    case VAProfileHEVCMain10:
+        gen9_hcpd_hevc_context_init(ctx, gen9_hcpd_context);
+        break;
+
+    default:
+        break;
     }
 
     return (struct hw_context *)gen9_hcpd_context;

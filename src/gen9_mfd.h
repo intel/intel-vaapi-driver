@@ -43,6 +43,8 @@ struct gen9_hcpd_context
 
     GenFrameStore reference_surfaces[MAX_GEN_HCP_REFERENCE_FRAMES];
 
+    VAIQMatrixBufferHEVC  iq_matrix_hevc;
+
     uint16_t picture_width_in_pixels;
     uint16_t picture_height_in_pixels;
     uint16_t picture_width_in_ctbs;
