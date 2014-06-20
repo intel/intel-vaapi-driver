@@ -330,6 +330,85 @@ gen9_hcpd_ind_obj_base_addr_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+static void
+gen9_hcpd_qm_state(VADriverContextP ctx,
+                   int size_id,
+                   int color_component,
+                   int pred_type,
+                   int dc,
+                   unsigned char *qm,
+                   int qm_length,
+                   struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+    unsigned char qm_buffer[64];
+
+    assert(qm_length <= 64);
+    memset(qm_buffer, 0, sizeof(qm_buffer));
+    memcpy(qm_buffer, qm, qm_length);
+
+    BEGIN_BCS_BATCH(batch, 18);
+
+    OUT_BCS_BATCH(batch, HCP_QM_STATE | (18 - 2));
+    OUT_BCS_BATCH(batch,
+                  dc << 5 |
+                  color_component << 3 |
+                  size_id << 1 |
+                  pred_type);
+    intel_batchbuffer_data(batch, qm_buffer, 64);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_hcpd_hevc_qm_state(VADriverContextP ctx,
+                        struct decode_state *decode_state,
+                        struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    VAIQMatrixBufferHEVC *iq_matrix;
+    VAPictureParameterBufferHEVC *pic_param;
+    int i;
+
+    if (decode_state->iq_matrix && decode_state->iq_matrix->buffer)
+        iq_matrix = (VAIQMatrixBufferHEVC *)decode_state->iq_matrix->buffer;
+    else
+        iq_matrix = &gen9_hcpd_context->iq_matrix_hevc;
+
+    assert(decode_state->pic_param && decode_state->pic_param->buffer);
+    pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
+
+    if (!pic_param->pic_fields.bits.scaling_list_enabled_flag)
+        iq_matrix = &gen9_hcpd_context->iq_matrix_hevc;
+
+    for (i = 0; i < 6; i++) {
+        gen9_hcpd_qm_state(ctx,
+                           0, i % 3, i / 3, 0,
+                           iq_matrix->ScalingList4x4[i], 16,
+                           gen9_hcpd_context);
+    }
+
+    for (i = 0; i < 6; i++) {
+        gen9_hcpd_qm_state(ctx,
+                           1, i % 3, i / 3, 0,
+                           iq_matrix->ScalingList8x8[i], 64,
+                           gen9_hcpd_context);
+    }
+
+    for (i = 0; i < 6; i++) {
+        gen9_hcpd_qm_state(ctx,
+                           2, i % 3, i / 3, iq_matrix->ScalingListDC16x16[i],
+                           iq_matrix->ScalingList16x16[i], 64,
+                           gen9_hcpd_context);
+    }
+
+    for (i = 0; i < 2; i++) {
+        gen9_hcpd_qm_state(ctx,
+                           3, 0, i % 2, iq_matrix->ScalingListDC32x32[i],
+                           iq_matrix->ScalingList32x32[i], 64,
+                           gen9_hcpd_context);
+    }
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -351,6 +430,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
     gen9_hcpd_pipe_mode_select(ctx, decode_state, HCP_CODEC_HEVC, gen9_hcpd_context);
     gen9_hcpd_surface_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
+    gen9_hcpd_hevc_qm_state(ctx, decode_state, gen9_hcpd_context);
 
     /* Need to double it works or not if the two slice groups have differenct slice data buffers */
     for (j = 0; j < decode_state->num_slice_params; j++) {
