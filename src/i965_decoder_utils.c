@@ -577,11 +577,12 @@ intel_update_codec_frame_store_index(
     VADriverContextP              ctx,
     struct decode_state          *decode_state,
     int poc,
-    GenFrameStore                 frame_store[MAX_GEN_REFERENCE_FRAMES],
+    GenFrameStore                 frame_store[],
+    int num_elements,
     GenFrameStoreContext         *fs_ctx
 )
 {
-    GenFrameStore *free_refs[MAX_GEN_REFERENCE_FRAMES];
+    GenFrameStore **free_refs = calloc(num_elements, sizeof(GenFrameStore *));
     uint32_t used_refs = 0, add_refs = 0;
     uint64_t age;
     int i, n, num_free_refs;
@@ -617,7 +618,7 @@ intel_update_codec_frame_store_index(
 
     /* Build and sort out the list of retired candidates. The resulting
        list is ordered by increasing age when they were last used */
-    for (i = 0, n = 0; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+    for (i = 0, n = 0; i < num_elements; i++) {
         if (!(used_refs & (1 << i))) {
             GenFrameStore * const fs = &frame_store[i];
             fs->obj_surface = NULL;
@@ -648,6 +649,8 @@ intel_update_codec_frame_store_index(
         }
         WARN_ONCE("No free slot found for DPB reference list!!!\n");
     }
+
+    free(free_refs);
 }
 
 void
@@ -663,6 +666,7 @@ intel_update_avc_frame_store_index(
                                          decode_state,
                                          avc_get_picture_poc(&pic_param->CurrPic),
                                          frame_store,
+                                         MAX_GEN_REFERENCE_FRAMES,
                                          fs_ctx);
 }
 
