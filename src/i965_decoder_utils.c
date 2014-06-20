@@ -572,11 +572,11 @@ compare_avc_ref_store_func(const void *p1, const void *p2)
     return fs1->ref_age - fs2->ref_age;
 }
 
-void
-intel_update_avc_frame_store_index(
+static void
+intel_update_codec_frame_store_index(
     VADriverContextP              ctx,
     struct decode_state          *decode_state,
-    VAPictureParameterBufferH264 *pic_param,
+    int poc,
     GenFrameStore                 frame_store[MAX_GEN_REFERENCE_FRAMES],
     GenFrameStoreContext         *fs_ctx
 )
@@ -587,7 +587,6 @@ intel_update_avc_frame_store_index(
     int i, n, num_free_refs;
 
     /* Detect changes of access unit */
-    const int poc = avc_get_picture_poc(&pic_param->CurrPic);
     if (fs_ctx->age == 0 || fs_ctx->prev_poc != poc)
         fs_ctx->age++;
     fs_ctx->prev_poc = poc;
@@ -649,6 +648,22 @@ intel_update_avc_frame_store_index(
         }
         WARN_ONCE("No free slot found for DPB reference list!!!\n");
     }
+}
+
+void
+intel_update_avc_frame_store_index(
+    VADriverContextP              ctx,
+    struct decode_state          *decode_state,
+    VAPictureParameterBufferH264 *pic_param,
+    GenFrameStore                 frame_store[MAX_GEN_REFERENCE_FRAMES],
+    GenFrameStoreContext         *fs_ctx
+)
+{
+    intel_update_codec_frame_store_index(ctx,
+                                         decode_state,
+                                         avc_get_picture_poc(&pic_param->CurrPic),
+                                         frame_store,
+                                         fs_ctx);
 }
 
 void
