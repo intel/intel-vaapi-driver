@@ -311,6 +311,25 @@ gen9_hcpd_pipe_buf_addr_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+static void
+gen9_hcpd_ind_obj_base_addr_state(VADriverContextP ctx,
+                                  dri_bo *slice_data_bo,
+                                  struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 14);
+
+    OUT_BCS_BATCH(batch, HCP_IND_OBJ_BASE_ADDR_STATE | (14 - 2));
+    OUT_BUFFER_MA_REFERENCE(slice_data_bo);        /* DW 1..3 */
+    OUT_BUFFER_NMA_REFERENCE(NULL);                /* DW 4..5, Upper Bound */
+    OUT_BUFFER_MA_REFERENCE(NULL);                 /* DW 6..8, CU, ignored */
+    OUT_BUFFER_MA_TARGET(NULL);                    /* DW 9..11, PAK-BSE, ignored */
+    OUT_BUFFER_NMA_TARGET(NULL);                   /* DW 12..13, Upper Bound  */
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -318,6 +337,8 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
 {
     VAStatus vaStatus;
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+    dri_bo *slice_data_bo;
+    int j;
 
     vaStatus = gen9_hcpd_hevc_decode_init(ctx, decode_state, gen9_hcpd_context);
 
@@ -330,6 +351,13 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
     gen9_hcpd_pipe_mode_select(ctx, decode_state, HCP_CODEC_HEVC, gen9_hcpd_context);
     gen9_hcpd_surface_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
+
+    /* Need to double it works or not if the two slice groups have differenct slice data buffers */
+    for (j = 0; j < decode_state->num_slice_params; j++) {
+        slice_data_bo = decode_state->slice_datas[j]->bo;
+
+        gen9_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
+    }
 
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
