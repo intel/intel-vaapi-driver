@@ -681,6 +681,147 @@ gen9_hcpd_weightoffset_state(VADriverContextP ctx,
     gen9_hcpd_weightoffset_state_1(batch, 1, slice_param);
 }
 
+static int
+gen9_hcpd_get_collocated_ref_idx(VADriverContextP ctx,
+                                 VAPictureParameterBufferHEVC *pic_param,
+                                 VASliceParameterBufferHEVC *slice_param,
+                                 struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    uint8_t *ref_list;
+    VAPictureHEVC *ref_pic;
+
+    if (slice_param->collocated_ref_idx > 14)
+        return 0;
+
+    if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_I)
+        return 0;
+
+    if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_P ||
+        (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_B &&
+         slice_param->LongSliceFlags.fields.collocated_from_l0_flag))
+        ref_list = slice_param->RefPicList[0];
+    else {
+        assert(slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_B);
+        ref_list = slice_param->RefPicList[1];
+    }
+
+    ref_pic = &pic_param->ReferenceFrames[ref_list[slice_param->collocated_ref_idx]];
+
+    return gen9_hcpd_get_reference_picture_frame_id(ref_pic, gen9_hcpd_context->reference_surfaces);
+}
+
+static int
+gen9_hcpd_is_list_low_delay(uint8_t ref_list_count,
+                            uint8_t ref_list[15],
+                            VAPictureHEVC *curr_pic,
+                            VAPictureHEVC ref_surfaces[15])
+{
+    int i;
+
+    for (i = 0; i < MIN(ref_list_count, 15); i++) {
+        VAPictureHEVC *ref_pic;
+
+        if (ref_list[i] > 14)
+            continue;
+
+        ref_pic = &ref_surfaces[ref_list[i]];
+
+        if (ref_pic->pic_order_cnt > curr_pic->pic_order_cnt)
+            return 0;
+    }
+
+    return 1;
+}
+
+static int
+gen9_hcpd_is_low_delay(VADriverContextP ctx,
+                       VAPictureParameterBufferHEVC *pic_param,
+                       VASliceParameterBufferHEVC *slice_param)
+{
+    if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_I)
+        return 0;
+    else if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_P)
+        return gen9_hcpd_is_list_low_delay(slice_param->num_ref_idx_l0_active_minus1 + 1,
+                                           slice_param->RefPicList[0],
+                                           &pic_param->CurrPic,
+                                           pic_param->ReferenceFrames);
+    else
+        return gen9_hcpd_is_list_low_delay(slice_param->num_ref_idx_l0_active_minus1 + 1,
+                                           slice_param->RefPicList[0],
+                                           &pic_param->CurrPic,
+                                           pic_param->ReferenceFrames) &&
+            gen9_hcpd_is_list_low_delay(slice_param->num_ref_idx_l1_active_minus1 + 1,
+                                        slice_param->RefPicList[1],
+                                        &pic_param->CurrPic,
+                                        pic_param->ReferenceFrames);
+}
+
+static void
+gen9_hcpd_slice_state(VADriverContextP ctx,
+                      VAPictureParameterBufferHEVC *pic_param,
+                      VASliceParameterBufferHEVC *slice_param,
+                      VASliceParameterBufferHEVC *next_slice_param,
+                      struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+    int slice_hor_pos, slice_ver_pos, next_slice_hor_pos, next_slice_ver_pos;
+
+    slice_hor_pos = slice_param->slice_segment_address % gen9_hcpd_context->picture_width_in_ctbs;
+    slice_ver_pos = slice_param->slice_segment_address / gen9_hcpd_context->picture_width_in_ctbs;
+
+    if (next_slice_param) {
+        next_slice_hor_pos = next_slice_param->slice_segment_address % gen9_hcpd_context->picture_width_in_ctbs;
+        next_slice_ver_pos = next_slice_param->slice_segment_address / gen9_hcpd_context->picture_width_in_ctbs;
+    } else {
+        next_slice_hor_pos = 0;
+        next_slice_ver_pos = 0;
+    }
+
+    BEGIN_BCS_BATCH(batch, 9);
+
+    OUT_BCS_BATCH(batch, HCP_SLICE_STATE | (9 - 2));
+
+    OUT_BCS_BATCH(batch,
+                  slice_ver_pos << 16 |
+                  slice_hor_pos);
+    OUT_BCS_BATCH(batch,
+                  next_slice_ver_pos << 16 |
+                  next_slice_hor_pos);
+    OUT_BCS_BATCH(batch,
+                  (slice_param->slice_cr_qp_offset & 0x1f) << 17 |
+                  (slice_param->slice_cb_qp_offset & 0x1f) << 12 |
+                  (pic_param->init_qp_minus26 + 26 + slice_param->slice_qp_delta) << 6 |
+                  slice_param->LongSliceFlags.fields.slice_temporal_mvp_enabled_flag << 5 |
+                  slice_param->LongSliceFlags.fields.dependent_slice_segment_flag << 4 |
+                  !next_slice_param << 2 |
+                  slice_param->LongSliceFlags.fields.slice_type);
+    OUT_BCS_BATCH(batch,
+                  gen9_hcpd_get_collocated_ref_idx(ctx, pic_param, slice_param, gen9_hcpd_context) << 26 |
+                  (5 - slice_param->five_minus_max_num_merge_cand - 1) << 23 |
+                  slice_param->LongSliceFlags.fields.cabac_init_flag << 22 |
+                  slice_param->luma_log2_weight_denom << 19 |
+                  (slice_param->luma_log2_weight_denom + slice_param->delta_chroma_log2_weight_denom) << 16 |
+                  slice_param->LongSliceFlags.fields.collocated_from_l0_flag << 15 |
+                  gen9_hcpd_is_low_delay(ctx, pic_param, slice_param) << 14 |
+                  slice_param->LongSliceFlags.fields.mvd_l1_zero_flag << 13 |
+                  slice_param->LongSliceFlags.fields.slice_sao_luma_flag << 12 |
+                  slice_param->LongSliceFlags.fields.slice_sao_chroma_flag << 11 |
+                  slice_param->LongSliceFlags.fields.slice_loop_filter_across_slices_enabled_flag << 10 |
+                  (slice_param->slice_beta_offset_div2 & 0xf) << 5 |
+                  (slice_param->slice_tc_offset_div2 & 0xf) << 1 |
+                  slice_param->LongSliceFlags.fields.slice_deblocking_filter_disabled_flag);
+    OUT_BCS_BATCH(batch,
+                  slice_param->slice_data_byte_offset); /* DW 5 */
+    OUT_BCS_BATCH(batch,
+                  0 << 26 |
+                  0 << 20 |
+                  0);
+    OUT_BCS_BATCH(batch, 0);    /* Ignored for decoding */
+    OUT_BCS_BATCH(batch, 0);    /* Ignored for decoding */
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -689,7 +830,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
     VAStatus vaStatus;
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     VAPictureParameterBufferHEVC *pic_param;
-    VASliceParameterBufferHEVC *slice_param;
+    VASliceParameterBufferHEVC *slice_param, *next_slice_param, *next_slice_group_param;
     dri_bo *slice_data_bo;
     int i, j;
 
@@ -719,7 +860,18 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
 
         gen9_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
 
+        if (j == decode_state->num_slice_params - 1)
+            next_slice_group_param = NULL;
+        else
+            next_slice_group_param = (VASliceParameterBufferHEVC *)decode_state->slice_params[j + 1]->buffer;
+
         for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
+            if (i < decode_state->slice_params[j]->num_elements - 1)
+                next_slice_param = slice_param + 1;
+            else
+                next_slice_param = next_slice_group_param;
+
+            gen9_hcpd_slice_state(ctx, pic_param, slice_param, next_slice_param, gen9_hcpd_context);
             gen9_hcpd_ref_idx_state(ctx, pic_param, slice_param, gen9_hcpd_context);
             gen9_hcpd_weightoffset_state(ctx, slice_param, gen9_hcpd_context);
             slice_param++;
