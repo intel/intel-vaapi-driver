@@ -507,6 +507,41 @@ gen9_hcpd_pic_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+static void
+gen9_hcpd_tile_state(VADriverContextP ctx,
+                     struct decode_state *decode_state,
+                     struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+    VAPictureParameterBufferHEVC *pic_param;
+    uint8_t pos_col[20], pos_row[24];
+    int i;
+
+    assert(decode_state->pic_param && decode_state->pic_param->buffer);
+    pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
+
+    memset(pos_col, 0, sizeof(pos_col));
+    memset(pos_row, 0, sizeof(pos_row));
+
+    for (i = 0; i <= MIN(pic_param->num_tile_columns_minus1, 18); i++)
+        pos_col[i + 1] = pos_col[i] + pic_param->column_width_minus1[i] + 1;
+
+    for (i = 0; i <= MIN(pic_param->num_tile_rows_minus1, 20); i++)
+        pos_row[i + 1] = pos_row[i] + pic_param->row_height_minus1[i] + 1;
+
+    BEGIN_BCS_BATCH(batch, 13);
+
+    OUT_BCS_BATCH(batch, HCP_TILE_STATE | (13 - 2));
+
+    OUT_BCS_BATCH(batch,
+                  pic_param->num_tile_columns_minus1 << 5 |
+                  pic_param->num_tile_rows_minus1);
+    intel_batchbuffer_data(batch, pos_col, 20);
+    intel_batchbuffer_data(batch, pos_row, 24);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -530,6 +565,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
     gen9_hcpd_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_hevc_qm_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_pic_state(ctx, decode_state, gen9_hcpd_context);
+    gen9_hcpd_tile_state(ctx, decode_state, gen9_hcpd_context);
 
     /* Need to double it works or not if the two slice groups have differenct slice data buffers */
     for (j = 0; j < decode_state->num_slice_params; j++) {
