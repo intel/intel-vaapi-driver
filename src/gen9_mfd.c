@@ -622,6 +622,65 @@ gen9_hcpd_ref_idx_state(VADriverContextP ctx,
     gen9_hcpd_ref_idx_state_1(batch, 1, pic_param, slice_param, gen9_hcpd_context->reference_surfaces);
 }
 
+static void
+gen9_hcpd_weightoffset_state_1(struct intel_batchbuffer *batch,
+                               int list,
+                               VASliceParameterBufferHEVC *slice_param)
+{
+    int i;
+    uint8_t num_ref_minus1 = (list == 1) ? slice_param->num_ref_idx_l1_active_minus1 : slice_param->num_ref_idx_l0_active_minus1;
+    int8_t *luma_offset = (list == 1) ? slice_param->luma_offset_l1 : slice_param->luma_offset_l0;
+    int8_t *delta_luma_weight = (list == 1) ? slice_param->delta_luma_weight_l1 : slice_param->delta_luma_weight_l0;
+    int8_t (* chroma_offset)[2] = (list == 1) ? slice_param->ChromaOffsetL1 : slice_param->ChromaOffsetL0;
+    int8_t (* delta_chroma_weight)[2] = (list == 1) ? slice_param->delta_chroma_weight_l1 : slice_param->delta_chroma_weight_l0;
+
+    BEGIN_BCS_BATCH(batch, 34);
+
+    OUT_BCS_BATCH(batch, HCP_WEIGHTOFFSET | (34 - 2));
+    OUT_BCS_BATCH(batch, list);
+
+    for (i = 0; i < 16; i++) {
+        if (i < MIN((num_ref_minus1 + 1), 15)) {
+            OUT_BCS_BATCH(batch,
+                          luma_offset[i] << 8 |
+                          delta_luma_weight[i]);
+        } else {
+            OUT_BCS_BATCH(batch, 0);
+        }
+    }
+    for (i = 0; i < 16; i++) {
+        if (i < MIN((num_ref_minus1 + 1), 15)) {
+            OUT_BCS_BATCH(batch,
+                          chroma_offset[i][1] << 24 |
+                          delta_chroma_weight[i][1] << 16 |
+                          chroma_offset[i][0] << 8 |
+                          delta_chroma_weight[i][0]);
+        } else {
+            OUT_BCS_BATCH(batch, 0);
+        }
+    }
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_hcpd_weightoffset_state(VADriverContextP ctx,
+                        VASliceParameterBufferHEVC *slice_param,
+                        struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+
+    if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_I)
+        return;
+
+    gen9_hcpd_weightoffset_state_1(batch, 0, slice_param);
+
+    if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_P)
+        return;
+
+    gen9_hcpd_weightoffset_state_1(batch, 1, slice_param);
+}
+
 static VAStatus
 gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct decode_state *decode_state,
@@ -662,6 +721,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
 
         for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
             gen9_hcpd_ref_idx_state(ctx, pic_param, slice_param, gen9_hcpd_context);
+            gen9_hcpd_weightoffset_state(ctx, slice_param, gen9_hcpd_context);
             slice_param++;
         }
     }
