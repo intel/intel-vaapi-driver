@@ -600,12 +600,12 @@ intel_update_avc_frame_store_index(
         if (!obj_surface)
             continue;
 
-        GenAvcSurface * const avc_surface = obj_surface->private_data;
-        if (!avc_surface)
+        GenCodecSurface * const codec_surface = obj_surface->private_data;
+        if (!codec_surface)
             continue;
-        if (avc_surface->frame_store_id >= 0) {
+        if (codec_surface->frame_store_id >= 0) {
             GenFrameStore * const fs =
-                &frame_store[avc_surface->frame_store_id];
+                &frame_store[codec_surface->frame_store_id];
             if (fs->surface_id == obj_surface->base.id) {
                 fs->obj_surface = obj_surface;
                 fs->ref_age = age;
@@ -635,8 +635,8 @@ intel_update_avc_frame_store_index(
         if (!obj_surface || !(add_refs & (1 << i)))
             continue;
 
-        GenAvcSurface * const avc_surface = obj_surface->private_data;
-        if (!avc_surface)
+        GenCodecSurface * const codec_surface = obj_surface->private_data;
+        if (!codec_surface)
             continue;
         if (n < num_free_refs) {
             GenFrameStore * const fs = free_refs[n++];
@@ -644,7 +644,7 @@ intel_update_avc_frame_store_index(
             fs->obj_surface = obj_surface;
             fs->frame_store_id = fs - frame_store;
             fs->ref_age = age;
-            avc_surface->frame_store_id = fs->frame_store_id;
+            codec_surface->frame_store_id = fs->frame_store_id;
             continue;
         }
         WARN_ONCE("No free slot found for DPB reference list!!!\n");

@@ -31,15 +31,20 @@
 #include <va/va.h>
 #include <intel_bufmgr.h>
 
+typedef struct gen_codec_surface GenCodecSurface;
 
+struct gen_codec_surface
+{
+    int frame_store_id;
+};
 
 typedef struct gen_avc_surface GenAvcSurface;
 struct gen_avc_surface
 {
+    GenCodecSurface base;
     dri_bo *dmv_top;
     dri_bo *dmv_bottom;
     int dmv_bottom_flag;
-    int frame_store_id; /* only used for H.264 on earlier generations (<HSW) */
 };
 
 extern void gen_free_avc_surface(void **data);
