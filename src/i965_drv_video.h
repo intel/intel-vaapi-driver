@@ -368,6 +368,7 @@ struct hw_codec_info
     unsigned int has_vp8_decoding:1;
     unsigned int has_vp8_encoding:1;
     unsigned int has_h264_mvc_encoding:1;
+    unsigned int has_hevc_decoding:1;
 
     unsigned int num_filters;
     struct i965_filter filters[VAProcFilterCount];
