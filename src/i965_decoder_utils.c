@@ -1092,12 +1092,86 @@ intel_decoder_check_vp8_parameter(VADriverContextP ctx,
 }
 
 static VAStatus
+hevc_ensure_surface_bo(
+    VADriverContextP                    ctx,
+    struct decode_state                *decode_state,
+    struct object_surface              *obj_surface,
+    const VAPictureParameterBufferHEVC *pic_param
+)
+{
+    VAStatus va_status = VA_STATUS_SUCCESS;
+
+    /* (Re-)allocate the underlying surface buffer store, if necessary */
+    if (!obj_surface->bo || obj_surface->fourcc != VA_FOURCC_NV12) {
+        struct i965_driver_data * const i965 = i965_driver_data(ctx);
+
+        i965_destroy_surface_storage(obj_surface);
+
+        va_status = i965_check_alloc_surface_bo(ctx,
+                                                obj_surface,
+                                                i965->codec_info->has_tiled_surface,
+                                                VA_FOURCC_NV12,
+                                                SUBSAMPLE_YUV420);
+    }
+
+    return va_status;
+}
+
+static VAStatus
 intel_decoder_check_hevc_parameter(VADriverContextP ctx,
                                    struct decode_state *decode_state)
 {
-    /* FIXME: implement it later */
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAPictureParameterBufferHEVC *pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
+    VAStatus va_status = VA_STATUS_ERROR_INVALID_PARAMETER;
+    struct object_surface *obj_surface;
+    int i;
+    int min_cb_size;
 
-    return VA_STATUS_SUCCESS;
+    if (pic_param->CurrPic.flags & VA_PICTURE_HEVC_INVALID ||
+        pic_param->CurrPic.picture_id == VA_INVALID_SURFACE)
+        goto error;
+
+    if (pic_param->CurrPic.picture_id != decode_state->current_render_target)
+        goto error;
+
+    min_cb_size = (1 << (pic_param->log2_min_luma_coding_block_size_minus3 + 3));
+
+    if (pic_param->pic_width_in_luma_samples % min_cb_size ||
+        pic_param->pic_height_in_luma_samples % min_cb_size)
+        goto error;
+
+    /* Fill in the reference objects array with the actual VA surface
+       objects with 1:1 correspondance with any entry in ReferenceFrames[],
+       i.e. including "holes" for invalid entries, that are expanded
+       to NULL in the reference_objects[] array */
+    for (i = 0; i < ARRAY_ELEMS(pic_param->ReferenceFrames); i++) {
+        const VAPictureHEVC * const va_pic = &pic_param->ReferenceFrames[i];
+
+        obj_surface = NULL;
+        if (!(va_pic->flags & VA_PICTURE_HEVC_INVALID) &&
+            va_pic->picture_id != VA_INVALID_ID) {
+            obj_surface = SURFACE(pic_param->ReferenceFrames[i].picture_id);
+
+            if (!obj_surface) {
+                va_status = VA_STATUS_ERROR_INVALID_SURFACE;
+                goto error;
+            }
+
+            va_status = hevc_ensure_surface_bo(ctx, decode_state, obj_surface,
+                                               pic_param);
+
+            if (va_status != VA_STATUS_SUCCESS)
+                goto error;
+        }
+
+        decode_state->reference_objects[i] = obj_surface;
+    }
+
+    va_status = VA_STATUS_SUCCESS;
+
+error:
+    return va_status;
 }
 
 VAStatus
