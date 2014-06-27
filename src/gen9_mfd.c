@@ -77,6 +77,7 @@ gen9_hcpd_init_hevc_surface(VADriverContextP ctx,
 
     if (!gen9_hevc_surface) {
         gen9_hevc_surface = calloc(sizeof(GenHevcSurface), 1);
+        gen9_hevc_surface->base.frame_store_id = -1;
         obj_surface->private_data = gen9_hevc_surface;
     }
 
@@ -127,6 +128,11 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
+    intel_update_hevc_frame_store_index(ctx,
+                                        decode_state,
+                                        pic_param,
+                                        gen9_hcpd_context->reference_surfaces,
+                                        &gen9_hcpd_context->fs_ctx);
 
     gen9_hcpd_context->picture_width_in_pixels = pic_param->pic_width_in_luma_samples;
     gen9_hcpd_context->picture_height_in_pixels = pic_param->pic_height_in_luma_samples;

@@ -111,6 +111,15 @@ intel_update_avc_frame_store_index(
 );
 
 void
+intel_update_hevc_frame_store_index(
+    VADriverContextP              ctx,
+    struct decode_state          *decode_state,
+    VAPictureParameterBufferHEVC *pic_param,
+    GenFrameStore                 frame_store[MAX_GEN_HCP_REFERENCE_FRAMES],
+    GenFrameStoreContext         *fs_ctx
+);
+
+void
 gen75_update_avc_frame_store_index(
     VADriverContextP                    ctx,
     struct decode_state                *decode_state,

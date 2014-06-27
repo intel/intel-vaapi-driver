@@ -55,6 +55,7 @@ extern int intel_format_convert(float src, int out_int_bits, int out_frac_bits,i
 typedef struct gen_hevc_surface GenHevcSurface;
 struct gen_hevc_surface
 {
+    GenCodecSurface base;
     dri_bo *motion_vector_temporal_bo;
 };
 
