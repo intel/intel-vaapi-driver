@@ -99,6 +99,9 @@
 #define HAS_H264_MVC_ENCODING(ctx)  ((ctx)->codec_info->has_h264_mvc_encoding && \
                                      (ctx)->intel.has_bsd)
 
+#define HAS_HEVC_DECODING(ctx)          ((ctx)->codec_info->has_hevc_decoding && \
+                                         (ctx)->intel.has_bsd)
+
 static int get_sampling_from_fourcc(unsigned int fourcc);
 
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */
@@ -460,6 +463,10 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileH264StereoHigh;
     }
 
+    if (HAS_HEVC_DECODING(i965)) {
+        profile_list[i++] = VAProfileHEVCMain;
+    }
+
     /* If the assert fails then I965_MAX_PROFILES needs to be bigger */
     ASSERT_RET(i <= I965_MAX_PROFILES, VA_STATUS_ERROR_OPERATION_FAILED);
     *num_profiles = i;
@@ -532,6 +539,14 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
         
         if (HAS_VP8_ENCODING(i965))
             entrypoint_list[n++] = VAEntrypointEncSlice;
+
+        break;
+
+    case VAProfileHEVCMain:
+        if (HAS_HEVC_DECODING(i965))
+            entrypoint_list[n++] = VAEntrypointVLD;
+
+        break;
 
     default:
         break;
@@ -618,6 +633,14 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
+
+        break;
+
+    case VAProfileHEVCMain:
+        if (HAS_HEVC_DECODING(i965) && (entrypoint == VAEntrypointVLD))
+            va_status = VA_STATUS_SUCCESS;
+        else
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
 
         break;
 
@@ -2291,6 +2314,10 @@ i965_BeginPicture(VADriverContextP ctx,
         break;
 
     case VAProfileVP8Version0_3:
+        vaStatus = VA_STATUS_SUCCESS;
+        break;
+
+    case VAProfileHEVCMain:
         vaStatus = VA_STATUS_SUCCESS;
         break;
 
