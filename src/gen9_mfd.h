@@ -41,6 +41,8 @@ struct gen9_hcpd_context
 {
     struct hw_context base;
 
+    GenFrameStoreContext fs_ctx;
+
     GenFrameStore reference_surfaces[MAX_GEN_HCP_REFERENCE_FRAMES];
 
     VAIQMatrixBufferHEVC  iq_matrix_hevc;
