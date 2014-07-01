@@ -63,7 +63,7 @@ $(INTEL_PP_GEN8_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G8A)
 	../../gpp.py _pp0.$@ $@;	\
 	rm _pp0.$@
 .g8s.g8b:
-	$(AM_V_GEN)intel-gen4asm -a -o $@ -g 8 $<
+	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 8 $<
 
 CLEANFILES = $(INTEL_PP_GEN7_ASM)
 
