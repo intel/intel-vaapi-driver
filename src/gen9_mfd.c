@@ -147,6 +147,7 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
+    hevc_ensure_surface_bo(ctx, decode_state, obj_surface, pic_param);
     gen9_hcpd_init_hevc_surface(ctx, pic_param, obj_surface, gen9_hcpd_context);
 
     size = ALIGN(gen9_hcpd_context->picture_width_in_pixels, 32) >> 3;
