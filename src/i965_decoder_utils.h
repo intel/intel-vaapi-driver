@@ -166,4 +166,12 @@ intel_ensure_vp8_segmentation_buffer(VADriverContextP ctx, GenBuffer *buf,
 void
 hevc_gen_default_iq_matrix(VAIQMatrixBufferHEVC *iq_matrix);
 
+VAStatus
+hevc_ensure_surface_bo(
+    VADriverContextP                    ctx,
+    struct decode_state                *decode_state,
+    struct object_surface              *obj_surface,
+    const VAPictureParameterBufferHEVC *pic_param
+);
+
 #endif /* I965_DECODER_UTILS_H */

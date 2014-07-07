@@ -1091,7 +1091,7 @@ intel_decoder_check_vp8_parameter(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
-static VAStatus
+VAStatus
 hevc_ensure_surface_bo(
     VADriverContextP                    ctx,
     struct decode_state                *decode_state,
