@@ -754,6 +754,8 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
     VAStatus va_status;
     struct object_surface *obj_surface;	
     int i;
+    VASliceParameterBufferH264 *slice_param, *next_slice_param, *next_slice_group_param;
+    int j;
 
     assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
     assert(pic_param->CurrPic.picture_id != VA_INVALID_SURFACE);
@@ -802,6 +804,37 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
         }
         decode_state->reference_objects[i] = obj_surface;
     }
+
+    for (j = 0; j < decode_state->num_slice_params; j++) {
+        assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
+        slice_param = (VASliceParameterBufferH264 *)decode_state->slice_params[j]->buffer;
+
+        if (j == decode_state->num_slice_params - 1)
+            next_slice_group_param = NULL;
+        else
+            next_slice_group_param = (VASliceParameterBufferH264 *)decode_state->slice_params[j + 1]->buffer;
+
+        for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
+
+            if (i < decode_state->slice_params[j]->num_elements - 1)
+                next_slice_param = slice_param + 1;
+            else
+                next_slice_param = next_slice_group_param;
+
+            if (next_slice_param != NULL) {
+                /* If the mb position of next_slice is less than or equal to the current slice,
+                 * discard the current frame.
+                 */
+                if (next_slice_param->first_mb_in_slice <= slice_param->first_mb_in_slice) {
+                    next_slice_param = NULL;
+                    WARN_ONCE("!!!incorrect slice_param. The first_mb_in_slice of next_slice is less"
+                               " than or equal to that in current slice\n");
+                    goto error;
+                }
+            }
+        }
+    }
+
     return VA_STATUS_SUCCESS;
 
 error:
