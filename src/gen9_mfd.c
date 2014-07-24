@@ -874,7 +874,9 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
     gen9_hcpd_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_hevc_qm_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_pic_state(ctx, decode_state, gen9_hcpd_context);
-    gen9_hcpd_tile_state(ctx, decode_state, gen9_hcpd_context);
+
+    if (pic_param->pic_fields.bits.tiles_enabled_flag)
+        gen9_hcpd_tile_state(ctx, decode_state, gen9_hcpd_context);
 
     /* Need to double it works or not if the two slice groups have differenct slice data buffers */
     for (j = 0; j < decode_state->num_slice_params; j++) {
