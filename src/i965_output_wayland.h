@@ -26,6 +26,7 @@
 #define I965_OUTPUT_WAYLAND_H
 
 #include <stdbool.h>
+#include <va/va_backend.h>
 
 bool
 i965_output_wayland_init(VADriverContextP ctx);
