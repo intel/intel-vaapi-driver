@@ -1333,11 +1333,10 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
     } else {
         intel_batchbuffer_start_atomic_veb(proc_ctx->batch, 0x1000);
         intel_batchbuffer_emit_mi_flush(proc_ctx->batch);
-        hsw_veb_surface_state(ctx, proc_ctx, INPUT_SURFACE); 
-        hsw_veb_surface_state(ctx, proc_ctx, OUTPUT_SURFACE); 
         hsw_veb_state_table_setup(ctx, proc_ctx);
-
         hsw_veb_state_command(ctx, proc_ctx);		
+        hsw_veb_surface_state(ctx, proc_ctx, INPUT_SURFACE);
+        hsw_veb_surface_state(ctx, proc_ctx, OUTPUT_SURFACE);
         hsw_veb_dndi_iecp_command(ctx, proc_ctx);
         intel_batchbuffer_end_atomic(proc_ctx->batch);
         intel_batchbuffer_flush(proc_ctx->batch);
@@ -1630,11 +1629,10 @@ VAStatus gen8_vebox_process_picture(VADriverContextP ctx,
     } else {
         intel_batchbuffer_start_atomic_veb(proc_ctx->batch, 0x1000);
         intel_batchbuffer_emit_mi_flush(proc_ctx->batch);
-        hsw_veb_surface_state(ctx, proc_ctx, INPUT_SURFACE); 
-        hsw_veb_surface_state(ctx, proc_ctx, OUTPUT_SURFACE); 
         hsw_veb_state_table_setup(ctx, proc_ctx);
-
         bdw_veb_state_command(ctx, proc_ctx);		
+        hsw_veb_surface_state(ctx, proc_ctx, INPUT_SURFACE);
+        hsw_veb_surface_state(ctx, proc_ctx, OUTPUT_SURFACE);
         bdw_veb_dndi_iecp_command(ctx, proc_ctx);
         intel_batchbuffer_end_atomic(proc_ctx->batch);
         intel_batchbuffer_flush(proc_ctx->batch);
