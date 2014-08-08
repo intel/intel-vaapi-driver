@@ -375,6 +375,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     case VAProfileH264Main:
     case VAProfileH264High:
         encoder_context->codec = CODEC_H264;
+        encoder_context->quality_range = ENCODER_QUALITY_RANGE;
         break;
 
     case VAProfileH264StereoHigh:
@@ -424,13 +425,8 @@ gen6_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 struct hw_context *
 gen7_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
-    struct intel_encoder_context *encoder_context;
 
-    encoder_context = (struct intel_encoder_context *)intel_enc_hw_context_init(ctx, obj_config, gen7_vme_context_init, gen7_mfc_context_init);
-
-    encoder_context->quality_range = ENCODER_QUALITY_RANGE;
-
-    return (struct hw_context *)encoder_context;
+    return intel_enc_hw_context_init(ctx, obj_config, gen7_vme_context_init, gen7_mfc_context_init);
 }
 
 struct hw_context *

@@ -676,7 +676,9 @@ i965_GetConfigAttributes(VADriverContextP ctx,
 	case VAConfigAttribEncQualityRange:
 	    if (entrypoint == VAEntrypointEncSlice) {
 		attrib_list[i].value = 1;
-                if(IS_GEN7(i965->intel.device_info))
+                if (profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High )
                     attrib_list[i].value = ENCODER_QUALITY_RANGE;
 		break;
 	    }
