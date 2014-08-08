@@ -131,7 +131,7 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
         assert(di_param);
 
         progressive_dn = 0;
-        dndi_top_first = !(di_param->flags & VA_DEINTERLACING_BOTTOM_FIELD);
+        dndi_top_first = !(di_param->flags & VA_DEINTERLACING_BOTTOM_FIELD_FIRST);
         motion_compensated_enable = (di_param->algorithm == VAProcDeinterlacingMotionCompensated);
     }
 
