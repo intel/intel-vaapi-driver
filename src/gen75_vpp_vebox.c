@@ -626,7 +626,7 @@ void hsw_veb_iecp_aoi_table(VADriverContextP ctx, struct intel_vebox_context *pr
 
 void hsw_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
-    if(proc_ctx->filters_mask & 0x000000ff) {
+    if(proc_ctx->filters_mask & VPP_DNDI_MASK) {
         dri_bo *dndi_bo = proc_ctx->dndi_state_table.bo;
         dri_bo_map(dndi_bo, 1);
         proc_ctx->dndi_state_table.ptr = dndi_bo->virtual;
@@ -636,7 +636,7 @@ void hsw_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
         dri_bo_unmap(dndi_bo);
     }
 
-    if(proc_ctx->filters_mask & 0x0000ff00) {
+    if(proc_ctx->filters_mask & VPP_IECP_MASK) {
         dri_bo *iecp_bo = proc_ctx->iecp_state_table.bo;
         dri_bo_map(iecp_bo, 1);
         proc_ctx->iecp_state_table.ptr = iecp_bo->virtual;
@@ -655,9 +655,9 @@ void hsw_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
 void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     struct intel_batchbuffer *batch = proc_ctx->batch;
-    unsigned int is_dn_enabled   = (proc_ctx->filters_mask & 0x01)? 1: 0;
-    unsigned int is_di_enabled   = (proc_ctx->filters_mask & 0x02)? 1: 0;
-    unsigned int is_iecp_enabled = (proc_ctx->filters_mask & 0xff00)?1:0;
+    unsigned int is_dn_enabled   = !!(proc_ctx->filters_mask & VPP_DNDI_DN);
+    unsigned int is_di_enabled   = !!(proc_ctx->filters_mask & VPP_DNDI_DI);
+    unsigned int is_iecp_enabled = !!(proc_ctx->filters_mask & VPP_IECP_MASK);
     unsigned int is_first_frame  = !!((proc_ctx->frame_order == -1) &&
                                       (is_di_enabled ||
                                        is_dn_enabled));
@@ -1445,9 +1445,9 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
 void bdw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     struct intel_batchbuffer *batch = proc_ctx->batch;
-    unsigned int is_dn_enabled   = (proc_ctx->filters_mask & 0x01)? 1: 0;
-    unsigned int is_di_enabled   = (proc_ctx->filters_mask & 0x02)? 1: 0;
-    unsigned int is_iecp_enabled = (proc_ctx->filters_mask & 0xff00)?1:0;
+    unsigned int is_dn_enabled   = !!(proc_ctx->filters_mask & VPP_DNDI_DN);
+    unsigned int is_di_enabled   = !!(proc_ctx->filters_mask & VPP_DNDI_DI);
+    unsigned int is_iecp_enabled = !!(proc_ctx->filters_mask & VPP_IECP_MASK);
     unsigned int is_first_frame  = !!((proc_ctx->frame_order == -1) &&
                                       (is_di_enabled ||
                                        is_dn_enabled));

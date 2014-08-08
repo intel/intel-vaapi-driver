@@ -43,12 +43,14 @@
 
 #define VPP_DNDI_DN        0x00000001
 #define VPP_DNDI_DI        0x00000002
+#define VPP_DNDI_MASK      0x000000ff
 #define VPP_IECP_STD_STE   0x00000100
 #define VPP_IECP_ACE       0x00000200
 #define VPP_IECP_TCC       0x00000400
 #define VPP_IECP_PRO_AMP   0x00000800
 #define VPP_IECP_CSC       0x00001000
 #define VPP_IECP_AOI       0x00002000
+#define VPP_IECP_MASK      0x0000ff00
 #define MAX_FILTER_SUM     8
 
 #define PRE_FORMAT_CONVERT      0x01
