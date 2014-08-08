@@ -805,8 +805,7 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
 {
     struct intel_batchbuffer *batch = proc_ctx->batch;
     unsigned char frame_ctrl_bits = 0;
-    unsigned int startingX = 0;
-    unsigned int endingX = (proc_ctx->width_input + 63 ) / 64 * 64;
+    const unsigned int width64 = ALIGN(proc_ctx->width_input, 64);
 
     /* s1:update the previous and current input */
 /*    tempFrame = proc_ctx->frame_store[FRAME_IN_PREVIOUS];
@@ -829,9 +828,7 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     /*s3:set reloc buffer address */
     BEGIN_VEB_BATCH(batch, 10);
     OUT_VEB_BATCH(batch, VEB_DNDI_IECP_STATE | (10 - 2));
-    OUT_VEB_BATCH(batch,
-                  startingX << 16 |
-                  (endingX-1));
+    OUT_VEB_BATCH(batch, (width64 - 1));
     OUT_RELOC(batch,
               proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);
@@ -1532,14 +1529,11 @@ void bdw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
 {
     struct intel_batchbuffer *batch = proc_ctx->batch;
     unsigned char frame_ctrl_bits = 0;
-    unsigned int startingX = 0;
-    unsigned int endingX = (proc_ctx->width_input + 63 ) / 64 * 64;
+    const unsigned int width64 = ALIGN(proc_ctx->width_input, 64);
 
     BEGIN_VEB_BATCH(batch, 0x14);
     OUT_VEB_BATCH(batch, VEB_DNDI_IECP_STATE | (0x14 - 2));//DWord 0
-    OUT_VEB_BATCH(batch,
-                  startingX << 16 |
-                  endingX -1);//DWord 1
+    OUT_VEB_BATCH(batch, (width64 - 1));
 
     OUT_RELOC(batch,
               proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface->bo,
