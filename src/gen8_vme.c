@@ -557,7 +557,7 @@ gen8_vme_fill_vme_batchbuffer(VADriverContextP ctx,
    
             /*inline data */
             *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
-            *command_ptr++ = ( (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+            *command_ptr++ = ((encoder_context->quality_level << 24) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
 
             *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
             *command_ptr++ = 0;
@@ -603,13 +603,18 @@ static void gen8_vme_pipeline_programing(VADriverContextP ctx,
     int kernel_shader;
     bool allow_hwscore = true;
     int s;
+    unsigned int is_low_quality = (encoder_context->quality_level == ENCODER_LOW_QUALITY);
 
-    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
-        pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
-        if ((pSliceParameter->macroblock_address % width_in_mbs)) {
-            allow_hwscore = false;
-            break;
-	}
+    if (is_low_quality)
+        allow_hwscore = false;
+    else {
+        for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+            pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer; 
+            if ((pSliceParameter->macroblock_address % width_in_mbs)) {
+                allow_hwscore = false;
+                break;
+            }
+        }
     }
 
     if ((pSliceParameter->slice_type == SLICE_TYPE_I) ||
