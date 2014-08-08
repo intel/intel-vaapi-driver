@@ -54,6 +54,7 @@ define(`SEARCH_CTRL_DUAL_RECORD',       `0x00000300')
 define(`SEARCH_CTRL_DUAL_REFERENCE',    `0x00000700')
 
 define(`REF_REGION_SIZE',               `0x2830:UW')
+define(`MIN_REF_REGION_SIZE',           `0x2020:UW')
 
 define(`BI_SUB_MB_PART_MASK',           `0x0c000000')
 define(`MAX_NUM_MV',                    `0x00000020')
@@ -140,6 +141,7 @@ define(`orig_y_ub',             `inline_reg0.1')
 define(`transform_8x8_ub',      `inline_reg0.4')
 define(`slice_edge_ub',         `inline_reg0.4')
 define(`num_macroblocks',       `inline_reg0.6')
+define(`quality_level_ub',      `inline_reg0.8')
 
 /*
  * GRF 6~11 -- reserved
@@ -277,3 +279,6 @@ define(`vme_msg_4',             `msg_reg4')
 
 #endif
 
+define(`DEFAULT_QUALITY_LEVEL',           `0x01')
+define(`HIGH_QUALITY_LEVEL',              `DEFAULT_QUALITY_LEVEL')
+define(`LOW_QUALITY_LEVEL',               `0x02')

@@ -35,7 +35,11 @@ mov  (1) read1_header.8<1>:UD   BLOCK_4X16 {align1};
 mov  (1) read1_header.20<1>:UB  thread_id_ub {align1};                  /* dispatch id */
         
 shl  (2) vme_m0.8<1>:UW         orig_xy_ub<2,2,1>:UB 4:UW {align1};    /* Source =  (x, y) * 16 */
-        
+
+cmp.z.f0.0 (1)	null<1>:uw	quality_level_ub<0,1,0>:ub		LOW_QUALITY_LEVEL:uw   {align1};
+(f0.0) jmpi (1) __low_quality_search;
+
+__high_quality_search:
 #ifdef DEV_SNB
 shl  (2) vme_m0.0<1>:UW         orig_xy_ub<2,2,1>:UB 4:UW {align1};	
 add  (1) vme_m0.0<1>:W          vme_m0.0<0,1,0>:W -16:W {align1};		/* Reference = (x-16,y-12)-(x+32,y+24) */
@@ -47,8 +51,25 @@ mov  (1) vme_m0.2<1>:W          -12:W {align1} ;
         
 mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_QUARTER:UD {align1};    /* 16x16 Source, 1/4 pixel, harr */
 mov  (1) vme_m0.20<1>:UB        thread_id_ub {align1};                  /* dispatch id */
-mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};               /* Reference Width&Height, 32x32 */
+mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};               /* Reference Width&Height, 48x40 */
+jmpi __vme_msg1;
 
+
+__low_quality_search:
+#ifdef DEV_SNB
+shl  (2) vme_m0.0<1>:UW         orig_xy_ub<2,2,1>:UB 4:UW {align1};	
+add  (1) vme_m0.0<1>:W          vme_m0.0<0,1,0>:W -8:W {align1};
+add  (1) vme_m0.2<1>:W          vme_m0.2<0,1,0>:W -8:W {align1};
+#else
+mov  (1) vme_m0.0<1>:W          -8:W {align1} ;
+mov  (1) vme_m0.2<1>:W          -8:W {align1} ;
+#endif
+        
+mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR + SUB_PEL_MODE_HALF:UD {align1};    /* 16x16 Source, 1/2 pixel, harr */
+mov  (1) vme_m0.20<1>:UB        thread_id_ub {align1};                  /* dispatch id */
+mov  (1) vme_m0.22<1>:UW        MIN_REF_REGION_SIZE {align1};               /* Reference Width&Height, 32x32 */
+
+__vme_msg1:
 mov  (1) vme_m1.0<1>:UD         ADAPTIVE_SEARCH_ENABLE:ud {align1} ;
 mov  (1) vme_m1.4<1>:UD         FB_PRUNING_ENABLE:UD {align1};
 /* MV num is passed by constant buffer. R4.28 */

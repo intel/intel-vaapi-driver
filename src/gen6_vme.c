@@ -384,21 +384,38 @@ static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,
     dri_bo_map(vme_context->vme_state.bo, 1);
     assert(vme_context->vme_state.bo->virtual);
     vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
-
-    vme_state_message[0] = 0x01010101;
-    vme_state_message[1] = 0x10010101;
-    vme_state_message[2] = 0x0F0F0F0F;
-    vme_state_message[3] = 0x100F0F0F;
-    vme_state_message[4] = 0x01010101;
-    vme_state_message[5] = 0x10010101;
-    vme_state_message[6] = 0x0F0F0F0F;
-    vme_state_message[7] = 0x100F0F0F;
-    vme_state_message[8] = 0x01010101;
-    vme_state_message[9] = 0x10010101;
-    vme_state_message[10] = 0x0F0F0F0F;
-    vme_state_message[11] = 0x000F0F0F;
-    vme_state_message[12] = 0x00;
-    vme_state_message[13] = 0x00;
+    
+    if (encoder_context->quality_level != ENCODER_LOW_QUALITY) {
+        vme_state_message[0] = 0x01010101;
+        vme_state_message[1] = 0x10010101;
+        vme_state_message[2] = 0x0F0F0F0F;
+        vme_state_message[3] = 0x100F0F0F;
+        vme_state_message[4] = 0x01010101;
+        vme_state_message[5] = 0x10010101;
+        vme_state_message[6] = 0x0F0F0F0F;
+        vme_state_message[7] = 0x100F0F0F;
+        vme_state_message[8] = 0x01010101;
+        vme_state_message[9] = 0x10010101;
+        vme_state_message[10] = 0x0F0F0F0F;
+        vme_state_message[11] = 0x000F0F0F;
+        vme_state_message[12] = 0x00;
+        vme_state_message[13] = 0x00;
+    } else {
+        vme_state_message[0] = 0x10010101;
+        vme_state_message[1] = 0x100F0F0F;
+        vme_state_message[2] = 0x10010101;
+        vme_state_message[3] = 0x000F0F0F;
+        vme_state_message[4] = 0;
+        vme_state_message[5] = 0;
+        vme_state_message[6] = 0;
+        vme_state_message[7] = 0;
+        vme_state_message[8] = 0;
+        vme_state_message[9] = 0;
+        vme_state_message[10] = 0;
+        vme_state_message[11] = 0;
+        vme_state_message[12] = 0;
+        vme_state_message[13] = 0;
+    }
 
     vme_state_message[14] = 0x4a4a;
     vme_state_message[15] = 0x0;
@@ -452,7 +469,7 @@ gen6_vme_fill_vme_batchbuffer(VADriverContextP ctx,
                 number_mb_cmds = slice_mb_number - i;
             }
 
-            *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+            *command_ptr++ = (CMD_MEDIA_OBJECT | (9 - 2));
             *command_ptr++ = kernel;
             *command_ptr++ = 0;
             *command_ptr++ = 0;
@@ -462,6 +479,7 @@ gen6_vme_fill_vme_batchbuffer(VADriverContextP ctx,
             /*inline data */
             *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
             *command_ptr++ = (number_mb_cmds << 16 | transform_8x8_mode_flag | ((i==0) << 1));
+            *command_ptr++ = encoder_context->quality_level;
 
             i += number_mb_cmds;
         } 
