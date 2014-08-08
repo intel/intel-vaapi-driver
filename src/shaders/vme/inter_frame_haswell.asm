@@ -475,24 +475,58 @@ send (16)
         {align1};
 
 /* IME search */
+cmp.z.f0.0 (1)		null<1>:uw	quality_level_ub<0,1,0>:ub		LOW_QUALITY_LEVEL:uw   {align1};
+(f0.0) jmpi (1) __low_quality_search;
+
+__high_quality_search:
+/* M3/M4 search path */
+mov  (1) vme_msg_3.0<1>:UD	0x01010101:UD {align1};
+mov  (1) vme_msg_3.4<1>:UD	0x10010101:UD {align1};
+mov  (1) vme_msg_3.8<1>:UD	0x0F0F0F0F:UD {align1};
+mov  (1) vme_msg_3.12<1>:UD	0x100F0F0F:UD {align1};
+mov  (1) vme_msg_3.16<1>:UD	0x01010101:UD {align1};
+mov  (1) vme_msg_3.20<1>:UD	0x10010101:UD {align1};
+mov  (1) vme_msg_3.24<1>:UD	0x0F0F0F0F:UD {align1};
+mov  (1) vme_msg_3.28<1>:UD	0x100F0F0F:UD {align1};
+mov  (1) vme_msg_4.0<1>:UD	0x01010101:UD {align1};
+mov  (1) vme_msg_4.4<1>:UD	0x10010101:UD {align1};
+mov  (1) vme_msg_4.8<1>:UD	0x0F0F0F0F:UD {align1};
+mov  (1) vme_msg_4.12<1>:UD	0x000F0F0F:UD {align1};
+mov  (4) vme_msg_4.16<1>:UD	0x0:UD {align1};
+
 mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR:UD {align1};    /* 16x16 Source, harr */
 mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};         /* Reference Width&Height, 48x40 */
-
-mov  (1) vme_m0.0<1>:UD		vme_m0.8<0,1,0>:UD      {align1};
-
-add  (1) vme_m0.0<1>:W          vme_m0.0<0,1,0>:W -16:W {align1};		/* Reference = (x-16,y-12)-(x+32,y+28) */
-add  (1) vme_m0.2<1>:W          vme_m0.2<0,1,0>:W -12:W {align1};
-
 mov  (1) vme_m0.0<1>:W		-16:W			{align1};
 mov  (1) vme_m0.2<1>:W		-12:W			{align1};
-
-mov  (1) vme_m0.4<1>:UD		vme_m0.0<0,1,0>:UD	{align1};
 
 and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_AE:uw   {align1};
 (f0.0)	add 	(1)	vme_m0.0<1>:w	vme_m0.0<0,1,0>:w	12:w	{align1};
 and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
 (f0.0)	add 	(1)	vme_m0.2<1>:w	vme_m0.2<0,1,0>:w	8:w	{align1};
- 
+
+jmpi (1) __vme_msg;
+
+__low_quality_search:
+/* M3/M4 search path */
+mov  (1) vme_msg_3.0<1>:UD	0x10010101:UD {align1};
+mov  (1) vme_msg_3.4<1>:UD	0x100F0F0F:UD {align1};
+mov  (1) vme_msg_3.8<1>:UD	0x10010101:UD {align1};
+mov  (1) vme_msg_3.12<1>:UD	0x000F0F0F:UD {align1};
+mov  (4) vme_msg_3.16<1>:UD	0x0:UD {align1};
+mov  (8) vme_msg_4.16<1>:UD	0x0:UD {align1};
+
+mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR:UD {align1};    /* 16x16 Source, harr */
+mov  (1) vme_m0.22<1>:UW        MIN_REF_REGION_SIZE {align1};         /* Reference Width&Height, 32x32 */
+mov  (1) vme_m0.0<1>:W		-8:W			{align1};
+mov  (1) vme_m0.2<1>:W		-8:W			{align1};
+
+and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_AE:uw   {align1};
+(f0.0)	add 	(1)	vme_m0.0<1>:w	vme_m0.0<0,1,0>:w	4:w	{align1};
+and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
+(f0.0)	add 	(1)	vme_m0.2<1>:w	vme_m0.2<0,1,0>:w	4:w	{align1};
+
+__vme_msg:
+mov  (1) vme_m0.4<1>:UD		vme_m0.0<0,1,0>:UD	{align1};
 add  (2) vme_m0.0<1>:w		vme_m0.0<2,2,1>:w	mb_ref_win.16<2,2,1>:w	{align1};
 add  (2) vme_m0.4<1>:w		vme_m0.4<2,2,1>:w	mb_ref_win.16<2,2,1>:w	{align1};
 mov  (8) vme_msg_0.0<1>:UD      vme_m0.0<8,8,1>:UD {align1};
@@ -507,23 +541,6 @@ mov  (1) vme_m1.20<1>:ud	mb_mvp_ref.0<0,1,0>:ud	{align1};
 mov  (8) vme_msg_1.0<1>:UD      vme_m1.0<8,8,1>:UD {align1};
 
 mov (8) vme_msg_2<1>:UD		vme_m2.0<8,8,1>:UD {align1};
-/* M3/M4 search path */
-
-mov  (1) vme_msg_3.0<1>:UD	0x01010101:UD {align1};
-mov  (1) vme_msg_3.4<1>:UD	0x10010101:UD {align1};
-mov  (1) vme_msg_3.8<1>:UD	0x0F0F0F0F:UD {align1};
-mov  (1) vme_msg_3.12<1>:UD	0x100F0F0F:UD {align1};
-mov  (1) vme_msg_3.16<1>:UD	0x01010101:UD {align1};
-mov  (1) vme_msg_3.20<1>:UD	0x10010101:UD {align1};
-mov  (1) vme_msg_3.24<1>:UD	0x0F0F0F0F:UD {align1};
-mov  (1) vme_msg_3.28<1>:UD	0x100F0F0F:UD {align1};
-
-mov  (1) vme_msg_4.0<1>:UD	0x01010101:UD {align1};
-mov  (1) vme_msg_4.4<1>:UD	0x10010101:UD {align1};
-mov  (1) vme_msg_4.8<1>:UD	0x0F0F0F0F:UD {align1};
-mov  (1) vme_msg_4.12<1>:UD	0x000F0F0F:UD {align1};
-
-mov  (4) vme_msg_4.16<1>:UD	0x0:UD {align1};
 
 send (8)
         vme_msg_ind
