@@ -53,7 +53,6 @@ i965_DeriveImage(VADriverContextP ctx, VABufferID surface, VAImage *out_image);
 extern VAStatus
 i965_DestroyImage(VADriverContextP ctx, VAImageID image);
 
-
 VAStatus
 vpp_surface_convert(VADriverContextP ctx, struct object_surface *src_obj_surf,
     struct object_surface *dst_obj_surf)
@@ -121,18 +120,24 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     unsigned int* p_table ;
-    int progressive_dn = 1;
-    int dndi_top_first = 0;
-    int motion_compensated_enable = 0;
+    unsigned int progressive_dn = 1;
+    unsigned int dndi_top_first = 0;
+    unsigned int is_mcdi_enabled = 0;
 
-    if (proc_ctx->filters_mask & VPP_DNDI_DI) {
-        VAProcFilterParameterBufferDeinterlacing *di_param =
-            (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
-        assert(di_param);
+    if (proc_ctx->is_di_enabled) {
+        const VAProcFilterParameterBufferDeinterlacing * const deint_params =
+            proc_ctx->filter_di;
 
         progressive_dn = 0;
-        dndi_top_first = !(di_param->flags & VA_DEINTERLACING_BOTTOM_FIELD_FIRST);
-        motion_compensated_enable = (di_param->algorithm == VAProcDeinterlacingMotionCompensated);
+
+        /* If we are in "First Frame" mode, i.e. past frames are not
+           available for motion measure, then don't use the TFF flag */
+        dndi_top_first = !(deint_params->flags & (proc_ctx->is_first_frame ?
+                VA_DEINTERLACING_BOTTOM_FIELD :
+                VA_DEINTERLACING_BOTTOM_FIELD_FIRST));
+
+        is_mcdi_enabled =
+            (deint_params->algorithm == VAProcDeinterlacingMotionCompensated);
     }
 
     /*
@@ -193,7 +198,7 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
                     100<< 16  |  // FMD #2 vertical difference th
                     0  << 14  |  // CAT th1
                     2  << 8   |  // FMD tear threshold
-                    motion_compensated_enable  << 7   |  // MCDI Enable, use motion compensated deinterlace algorithm
+                    is_mcdi_enabled  << 7  |  // MCDI Enable, use motion compensated deinterlace algorithm
                     progressive_dn  << 6   |  // progressive DN
                     0  << 4   |  // reserved
                     dndi_top_first  << 3   |  // DN/DI Top First
@@ -655,33 +660,6 @@ void hsw_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
 void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     struct intel_batchbuffer *batch = proc_ctx->batch;
-    unsigned int is_dn_enabled   = !!(proc_ctx->filters_mask & VPP_DNDI_DN);
-    unsigned int is_di_enabled   = !!(proc_ctx->filters_mask & VPP_DNDI_DI);
-    unsigned int is_iecp_enabled = !!(proc_ctx->filters_mask & VPP_IECP_MASK);
-    unsigned int is_first_frame  = !!((proc_ctx->frame_order == -1) &&
-                                      (is_di_enabled ||
-                                       is_dn_enabled));
-    unsigned int di_output_frames_flag = 2; /* Output Current Frame Only */
-
-    if(proc_ctx->fourcc_input != proc_ctx->fourcc_output ||
-       (is_dn_enabled == 0 && is_di_enabled == 0)){
-       is_iecp_enabled = 1;
-    }
-
-    if (is_di_enabled) {
-        VAProcFilterParameterBufferDeinterlacing *di_param =
-            (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
-
-        assert(di_param);
-        
-        if (di_param->algorithm == VAProcDeinterlacingBob)
-            is_first_frame = 1;
-
-        if ((di_param->algorithm == VAProcDeinterlacingMotionAdaptive ||
-            di_param->algorithm == VAProcDeinterlacingMotionCompensated) &&
-            proc_ctx->frame_order != -1)
-            di_output_frames_flag = 0; /* Output both Current Frame and Previous Frame */
-    }
 
     BEGIN_VEB_BATCH(batch, 6);
     OUT_VEB_BATCH(batch, VEB_STATE | (6 - 2));
@@ -689,13 +667,13 @@ void hsw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
                   0 << 26 |       // state surface control bits
                   0 << 11 |       // reserved.
                   0 << 10 |       // pipe sync disable
-                  di_output_frames_flag << 8  |       // DI output frame
+                  proc_ctx->current_output_type << 8  | // DI output frame
                   1 << 7  |       // 444->422 downsample method
                   1 << 6  |       // 422->420 downsample method
-                  is_first_frame  << 5  |   // DN/DI first frame
-                  is_di_enabled   << 4  |             // DI enable
-                  is_dn_enabled   << 3  |             // DN enable
-                  is_iecp_enabled << 2  |             // global IECP enabled
+                  proc_ctx->is_first_frame  << 5  |   // DN/DI first frame
+                  proc_ctx->is_di_enabled   << 4  |   // DI enable
+                  proc_ctx->is_dn_enabled   << 3  |   // DN enable
+                  proc_ctx->is_iecp_enabled << 2  |   // global IECP enabled
                   0 << 1  |       // ColorGamutCompressionEnable
                   0 ) ;           // ColorGamutExpansionEnable.
 
@@ -920,6 +898,8 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     /* Update VEBOX pipeline formats */
     proc_ctx->fourcc_input = input_fourcc;
     proc_ctx->fourcc_output = output_fourcc;
+    if (input_fourcc != output_fourcc)
+        proc_ctx->is_iecp_enabled = 1; // IECP needed for format conversion
    
     /* Create pipeline surfaces */
     for (i = 0; i < ARRAY_ELEMS(proc_ctx->frame_store); i ++) {
@@ -952,9 +932,8 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
         if (status != VA_STATUS_SUCCESS)
             return status;
 
-        proc_ctx->frame_store[i].surface_id = new_surface;
-        proc_ctx->frame_store[i].is_internal_surface = 1;
         proc_ctx->frame_store[i].obj_surface = obj_surface;
+        proc_ctx->frame_store[i].is_internal_surface = 1;
     }
 
     /* Allocate DNDI state table  */
@@ -997,137 +976,60 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
 }
 
 static VAStatus
-hsw_veb_surface_reference(VADriverContextP ctx,
-                          struct intel_vebox_context *proc_ctx)
+gen75_vebox_ensure_surfaces(VADriverContextP ctx,
+    struct intel_vebox_context *proc_ctx)
 {
-    struct object_surface * obj_surf; 
-    VEBFrameStore tmp_store;
+    struct object_surface *obj_surface;
+    VEBFrameStore *ifs, *ofs;
+    bool is_new_frame = 0;
+    int i;
 
-    if (proc_ctx->surface_input_vebox_object != NULL) {
-        obj_surf = proc_ctx->surface_input_vebox_object;
-    } else {
-        obj_surf = proc_ctx->surface_input_object;
-    } 
+    /* Update the previous input surface */
+    obj_surface = proc_ctx->surface_input_object;
 
-    /* update the input surface */ 
-    proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id = VA_INVALID_ID;
-    proc_ctx->frame_store[FRAME_IN_CURRENT].is_internal_surface = 0;
-    proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface = obj_surf;
+    is_new_frame = proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id !=
+        obj_surface->base.id;
 
-    /* update the previous input surface */
-    if (proc_ctx->frame_order != -1) {
-        if (proc_ctx->filters_mask == VPP_DNDI_DN) {
-            proc_ctx->frame_store[FRAME_IN_PREVIOUS] = proc_ctx->frame_store[FRAME_OUT_CURRENT_DN];
-        } else if (proc_ctx->filters_mask & VPP_DNDI_DI) {
-            VAProcFilterParameterBufferDeinterlacing *di_param =
-                (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
+    /* Update the input surface */
+    obj_surface = proc_ctx->surface_input_vebox_object ?
+        proc_ctx->surface_input_vebox_object : proc_ctx->surface_input_object;
 
-            if (di_param && 
-                (di_param->algorithm == VAProcDeinterlacingMotionAdaptive ||
-                di_param->algorithm == VAProcDeinterlacingMotionCompensated)) {
-                if ((proc_ctx->filters_mask & VPP_DNDI_DN) &&
-                    proc_ctx->frame_order == 0) { /* DNDI */
-                    tmp_store = proc_ctx->frame_store[FRAME_OUT_CURRENT_DN];
-                    proc_ctx->frame_store[FRAME_OUT_CURRENT_DN] = proc_ctx->frame_store[FRAME_IN_PREVIOUS];
-                    proc_ctx->frame_store[FRAME_IN_PREVIOUS] = tmp_store;
-                } else { /* DI only */
-                    VAProcPipelineParameterBuffer *pipe = proc_ctx->pipeline_param;
-                    struct object_surface *obj_surf = NULL;
-                    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    ifs = &proc_ctx->frame_store[FRAME_IN_CURRENT];
+    ifs->obj_surface = obj_surface;
+    ifs->surface_id = proc_ctx->surface_input_object->base.id;
+    ifs->is_internal_surface = proc_ctx->surface_input_vebox_object != NULL;
 
-                    if (!pipe ||
-                        !pipe->num_forward_references ||
-                        pipe->forward_references[0] == VA_INVALID_ID) {
-                        WARN_ONCE("A forward temporal reference is needed for Motion adaptive/compensated deinterlacing !!!\n");
-
-                        return VA_STATUS_ERROR_INVALID_PARAMETER;
-                    }
-
-                    obj_surf = SURFACE(pipe->forward_references[0]);
-                    assert(obj_surf && obj_surf->bo);
-                
-                    proc_ctx->frame_store[FRAME_IN_PREVIOUS].surface_id = pipe->forward_references[0];
-                    proc_ctx->frame_store[FRAME_IN_PREVIOUS].is_internal_surface = 0;
-                    proc_ctx->frame_store[FRAME_IN_PREVIOUS].obj_surface = obj_surf;
-                }
-            }
-        }
+    /* Update the Spatial Temporal Motion Measure (STMM) surfaces */
+    if (is_new_frame) {
+        const VEBFrameStore tmpfs = proc_ctx->frame_store[FRAME_IN_STMM];
+        proc_ctx->frame_store[FRAME_IN_STMM] =
+            proc_ctx->frame_store[FRAME_OUT_STMM];
+        proc_ctx->frame_store[FRAME_OUT_STMM] = tmpfs;
     }
 
-    /* update STMM surface */
-    if (proc_ctx->frame_order != -1) {
-        tmp_store = proc_ctx->frame_store[FRAME_IN_STMM];
-        proc_ctx->frame_store[FRAME_IN_STMM] = proc_ctx->frame_store[FRAME_OUT_STMM];
-        proc_ctx->frame_store[FRAME_OUT_STMM] = tmp_store;
+    /* Reset the output surfaces to defaults. i.e. clean from user surfaces */
+    for (i = FRAME_OUT_CURRENT_DN; i <= FRAME_OUT_PREVIOUS; i++) {
+        ofs = &proc_ctx->frame_store[i];
+        if (!ofs->is_internal_surface)
+            ofs->obj_surface = NULL;
+        ofs->surface_id = proc_ctx->surface_input_object->base.id;
     }
 
-    /* update the output surface */ 
-    if (proc_ctx->surface_output_vebox_object != NULL) {
-        obj_surf = proc_ctx->surface_output_vebox_object;
-    } else {
-        obj_surf = proc_ctx->surface_output_object;
-    } 
+    /* Update the output surfaces */
+    obj_surface = proc_ctx->surface_output_vebox_object ?
+        proc_ctx->surface_output_vebox_object : proc_ctx->surface_output_object;
 
-    if (proc_ctx->filters_mask == VPP_DNDI_DN) {
-        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].surface_id = VA_INVALID_ID;
-        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].is_internal_surface = 0;
-        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface = obj_surf;
+    proc_ctx->current_output_type = 2;
+    if (proc_ctx->filters_mask == VPP_DNDI_DN)
         proc_ctx->current_output = FRAME_OUT_CURRENT_DN;
-    } else if (proc_ctx->filters_mask & VPP_DNDI_DI) {
-        VAProcFilterParameterBufferDeinterlacing *di_param =
-            (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
-
-        if (di_param && 
-            (di_param->algorithm == VAProcDeinterlacingMotionAdaptive ||
-            di_param->algorithm == VAProcDeinterlacingMotionCompensated)) {
-            if (proc_ctx->frame_order == -1) {
-                proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = VA_INVALID_ID;
-                proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
-                proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface = obj_surf;
-                proc_ctx->current_output = FRAME_OUT_CURRENT;
-            } else if (proc_ctx->frame_order == 0) {
-                proc_ctx->frame_store[FRAME_OUT_PREVIOUS].surface_id = VA_INVALID_ID;
-                proc_ctx->frame_store[FRAME_OUT_PREVIOUS].is_internal_surface = 0;
-                proc_ctx->frame_store[FRAME_OUT_PREVIOUS].obj_surface = obj_surf;
-                proc_ctx->current_output = FRAME_OUT_PREVIOUS;
-            } else {
-                proc_ctx->current_output = FRAME_OUT_CURRENT;
-                proc_ctx->format_convert_flags |= POST_COPY_CONVERT;
-            }
-        } else {
-            proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = VA_INVALID_ID;
-            proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
-            proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface = obj_surf;
-            proc_ctx->current_output = FRAME_OUT_CURRENT;
-        }
-    } else {
-        proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = VA_INVALID_ID;
-        proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
-        proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface = obj_surf;
+    else
         proc_ctx->current_output = FRAME_OUT_CURRENT;
-    }
+    ofs = &proc_ctx->frame_store[proc_ctx->current_output];
+    ofs->obj_surface = obj_surface;
+    ofs->surface_id = proc_ctx->surface_input_object->base.id;
+    ofs->is_internal_surface = proc_ctx->surface_output_vebox_object != NULL;
 
     return VA_STATUS_SUCCESS;
-}
-
-void hsw_veb_surface_unreference(VADriverContextP ctx,
-                                 struct intel_vebox_context *proc_ctx)
-{
-    /* unreference the input surface */ 
-    proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id = VA_INVALID_ID;
-    proc_ctx->frame_store[FRAME_IN_CURRENT].is_internal_surface = 0;
-    proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface = NULL;
-
-    /* unreference the shared output surface */ 
-    if (proc_ctx->filters_mask == VPP_DNDI_DN) {
-        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].surface_id = VA_INVALID_ID;
-        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].is_internal_surface = 0;
-        proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface = NULL;
-    } else {
-        proc_ctx->frame_store[FRAME_OUT_CURRENT].surface_id = VA_INVALID_ID;
-        proc_ctx->frame_store[FRAME_OUT_CURRENT].is_internal_surface = 0;
-        proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface = NULL;
-    }
 }
 
 int hsw_veb_pre_format_convert(VADriverContextP ctx,
@@ -1349,6 +1251,58 @@ gen75_vebox_init_pipe_params(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static VAStatus
+gen75_vebox_init_filter_params(VADriverContextP ctx,
+    struct intel_vebox_context *proc_ctx)
+{
+    proc_ctx->format_convert_flags = 0; /* initialized in hsw_veb_pre_format_convert() */
+
+    proc_ctx->is_iecp_enabled = (proc_ctx->filters_mask & VPP_IECP_MASK) != 0;
+    proc_ctx->is_dn_enabled = (proc_ctx->filters_mask & VPP_DNDI_DN) != 0;
+    proc_ctx->is_di_enabled = (proc_ctx->filters_mask & VPP_DNDI_DI) != 0;
+    proc_ctx->is_first_frame = 0;
+    proc_ctx->is_second_field = 0;
+
+    /* Check whether we are deinterlacing the second field */
+    if (proc_ctx->is_di_enabled) {
+        const VAProcFilterParameterBufferDeinterlacing * const deint_params =
+            proc_ctx->filter_di;
+
+        const unsigned int tff =
+            !(deint_params->flags & VA_DEINTERLACING_BOTTOM_FIELD_FIRST);
+        const unsigned int is_top_field =
+            !(deint_params->flags & VA_DEINTERLACING_BOTTOM_FIELD);
+
+        if ((tff ^ is_top_field) != 0) {
+            struct object_surface * const obj_surface =
+                proc_ctx->surface_input_object;
+
+            if (proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id != obj_surface->base.id) {
+                WARN_ONCE("invalid surface provided for second field\n");
+                return VA_STATUS_ERROR_INVALID_PARAMETER;
+            }
+            proc_ctx->is_second_field = 1;
+        }
+    }
+
+    /* Check whether we are deinterlacing the first frame */
+    if (proc_ctx->is_di_enabled) {
+        const VAProcFilterParameterBufferDeinterlacing * const deint_params =
+            proc_ctx->filter_di;
+
+        switch (deint_params->algorithm) {
+        case VAProcDeinterlacingBob:
+            proc_ctx->is_first_frame = 1;
+            break;
+        default:
+            WARN_ONCE("unsupported deinterlacing algorithm (%d)\n",
+                      deint_params->algorithm);
+            return VA_STATUS_ERROR_UNSUPPORTED_FILTER;
+        }
+    }
+    return VA_STATUS_SUCCESS;
+}
+
 VAStatus
 gen75_vebox_process_picture(VADriverContextP ctx,
     struct intel_vebox_context *proc_ctx)
@@ -1359,17 +1313,22 @@ gen75_vebox_process_picture(VADriverContextP ctx,
     if (status != VA_STATUS_SUCCESS)
         return status;
 
-    hsw_veb_pre_format_convert(ctx, proc_ctx);
-    hsw_veb_surface_reference(ctx, proc_ctx);
+    status = gen75_vebox_init_filter_params(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
-    if (proc_ctx->frame_order == -1) {
-        status = gen75_vebox_ensure_surfaces_storage(ctx, proc_ctx);
-        if (status != VA_STATUS_SUCCESS)
-            return status;
-    }
+    hsw_veb_pre_format_convert(ctx, proc_ctx);
+
+    status = gen75_vebox_ensure_surfaces(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    status = gen75_vebox_ensure_surfaces_storage(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
     if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
-        assert(proc_ctx->frame_order == 1);
+        assert(proc_ctx->is_second_field);
         /* directly copy the saved frame in the second call */
     } else {
         intel_batchbuffer_start_atomic_veb(proc_ctx->batch, 0x1000);
@@ -1384,9 +1343,6 @@ gen75_vebox_process_picture(VADriverContextP ctx,
     }
 
     hsw_veb_post_format_convert(ctx, proc_ctx);
-    // hsw_veb_surface_unreference(ctx, proc_ctx);
-
-    proc_ctx->frame_order = (proc_ctx->frame_order + 1) % 2;
      
     return VA_STATUS_SUCCESS;
 }
@@ -1414,17 +1370,17 @@ void gen75_vebox_context_destroy(VADriverContextP ctx,
        proc_ctx->surface_output_scaled_object = NULL;
      }
 
-    for(i = 0; i < ARRAY_ELEMS(proc_ctx->frame_store); i ++) {
-        if (proc_ctx->frame_store[i].is_internal_surface == 1) {
-            assert(proc_ctx->frame_store[i].surface_id != VA_INVALID_ID);
+    for (i = 0; i < ARRAY_ELEMS(proc_ctx->frame_store); i++) {
+        struct object_surface * const obj_surface =
+            proc_ctx->frame_store[i].obj_surface;
 
-            if (proc_ctx->frame_store[i].surface_id != VA_INVALID_ID)
-                i965_DestroySurfaces(ctx, &proc_ctx->frame_store[i].surface_id, 1);
+        if (proc_ctx->frame_store[i].is_internal_surface && obj_surface) {
+            VASurfaceID surface_id = obj_surface->base.id;
+            i965_DestroySurfaces(ctx, &surface_id, 1);
         }
-
+        proc_ctx->frame_store[i].obj_surface = NULL;
         proc_ctx->frame_store[i].surface_id = VA_INVALID_ID;
         proc_ctx->frame_store[i].is_internal_surface = 0;
-        proc_ctx->frame_store[i].obj_surface = NULL;
     }
 
     /* dndi state table  */
@@ -1460,7 +1416,6 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
         proc_context->frame_store[i].surface_id = VA_INVALID_ID;
   
     proc_context->filters_mask          = 0;
-    proc_context->frame_order           = -1; /* the first frame */
     proc_context->surface_output_object = NULL;
     proc_context->surface_input_object  = NULL;
     proc_context->surface_input_vebox   = VA_INVALID_ID;
@@ -1478,33 +1433,6 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
 void bdw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     struct intel_batchbuffer *batch = proc_ctx->batch;
-    unsigned int is_dn_enabled   = !!(proc_ctx->filters_mask & VPP_DNDI_DN);
-    unsigned int is_di_enabled   = !!(proc_ctx->filters_mask & VPP_DNDI_DI);
-    unsigned int is_iecp_enabled = !!(proc_ctx->filters_mask & VPP_IECP_MASK);
-    unsigned int is_first_frame  = !!((proc_ctx->frame_order == -1) &&
-                                      (is_di_enabled ||
-                                       is_dn_enabled));
-    unsigned int di_output_frames_flag = 2; /* Output Current Frame Only */
-
-    if(proc_ctx->fourcc_input != proc_ctx->fourcc_output ||
-       (is_dn_enabled == 0 && is_di_enabled == 0)){
-       is_iecp_enabled = 1;
-    }
-
-    if (is_di_enabled) {
-        VAProcFilterParameterBufferDeinterlacing *di_param =
-            (VAProcFilterParameterBufferDeinterlacing *)proc_ctx->filter_di;
-
-        assert(di_param);
-        
-        if (di_param->algorithm == VAProcDeinterlacingBob)
-            is_first_frame = 1;
-
-        if ((di_param->algorithm == VAProcDeinterlacingMotionAdaptive ||
-            di_param->algorithm == VAProcDeinterlacingMotionCompensated) &&
-            proc_ctx->frame_order != -1)
-            di_output_frames_flag = 0; /* Output both Current Frame and Previous Frame */
-    }
 
     BEGIN_VEB_BATCH(batch, 0xc);
     OUT_VEB_BATCH(batch, VEB_STATE | (0xc - 2));
@@ -1518,13 +1446,13 @@ void bdw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
                   0 << 12 |       // alpha plane enable
                   0 << 11 |       // vignette enable
                   0 << 10 |       // demosaic enable
-                  di_output_frames_flag << 8  |       // DI output frame
+                  proc_ctx->current_output_type << 8  | // DI output frame
                   1 << 7  |       // 444->422 downsample method
                   1 << 6  |       // 422->420 downsample method
-                  is_first_frame  << 5  |   // DN/DI first frame
-                  is_di_enabled   << 4  |             // DI enable
-                  is_dn_enabled   << 3  |             // DN enable
-                  is_iecp_enabled << 2  |             // global IECP enabled
+                  proc_ctx->is_first_frame  << 5  |   // DN/DI first frame
+                  proc_ctx->is_di_enabled   << 4  |   // DI enable
+                  proc_ctx->is_dn_enabled   << 3  |   // DN enable
+                  proc_ctx->is_iecp_enabled << 2  |   // global IECP enabled
                   0 << 1  |       // ColorGamutCompressionEnable
                   0 ) ;           // ColorGamutExpansionEnable.
 
@@ -1624,17 +1552,22 @@ gen8_vebox_process_picture(VADriverContextP ctx,
     if (status != VA_STATUS_SUCCESS)
         return status;
 
-    hsw_veb_pre_format_convert(ctx, proc_ctx);
-    hsw_veb_surface_reference(ctx, proc_ctx);
+    status = gen75_vebox_init_filter_params(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
-    if (proc_ctx->frame_order == -1) {
-        status = gen75_vebox_ensure_surfaces_storage(ctx, proc_ctx);
-        if (status != VA_STATUS_SUCCESS)
-            return status;
-    }
+    hsw_veb_pre_format_convert(ctx, proc_ctx);
+
+    status = gen75_vebox_ensure_surfaces(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    status = gen75_vebox_ensure_surfaces_storage(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
     if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
-        assert(proc_ctx->frame_order == 1);
+        assert(proc_ctx->is_second_field);
         /* directly copy the saved frame in the second call */
     } else {
         intel_batchbuffer_start_atomic_veb(proc_ctx->batch, 0x1000);
@@ -1649,9 +1582,6 @@ gen8_vebox_process_picture(VADriverContextP ctx,
     }
 
     hsw_veb_post_format_convert(ctx, proc_ctx);
-    // hsw_veb_surface_unreference(ctx, proc_ctx);
-
-    proc_ctx->frame_order = (proc_ctx->frame_order + 1) % 2;
      
     return VA_STATUS_SUCCESS;
 }

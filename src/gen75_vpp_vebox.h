@@ -89,9 +89,9 @@ enum SURFACE_FORMAT{
 };
 
 typedef struct veb_frame_store {
-    VASurfaceID surface_id;
-    unsigned int is_internal_surface;
     struct object_surface *obj_surface;
+    VASurfaceID surface_id; /* always relative to the input surface */
+    unsigned int is_internal_surface;
 } VEBFrameStore;
 
 typedef struct veb_buffer {
@@ -129,8 +129,8 @@ struct intel_vebox_context
     VEBBuffer vertex_state_table;
 
     unsigned int  filters_mask;
-    int frame_order;
     int current_output;
+    int current_output_type; /* 0:Both, 1:Previous, 2:Current */
 
     VAProcPipelineParameterBuffer * pipeline_param;
     void * filter_dn;
@@ -142,6 +142,13 @@ struct intel_vebox_context
 
     unsigned int  filter_iecp_amp_num_elements;
     unsigned char format_convert_flags;
+
+    /* Temporary flags live until the current picture is processed */
+    unsigned int is_iecp_enabled        : 1;
+    unsigned int is_dn_enabled          : 1;
+    unsigned int is_di_enabled          : 1;
+    unsigned int is_first_frame         : 1;
+    unsigned int is_second_field        : 1;
 };
 
 VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
