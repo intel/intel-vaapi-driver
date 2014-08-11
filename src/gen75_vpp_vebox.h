@@ -67,7 +67,7 @@ enum {
     FRAME_OUT_CURRENT,
     FRAME_OUT_PREVIOUS,
     FRAME_OUT_STATISTIC,
-    FRAME_STORE_SUM,
+    FRAME_STORE_COUNT,
 };
 
 enum SURFACE_FORMAT{
@@ -121,7 +121,7 @@ struct intel_vebox_context
     int width_output;
     int height_output;
 
-    VEBFrameStore frame_store[FRAME_STORE_SUM];
+    VEBFrameStore frame_store[FRAME_STORE_COUNT];
 
     VEBBuffer dndi_state_table;
     VEBBuffer iecp_state_table;
