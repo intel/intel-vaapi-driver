@@ -857,123 +857,143 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     ADVANCE_VEB_BATCH(batch);
 }
 
-void hsw_veb_resource_prepare(VADriverContextP ctx,
-                              struct intel_vebox_context *proc_ctx)
+static VAStatus
+gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
+    struct intel_vebox_context *proc_ctx)
 {
-    VAStatus va_status;
-    dri_bo *bo;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    struct object_surface *input_obj_surface, *output_obj_surface;
     unsigned int input_fourcc, output_fourcc;
     unsigned int input_sampling, output_sampling;
     unsigned int input_tiling, output_tiling;
     unsigned int i, swizzle;
-    struct object_surface *obj_surf_out = NULL, *obj_surf_in = NULL;
+    drm_intel_bo *bo;
+    VAStatus status;
 
-    if (proc_ctx->surface_input_vebox_object != NULL) {
-        obj_surf_in = proc_ctx->surface_input_vebox_object;
-    } else {
-        obj_surf_in = proc_ctx->surface_input_object;
-    } 
+    /* Determine input surface info. Use native VEBOX format whenever
+       possible. i.e. when the input surface format is not supported
+       by the VEBOX engine, then allocate a temporary surface (live
+       during the whole VPP pipeline lifetime)
 
-    if (proc_ctx->surface_output_vebox_object != NULL) {
-        obj_surf_out = proc_ctx->surface_output_vebox_object;
-    } else {
-        obj_surf_out = proc_ctx->surface_output_object;
-    } 
-
-    if(obj_surf_in->bo == NULL){
-          input_fourcc = VA_FOURCC_NV12;
-          input_sampling = SUBSAMPLE_YUV420;
-          input_tiling = 0;
-          i965_check_alloc_surface_bo(ctx, obj_surf_in, input_tiling, input_fourcc, input_sampling);
-    } else {
-        input_fourcc = obj_surf_in->fourcc;
-        input_sampling = obj_surf_in->subsampling;
-        dri_bo_get_tiling(obj_surf_in->bo, &input_tiling, &swizzle);
+       XXX: derive an actual surface format compatible with the input
+       surface chroma format */
+    input_obj_surface = proc_ctx->surface_input_vebox_object ?
+        proc_ctx->surface_input_vebox_object : proc_ctx->surface_input_object;
+    if (input_obj_surface->bo) {
+        input_fourcc = input_obj_surface->fourcc;
+        input_sampling = input_obj_surface->subsampling;
+        dri_bo_get_tiling(input_obj_surface->bo, &input_tiling, &swizzle);
         input_tiling = !!input_tiling;
     }
-
-    if(obj_surf_out->bo == NULL){
-          output_fourcc = VA_FOURCC_NV12;
-          output_sampling = SUBSAMPLE_YUV420;
-          output_tiling = 0;
-          i965_check_alloc_surface_bo(ctx, obj_surf_out, output_tiling, output_fourcc, output_sampling);
-    }else {
-        output_fourcc   = obj_surf_out->fourcc;
-        output_sampling = obj_surf_out->subsampling;
-        dri_bo_get_tiling(obj_surf_out->bo, &output_tiling, &swizzle);
-        output_tiling = !!output_tiling;
+    else {
+        input_fourcc = VA_FOURCC_NV12;
+        input_sampling = SUBSAMPLE_YUV420;
+        input_tiling = 0;
+        status = i965_check_alloc_surface_bo(ctx, input_obj_surface,
+            input_tiling, input_fourcc, input_sampling);
+        if (status != VA_STATUS_SUCCESS)
+            return status;
     }
 
-    /* vebox pipelien input surface format info */
+    /* Determine output surface info.
+
+       XXX: derive an actual surface format compatible with the input
+       surface chroma format */
+    output_obj_surface = proc_ctx->surface_output_vebox_object ?
+        proc_ctx->surface_output_vebox_object : proc_ctx->surface_output_object;
+    if (output_obj_surface->bo) {
+        output_fourcc   = output_obj_surface->fourcc;
+        output_sampling = output_obj_surface->subsampling;
+        dri_bo_get_tiling(output_obj_surface->bo, &output_tiling, &swizzle);
+        output_tiling = !!output_tiling;
+    }
+    else {
+        output_fourcc = VA_FOURCC_NV12;
+        output_sampling = SUBSAMPLE_YUV420;
+        output_tiling = 0;
+        status = i965_check_alloc_surface_bo(ctx, output_obj_surface,
+            output_tiling, output_fourcc, output_sampling);
+        if (status != VA_STATUS_SUCCESS)
+            return status;
+    }
+
+    /* Update VEBOX pipeline formats */
     proc_ctx->fourcc_input = input_fourcc;
     proc_ctx->fourcc_output = output_fourcc;
    
-    /* create pipeline surfaces */
-    for(i = 0; i < ARRAY_ELEMS(proc_ctx->frame_store); i ++) {
-        if(proc_ctx->frame_store[i].obj_surface){
-            continue; //refer external surface for vebox pipeline
-        }
-    
+    /* Create pipeline surfaces */
+    for (i = 0; i < ARRAY_ELEMS(proc_ctx->frame_store); i ++) {
+        struct object_surface *obj_surface;
         VASurfaceID new_surface;
-        struct object_surface *obj_surf = NULL;
 
-        va_status =   i965_CreateSurfaces(ctx,
-                                          proc_ctx ->width_input,
-                                          proc_ctx ->height_input,
-                                          VA_RT_FORMAT_YUV420,
-                                          1,
-                                          &new_surface);
-        assert(va_status == VA_STATUS_SUCCESS);
+        if (proc_ctx->frame_store[i].obj_surface)
+            continue; // user allocated surface, not VEBOX internal
 
-        obj_surf = SURFACE(new_surface);
-        assert(obj_surf);
+        status = i965_CreateSurfaces(ctx, proc_ctx->width_input,
+            proc_ctx->height_input, VA_RT_FORMAT_YUV420, 1, &new_surface);
+        if (status != VA_STATUS_SUCCESS)
+            return status;
 
-        if( i <= FRAME_IN_PREVIOUS || i == FRAME_OUT_CURRENT_DN) {
-            i965_check_alloc_surface_bo(ctx, obj_surf, input_tiling, input_fourcc, input_sampling);
-        } else if( i == FRAME_IN_STMM || i == FRAME_OUT_STMM){
-            i965_check_alloc_surface_bo(ctx, obj_surf, 1, input_fourcc, input_sampling);
-        } else if( i >= FRAME_OUT_CURRENT){
-            i965_check_alloc_surface_bo(ctx, obj_surf, output_tiling, output_fourcc, output_sampling);
+        obj_surface = SURFACE(new_surface);
+        assert(obj_surface != NULL);
+
+        if (i <= FRAME_IN_PREVIOUS || i == FRAME_OUT_CURRENT_DN) {
+            status = i965_check_alloc_surface_bo(ctx, obj_surface,
+                input_tiling, input_fourcc, input_sampling);
         }
+        else if (i == FRAME_IN_STMM || i == FRAME_OUT_STMM) {
+            status = i965_check_alloc_surface_bo(ctx, obj_surface,
+                1, input_fourcc, input_sampling);
+        }
+        else if (i >= FRAME_OUT_CURRENT) {
+            status = i965_check_alloc_surface_bo(ctx, obj_surface,
+                output_tiling, output_fourcc, output_sampling);
+        }
+        if (status != VA_STATUS_SUCCESS)
+            return status;
 
         proc_ctx->frame_store[i].surface_id = new_surface;
         proc_ctx->frame_store[i].is_internal_surface = 1;
-        proc_ctx->frame_store[i].obj_surface = obj_surf;
+        proc_ctx->frame_store[i].obj_surface = obj_surface;
     }
 
-    /* alloc dndi state table  */
-    dri_bo_unreference(proc_ctx->dndi_state_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "vebox: dndi state Buffer",
-                      0x1000, 0x1000);
+    /* Allocate DNDI state table  */
+    drm_intel_bo_unreference(proc_ctx->dndi_state_table.bo);
+    bo = drm_intel_bo_alloc(i965->intel.bufmgr, "vebox: dndi state Buffer",
+        0x1000, 0x1000);
     proc_ctx->dndi_state_table.bo = bo;
-    dri_bo_reference(proc_ctx->dndi_state_table.bo);
+    if (!bo)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    drm_intel_bo_reference(proc_ctx->dndi_state_table.bo);
  
-    /* alloc iecp state table  */
-    dri_bo_unreference(proc_ctx->iecp_state_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "vebox: iecp state Buffer",
-                      0x1000, 0x1000);
+    /* Allocate IECP state table  */
+    drm_intel_bo_unreference(proc_ctx->iecp_state_table.bo);
+    bo = drm_intel_bo_alloc(i965->intel.bufmgr, "vebox: iecp state Buffer",
+        0x1000, 0x1000);
     proc_ctx->iecp_state_table.bo = bo;
-    dri_bo_reference(proc_ctx->iecp_state_table.bo);
+    if (!bo)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    drm_intel_bo_reference(proc_ctx->iecp_state_table.bo);
 
-    /* alloc gamut state table  */
-    dri_bo_unreference(proc_ctx->gamut_state_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "vebox: gamut state Buffer",
-                      0x1000, 0x1000);
+    /* Allocate Gamut state table  */
+    drm_intel_bo_unreference(proc_ctx->gamut_state_table.bo);
+    bo = drm_intel_bo_alloc(i965->intel.bufmgr, "vebox: gamut state Buffer",
+        0x1000, 0x1000);
     proc_ctx->gamut_state_table.bo = bo;
-    dri_bo_reference(proc_ctx->gamut_state_table.bo);
+    if (!bo)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    drm_intel_bo_reference(proc_ctx->gamut_state_table.bo);
 
-    /* alloc vertex state table  */
-    dri_bo_unreference(proc_ctx->vertex_state_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "vertex: iecp state Buffer",
-                      0x1000, 0x1000);
+    /* Allocate vertex state table  */
+    drm_intel_bo_unreference(proc_ctx->vertex_state_table.bo);
+    bo = drm_intel_bo_alloc(i965->intel.bufmgr, "vebox: vertex state Buffer",
+        0x1000, 0x1000);
     proc_ctx->vertex_state_table.bo = bo;
-    dri_bo_reference(proc_ctx->vertex_state_table.bo);
+    if (!bo)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    drm_intel_bo_reference(proc_ctx->vertex_state_table.bo);
 
+    return VA_STATUS_SUCCESS;
 }
 
 static VAStatus
@@ -1343,7 +1363,9 @@ gen75_vebox_process_picture(VADriverContextP ctx,
     hsw_veb_surface_reference(ctx, proc_ctx);
 
     if (proc_ctx->frame_order == -1) {
-        hsw_veb_resource_prepare(ctx, proc_ctx);
+        status = gen75_vebox_ensure_surfaces_storage(ctx, proc_ctx);
+        if (status != VA_STATUS_SUCCESS)
+            return status;
     }
 
     if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
@@ -1606,7 +1628,9 @@ gen8_vebox_process_picture(VADriverContextP ctx,
     hsw_veb_surface_reference(ctx, proc_ctx);
 
     if (proc_ctx->frame_order == -1) {
-        hsw_veb_resource_prepare(ctx, proc_ctx);
+        status = gen75_vebox_ensure_surfaces_storage(ctx, proc_ctx);
+        if (status != VA_STATUS_SUCCESS)
+            return status;
     }
 
     if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
