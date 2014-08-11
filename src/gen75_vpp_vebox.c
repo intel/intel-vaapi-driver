@@ -1284,41 +1284,60 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
     return 0;
 }
 
-VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
-                         struct intel_vebox_context *proc_ctx)
+static VAStatus
+gen75_vebox_init_pipe_params(VADriverContextP ctx,
+    struct intel_vebox_context *proc_ctx)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
- 
-    VAProcPipelineParameterBuffer *pipe = proc_ctx->pipeline_param;
-    VAProcFilterParameterBuffer* filter = NULL;
-    struct object_buffer *obj_buf = NULL;
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    const VAProcPipelineParameterBuffer * const pipe = proc_ctx->pipeline_param;
+    VAProcFilterParameterBuffer *filter;
     unsigned int i;
 
-    for (i = 0; i < pipe->num_filters; i ++) {
-         obj_buf = BUFFER(pipe->filters[i]);
-         
-         assert(obj_buf && obj_buf->buffer_store);
+    proc_ctx->filters_mask = 0;
+    for (i = 0; i < pipe->num_filters; i++) {
+        struct object_buffer * const obj_buffer = BUFFER(pipe->filters[i]);
 
-         if (!obj_buf || !obj_buf->buffer_store)
-             goto error;
+        assert(obj_buffer && obj_buffer->buffer_store);
+        if (!obj_buffer || !obj_buffer->buffer_store)
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-         filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
-            
-         if (filter->type == VAProcFilterNoiseReduction) {
-             proc_ctx->filters_mask |= VPP_DNDI_DN;
-             proc_ctx->filter_dn = filter;
-         } else if (filter->type == VAProcFilterDeinterlacing) {
-             proc_ctx->filters_mask |= VPP_DNDI_DI;
-             proc_ctx->filter_di = filter;
-         } else if (filter->type == VAProcFilterColorBalance) {
-             proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
-             proc_ctx->filter_iecp_amp = filter;
-             proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
-         } else if (filter->type == VAProcFilterSkinToneEnhancement) {
-             proc_ctx->filters_mask |= VPP_IECP_STD_STE;
-             proc_ctx->filter_iecp_std = filter;
-         }
+        filter = (VAProcFilterParameterBuffer *)
+            obj_buffer->buffer_store->buffer;
+        switch (filter->type) {
+        case VAProcFilterNoiseReduction:
+            proc_ctx->filters_mask |= VPP_DNDI_DN;
+            proc_ctx->filter_dn = filter;
+            break;
+        case VAProcFilterDeinterlacing:
+            proc_ctx->filters_mask |= VPP_DNDI_DI;
+            proc_ctx->filter_di = filter;
+            break;
+        case VAProcFilterColorBalance:
+            proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
+            proc_ctx->filter_iecp_amp = filter;
+            proc_ctx->filter_iecp_amp_num_elements = obj_buffer->num_elements;
+            break;
+        case VAProcFilterSkinToneEnhancement:
+            proc_ctx->filters_mask |= VPP_IECP_STD_STE;
+            proc_ctx->filter_iecp_std = filter;
+            break;
+        default:
+            WARN_ONCE("unsupported filter (type: %d)\n", filter->type);
+            return VA_STATUS_ERROR_UNSUPPORTED_FILTER;
+        }
     }
+    return VA_STATUS_SUCCESS;
+}
+
+VAStatus
+gen75_vebox_process_picture(VADriverContextP ctx,
+    struct intel_vebox_context *proc_ctx)
+{
+    VAStatus status;
+
+    status = gen75_vebox_init_pipe_params(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
     hsw_veb_pre_format_convert(ctx, proc_ctx);
     hsw_veb_surface_reference(ctx, proc_ctx);
@@ -1348,9 +1367,6 @@ VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
     proc_ctx->frame_order = (proc_ctx->frame_order + 1) % 2;
      
     return VA_STATUS_SUCCESS;
-
-error:
-    return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 
 void gen75_vebox_context_destroy(VADriverContextP ctx, 
@@ -1576,41 +1592,15 @@ void bdw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     ADVANCE_VEB_BATCH(batch);
 }
 
-VAStatus gen8_vebox_process_picture(VADriverContextP ctx,
-                         struct intel_vebox_context *proc_ctx)
+VAStatus
+gen8_vebox_process_picture(VADriverContextP ctx,
+    struct intel_vebox_context *proc_ctx)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
- 
-    VAProcPipelineParameterBuffer *pipe = proc_ctx->pipeline_param;
-    VAProcFilterParameterBuffer* filter = NULL;
-    struct object_buffer *obj_buf = NULL;
-    unsigned int i;
+    VAStatus status;
 
-    for (i = 0; i < pipe->num_filters; i ++) {
-         obj_buf = BUFFER(pipe->filters[i]);
-         
-         assert(obj_buf && obj_buf->buffer_store);
-
-         if (!obj_buf || !obj_buf->buffer_store)
-             goto error;
-
-         filter = (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
-            
-         if (filter->type == VAProcFilterNoiseReduction) {
-             proc_ctx->filters_mask |= VPP_DNDI_DN;
-             proc_ctx->filter_dn = filter;
-         } else if (filter->type == VAProcFilterDeinterlacing) {
-             proc_ctx->filters_mask |= VPP_DNDI_DI;
-             proc_ctx->filter_di = filter;
-         } else if (filter->type == VAProcFilterColorBalance) {
-             proc_ctx->filters_mask |= VPP_IECP_PRO_AMP;
-             proc_ctx->filter_iecp_amp = filter;
-             proc_ctx->filter_iecp_amp_num_elements = obj_buf->num_elements;
-         } else if (filter->type == VAProcFilterSkinToneEnhancement) {
-             proc_ctx->filters_mask |= VPP_IECP_STD_STE;
-             proc_ctx->filter_iecp_std = filter;
-         }
-    }
+    status = gen75_vebox_init_pipe_params(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
     hsw_veb_pre_format_convert(ctx, proc_ctx);
     hsw_veb_surface_reference(ctx, proc_ctx);
@@ -1640,8 +1630,5 @@ VAStatus gen8_vebox_process_picture(VADriverContextP ctx,
     proc_ctx->frame_order = (proc_ctx->frame_order + 1) % 2;
      
     return VA_STATUS_SUCCESS;
-
-error:
-    return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
 
