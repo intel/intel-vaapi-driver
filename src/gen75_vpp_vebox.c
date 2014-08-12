@@ -835,6 +835,25 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     ADVANCE_VEB_BATCH(batch);
 }
 
+static void
+frame_store_reset(VEBFrameStore *fs)
+{
+    fs->obj_surface = NULL;
+    fs->surface_id = VA_INVALID_ID;
+    fs->is_internal_surface = 0;
+    fs->is_scratch_surface = 0;
+}
+
+static void
+frame_store_clear(VEBFrameStore *fs, VADriverContextP ctx)
+{
+    if (fs->obj_surface && fs->is_scratch_surface) {
+        VASurfaceID surface_id = fs->obj_surface->base.id;
+        i965_DestroySurfaces(ctx, &surface_id, 1);
+    }
+    frame_store_reset(fs);
+}
+
 static VAStatus
 gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     struct intel_vebox_context *proc_ctx)
@@ -934,6 +953,7 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
 
         proc_ctx->frame_store[i].obj_surface = obj_surface;
         proc_ctx->frame_store[i].is_internal_surface = 1;
+        proc_ctx->frame_store[i].is_scratch_surface = 1;
     }
 
     /* Allocate DNDI state table  */
@@ -979,6 +999,7 @@ static VAStatus
 gen75_vebox_ensure_surfaces(VADriverContextP ctx,
     struct intel_vebox_context *proc_ctx)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
     VEBFrameStore *ifs, *ofs;
     bool is_new_frame = 0;
@@ -989,15 +1010,47 @@ gen75_vebox_ensure_surfaces(VADriverContextP ctx,
 
     is_new_frame = proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id !=
         obj_surface->base.id;
+    if (is_new_frame) {
+        ifs = &proc_ctx->frame_store[FRAME_IN_PREVIOUS];
+        ofs = &proc_ctx->frame_store[proc_ctx->is_dn_enabled ?
+            FRAME_OUT_CURRENT_DN : FRAME_IN_CURRENT];
+        do {
+            const VAProcPipelineParameterBuffer * const pipe =
+                proc_ctx->pipeline_param;
+
+            if (pipe->num_forward_references < 1)
+                break;
+            if (pipe->forward_references[0] == VA_INVALID_ID)
+                break;
+
+            obj_surface = SURFACE(pipe->forward_references[0]);
+            if (!obj_surface || obj_surface->base.id == ifs->surface_id)
+                break;
+
+            frame_store_clear(ifs, ctx);
+            if (obj_surface->base.id == ofs->surface_id) {
+                *ifs = *ofs;
+                frame_store_reset(ofs);
+            }
+            else {
+                ifs->obj_surface = obj_surface;
+                ifs->surface_id = obj_surface->base.id;
+                ifs->is_internal_surface = 0;
+                ifs->is_scratch_surface = 0;
+            }
+        } while (0);
+    }
 
     /* Update the input surface */
     obj_surface = proc_ctx->surface_input_vebox_object ?
         proc_ctx->surface_input_vebox_object : proc_ctx->surface_input_object;
 
     ifs = &proc_ctx->frame_store[FRAME_IN_CURRENT];
+    frame_store_clear(ifs, ctx);
     ifs->obj_surface = obj_surface;
     ifs->surface_id = proc_ctx->surface_input_object->base.id;
     ifs->is_internal_surface = proc_ctx->surface_input_vebox_object != NULL;
+    ifs->is_scratch_surface = 0;
 
     /* Update the Spatial Temporal Motion Measure (STMM) surfaces */
     if (is_new_frame) {
@@ -1010,7 +1063,7 @@ gen75_vebox_ensure_surfaces(VADriverContextP ctx,
     /* Reset the output surfaces to defaults. i.e. clean from user surfaces */
     for (i = FRAME_OUT_CURRENT_DN; i <= FRAME_OUT_PREVIOUS; i++) {
         ofs = &proc_ctx->frame_store[i];
-        if (!ofs->is_internal_surface)
+        if (!ofs->is_scratch_surface)
             ofs->obj_surface = NULL;
         ofs->surface_id = proc_ctx->surface_input_object->base.id;
     }
@@ -1022,12 +1075,19 @@ gen75_vebox_ensure_surfaces(VADriverContextP ctx,
     proc_ctx->current_output_type = 2;
     if (proc_ctx->filters_mask == VPP_DNDI_DN)
         proc_ctx->current_output = FRAME_OUT_CURRENT_DN;
+    else if (proc_ctx->is_di_adv_enabled && !proc_ctx->is_first_frame) {
+        proc_ctx->current_output_type = 0;
+        proc_ctx->current_output = proc_ctx->is_second_field ?
+            FRAME_OUT_CURRENT : FRAME_OUT_PREVIOUS;
+    }
     else
         proc_ctx->current_output = FRAME_OUT_CURRENT;
     ofs = &proc_ctx->frame_store[proc_ctx->current_output];
+    frame_store_clear(ofs, ctx);
     ofs->obj_surface = obj_surface;
     ofs->surface_id = proc_ctx->surface_input_object->base.id;
     ofs->is_internal_surface = proc_ctx->surface_output_vebox_object != NULL;
+    ofs->is_scratch_surface = 0;
 
     return VA_STATUS_SUCCESS;
 }
@@ -1260,6 +1320,7 @@ gen75_vebox_init_filter_params(VADriverContextP ctx,
     proc_ctx->is_iecp_enabled = (proc_ctx->filters_mask & VPP_IECP_MASK) != 0;
     proc_ctx->is_dn_enabled = (proc_ctx->filters_mask & VPP_DNDI_DN) != 0;
     proc_ctx->is_di_enabled = (proc_ctx->filters_mask & VPP_DNDI_DI) != 0;
+    proc_ctx->is_di_adv_enabled = 0;
     proc_ctx->is_first_frame = 0;
     proc_ctx->is_second_field = 0;
 
@@ -1293,6 +1354,30 @@ gen75_vebox_init_filter_params(VADriverContextP ctx,
         switch (deint_params->algorithm) {
         case VAProcDeinterlacingBob:
             proc_ctx->is_first_frame = 1;
+            break;
+        case VAProcDeinterlacingMotionAdaptive:
+        case VAProcDeinterlacingMotionCompensated:
+            if (proc_ctx->frame_store[FRAME_IN_CURRENT].surface_id == VA_INVALID_ID)
+                proc_ctx->is_first_frame = 1;
+            else if (proc_ctx->is_second_field) {
+                /* At this stage, we have already deinterlaced the
+                   first field successfully. So, the first frame flag
+                   is trigerred if the previous field was deinterlaced
+                   without reference frame */
+                if (proc_ctx->frame_store[FRAME_IN_PREVIOUS].surface_id == VA_INVALID_ID)
+                    proc_ctx->is_first_frame = 1;
+            }
+            else {
+                const VAProcPipelineParameterBuffer * const pipe =
+                    proc_ctx->pipeline_param;
+
+                if (pipe->num_forward_references < 1 ||
+                    pipe->forward_references[0] == VA_INVALID_ID) {
+                    WARN_ONCE("A forward temporal reference is needed for Motion adaptive/compensated deinterlacing !!!\n");
+                    return VA_STATUS_ERROR_INVALID_PARAMETER;
+                }
+            }
+            proc_ctx->is_di_adv_enabled = 1;
             break;
         default:
             WARN_ONCE("unsupported deinterlacing algorithm (%d)\n",
@@ -1370,18 +1455,8 @@ void gen75_vebox_context_destroy(VADriverContextP ctx,
        proc_ctx->surface_output_scaled_object = NULL;
      }
 
-    for (i = 0; i < ARRAY_ELEMS(proc_ctx->frame_store); i++) {
-        struct object_surface * const obj_surface =
-            proc_ctx->frame_store[i].obj_surface;
-
-        if (proc_ctx->frame_store[i].is_internal_surface && obj_surface) {
-            VASurfaceID surface_id = obj_surface->base.id;
-            i965_DestroySurfaces(ctx, &surface_id, 1);
-        }
-        proc_ctx->frame_store[i].obj_surface = NULL;
-        proc_ctx->frame_store[i].surface_id = VA_INVALID_ID;
-        proc_ctx->frame_store[i].is_internal_surface = 0;
-    }
+    for (i = 0; i < ARRAY_ELEMS(proc_ctx->frame_store); i++)
+        frame_store_clear(&proc_ctx->frame_store[i], ctx);
 
     /* dndi state table  */
     dri_bo_unreference(proc_ctx->dndi_state_table.bo);

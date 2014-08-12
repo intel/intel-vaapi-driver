@@ -91,7 +91,8 @@ enum SURFACE_FORMAT{
 typedef struct veb_frame_store {
     struct object_surface *obj_surface;
     VASurfaceID surface_id; /* always relative to the input surface */
-    unsigned int is_internal_surface;
+    unsigned int is_internal_surface : 1;
+    unsigned int is_scratch_surface : 1;
 } VEBFrameStore;
 
 typedef struct veb_buffer {
@@ -147,6 +148,7 @@ struct intel_vebox_context
     unsigned int is_iecp_enabled        : 1;
     unsigned int is_dn_enabled          : 1;
     unsigned int is_di_enabled          : 1;
+    unsigned int is_di_adv_enabled      : 1;
     unsigned int is_first_frame         : 1;
     unsigned int is_second_field        : 1;
 };
