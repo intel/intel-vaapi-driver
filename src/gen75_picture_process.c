@@ -156,7 +156,7 @@ gen75_proc_picture(VADriverContextP ctx,
     }
 
     if (!obj_dst_surf->bo) {
-        unsigned int is_tiled = 0;
+        unsigned int is_tiled = 1;
         unsigned int fourcc = VA_FOURCC_NV12;
         int sampling = SUBSAMPLE_YUV420;
         i965_check_alloc_surface_bo(ctx, obj_dst_surf, is_tiled, fourcc, sampling);

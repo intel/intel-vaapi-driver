@@ -885,7 +885,7 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     else {
         input_fourcc = VA_FOURCC_NV12;
         input_sampling = SUBSAMPLE_YUV420;
-        input_tiling = 0;
+        input_tiling = 1;
         status = i965_check_alloc_surface_bo(ctx, input_obj_surface,
             input_tiling, input_fourcc, input_sampling);
         if (status != VA_STATUS_SUCCESS)
@@ -907,7 +907,7 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     else {
         output_fourcc = VA_FOURCC_NV12;
         output_sampling = SUBSAMPLE_YUV420;
-        output_tiling = 0;
+        output_tiling = 1;
         status = i965_check_alloc_surface_bo(ctx, output_obj_surface,
             output_tiling, output_fourcc, output_sampling);
         if (status != VA_STATUS_SUCCESS)
