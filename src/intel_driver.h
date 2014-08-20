@@ -133,6 +133,7 @@ struct intel_device_info
     unsigned int is_ivybridge   : 1; /* gen7 */
     unsigned int is_baytrail    : 1; /* gen7 */
     unsigned int is_haswell     : 1; /* gen7 */
+    unsigned int is_cherryview  : 1; /* gen8 */
 };
 
 struct intel_driver_data 
@@ -188,6 +189,7 @@ struct intel_region
 #define IS_HASWELL(device_info)         (device_info->is_haswell)
 #define IS_GEN7(device_info)            (device_info->gen == 7)
 
+#define IS_CHERRYVIEW(device_info)      (device_info->is_cherryview)
 #define IS_GEN8(device_info)            (device_info->gen == 8)
 
 #endif /* _INTEL_DRIVER_H_ */
