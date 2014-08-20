@@ -1069,7 +1069,7 @@ gen75_vebox_ensure_surfaces(VADriverContextP ctx,
         proc_ctx->surface_output_vebox_object : proc_ctx->surface_output_object;
 
     proc_ctx->current_output_type = 2;
-    if (proc_ctx->filters_mask == VPP_DNDI_DN)
+    if (proc_ctx->filters_mask == VPP_DNDI_DN && !proc_ctx->is_iecp_enabled)
         proc_ctx->current_output = FRAME_OUT_CURRENT_DN;
     else if (proc_ctx->is_di_adv_enabled && !proc_ctx->is_first_frame) {
         proc_ctx->current_output_type = 0;
