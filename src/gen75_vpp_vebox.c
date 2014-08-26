@@ -963,7 +963,6 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     proc_ctx->dndi_state_table.bo = bo;
     if (!bo)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
-    drm_intel_bo_reference(proc_ctx->dndi_state_table.bo);
  
     /* Allocate IECP state table  */
     drm_intel_bo_unreference(proc_ctx->iecp_state_table.bo);
@@ -972,7 +971,6 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     proc_ctx->iecp_state_table.bo = bo;
     if (!bo)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
-    drm_intel_bo_reference(proc_ctx->iecp_state_table.bo);
 
     /* Allocate Gamut state table  */
     drm_intel_bo_unreference(proc_ctx->gamut_state_table.bo);
@@ -981,7 +979,6 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     proc_ctx->gamut_state_table.bo = bo;
     if (!bo)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
-    drm_intel_bo_reference(proc_ctx->gamut_state_table.bo);
 
     /* Allocate vertex state table  */
     drm_intel_bo_unreference(proc_ctx->vertex_state_table.bo);
@@ -990,7 +987,6 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     proc_ctx->vertex_state_table.bo = bo;
     if (!bo)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
-    drm_intel_bo_reference(proc_ctx->vertex_state_table.bo);
 
     return VA_STATUS_SUCCESS;
 }
@@ -1459,19 +1455,19 @@ void gen75_vebox_context_destroy(VADriverContextP ctx,
         frame_store_clear(&proc_ctx->frame_store[i], ctx);
 
     /* dndi state table  */
-    dri_bo_unreference(proc_ctx->dndi_state_table.bo);
+    drm_intel_bo_unreference(proc_ctx->dndi_state_table.bo);
     proc_ctx->dndi_state_table.bo = NULL;
 
     /* iecp state table  */
-    dri_bo_unreference(proc_ctx->iecp_state_table.bo);
-    proc_ctx->dndi_state_table.bo = NULL;
+    drm_intel_bo_unreference(proc_ctx->iecp_state_table.bo);
+    proc_ctx->iecp_state_table.bo = NULL;
  
     /* gamut statu table */
-    dri_bo_unreference(proc_ctx->gamut_state_table.bo);
+    drm_intel_bo_unreference(proc_ctx->gamut_state_table.bo);
     proc_ctx->gamut_state_table.bo = NULL;
 
     /* vertex state table  */
-    dri_bo_unreference(proc_ctx->vertex_state_table.bo);
+    drm_intel_bo_unreference(proc_ctx->vertex_state_table.bo);
     proc_ctx->vertex_state_table.bo = NULL;
 
     intel_batchbuffer_free(proc_ctx->batch);
