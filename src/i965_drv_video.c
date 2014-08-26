@@ -3860,48 +3860,20 @@ get_image_yuy2(struct object_image *obj_image, uint8_t *image_data,
 
 static VAStatus 
 i965_sw_getimage(VADriverContextP ctx,
-                 VASurfaceID surface,
-                 int x,   /* coordinates of the upper left source pixel */
-                 int y,
-                 unsigned int width,      /* width and height of the region */
-                 unsigned int height,
-                 VAImageID image)
+    struct object_surface *obj_surface, struct object_image *obj_image,
+    const VARectangle *rect)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
-    VAStatus va_status = VA_STATUS_SUCCESS;
-
-    struct object_surface *obj_surface = SURFACE(surface);
-    if (!obj_surface)
-        return VA_STATUS_ERROR_INVALID_SURFACE;
-
-    struct object_image *obj_image = IMAGE(image);
-    if (!obj_image)
-        return VA_STATUS_ERROR_INVALID_IMAGE;
-
-    if (x < 0 || y < 0)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-    if (x + width > obj_surface->orig_width ||
-        y + height > obj_surface->orig_height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-    if (x + width > obj_image->image.width ||
-        y + height > obj_image->image.height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    void *image_data = NULL;
+    VAStatus va_status;
 
     if (obj_surface->fourcc != obj_image->image.format.fourcc)
         return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
 
-    void *image_data = NULL;
-
     va_status = i965_MapBuffer(ctx, obj_image->image.buf, &image_data);
     if (va_status != VA_STATUS_SUCCESS)
         return va_status;
-
-    VARectangle rect;
-    rect.x = x;
-    rect.y = y;
-    rect.width = width;
-    rect.height = height;
 
     switch (obj_image->image.format.fourcc) {
     case VA_FOURCC_YV12:
@@ -3909,24 +3881,23 @@ i965_sw_getimage(VADriverContextP ctx,
         /* I420 is native format for MPEG-2 decoded surfaces */
         if (render_state->interleaved_uv)
             goto operation_failed;
-        get_image_i420(obj_image, image_data, obj_surface, &rect);
+        get_image_i420(obj_image, image_data, obj_surface, rect);
         break;
     case VA_FOURCC_NV12:
         /* NV12 is native format for H.264 decoded surfaces */
         if (!render_state->interleaved_uv)
             goto operation_failed;
-        get_image_nv12(obj_image, image_data, obj_surface, &rect);
+        get_image_nv12(obj_image, image_data, obj_surface, rect);
         break;
     case VA_FOURCC_YUY2:
         /* YUY2 is the format supported by overlay plane */
-        get_image_yuy2(obj_image, image_data, obj_surface, &rect);
+        get_image_yuy2(obj_image, image_data, obj_surface, rect);
         break;
     default:
     operation_failed:
         va_status = VA_STATUS_ERROR_OPERATION_FAILED;
         break;
     }
-
     if (va_status != VA_STATUS_SUCCESS)
         return va_status;
 
@@ -3936,44 +3907,11 @@ i965_sw_getimage(VADriverContextP ctx,
 
 static VAStatus 
 i965_hw_getimage(VADriverContextP ctx,
-                 VASurfaceID surface,
-                 int x,   /* coordinates of the upper left source pixel */
-                 int y,
-                 unsigned int width,      /* width and height of the region */
-                 unsigned int height,
-                 VAImageID image)
+    struct object_surface *obj_surface, struct object_image *obj_image,
+    const VARectangle *rect)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_surface src_surface;
     struct i965_surface dst_surface;
-    VAStatus va_status = VA_STATUS_SUCCESS;
-    VARectangle rect;
-    struct object_surface *obj_surface = SURFACE(surface);
-    struct object_image *obj_image = IMAGE(image);
-
-    if (!obj_surface)
-        return VA_STATUS_ERROR_INVALID_SURFACE;
-
-    if (!obj_image)
-        return VA_STATUS_ERROR_INVALID_IMAGE;
-
-    if (x < 0 || y < 0)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-    if (x + width > obj_surface->orig_width ||
-        y + height > obj_surface->orig_height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-    if (x + width > obj_image->image.width ||
-        y + height > obj_image->image.height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-
-    if (!obj_surface->bo)
-        return VA_STATUS_SUCCESS;
-    assert(obj_image->bo); // image bo is always created, see i965_CreateImage()
-
-    rect.x = x;
-    rect.y = y;
-    rect.width = width;
-    rect.height = height;
 
     src_surface.base = (struct object_base *)obj_surface;
     src_surface.type = I965_SURFACE_TYPE_SURFACE;
@@ -3983,14 +3921,7 @@ i965_hw_getimage(VADriverContextP ctx,
     dst_surface.type = I965_SURFACE_TYPE_IMAGE;
     dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
-    va_status = i965_image_processing(ctx,
-                                      &src_surface,
-                                      &rect,
-                                      &dst_surface,
-                                      &rect);
-
-
-    return va_status;
+    return i965_image_processing(ctx, &src_surface, rect, &dst_surface, rect);
 }
 
 VAStatus 
@@ -4003,20 +3934,37 @@ i965_GetImage(VADriverContextP ctx,
               VAImageID image)
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
-    VAStatus va_status = VA_STATUS_SUCCESS;
+    struct object_surface * const obj_surface = SURFACE(surface);
+    struct object_image * const obj_image = IMAGE(image);
+    VARectangle rect;
+    VAStatus va_status;
+
+    if (!obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+    if (!obj_surface->bo) /* don't get anything, keep previous data */
+        return VA_STATUS_SUCCESS;
+
+    if (!obj_image || !obj_image->bo)
+        return VA_STATUS_ERROR_INVALID_IMAGE;
+
+    if (x < 0 || y < 0)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    if (x + width > obj_surface->orig_width ||
+        y + height > obj_surface->orig_height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    if (x + width > obj_image->image.width ||
+        y + height > obj_image->image.height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    rect.x = x;
+    rect.y = y;
+    rect.width = width;
+    rect.height = height;
 
     if (HAS_ACCELERATED_GETIMAGE(i965))
-        va_status = i965_hw_getimage(ctx,
-                                     surface,
-                                     x, y,
-                                     width, height,
-                                     image);
+        va_status = i965_hw_getimage(ctx, obj_surface, obj_image, &rect);
     else
-        va_status = i965_sw_getimage(ctx,
-                                     surface,
-                                     x, y,
-                                     width, height,
-                                     image);
+        va_status = i965_sw_getimage(ctx, obj_surface, obj_image, &rect);
 
     return va_status;
 }
@@ -4184,42 +4132,17 @@ put_image_yuy2(struct object_surface *obj_surface,
     return va_status;
 }
 
-
 static VAStatus
 i965_sw_putimage(VADriverContextP ctx,
-                 VASurfaceID surface,
-                 VAImageID image,
-                 int src_x,
-                 int src_y,
-                 unsigned int src_width,
-                 unsigned int src_height,
-                 int dest_x,
-                 int dest_y,
-                 unsigned int dest_width,
-                 unsigned int dest_height)
+    struct object_surface *obj_surface, struct object_image *obj_image,
+    const VARectangle *src_rect, const VARectangle *dst_rect)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface *obj_surface = SURFACE(surface);
-    struct object_image *obj_image = IMAGE(image);
     VAStatus va_status = VA_STATUS_SUCCESS;
     void *image_data = NULL;
 
-    ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
-    ASSERT_RET(obj_image, VA_STATUS_ERROR_INVALID_IMAGE);
-
-    if (src_x < 0 || src_y < 0)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-    if (src_x + src_width > obj_image->image.width ||
-        src_y + src_height > obj_image->image.height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-    if (dest_x < 0 || dest_y < 0)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-    if (dest_x + dest_width > obj_surface->orig_width ||
-        dest_y + dest_height > obj_surface->orig_height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-
     /* XXX: don't allow scaling */
-    if (src_width != dest_width || src_height != dest_height)
+    if (src_rect->width != dst_rect->width ||
+        src_rect->height != dst_rect->height)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     if (obj_surface->fourcc) {
@@ -4244,27 +4167,17 @@ i965_sw_putimage(VADriverContextP ctx,
     va_status = i965_MapBuffer(ctx, obj_image->image.buf, &image_data);
     if (va_status != VA_STATUS_SUCCESS)
         return va_status;
-
-    VARectangle src_rect, dest_rect;
-    src_rect.x       = src_x;
-    src_rect.y       = src_y;
-    src_rect.width   = src_width;
-    src_rect.height  = src_height;
-    dest_rect.x      = dest_x;
-    dest_rect.y      = dest_y;
-    dest_rect.width  = dest_width;
-    dest_rect.height = dest_height;
      
     switch (obj_image->image.format.fourcc) {
     case VA_FOURCC_YV12:
     case VA_FOURCC_I420:
-        va_status = put_image_i420(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        va_status = put_image_i420(obj_surface, dst_rect, obj_image, image_data, src_rect);
         break;
     case VA_FOURCC_NV12:
-        va_status = put_image_nv12(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        va_status = put_image_nv12(obj_surface, dst_rect, obj_image, image_data, src_rect);
         break;
     case VA_FOURCC_YUY2:
-        va_status = put_image_yuy2(obj_surface, &dest_rect, obj_image, image_data, &src_rect);
+        va_status = put_image_yuy2(obj_surface, dst_rect, obj_image, image_data, src_rect);
         break;
     default:
         va_status = VA_STATUS_ERROR_OPERATION_FAILED;
@@ -4279,38 +4192,11 @@ i965_sw_putimage(VADriverContextP ctx,
 
 static VAStatus 
 i965_hw_putimage(VADriverContextP ctx,
-                 VASurfaceID surface,
-                 VAImageID image,
-                 int src_x,
-                 int src_y,
-                 unsigned int src_width,
-                 unsigned int src_height,
-                 int dest_x,
-                 int dest_y,
-                 unsigned int dest_width,
-                 unsigned int dest_height)
+    struct object_surface *obj_surface, struct object_image *obj_image,
+    const VARectangle *src_rect, const VARectangle *dst_rect)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_surface *obj_surface = SURFACE(surface);
-    struct object_image *obj_image = IMAGE(image);
     struct i965_surface src_surface, dst_surface;
     VAStatus va_status = VA_STATUS_SUCCESS;
-    VARectangle src_rect, dst_rect;
-
-    ASSERT_RET(obj_surface,VA_STATUS_ERROR_INVALID_SURFACE);
-    ASSERT_RET(obj_image && obj_image->bo, VA_STATUS_ERROR_INVALID_IMAGE);
-
-    if (src_x < 0 ||
-        src_y < 0 ||
-        src_x + src_width > obj_image->image.width ||
-        src_y + src_height > obj_image->image.height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
-
-    if (dest_x < 0 ||
-        dest_y < 0 ||
-        dest_x + dest_width > obj_surface->orig_width ||
-        dest_y + dest_height > obj_surface->orig_height)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     if (!obj_surface->bo) {
         unsigned int tiling, swizzle;
@@ -4329,24 +4215,16 @@ i965_hw_putimage(VADriverContextP ctx,
     src_surface.base = (struct object_base *)obj_image;
     src_surface.type = I965_SURFACE_TYPE_IMAGE;
     src_surface.flags = I965_SURFACE_FLAG_FRAME;
-    src_rect.x = src_x;
-    src_rect.y = src_y;
-    src_rect.width = src_width;
-    src_rect.height = src_height;
 
     dst_surface.base = (struct object_base *)obj_surface;
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
     dst_surface.flags = I965_SURFACE_FLAG_FRAME;
-    dst_rect.x = dest_x;
-    dst_rect.y = dest_y;
-    dst_rect.width = dest_width;
-    dst_rect.height = dest_height;
 
     va_status = i965_image_processing(ctx,
                                       &src_surface,
-                                      &src_rect,
+                                      src_rect,
                                       &dst_surface,
-                                      &dst_rect);
+                                      dst_rect);
 
     return  va_status;
 }
@@ -4364,33 +4242,46 @@ i965_PutImage(VADriverContextP ctx,
               unsigned int dest_width,
               unsigned int dest_height)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    VAStatus va_status = VA_STATUS_SUCCESS;
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    struct object_surface * const obj_surface = SURFACE(surface);
+    struct object_image * const obj_image = IMAGE(image);
+    VARectangle src_rect, dst_rect;
+    VAStatus va_status;
+
+    if (!obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    if (!obj_image || !obj_image->bo)
+        return VA_STATUS_ERROR_INVALID_IMAGE;
+
+    if (src_x < 0 ||
+        src_y < 0 ||
+        src_x + src_width > obj_image->image.width ||
+        src_y + src_height > obj_image->image.height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    src_rect.x       = src_x;
+    src_rect.y       = src_y;
+    src_rect.width   = src_width;
+    src_rect.height  = src_height;
+
+    if (dest_x < 0 ||
+        dest_y < 0 ||
+        dest_x + dest_width > obj_surface->orig_width ||
+        dest_y + dest_height > obj_surface->orig_height)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    dst_rect.x      = dest_x;
+    dst_rect.y      = dest_y;
+    dst_rect.width  = dest_width;
+    dst_rect.height = dest_height;
 
     if (HAS_ACCELERATED_PUTIMAGE(i965))
-        va_status = i965_hw_putimage(ctx,
-                                     surface,
-                                     image,
-                                     src_x,
-                                     src_y,
-                                     src_width,
-                                     src_height,
-                                     dest_x,
-                                     dest_y,
-                                     dest_width,
-                                     dest_height);
+        va_status = i965_hw_putimage(ctx, obj_surface, obj_image,
+            &src_rect, &dst_rect);
     else 
-        va_status = i965_sw_putimage(ctx,
-                                     surface,
-                                     image,
-                                     src_x,
-                                     src_y,
-                                     src_width,
-                                     src_height,
-                                     dest_x,
-                                     dest_y,
-                                     dest_width,
-                                     dest_height);
+        va_status = i965_sw_putimage(ctx, obj_surface, obj_image,
+            &src_rect, &dst_rect);
 
     return va_status;
 }
