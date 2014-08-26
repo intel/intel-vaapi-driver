@@ -335,6 +335,37 @@ get_subpic_format(const VAImageFormat *va_format)
     return NULL;
 }
 
+/* Checks whether the surface is in busy state */
+static bool
+is_surface_busy(struct i965_driver_data *i965,
+    struct object_surface *obj_surface)
+{
+    assert(obj_surface != NULL);
+
+    if (obj_surface->locked_image_id != VA_INVALID_ID)
+        return true;
+    if (obj_surface->derived_image_id != VA_INVALID_ID)
+        return true;
+    return false;
+}
+
+/* Checks whether the image is in busy state */
+static bool
+is_image_busy(struct i965_driver_data *i965, struct object_image *obj_image)
+{
+    struct object_buffer *obj_buffer;
+
+    assert(obj_image != NULL);
+
+    if (obj_image->derived_surface != VA_INVALID_ID)
+        return true;
+
+    obj_buffer = BUFFER(obj_image->image.buf);
+    if (obj_buffer && obj_buffer->export_refcount > 0)
+        return true;
+    return false;
+}
+
 #define I965_PACKED_HEADER_BASE         0
 #define I965_PACKED_MISC_HEADER_BASE    3
 
@@ -1190,6 +1221,7 @@ i965_CreateSurfaces2(
         obj_surface->fourcc = 0;
         obj_surface->bo = NULL;
         obj_surface->locked_image_id = VA_INVALID_ID;
+        obj_surface->derived_image_id = VA_INVALID_ID;
         obj_surface->private_data = NULL;
         obj_surface->free_private_data = NULL;
         obj_surface->subsampling = SUBSAMPLE_YUV420;
@@ -2060,6 +2092,9 @@ i965_MapBuffer(VADriverContextP ctx,
     ASSERT_RET(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_INVALID_BUFFER);
     ASSERT_RET(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer), VA_STATUS_ERROR_INVALID_BUFFER);
 
+    if (obj_buffer->export_refcount > 0)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
     if (NULL != obj_buffer->buffer_store->bo) {
         unsigned int tiling, swizzle;
 
@@ -2191,6 +2226,9 @@ i965_BeginPicture(VADriverContextP ctx,
     ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
     obj_config = obj_context->obj_config;
     ASSERT_RET(obj_config, VA_STATUS_ERROR_INVALID_CONFIG);
+
+    if (is_surface_busy(i965, obj_surface))
+        return VA_STATUS_ERROR_SURFACE_BUSY;
 
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
@@ -3599,6 +3637,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
 
     *out_image = *image;
     obj_surface->flags |= SURFACE_DERIVED;
+    obj_surface->derived_image_id = image_id;
     obj_image->derived_surface = surface;
 
     return VA_STATUS_SUCCESS;
@@ -3642,6 +3681,7 @@ i965_DestroyImage(VADriverContextP ctx, VAImageID image)
 
     if (obj_surface) {
         obj_surface->flags &= ~SURFACE_DERIVED;
+        obj_surface->derived_image_id = VA_INVALID_ID;
     }
 
     i965_destroy_image(&i965->image_heap, (struct object_base *)obj_image);
@@ -3943,9 +3983,13 @@ i965_GetImage(VADriverContextP ctx,
         return VA_STATUS_ERROR_INVALID_SURFACE;
     if (!obj_surface->bo) /* don't get anything, keep previous data */
         return VA_STATUS_SUCCESS;
+    if (is_surface_busy(i965, obj_surface))
+        return VA_STATUS_ERROR_SURFACE_BUSY;
 
     if (!obj_image || !obj_image->bo)
         return VA_STATUS_ERROR_INVALID_IMAGE;
+    if (is_image_busy(i965, obj_image))
+        return VA_STATUS_ERROR_SURFACE_BUSY;
 
     if (x < 0 || y < 0)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
@@ -4250,9 +4294,13 @@ i965_PutImage(VADriverContextP ctx,
 
     if (!obj_surface)
         return VA_STATUS_ERROR_INVALID_SURFACE;
+    if (is_surface_busy(i965, obj_surface))
+        return VA_STATUS_ERROR_SURFACE_BUSY;
 
     if (!obj_image || !obj_image->bo)
         return VA_STATUS_ERROR_INVALID_IMAGE;
+    if (is_image_busy(i965, obj_image))
+        return VA_STATUS_ERROR_SURFACE_BUSY;
 
     if (src_x < 0 ||
         src_y < 0 ||

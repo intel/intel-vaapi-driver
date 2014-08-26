@@ -263,6 +263,7 @@ struct object_surface
     unsigned int fourcc;    
     dri_bo *bo;
     VAImageID locked_image_id;
+    VAImageID derived_image_id;
     void (*free_private_data)(void **data);
     void *private_data;
     unsigned int subsampling;
