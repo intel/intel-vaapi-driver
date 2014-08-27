@@ -89,6 +89,13 @@ gen6_send_avc_ref_idx_state(
     const GenFrameStore               frame_store[MAX_GEN_REFERENCE_FRAMES]
 );
 
+void
+gen6_mfd_avc_phantom_slice(VADriverContextP ctx,
+                           VAPictureParameterBufferH264 *pic_param,
+                           VASliceParameterBufferH264 *next_slice_param,
+                           struct intel_batchbuffer *batch
+);
+
 VAStatus
 intel_decoder_sanity_check_input(VADriverContextP ctx,
                                  VAProfile profile,
