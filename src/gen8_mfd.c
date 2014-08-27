@@ -575,6 +575,15 @@ gen8_mfd_avc_directmode_state(VADriverContextP ctx,
 }
 
 static void
+gen8_mfd_avc_phantom_slice_first(VADriverContextP ctx,
+                                 VAPictureParameterBufferH264 *pic_param,
+                                 VASliceParameterBufferH264 *next_slice_param,
+                                 struct gen7_mfd_context *gen7_mfd_context)
+{
+    gen6_mfd_avc_phantom_slice(ctx, pic_param, next_slice_param, gen7_mfd_context->base.batch);
+}
+
+static void
 gen8_mfd_avc_slice_state(VADriverContextP ctx,
                          VAPictureParameterBufferH264 *pic_param,
                          VASliceParameterBufferH264 *slice_param,
@@ -907,6 +916,9 @@ gen8_mfd_avc_decode_picture(VADriverContextP ctx,
             next_slice_group_param = NULL;
         else
             next_slice_group_param = (VASliceParameterBufferH264 *)decode_state->slice_params[j + 1]->buffer;
+
+        if (j == 0 && slice_param->first_mb_in_slice)
+            gen8_mfd_avc_phantom_slice_first(ctx, pic_param, slice_param, gen7_mfd_context); 
 
         for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
             assert(slice_param->slice_data_flag == VA_SLICE_DATA_FLAG_ALL);
