@@ -1169,11 +1169,15 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     unsigned int tail_data[] = { 0x0, 0x0 };
     int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
     int is_intra = slice_type == SLICE_TYPE_I;
+    int qp_slice;
 
+    qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
-        if (encode_state->slice_header_index[slice_index] == 0)
+        if (encode_state->slice_header_index[slice_index] == 0) {
             pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
+            qp_slice = qp;
+        }
     }
 
     /* only support for 8-bit pixel bit-depth */
@@ -1186,7 +1190,7 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                               pPicParameter,
                               pSliceParameter,
                               encode_state, encoder_context,
-                              (rate_control_mode == VA_RC_CBR), qp, slice_batch);
+                              (rate_control_mode == VA_RC_CBR), qp_slice, slice_batch);
 
     if ( slice_index == 0)
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
@@ -1508,11 +1512,15 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
     unsigned int tail_data[] = { 0x0, 0x0 };
     long head_offset;
     int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
+    int qp_slice;
 
+    qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
-        if (encode_state->slice_header_index[slice_index] == 0)
+        if (encode_state->slice_header_index[slice_index] == 0) {
             pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
+            qp_slice = qp;
+        }
     }
 
     /* only support for 8-bit pixel bit-depth */
@@ -1527,7 +1535,7 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                               encode_state,
                               encoder_context,
                               (rate_control_mode == VA_RC_CBR),
-                              qp,
+                              qp_slice,
                               slice_batch);
 
     if (slice_index == 0)
