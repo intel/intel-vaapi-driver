@@ -5606,6 +5606,39 @@ struct {
 #endif
 };
 
+static bool
+ensure_vendor_string(struct i965_driver_data *i965, const char *chipset)
+{
+    int ret, len;
+
+    if (i965->va_vendor[0] != '\0')
+        return true;
+
+    len = 0;
+    ret = snprintf(i965->va_vendor, sizeof(i965->va_vendor),
+        "%s %s driver for %s - %d.%d.%d",
+        INTEL_STR_DRIVER_VENDOR, INTEL_STR_DRIVER_NAME, chipset,
+        INTEL_DRIVER_MAJOR_VERSION, INTEL_DRIVER_MINOR_VERSION,
+        INTEL_DRIVER_MICRO_VERSION);
+    if (ret < 0 || ret >= sizeof(i965->va_vendor))
+        goto error;
+    len = ret;
+
+    if (INTEL_DRIVER_PRE_VERSION > 0) {
+        ret = snprintf(&i965->va_vendor[len], sizeof(i965->va_vendor) - len,
+            ".pre%d", INTEL_DRIVER_PRE_VERSION);
+        if (ret < 0 || ret >= sizeof(i965->va_vendor))
+            goto error;
+        len += ret;
+    }
+    return true;
+
+error:
+    i965->va_vendor[0] = '\0';
+    ASSERT_RET(ret > 0 && len < sizeof(i965->va_vendor), false);
+    return false;
+}
+
 static VAStatus 
 i965_Init(VADriverContextP ctx)
 {
@@ -5630,18 +5663,8 @@ i965_Init(VADriverContextP ctx)
             break;
         }
 
-        sprintf(i965->va_vendor, "%s %s driver for %s - %d.%d.%d",
-                INTEL_STR_DRIVER_VENDOR,
-                INTEL_STR_DRIVER_NAME,
-                chipset,
-                INTEL_DRIVER_MAJOR_VERSION,
-                INTEL_DRIVER_MINOR_VERSION,
-                INTEL_DRIVER_MICRO_VERSION);
-
-        if (INTEL_DRIVER_PRE_VERSION > 0) {
-            const int len = strlen(i965->va_vendor);
-            sprintf(&i965->va_vendor[len], ".pre%d", INTEL_DRIVER_PRE_VERSION);
-        }
+        if (!ensure_vendor_string(i965, chipset))
+            return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
         i965->current_context_id = VA_INVALID_ID;
 
