@@ -1950,6 +1950,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     obj_buffer->num_elements = num_elements;
     obj_buffer->size_element = size;
     obj_buffer->type = type;
+    obj_buffer->export_refcount = 0;
     obj_buffer->buffer_store = NULL;
     buffer_store = calloc(1, sizeof(struct buffer_store));
     assert(buffer_store);
