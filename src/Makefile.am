@@ -20,7 +20,10 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-SUBDIRS = shaders
+SUBDIRS		= shaders
+DIST_SUBDIRS	= $(SUBDIRS)
+EXTRA_DIST	=
+BUILT_SOURCES	=
 
 AM_CPPFLAGS = \
 	-DPTHREADS		\
@@ -120,6 +123,7 @@ source_h = \
 	intel_driver.h          \
 	intel_media.h           \
 	intel_memman.h          \
+	intel_version.h		\
 	object_heap.h           \
 	sysdeps.h		\
 	va_backend_compat.h	\
@@ -145,12 +149,43 @@ source_h			+= i965_output_wayland.h
 driver_cflags			+= $(WAYLAND_CFLAGS)
 endif
 
+# git version
+VERSION_FILE			= .VERSION
+OLD_VERSION_FILE		= $(VERSION_FILE).old
+NEW_VERSION_FILE		= $(VERSION_FILE).new
+PKG_VERSION_FILE		= $(VERSION_FILE).pkg
+
+intel_version.h: gen-version
+	$(AM_V_GEN)							 \
+	OV=`[ -f $(OLD_VERSION_FILE) ] && cat $(OLD_VERSION_FILE) || :`; \
+	NV=`cat $(NEW_VERSION_FILE)`;					 \
+	if [ "$$OV" != "$$NV" -o ! -f intel_version.h ]; then		 \
+		cp -f $(NEW_VERSION_FILE) $(OLD_VERSION_FILE);		 \
+		$(SED) -e "s|\@INTEL_DRIVER_GIT_VERSION\@|$${NV}|"	 \
+			$(srcdir)/intel_version.h.in > intel_version.h;	 \
+	fi
+
+gen-version:
+	@echo $(VERSION) > $(NEW_VERSION_FILE)
+if HAVE_GIT
+	@[ -d $(top_srcdir)/.git ] && \
+	(cd $(top_srcdir) && $(GIT) describe --tags) > $(NEW_VERSION_FILE) || :
+endif
+	@[ -f $(srcdir)/$(PKG_VERSION_FILE) ] && \
+	cp -f $(srcdir)/$(PKG_VERSION_FILE) $(NEW_VERSION_FILE) || :
+
+$(PKG_VERSION_FILE): $(NEW_VERSION_FILE)
+	@cp -f $< $@
+
+BUILT_SOURCES	+= intel_version.h
+EXTRA_DIST	+= intel_version.h.in $(PKG_VERSION_FILE)
+
 # Wayland protocol
 protocol_source_h = wayland-drm-client-protocol.h
 i965_output_wayland.c: $(protocol_source_h)
 @wayland_scanner_rules@
 
-DIST_SUBDIRS = $(SUBDIRS) wayland
+DIST_SUBDIRS	+= wayland
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in

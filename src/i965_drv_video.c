@@ -38,6 +38,7 @@
 # include "i965_output_wayland.h"
 #endif
 
+#include "intel_version.h"
 #include "intel_driver.h"
 #include "intel_memman.h"
 #include "intel_batchbuffer.h"
@@ -5627,6 +5628,12 @@ ensure_vendor_string(struct i965_driver_data *i965, const char *chipset)
     if (INTEL_DRIVER_PRE_VERSION > 0) {
         ret = snprintf(&i965->va_vendor[len], sizeof(i965->va_vendor) - len,
             ".pre%d", INTEL_DRIVER_PRE_VERSION);
+        if (ret < 0 || ret >= sizeof(i965->va_vendor))
+            goto error;
+        len += ret;
+
+        ret = snprintf(&i965->va_vendor[len], sizeof(i965->va_vendor) - len,
+            " (%s)", INTEL_DRIVER_GIT_VERSION);
         if (ret < 0 || ret >= sizeof(i965->va_vendor))
             goto error;
         len += ret;

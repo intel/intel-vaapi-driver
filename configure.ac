@@ -80,6 +80,11 @@ PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.5], [gen4asm=yes], [gen4asm=no])
 AM_CONDITIONAL(HAVE_GEN4ASM, test x$gen4asm = xyes)
 AC_PATH_PROG([GEN4ASM], [intel-gen4asm])
 
+dnl Check for git
+AC_ARG_VAR([GIT], [Path to git program, if any])
+AC_PATH_PROG([GIT], [git])
+AM_CONDITIONAL([HAVE_GIT], [test -n "$GIT"])
+
 dnl Check for VA-API
 PKG_CHECK_MODULES(LIBVA_DEPS,     [libva >= va_api_version])
 
