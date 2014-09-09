@@ -82,6 +82,7 @@ all-local: $(TARGETS)
 
 SUFFIXES = .g7b .g7s .asm
 
+if HAVE_GEN4ASM
 $(INTEL_PP_GEN7_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G4A)
 .asm.g7s:
 	$(AM_V_GEN)cpp $< > _pp0.$@;		\
@@ -92,6 +93,7 @@ $(INTEL_PP_GEN7_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G4A)
 
 .g7s.g75b:
 	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 7.5 $<
+endif
 
 CLEANFILES = $(INTEL_PP_GEN7_ASM)
 
