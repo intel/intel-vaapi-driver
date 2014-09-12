@@ -337,6 +337,7 @@ struct hw_codec_info
     struct hw_context *(*proc_hw_context_init)(VADriverContextP, struct object_config *);
     bool (*render_init)(VADriverContextP);
     void (*post_processing_context_init)(VADriverContextP, void *, struct intel_batchbuffer *);
+    void (*preinit_hw_codec)(VADriverContextP, struct hw_codec_info *);
 
     int max_width;
     int max_height;
