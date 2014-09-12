@@ -27,6 +27,10 @@
 #include <stdlib.h>
 #include "i965_drv_video.h"
 
+#include <string.h>
+#include <strings.h>
+#include <errno.h>
+
 /* Extra set of chroma formats supported for H.264 decoding (beyond YUV 4:2:0) */
 #define EXTRA_H264_DEC_CHROMA_FORMATS \
     (VA_RT_FORMAT_YUV400)
@@ -155,6 +159,8 @@ static struct hw_codec_info ivb_hw_codec_info = {
     },
 };
 
+static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info);
+
 extern struct hw_context *gen75_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen75_enc_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen75_proc_context_init(VADriverContextP, struct object_config *);
@@ -164,6 +170,7 @@ static struct hw_codec_info hsw_hw_codec_info = {
     .proc_hw_context_init = gen75_proc_context_init,
     .render_init = genx_render_init,
     .post_processing_context_init = i965_post_processing_context_init,
+    .preinit_hw_codec = hsw_hw_codec_preinit,
 
     .max_width = 4096,
     .max_height = 4096,
@@ -366,4 +373,104 @@ i965_get_device_info(int devid)
     default:
         return NULL;
     }
+}
+
+static int intel_driver_detect_cpustring(char *model_id)
+{
+    FILE *fp;
+    size_t line_length;
+    ssize_t read_length;
+    char *line_string, *model_ptr;
+    bool found;
+
+    if (model_id == NULL)
+        return -EINVAL;
+
+    fp = fopen("/proc/cpuinfo", "r");
+    if (fp == NULL) {
+        fprintf(stderr, "no permission to access /proc/cpuinfo\n");
+        return -EACCES;
+    }
+    line_string = NULL;
+    found = false;
+
+    while((read_length = getline(&line_string, &line_length, fp)) != -1) {
+        if (strstr(line_string, "model name")) {
+            model_ptr = strstr(line_string, ": ");
+            model_ptr += 2;
+            found = true;
+            strncpy(model_id, model_ptr, strlen(model_ptr));
+            break;
+        }
+    }
+    fclose(fp);
+
+    if (line_string)
+        free(line_string);
+
+    if (found)
+        return 0;
+    else
+        return -EINVAL;
+}
+
+/*
+ * the hook_list for HSW.
+ * It is captured by /proc/cpuinfo and the space character is stripped.
+ */
+const static char *hsw_cpu_hook_list[] =  {
+"Intel(R)Pentium(R)3556U",
+"Intel(R)Pentium(R)3560Y",
+"Intel(R)Pentium(R)3550M",
+"Intel(R)Celeron(R)2980U",
+"Intel(R)Celeron(R)2955U",
+"Intel(R)Celeron(R)2950M",
+};
+
+static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info)
+{
+    char model_string[64], model_id[64];
+    char *model_ptr, *tmp_ptr;
+    int i, model_len, list_len;
+    bool found;
+
+    memset(model_string, 0, sizeof(model_string));
+    memset(model_id, 0, sizeof(model_id));
+
+    /* If it can't detect cpu model_string, leave it alone */
+    if (intel_driver_detect_cpustring(model_string))
+        return;
+
+    /* strip the cpufreq info */
+    model_ptr = model_string;
+    tmp_ptr = strstr(model_ptr, "@");
+    *tmp_ptr = '\0';
+
+    /* strip the space character and convert to the lower case */
+    model_ptr = model_id;
+    model_len = strlen(model_string);
+    for (i = 0; i < model_len; i++) {
+         if (model_string[i] != ' ') {
+             *model_ptr = model_string[i];
+             model_ptr++;
+         }
+    }
+    *model_ptr = '\0';
+
+    found = false;
+    list_len = sizeof(hsw_cpu_hook_list) / sizeof(char *);
+    for (i = 0; i < list_len; i++) {
+        model_ptr = (char *)hsw_cpu_hook_list[i];
+        if (strcasecmp(model_id, model_ptr) == 0) {
+            found = true;
+            break;
+	}
+    }
+
+    if (found) {
+	codec_info->has_h264_encoding = 0;
+	codec_info->has_h264_mvc_encoding = 0;
+	codec_info->has_mpeg2_encoding = 0;
+    }
+    return;
 }
