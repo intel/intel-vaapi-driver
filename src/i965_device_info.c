@@ -44,7 +44,7 @@ extern struct hw_context *i965_proc_context_init(VADriverContextP, struct object
 extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern bool genx_render_init(VADriverContextP);
 
-static const struct hw_codec_info g4x_hw_codec_info = {
+static struct hw_codec_info g4x_hw_codec_info = {
     .dec_hw_context_init = g4x_dec_hw_context_init,
     .enc_hw_context_init = NULL,
     .proc_hw_context_init = NULL,
@@ -64,7 +64,7 @@ static const struct hw_codec_info g4x_hw_codec_info = {
 extern struct hw_context *ironlake_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern void i965_post_processing_context_init(VADriverContextP, void *, struct intel_batchbuffer *);
 
-static const struct hw_codec_info ilk_hw_codec_info = {
+static struct hw_codec_info ilk_hw_codec_info = {
     .dec_hw_context_init = ironlake_dec_hw_context_init,
     .enc_hw_context_init = NULL,
     .proc_hw_context_init = i965_proc_context_init,
@@ -86,7 +86,7 @@ static const struct hw_codec_info ilk_hw_codec_info = {
 
 extern struct hw_context *gen6_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen6_enc_hw_context_init(VADriverContextP, struct object_config *);
-static const struct hw_codec_info snb_hw_codec_info = {
+static struct hw_codec_info snb_hw_codec_info = {
     .dec_hw_context_init = gen6_dec_hw_context_init,
     .enc_hw_context_init = gen6_enc_hw_context_init,
     .proc_hw_context_init = i965_proc_context_init,
@@ -120,7 +120,7 @@ static const struct hw_codec_info snb_hw_codec_info = {
 
 extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen7_enc_hw_context_init(VADriverContextP, struct object_config *);
-static const struct hw_codec_info ivb_hw_codec_info = {
+static struct hw_codec_info ivb_hw_codec_info = {
     .dec_hw_context_init = gen7_dec_hw_context_init,
     .enc_hw_context_init = gen7_enc_hw_context_init,
     .proc_hw_context_init = i965_proc_context_init,
@@ -158,7 +158,7 @@ static const struct hw_codec_info ivb_hw_codec_info = {
 extern struct hw_context *gen75_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen75_enc_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen75_proc_context_init(VADriverContextP, struct object_config *);
-static const struct hw_codec_info hsw_hw_codec_info = {
+static struct hw_codec_info hsw_hw_codec_info = {
     .dec_hw_context_init = gen75_dec_hw_context_init,
     .enc_hw_context_init = gen75_enc_hw_context_init,
     .proc_hw_context_init = gen75_proc_context_init,
@@ -202,7 +202,7 @@ static const struct hw_codec_info hsw_hw_codec_info = {
 extern struct hw_context *gen8_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen8_enc_hw_context_init(VADriverContextP, struct object_config *);
 extern void gen8_post_processing_context_init(VADriverContextP, void *, struct intel_batchbuffer *);
-static const struct hw_codec_info bdw_hw_codec_info = {
+static struct hw_codec_info bdw_hw_codec_info = {
     .dec_hw_context_init = gen8_dec_hw_context_init,
     .enc_hw_context_init = gen8_enc_hw_context_init,
     .proc_hw_context_init = gen75_proc_context_init,
@@ -244,7 +244,7 @@ static const struct hw_codec_info bdw_hw_codec_info = {
     },
 };
 
-const struct hw_codec_info *
+struct hw_codec_info *
 i965_get_codec_info(int devid)
 {
     switch (devid) {
