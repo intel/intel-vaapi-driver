@@ -102,7 +102,7 @@ SUFFIXES = .g4a .g4s .g4b .g4b.gen5
 if HAVE_GEN4ASM
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 .g4a.g4s:
-	$(AM_V_GEN)m4 $< > $@
+	$(AM_V_GEN)m4 -I$(srcdir) $< > $@
 .g4s.g4b:
 	$(AM_V_GEN)$(GEN4ASM) -o $@ $<
 .g4s.g4b.gen5:

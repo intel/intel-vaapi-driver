@@ -185,17 +185,17 @@ if HAVE_GEN4ASM
 	rm $*.g4m
 
 $(INTEL_MC_GEN5_ASM): $(INTEL_MC_ASM) $(INTEL_MC_INC) $(INTEL_ILDB_ASM)
-	$(AM_V_GEN)cpp -DDEV_ILK -DBOOTSTRAP -I ../ildb/ AllAVC.asm > _mc0.$@	&& \
-	../../gpp.py _mc0.$@ $@						&& \
-	$(GEN4ASM) -l list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $@	   \
+	$(AM_V_GEN)cpp -DDEV_ILK -DBOOTSTRAP -I $(srcdir)/../ildb/ $(srcdir)/AllAVC.asm > _mc0.$@	&& \
+	$(top_srcdir)/src/shaders/gpp.py _mc0.$@ $@			&& \
+	$(GEN4ASM) -l $(srcdir)/list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $@	   \
 		-o /dev/null						&& \
 	mv tmp.$(INTEL_MC_EXPORT_GEN5) $(INTEL_MC_EXPORT_GEN5)		&& \
-	cpp -DDEV_ILK -I ../ildb/ AllAVC.asm > _mc1.$@			&& \
-	../../gpp.py _mc1.$@ $@						&& \
+	cpp -DDEV_ILK -I $(srcdir)/../ildb/ $(srcdir)/AllAVC.asm > _mc1.$@	&& \
+	$(top_srcdir)/src/shaders/gpp.py _mc1.$@ $@			&& \
 	rm _mc0.$@ _mc1.$@
 
 $(INTEL_MC_G4B_GEN5): $(INTEL_MC_GEN5_ASM)
-	$(AM_V_GEN)$(GEN4ASM) -l list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $<	   \
+	$(AM_V_GEN)$(GEN4ASM) -l $(srcdir)/list -a -e tmp.$(INTEL_MC_EXPORT_GEN5) -g 5 $<	   \
 		-o $@							&& \
 	cat tmp.$(INTEL_MC_EXPORT_GEN5) | sed "s/_IP/_IP_GEN5/g"	   \
 		> $(INTEL_MC_EXPORT_GEN5)				&& \

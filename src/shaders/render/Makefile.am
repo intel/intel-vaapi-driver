@@ -120,7 +120,7 @@ SUFFIXES = .g4a .g4s .g4b .g4b.gen5 .g6a .g6s .g6b .g7a .g7s .g7b .g7b.haswell .
 if HAVE_GEN4ASM
 $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 .g4a.g4s:
-	$(AM_V_GEN)m4 $< > $@
+	$(AM_V_GEN)m4 -I$(srcdir) $< > $@
 .g4s.g4b:
 	$(AM_V_GEN)$(GEN4ASM) -o $@ $<
 .g4s.g4b.gen5:
@@ -128,13 +128,13 @@ $(INTEL_G4S): $(INTEL_G4A) $(INTEL_G4I)
 
 $(INTEL_G6S): $(INTEL_G6A) $(INTEL_G6I)
 .g6a.g6s:
-	$(AM_V_GEN)m4 $< > $@
+	$(AM_V_GEN)m4 -I$(srcdir) $< > $@
 .g6s.g6b:
 	$(AM_V_GEN)$(GEN4ASM) -g 6 -o $@ $<
 
 $(INTEL_G7S): $(INTEL_G7A) $(INTEL_G7I)
 .g7a.g7s:
-	$(AM_V_GEN)m4 $< > $@
+	$(AM_V_GEN)m4 -I$(srcdir) $< > $@
 .g7s.g7b:
 	$(AM_V_GEN)$(GEN4ASM) -g 7 -o $@ $<
 .g7s.g7b.haswell:
@@ -143,7 +143,7 @@ $(INTEL_G7S): $(INTEL_G7A) $(INTEL_G7I)
 
 $(INTEL_G8S): $(INTEL_G8A) $(INTEL_G8I)
 .g8a.g8s:
-	$(AM_V_GEN)m4 $< > $@
+	$(AM_V_GEN)m4 -I$(srcdir) $< > $@
 .g8s.g8b:
 	$(AM_V_GEN)$(GEN4ASM) -g 8 -o $@ $<
 
