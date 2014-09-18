@@ -167,7 +167,7 @@ fi
 AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
 
 m4_ifdef([WAYLAND_SCANNER_RULES],
-    [WAYLAND_SCANNER_RULES(['$(top_srcdir)/src/wayland'])],
+    [WAYLAND_SCANNER_RULES(['$(top_builddir)/src/wayland'])],
     [wayland_scanner_rules=""; AC_SUBST(wayland_scanner_rules)])
 
 AC_OUTPUT([
