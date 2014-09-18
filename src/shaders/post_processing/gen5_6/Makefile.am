@@ -199,16 +199,16 @@ $(INTEL_G4B): $(INTEL_G4I)
 
 $(INTEL_PP_GEN5_ASM): $(INTEL_PP_ASM)
 .asm.g5s:
-	$(AM_V_GEN)cpp -D DEV_ILK -I Common/ -I Core_Kernels $< > _pp0.$@; \
-	../../gpp.py _pp0.$@ $@; \
+	$(AM_V_GEN)cpp -D DEV_ILK -I $(srcdir)/Common/ -I $(srcdir)/Core_Kernels $< > _pp0.$@; \
+	$(top_srcdir)/src/shaders/gpp.py _pp0.$@ $@; \
 	rm _pp0.$@
 .g5s.g4b.gen5:
 	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 5 $<
 
 $(INTEL_PP_GEN6_ASM): $(INTEL_PP_ASM)
 .asm.g6s:
-	$(AM_V_GEN)cpp -D GT -I Common/ -I Core_Kernels $< > _pp0.$@; \
-	../../gpp.py _pp0.$@ $@; \
+	$(AM_V_GEN)cpp -D GT -I $(srcdir)/Common/ -I $(srcdir)/Core_Kernels $< > _pp0.$@; \
+	$(top_srcdir)/src/shaders/gpp.py _pp0.$@ $@; \
 	rm _pp0.$@
 .g6s.g6b:
 	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 6 $<
