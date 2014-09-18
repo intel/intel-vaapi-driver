@@ -145,6 +145,7 @@ endif
 if USE_WAYLAND
 source_c			+= i965_output_wayland.c
 source_h			+= i965_output_wayland.h
+source_h			+= $(protocol_source_h)
 driver_cflags			+= $(WAYLAND_CFLAGS)
 endif
 
