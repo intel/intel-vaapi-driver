@@ -45,7 +45,6 @@ driver_ldflags = \
 driver_libs = \
 	-lpthread -lm -ldl	\
 	$(DRM_LIBS) -ldrm_intel	\
-	$(LIBVA_DEPS_LIBS)	\
 	$(NULL)
 
 source_c = \
