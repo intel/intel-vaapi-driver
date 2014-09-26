@@ -443,7 +443,9 @@ static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *cod
     /* strip the cpufreq info */
     model_ptr = model_string;
     tmp_ptr = strstr(model_ptr, "@");
-    *tmp_ptr = '\0';
+   
+    if (tmp_ptr)
+        *tmp_ptr = '\0';
 
     /* strip the space character and convert to the lower case */
     model_ptr = model_string;
