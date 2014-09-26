@@ -30,6 +30,7 @@
 #include <string.h>
 #include <strings.h>
 #include <errno.h>
+#include <cpuid.h>
 
 /* Extra set of chroma formats supported for H.264 decoding (beyond YUV 4:2:0) */
 #define EXTRA_H264_DEC_CHROMA_FORMATS \
@@ -375,43 +376,40 @@ i965_get_device_info(int devid)
     }
 }
 
+static void cpuid(unsigned int op,
+                         uint32_t *eax, uint32_t *ebx,
+                         uint32_t *ecx, uint32_t *edx)
+{
+	__cpuid_count(op, 0, *eax, *ebx, *ecx, *edx);
+}
+
+/*
+ * This function doesn't check the length. And the caller should
+ * assure that the length of input string should be greater than 48.
+ */
 static int intel_driver_detect_cpustring(char *model_id)
 {
-    FILE *fp;
-    size_t line_length;
-    ssize_t read_length;
-    char *line_string, *model_ptr;
-    bool found;
+    uint32_t *rdata;
 
     if (model_id == NULL)
         return -EINVAL;
 
-    fp = fopen("/proc/cpuinfo", "r");
-    if (fp == NULL) {
-        fprintf(stderr, "no permission to access /proc/cpuinfo\n");
-        return -EACCES;
-    }
-    line_string = NULL;
-    found = false;
+    rdata = (uint32_t *)model_id;
 
-    while((read_length = getline(&line_string, &line_length, fp)) != -1) {
-        if (strstr(line_string, "model name")) {
-            model_ptr = strstr(line_string, ": ");
-            model_ptr += 2;
-            found = true;
-            strncpy(model_id, model_ptr, strlen(model_ptr));
-            break;
-        }
-    }
-    fclose(fp);
+    /* obtain the max supported extended CPUID info */
+    cpuid(0x80000000, &rdata[0], &rdata[1], &rdata[2], &rdata[3]);
 
-    if (line_string)
-        free(line_string);
+    /* If the max extended CPUID info is less than 0x80000004, fail */
+    if (rdata[0] < 0x80000004)
+	return -EINVAL;
 
-    if (found)
-        return 0;
-    else
-        return -EINVAL;
+    /* obtain the CPUID string */
+    cpuid(0x80000002, &rdata[0], &rdata[1], &rdata[2], &rdata[3]);
+    cpuid(0x80000003, &rdata[4], &rdata[5], &rdata[6], &rdata[7]);
+    cpuid(0x80000004, &rdata[8], &rdata[9], &rdata[10], &rdata[11]);
+
+    *(model_id + 48) = '\0';
+    return 0;
 }
 
 /*
