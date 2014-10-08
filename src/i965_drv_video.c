@@ -5521,7 +5521,7 @@ VAStatus i965_QueryVideoProcPipelineCaps(
     return VA_STATUS_SUCCESS;
 }
 
-extern const struct hw_codec_info *i965_get_codec_info(int devid);
+extern struct hw_codec_info *i965_get_codec_info(int devid);
 
 static bool
 i965_driver_data_init(VADriverContextP ctx)
