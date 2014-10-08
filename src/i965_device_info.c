@@ -27,6 +27,11 @@
 #include <stdlib.h>
 #include "i965_drv_video.h"
 
+#include <string.h>
+#include <strings.h>
+#include <errno.h>
+#include <cpuid.h>
+
 /* Extra set of chroma formats supported for H.264 decoding (beyond YUV 4:2:0) */
 #define EXTRA_H264_DEC_CHROMA_FORMATS \
     (VA_RT_FORMAT_YUV400)
@@ -155,6 +160,8 @@ static struct hw_codec_info ivb_hw_codec_info = {
     },
 };
 
+static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info);
+
 extern struct hw_context *gen75_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen75_enc_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen75_proc_context_init(VADriverContextP, struct object_config *);
@@ -164,6 +171,7 @@ static struct hw_codec_info hsw_hw_codec_info = {
     .proc_hw_context_init = gen75_proc_context_init,
     .render_init = genx_render_init,
     .post_processing_context_init = i965_post_processing_context_init,
+    .preinit_hw_codec = hsw_hw_codec_preinit,
 
     .max_width = 4096,
     .max_height = 4096,
@@ -416,5 +424,108 @@ i965_get_device_info(int devid)
 #include "i965_pciids.h"
     default:
         return NULL;
+    }
+}
+
+static void cpuid(unsigned int op,
+                         uint32_t *eax, uint32_t *ebx,
+                         uint32_t *ecx, uint32_t *edx)
+{
+	__cpuid_count(op, 0, *eax, *ebx, *ecx, *edx);
+}
+
+/*
+ * This function doesn't check the length. And the caller should
+ * assure that the length of input string should be greater than 48.
+ */
+
+static int intel_driver_detect_cpustring(char *model_id)
+{
+    uint32_t *rdata;
+
+    if (model_id == NULL)
+        return -EINVAL;
+
+    rdata = (uint32_t *)model_id;
+
+    /* obtain the max supported extended CPUID info */
+    cpuid(0x80000000, &rdata[0], &rdata[1], &rdata[2], &rdata[3]);
+
+    /* If the max extended CPUID info is less than 0x80000004, fail */
+    if (rdata[0] < 0x80000004)
+	return -EINVAL;
+
+    /* obtain the CPUID string */
+    cpuid(0x80000002, &rdata[0], &rdata[1], &rdata[2], &rdata[3]);
+    cpuid(0x80000003, &rdata[4], &rdata[5], &rdata[6], &rdata[7]);
+    cpuid(0x80000004, &rdata[8], &rdata[9], &rdata[10], &rdata[11]);
+
+    *(model_id + 48) = '\0';
+    return 0;
+}
+
+/*
+ * the hook_list for HSW.
+ * It is captured by /proc/cpuinfo and the space character is stripped.
+ */
+const static char *hsw_cpu_hook_list[] =  {
+"Intel(R)Pentium(R)3556U",
+"Intel(R)Pentium(R)3560Y",
+"Intel(R)Pentium(R)3550M",
+"Intel(R)Celeron(R)2980U",
+"Intel(R)Celeron(R)2955U",
+"Intel(R)Celeron(R)2950M",
+};
+
+static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info)
+{
+    char model_string[64];
+    char *model_ptr, *tmp_ptr;
+    int i, model_len, list_len;
+    bool found;
+
+    memset(model_string, 0, sizeof(model_string));
+
+    /* If it can't detect cpu model_string, leave it alone */
+    if (intel_driver_detect_cpustring(model_string))
+        return;
+
+    /* strip the cpufreq info */
+    model_ptr = model_string;
+    tmp_ptr = strstr(model_ptr, "@");
+
+    if (tmp_ptr)
+        *tmp_ptr = '\0';
+
+    /* strip the space character */
+    model_ptr = model_string;
+    model_len = strlen(model_string);
+    for (i = 0; i < model_len; i++) {
+        if (model_string[i] != ' ') {
+            *model_ptr = model_string[i];
+            model_ptr++;
+        }
+    }
+    *model_ptr = '\0';
+
+    found = false;
+    list_len = sizeof(hsw_cpu_hook_list) / sizeof(char *);
+    model_len = strlen(model_string);
+    for (i = 0; i < list_len; i++) {
+        model_ptr = (char *)hsw_cpu_hook_list[i];
+
+        if (strlen(model_ptr) != model_len)
+	    continue;
+
+        if (strncasecmp(model_string, model_ptr, model_len) == 0) {
+            found = true;
+            break;
+	}
+    }
+
+    if (found) {
+	codec_info->has_h264_encoding = 0;
+	codec_info->has_h264_mvc_encoding = 0;
+	codec_info->has_mpeg2_encoding = 0;
     }
 }
