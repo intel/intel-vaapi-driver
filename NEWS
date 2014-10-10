@@ -1,5 +1,8 @@
-libva-intel-driver NEWS -- summary of changes.  2014-09-30
+libva-intel-driver NEWS -- summary of changes.  2014-10-xx
 Copyright (C) 2009-2014 Intel Corporation
+
+Version 1.4.1 - DD.Oct.2014
+* Use a new method to detect encoding capabilitiy on Haswell
 
 Version 1.4.0 - 30.Sep.2014
 * Add support for exporting VA buffer
