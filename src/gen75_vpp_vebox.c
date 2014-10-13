@@ -1236,12 +1236,13 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
         vpp_surface_convert(ctx, obj_surface, proc_ctx->surface_output_object);
 
     } else if(proc_ctx->format_convert_flags & POST_SCALING_CONVERT) {
+        VAProcPipelineParameterBuffer * const pipe = proc_ctx->pipeline_param;
        /* scaling, convert and copy NV12 to YV12/IMC3/IMC2/RGBA output*/
         assert(obj_surface->fourcc == VA_FOURCC_NV12);
      
         /* first step :surface scaling */
         vpp_surface_scaling(ctx, obj_surface,
-            proc_ctx->surface_output_scaled_object, 0);
+            proc_ctx->surface_output_scaled_object, pipe->filter_flags);
 
         /* second step: color format convert and copy to output */
         obj_surface = proc_ctx->surface_output_object;
