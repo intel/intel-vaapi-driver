@@ -1811,6 +1811,61 @@ struct gen7_sampler_dndi
     } dw7;
 };
 
+struct gen8_sampler_8x8_avs_coefficients
+{
+    struct {
+        unsigned int table_0x_filter_c0:8;
+        unsigned int table_0y_filter_c0:8;
+        unsigned int table_0x_filter_c1:8;
+        unsigned int table_0y_filter_c1:8;
+    } dw0;
+
+    struct {
+        unsigned int table_0x_filter_c2:8;
+        unsigned int table_0y_filter_c2:8;
+        unsigned int table_0x_filter_c3:8;
+        unsigned int table_0y_filter_c3:8;
+    } dw1;
+
+    struct {
+        unsigned int table_0x_filter_c4:8;
+        unsigned int table_0y_filter_c4:8;
+        unsigned int table_0x_filter_c5:8;
+        unsigned int table_0y_filter_c5:8;
+    } dw2;
+
+    struct {
+        unsigned int table_0x_filter_c6:8;
+        unsigned int table_0y_filter_c6:8;
+        unsigned int table_0x_filter_c7:8;
+        unsigned int table_0y_filter_c7:8;
+    } dw3;
+
+    struct {
+        unsigned int pad0:16;
+        unsigned int table_1x_filter_c2:8;
+        unsigned int table_1x_filter_c3:8;
+    } dw4;
+
+    struct {
+        unsigned int table_1x_filter_c4:8;
+        unsigned int table_1x_filter_c5:8;
+        unsigned int pad0:16;
+    } dw5;
+
+    struct {
+        unsigned int pad0:16;
+        unsigned int table_1y_filter_c2:8;
+        unsigned int table_1y_filter_c3:8;
+    } dw6;
+
+    struct {
+        unsigned int table_1y_filter_c4:8;
+        unsigned int table_1y_filter_c5:8;
+        unsigned int pad0:16;
+    } dw7;
+};
+
 struct gen8_sampler_8x8_avs {
     struct {
         unsigned int gain_factor:6;
@@ -1931,7 +1986,7 @@ struct gen8_sampler_8x8_avs {
     } dw15;
 
     /* DW16-DW151 */
-    struct i965_sampler_8x8_coefficient coefficients[17];
+    struct gen8_sampler_8x8_avs_coefficients coefficients[17];
     
     struct {
         unsigned int transition_area_with_8_pixels:3;
