@@ -841,13 +841,24 @@ struct i965_sampler_8x8_state
         unsigned int default_sharpness_level:8;
     } dw136;
 
-    struct {
-        unsigned int bit_field_name:1;
-        unsigned int adaptive_filter_for_all_channel:1;
-        unsigned int pad0:19;
-        unsigned int bypass_y_adaptive_filtering:1;
-        unsigned int bypass_x_adaptive_filtering:1;
-        unsigned int pad1:9;
+    union {
+        /* Ironlake, Sandybridge, Ivybridge (Gen5+) */
+        struct {
+            unsigned int pad0:21;
+            unsigned int bypass_y_adaptive_filtering:1;
+            unsigned int bypass_x_adaptive_filtering:1;
+            unsigned int pad1:9;
+        } ilk;
+
+        /* Haswell (Gen7.5+) */
+        struct {
+            unsigned int rgb_adaptive:1;
+            unsigned int adaptive_filter_for_all_channel:1;
+            unsigned int pad0:19;
+            unsigned int bypass_y_adaptive_filtering:1;
+            unsigned int bypass_x_adaptive_filtering:1;
+            unsigned int pad1:9;
+        } hsw;
     } dw137;
 };
 
