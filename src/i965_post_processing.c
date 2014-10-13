@@ -2483,7 +2483,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
 
     sx = (float)dst_rect->width / src_rect->width;
     sy = (float)dst_rect->height / src_rect->height;
-    avs_update_coefficients(avs, sx, sy, 0);
+    avs_update_coefficients(avs, sx, sy, pp_context->filter_flags);
 
     assert(avs->config->num_phases == 16);
     for (i = 0; i <= 16; i++) {
@@ -2545,7 +2545,8 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     /* Adaptive filter for all channels (DW4.15) */
     sampler_8x8_state->coefficients[0].dw4.table_1x_filter_c1 = 1U << 7;
 
-    sampler_8x8_state->dw136.default_sharpness_level = 0;
+    sampler_8x8_state->dw136.default_sharpness_level =
+        -avs_is_needed(pp_context->filter_flags);
     sampler_8x8_state->dw137.ilk.bypass_y_adaptive_filtering = 1;
     sampler_8x8_state->dw137.ilk.bypass_x_adaptive_filtering = 1;
     dri_bo_unmap(pp_context->sampler_state_table.bo_8x8);
@@ -2838,7 +2839,7 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
 
     sx = (float)dst_rect->width / src_rect->width;
     sy = (float)dst_rect->height / src_rect->height;
-    avs_update_coefficients(avs, sx, sy, 0);
+    avs_update_coefficients(avs, sx, sy, pp_context->filter_flags);
 
     assert(avs->config->num_phases == 16);
     for (i = 0; i <= 16; i++) {
@@ -2897,7 +2898,8 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
             intel_format_convert(coeffs->uv_k_v[3], 1, 6, 1);
     }
 
-    sampler_8x8_state->dw136.default_sharpness_level = 0;
+    sampler_8x8_state->dw136.default_sharpness_level =
+        -avs_is_needed(pp_context->filter_flags);
     if (IS_HASWELL(i965->intel.device_info)) {
         sampler_8x8_state->dw137.hsw.adaptive_filter_for_all_channel = 1;
         sampler_8x8_state->dw137.hsw.bypass_y_adaptive_filtering = 1;
@@ -4809,6 +4811,8 @@ i965_scaling_processing(
     if (HAS_VPP(i965)) {
         struct i965_surface src_surface;
         struct i965_surface dst_surface;
+        struct i965_post_processing_context *pp_context;
+        unsigned int filter_flags;
 
          _i965LockMutex(&i965->pp_mutex);
 
@@ -4819,9 +4823,15 @@ i965_scaling_processing(
          dst_surface.type = I965_SURFACE_TYPE_SURFACE;
          dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
-         va_status = i965_post_processing_internal(ctx, i965->pp_context,
+         pp_context = i965->pp_context;
+         filter_flags = pp_context->filter_flags;
+         pp_context->filter_flags = va_flags;
+
+         va_status = i965_post_processing_internal(ctx, pp_context,
              &src_surface, src_rect, &dst_surface, dst_rect,
              avs_is_needed(va_flags) ? PP_NV12_AVS : PP_NV12_SCALING, NULL);
+
+         pp_context->filter_flags = filter_flags;
 
          _i965UnlockMutex(&i965->pp_mutex);
     }
@@ -4849,6 +4859,7 @@ i965_post_processing(
         VAStatus status;
         struct i965_surface src_surface;
         struct i965_surface dst_surface;
+        struct i965_post_processing_context *pp_context;
 
         /* Currently only support post processing for NV12 surface */
         if (obj_surface->fourcc != VA_FOURCC_NV12)
@@ -4856,6 +4867,8 @@ i965_post_processing(
 
         _i965LockMutex(&i965->pp_mutex);
 
+        pp_context = i965->pp_context;
+        pp_context->filter_flags = va_flags;
         if (avs_is_needed(va_flags)) {
             struct i965_render_state *render_state = &i965->render_state;
             struct intel_region *dest_region = render_state->draw_region;
@@ -4877,13 +4890,13 @@ i965_post_processing(
             obj_surface = SURFACE(out_surface_id);
             assert(obj_surface);
             i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
-            i965_vpp_clear_surface(ctx, i965->pp_context, obj_surface, 0); 
+            i965_vpp_clear_surface(ctx, pp_context, obj_surface, 0);
 
             dst_surface.base = (struct object_base *)obj_surface;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
             dst_surface.flags = I965_SURFACE_FLAG_FRAME;
 
-            i965_post_processing_internal(ctx, i965->pp_context,
+            i965_post_processing_internal(ctx, pp_context,
                                           &src_surface,
                                           src_rect,
                                           &dst_surface,
@@ -5652,6 +5665,7 @@ i965_proc_picture(VADriverContextP ctx,
                                       NULL);
     } else {
 
+        proc_context->pp_context.filter_flags = pipeline_param->filter_flags;
         i965_post_processing_internal(ctx, &proc_context->pp_context,
                                       &src_surface,
                                       &src_rect,

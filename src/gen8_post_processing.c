@@ -895,7 +895,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
 
     sx = (float)dst_rect->width / src_rect->width;
     sy = (float)dst_rect->height / src_rect->height;
-    avs_update_coefficients(avs, sx, sy, 0);
+    avs_update_coefficients(avs, sx, sy, pp_context->filter_flags);
 
     assert(avs->config->num_phases == 16);
     for (i = 0; i <= 16; i++) {
@@ -962,7 +962,8 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
             intel_format_convert(coeffs->uv_k_v[3], 1, 6, 1);
     }
 
-    sampler_8x8->dw152.default_sharpness_level = 0;
+    sampler_8x8->dw152.default_sharpness_level =
+        -avs_is_needed(pp_context->filter_flags);
     sampler_8x8->dw153.adaptive_filter_for_all_channel = 1;
     sampler_8x8->dw153.bypass_y_adaptive_filtering = 1;
     sampler_8x8->dw153.bypass_x_adaptive_filtering = 1;
