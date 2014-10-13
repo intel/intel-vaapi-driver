@@ -123,11 +123,9 @@ i965_put_surface_dri(
     union dri_buffer *buffer;
     struct intel_region *dest_region;
     struct object_surface *obj_surface; 
-    unsigned int pp_flag = 0;
     bool new_region = false;
     uint32_t name;
     int i, ret;
-    unsigned int color_flag = 0;
 
     /* Currently don't support DRI1 */
     if (!VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2))
@@ -179,21 +177,10 @@ i965_put_surface_dri(
         assert(ret == 0);
     }
 
-    color_flag = flags & VA_SRC_COLOR_MASK;
-    if (color_flag == 0)
-        color_flag = VA_SRC_BT601;
+    if (!(flags & VA_SRC_COLOR_MASK))
+        flags |= VA_SRC_BT601;
 
-    pp_flag = color_flag;
-
-    if ((flags & VA_FILTER_SCALING_MASK) == VA_FILTER_SCALING_NL_ANAMORPHIC)
-        pp_flag |= I965_PP_FLAG_AVS;
-
-    if (flags & VA_TOP_FIELD)
-        pp_flag |= I965_PP_FLAG_TOP_FIELD;
-    else if (flags & VA_BOTTOM_FIELD)
-        pp_flag |= I965_PP_FLAG_BOTTOM_FIELD;
-
-    intel_render_put_surface(ctx, obj_surface, src_rect, dst_rect, pp_flag);
+    intel_render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);
 
     for (i = 0; i < I965_MAX_SUBPIC_SUM; i++) {
         if (obj_surface->obj_subpic[i] != NULL) {

@@ -99,4 +99,11 @@ avs_init_state(AVSState *avs, const AVSConfig *config);
 bool
 avs_update_coefficients(AVSState *avs, float sx, float sy, uint32_t flags);
 
+/** Checks whether AVS is needed, e.g. if high-quality scaling is requested */
+static inline bool
+avs_is_needed(uint32_t flags)
+{
+    return ((flags & VA_FILTER_SCALING_MASK) >= VA_FILTER_SCALING_HQ);
+}
+
 #endif /* I965_VPP_AVS_H */
