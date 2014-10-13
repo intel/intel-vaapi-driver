@@ -37,6 +37,7 @@
 #define AVS_MAX_CHROMA_COEFFS 4
 
 typedef struct avs_coeffs               AVSCoeffs;
+typedef struct avs_coeffs_range         AVSCoeffsRange;
 typedef struct avs_config               AVSConfig;
 typedef struct avs_state                AVSState;
 
@@ -52,12 +53,22 @@ struct avs_coeffs {
     float uv_k_v[AVS_MAX_CHROMA_COEFFS];
 };
 
+/** AVS coefficients range used for validation */
+struct avs_coeffs_range {
+    /** Lower bound for all coefficients */
+    AVSCoeffs lower_bound;
+    /** Upper bound for all coefficients */
+    AVSCoeffs upper_bound;
+};
+
 /** Static configuration (per-generation) */
 struct avs_config {
     /** Number of bits used for the fractional part of a coefficient */
     int coeff_frac_bits;
     /** The smallest float that could be represented as a coefficient */
     float coeff_epsilon;
+    /** Coefficients range */
+    AVSCoeffsRange coeff_range;
     /** Number of phases for the sharp filter */
     int num_phases;
     /** Number of coefficients for luma samples */

@@ -2370,6 +2370,21 @@ static const AVSConfig gen5_avs_config = {
     .num_phases = 16,
     .num_luma_coeffs = 8,
     .num_chroma_coeffs = 4,
+
+    .coeff_range = {
+        .lower_bound = {
+            .y_k_h = { -0.25f, -0.5f, -1, 0, 0, -1, -0.5f, -0.25f },
+            .y_k_v = { -0.25f, -0.5f, -1, 0, 0, -1, -0.5f, -0.25f },
+            .uv_k_h = { -1, 0, 0, -1 },
+            .uv_k_v = { -1, 0, 0, -1 },
+        },
+        .upper_bound = {
+            .y_k_h = { 0.25f, 0.5f, 1, 2, 2, 1, 0.5f, 0.25f },
+            .y_k_v = { 0.25f, 0.5f, 1, 2, 2, 1, 0.5f, 0.25f },
+            .uv_k_h = { 1, 2, 2, 1 },
+            .uv_k_v = { 1, 2, 2, 1 },
+        },
+    },
 };
 
 static const AVSConfig gen6_avs_config = {
@@ -2378,6 +2393,21 @@ static const AVSConfig gen6_avs_config = {
     .num_phases = 16,
     .num_luma_coeffs = 8,
     .num_chroma_coeffs = 4,
+
+    .coeff_range = {
+        .lower_bound = {
+            .y_k_h = { -0.25f, -0.5f, -1, -2, -2, -1, -0.5f, -0.25f },
+            .y_k_v = { -0.25f, -0.5f, -1, -2, -2, -1, -0.5f, -0.25f },
+            .uv_k_h = { -1, 0, 0, -1 },
+            .uv_k_v = { -1, 0, 0, -1 },
+        },
+        .upper_bound = {
+            .y_k_h = { 0.25f, 0.5f, 1, 2, 2, 1, 0.5f, 0.25f },
+            .y_k_v = { 0.25f, 0.5f, 1, 2, 2, 1, 0.5f, 0.25f },
+            .uv_k_h = { 1, 2, 2, 1 },
+            .uv_k_v = { 1, 2, 2, 1 },
+        },
+    },
 };
 
 static VAStatus
