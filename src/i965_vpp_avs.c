@@ -214,6 +214,27 @@ void
 avs_init_state(AVSState *avs, const AVSConfig *config)
 {
     avs->config = config;
+    avs->flags = 0;
+    avs->scale_x = 0.0f;
+    avs->scale_y = 0.0f;
+}
+
+/* Checks whether the AVS scaling parameters changed */
+static inline bool
+avs_params_changed(AVSState *avs, float sx, float sy, uint32_t flags)
+{
+    if (avs->flags != flags)
+        return true;
+
+    if (flags >= VA_FILTER_SCALING_HQ) {
+        if (avs->scale_x != sx || avs->scale_y != sy)
+            return true;
+    }
+    else {
+        if (avs->scale_x == 0.0f || avs->scale_y == 0.0f)
+            return true;
+    }
+    return false;
 }
 
 /* Updates AVS coefficients for the supplied factors and quality level */
@@ -223,6 +244,9 @@ avs_update_coefficients(AVSState *avs, float sx, float sy, uint32_t flags)
     AVSGenCoeffsFunc gen_coeffs;
 
     flags &= VA_FILTER_SCALING_MASK;
+    if (!avs_params_changed(avs, sx, sy, flags))
+        return true;
+
     switch (flags) {
     case VA_FILTER_SCALING_HQ:
         gen_coeffs = avs_gen_coeffs_lanczos;
@@ -235,5 +259,9 @@ avs_update_coefficients(AVSState *avs, float sx, float sy, uint32_t flags)
         assert(0 && "invalid set of coefficients generated");
         return false;
     }
+
+    avs->flags = flags;
+    avs->scale_x = sx;
+    avs->scale_y = sy;
     return true;
 }

@@ -81,6 +81,12 @@ struct avs_config {
 struct avs_state {
     /** Per-generation configuration parameters */
     const AVSConfig *config;
+    /** Scaling flags */
+    uint32_t flags;
+    /** Scaling factor on the X-axis (horizontal) */
+    float scale_x;
+    /** Scaling factor on the Y-axis (vertical) */
+    float scale_y;
     /** Coefficients for the polyphase scaler */
     AVSCoeffs coeffs[AVS_MAX_PHASES + 1];
 };

@@ -38,7 +38,6 @@
 #include "i965_drv_video.h"
 #include "i965_post_processing.h"
 #include "i965_render.h"
-#include "i965_vpp_avs.h"
 #include "intel_media.h"
 
 extern VAStatus
@@ -2419,7 +2418,6 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
                        void *filter_param,
                        int nlas)
 {
-    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->pp_avs_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
     struct pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
@@ -2430,7 +2428,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     int in_w, in_h, in_wpitch, in_hpitch;
     int out_w, out_h, out_wpitch, out_hpitch;
     int i;
-    AVSState avs;
+    AVSState * const avs = &pp_avs_context->state;
     float sx, sy;
 
     /* surface */
@@ -2483,16 +2481,13 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     sampler_8x8_state = pp_context->sampler_state_table.bo_8x8->virtual;
     memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
 
-    avs_init_state(&avs, IS_GEN6(i965->intel.device_info) ? &gen6_avs_config :
-        &gen5_avs_config);
-
     sx = (float)dst_rect->width / src_rect->width;
     sy = (float)dst_rect->height / src_rect->height;
-    avs_update_coefficients(&avs, sx, sy, 0);
+    avs_update_coefficients(avs, sx, sy, 0);
 
-    assert(avs.config->num_phases == 16);
+    assert(avs->config->num_phases == 16);
     for (i = 0; i <= 16; i++) {
-        const AVSCoeffs * const coeffs = &avs.coeffs[i];
+        const AVSCoeffs * const coeffs = &avs->coeffs[i];
 
         sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c0 =
             intel_format_convert(coeffs->y_k_h[0], 1, 6, 1);
@@ -2819,7 +2814,7 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     int index, i;
     int width[3], height[3], pitch[3], offset[3];
     int src_width, src_height;
-    AVSState avs;
+    AVSState * const avs = &pp_avs_context->state;
     float sx, sy;
 
     /* source surface */
@@ -2841,15 +2836,13 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     sampler_8x8_state = pp_context->sampler_state_table.bo_8x8->virtual;
     memset(sampler_8x8_state, 0, sizeof(*sampler_8x8_state));
 
-    avs_init_state(&avs, &gen6_avs_config);
-
     sx = (float)dst_rect->width / src_rect->width;
     sy = (float)dst_rect->height / src_rect->height;
-    avs_update_coefficients(&avs, sx, sy, 0);
+    avs_update_coefficients(avs, sx, sy, 0);
 
-    assert(avs.config->num_phases == 16);
+    assert(avs->config->num_phases == 16);
     for (i = 0; i <= 16; i++) {
-        const AVSCoeffs * const coeffs = &avs.coeffs[i];
+        const AVSCoeffs * const coeffs = &avs->coeffs[i];
 
         sampler_8x8_state->coefficients[i].dw0.table_0x_filter_c0 =
             intel_format_convert(coeffs->y_k_h[0], 1, 6, 1);
@@ -5376,6 +5369,7 @@ i965_post_processing_context_init(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
     struct i965_post_processing_context *pp_context = data;
+    const AVSConfig *avs_config;
 
     if (IS_IRONLAKE(i965->intel.device_info)) {
 	pp_context->urb.size = i965->intel.device_info->urb_size;
@@ -5442,6 +5436,10 @@ i965_post_processing_context_init(VADriverContextP ctx,
     pp_context->pp_dndi_context.current_out_obj_surface = NULL;
     pp_context->pp_dndi_context.frame_order = -1;
     pp_context->batch = batch;
+
+    avs_config = IS_IRONLAKE(i965->intel.device_info) ? &gen5_avs_config :
+        &gen6_avs_config;
+    avs_init_state(&pp_context->pp_avs_context.state, avs_config);
 }
 
 bool
