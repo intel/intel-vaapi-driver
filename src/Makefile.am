@@ -80,6 +80,7 @@ source_c = \
 	i965_post_processing.c	\
 	gen8_post_processing.c	\
 	i965_render.c		\
+	i965_vpp_avs.c		\
 	gen8_render.c		\
 	intel_batchbuffer.c	\
 	intel_batchbuffer_dump.c\
@@ -116,6 +117,7 @@ source_h = \
 	i965_post_processing.h	\
 	i965_render.h           \
 	i965_structs.h		\
+	i965_vpp_avs.h		\
 	intel_batchbuffer.h     \
 	intel_batchbuffer_dump.h\
 	intel_compiler.h	\
