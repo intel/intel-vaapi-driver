@@ -33,11 +33,6 @@
 
 #define MAX_PP_SURFACES                 48
 
-#define I965_PP_FLAG_TOP_FIELD          1
-#define I965_PP_FLAG_BOTTOM_FIELD       2
-#define I965_PP_FLAG_MCDI               4
-#define I965_PP_FLAG_AVS                8
-
 enum
 {
     PP_NULL = 0,
@@ -553,7 +548,7 @@ i965_post_processing(
     struct object_surface *obj_surface,
     const VARectangle *src_rect,
     const VARectangle *dst_rect,
-    unsigned int       flags,
+    unsigned int       va_flags,
     int                *has_done_scaling 
 );
 
@@ -564,7 +559,7 @@ i965_scaling_processing(
     const VARectangle *src_rect,
     struct object_surface *dst_surface_obj,
     const VARectangle *dst_rect,
-    unsigned int       flags
+    unsigned int       va_flags
 );
 
 VAStatus

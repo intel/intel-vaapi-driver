@@ -87,10 +87,9 @@ vpp_surface_convert(VADriverContextP ctx, struct object_surface *src_obj_surf,
 
 static VAStatus
 vpp_surface_scaling(VADriverContextP ctx, struct object_surface *src_obj_surf,
-    struct object_surface *dst_obj_surf)
+    struct object_surface *dst_obj_surf, uint32_t flags)
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
-    int flags = I965_PP_FLAG_AVS;
 
     assert(src_obj_surf->fourcc == VA_FOURCC_NV12);
     assert(dst_obj_surf->fourcc == VA_FOURCC_NV12);
@@ -1241,7 +1240,8 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
         assert(obj_surface->fourcc == VA_FOURCC_NV12);
      
         /* first step :surface scaling */
-        vpp_surface_scaling(ctx, obj_surface, proc_ctx->surface_output_scaled_object);
+        vpp_surface_scaling(ctx, obj_surface,
+            proc_ctx->surface_output_scaled_object, 0);
 
         /* second step: color format convert and copy to output */
         obj_surface = proc_ctx->surface_output_object;

@@ -189,11 +189,11 @@ gen8_render_set_surface_state(
 
     memset(ss, 0, sizeof(*ss));
 
-    switch (flags & (I965_PP_FLAG_TOP_FIELD|I965_PP_FLAG_BOTTOM_FIELD)) {
-    case I965_PP_FLAG_BOTTOM_FIELD:
+    switch (flags & (VA_TOP_FIELD|VA_BOTTOM_FIELD)) {
+    case VA_BOTTOM_FIELD:
         ss->ss0.vert_line_stride_ofs = 1;
         /* fall-through */
-    case I965_PP_FLAG_TOP_FIELD:
+    case VA_TOP_FIELD:
         ss->ss0.vert_line_stride = 1;
         height /= 2;
         break;
