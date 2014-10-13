@@ -746,6 +746,21 @@ static const AVSConfig gen8_avs_config = {
     .num_phases = 16,
     .num_luma_coeffs = 8,
     .num_chroma_coeffs = 4,
+
+    .coeff_range = {
+        .lower_bound = {
+            .y_k_h = { -2, -2, -2, -2, -2, -2, -2, -2 },
+            .y_k_v = { -2, -2, -2, -2, -2, -2, -2, -2 },
+            .uv_k_h = { -1, -2, -2, -1 },
+            .uv_k_v = { -1, -2, -2, -1 },
+        },
+        .upper_bound = {
+            .y_k_h = { 2, 2, 2, 2, 2, 2, 2, 2 },
+            .y_k_v = { 2, 2, 2, 2, 2, 2, 2, 2 },
+            .uv_k_h = { 1, 2, 2, 1 },
+            .uv_k_v = { 1, 2, 2, 1 },
+        },
+    },
 };
 
 static VAStatus

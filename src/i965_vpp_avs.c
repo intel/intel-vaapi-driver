@@ -123,6 +123,37 @@ avs_normalize_coeffs(AVSCoeffs *coeffs, const AVSConfig *config)
         config->coeff_epsilon);
 }
 
+/* Validate coefficients for one sample/direction */
+static bool
+avs_validate_coeffs_1(float *coeffs, int num_coeffs, const float *min_coeffs,
+    const float *max_coeffs)
+{
+    int i;
+
+    for (i = 0; i < num_coeffs; i++) {
+        if (coeffs[i] < min_coeffs[i] || coeffs[i] > max_coeffs[i])
+            return false;
+    }
+    return true;
+}
+
+/* Validate coefficients wrt. the supplied range in config */
+static bool
+avs_validate_coeffs(AVSCoeffs *coeffs, const AVSConfig *config)
+{
+    const AVSCoeffs * const min_coeffs = &config->coeff_range.lower_bound;
+    const AVSCoeffs * const max_coeffs = &config->coeff_range.upper_bound;
+
+    return avs_validate_coeffs_1(coeffs->y_k_h, config->num_luma_coeffs,
+            min_coeffs->y_k_h, max_coeffs->y_k_h) &&
+        avs_validate_coeffs_1(coeffs->y_k_v, config->num_luma_coeffs,
+            min_coeffs->y_k_v, max_coeffs->y_k_v) &&
+        avs_validate_coeffs_1(coeffs->uv_k_h, config->num_chroma_coeffs,
+            min_coeffs->uv_k_h, max_coeffs->uv_k_h) &&
+        avs_validate_coeffs_1(coeffs->uv_k_v, config->num_chroma_coeffs,
+            min_coeffs->uv_k_v, max_coeffs->uv_k_v);
+}
+
 /* Generate coefficients for default quality (bilinear) */
 static void
 avs_gen_coeffs_linear(float *coeffs, int num_coeffs, int phase, int num_phases,
@@ -153,7 +184,7 @@ avs_gen_coeffs_lanczos(float *coeffs, int num_coeffs, int phase, int num_phases,
 }
 
 /* Generate coefficients with the supplied scaler */
-static void
+static bool
 avs_gen_coeffs(AVSState *avs, float sx, float sy, AVSGenCoeffsFunc gen_coeffs)
 {
     const AVSConfig * const config = avs->config;
@@ -172,7 +203,10 @@ avs_gen_coeffs(AVSState *avs, float sx, float sy, AVSGenCoeffsFunc gen_coeffs)
             i, config->num_phases, sy);
 
         avs_normalize_coeffs(coeffs, config);
+        if (!avs_validate_coeffs(coeffs, config))
+            return false;
     }
+    return true;
 }
 
 /* Initializes AVS state with the supplied configuration */
@@ -197,6 +231,9 @@ avs_update_coefficients(AVSState *avs, float sx, float sy, uint32_t flags)
         gen_coeffs = avs_gen_coeffs_linear;
         break;
     }
-    avs_gen_coeffs(avs, sx, sy, gen_coeffs);
+    if (!avs_gen_coeffs(avs, sx, sy, gen_coeffs)) {
+        assert(0 && "invalid set of coefficients generated");
+        return false;
+    }
     return true;
 }
