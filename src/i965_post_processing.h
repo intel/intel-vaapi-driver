@@ -29,6 +29,8 @@
 #ifndef __I965_POST_PROCESSING_H__
 #define __I965_POST_PROCESSING_H__
 
+#include "i965_vpp_avs.h"
+
 #define MAX_PP_SURFACES                 48
 
 #define I965_PP_FLAG_TOP_FIELD          1
@@ -79,6 +81,7 @@ struct pp_scaling_context
 
 struct pp_avs_context
 {
+    AVSState state;
     int dest_x; /* in pixel */
     int dest_y; /* in pixel */
     int dest_w;

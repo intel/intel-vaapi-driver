@@ -39,7 +39,6 @@
 #include "i965_drv_video.h"
 #include "i965_post_processing.h"
 #include "i965_render.h"
-#include "i965_vpp_avs.h"
 #include "intel_media.h"
 
 #define SURFACE_STATE_PADDED_SIZE               SURFACE_STATE_PADDED_SIZE_GEN8
@@ -779,7 +778,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     int width[3], height[3], pitch[3], offset[3];
     int src_width, src_height;
     unsigned char *cc_ptr;
-    AVSState avs;
+    AVSState * const avs = &pp_avs_context->state;
     float sx, sy;
 
     memset(pp_static_parameter, 0, sizeof(struct gen7_pp_static_parameter));
@@ -894,17 +893,15 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     sampler_8x8->dw15.s1u = 113; /* s1u = 0 */
     sampler_8x8->dw15.s2u = 1203; /* s2u = 0 */
 
-    avs_init_state(&avs, &gen8_avs_config);
-
     sx = (float)dst_rect->width / src_rect->width;
     sy = (float)dst_rect->height / src_rect->height;
-    avs_update_coefficients(&avs, sx, sy, 0);
+    avs_update_coefficients(avs, sx, sy, 0);
 
-    assert(avs.config->num_phases == 16);
+    assert(avs->config->num_phases == 16);
     for (i = 0; i <= 16; i++) {
         struct gen8_sampler_8x8_avs_coefficients * const sampler_8x8_state =
             &sampler_8x8->coefficients[i];
-        const AVSCoeffs * const coeffs = &avs.coeffs[i];
+        const AVSCoeffs * const coeffs = &avs->coeffs[i];
 
         sampler_8x8_state->dw0.table_0x_filter_c0 =
             intel_format_convert(coeffs->y_k_h[0], 1, 6, 1);
@@ -1506,4 +1503,6 @@ gen8_post_processing_context_init(VADriverContextP ctx,
 
     pp_context->idrt_size = 5 * sizeof(struct gen8_interface_descriptor_data);
     pp_context->curbe_size = 256;
+
+    avs_init_state(&pp_context->pp_avs_context.state, &gen8_avs_config);
 }
