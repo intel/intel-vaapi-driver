@@ -5669,9 +5669,6 @@ i965_Init(VADriverContextP ctx)
             break;
     }
 
-    if (i965->codec_info->preinit_hw_codec)
-        i965->codec_info->preinit_hw_codec(ctx, i965->codec_info);
-
     if (i == ARRAY_ELEMS(i965_sub_ops)) {
         switch (i965->intel.device_id) {
 #undef CHIPSET
@@ -5696,6 +5693,9 @@ i965_Init(VADriverContextP ctx)
         }
 
         i965->current_context_id = VA_INVALID_ID;
+
+        if (i965->codec_info && i965->codec_info->preinit_hw_codec)
+            i965->codec_info->preinit_hw_codec(ctx, i965->codec_info);
 
         return VA_STATUS_SUCCESS;
     } else {
