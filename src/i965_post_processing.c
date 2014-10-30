@@ -129,12 +129,12 @@ static VAStatus pp_null_initialize(VADriverContextP ctx, struct i965_post_proces
                                    struct i965_surface *dst_surface,
                                    const VARectangle *dst_rect,
                                    void *filter_param);
-static VAStatus pp_nv12_avs_initialize_nlas(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                                            const struct i965_surface *src_surface,
-                                            const VARectangle *src_rect,
-                                            struct i965_surface *dst_surface,
-                                            const VARectangle *dst_rect,
-                                            void *filter_param);
+static VAStatus
+pp_nv12_avs_initialize(VADriverContextP ctx,
+    struct i965_post_processing_context *pp_context,
+    const struct i965_surface *src_surface, const VARectangle *src_rect,
+    struct i965_surface *dst_surface, const VARectangle *dst_rect,
+    void *filter_param);
 static VAStatus pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                                            const struct i965_surface *src_surface,
                                            const VARectangle *src_rect,
@@ -248,7 +248,7 @@ static struct pp_module pp_modules_gen5[] = {
             NULL,
         },
 
-        pp_nv12_avs_initialize_nlas,
+        pp_nv12_avs_initialize,
     },
 
     {
@@ -506,7 +506,7 @@ static struct pp_module pp_modules_gen6[] = {
             NULL,
         },
 
-        pp_nv12_avs_initialize_nlas,
+        pp_nv12_avs_initialize,
     },
 
     {
@@ -2415,8 +2415,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
                        const VARectangle *src_rect,
                        struct i965_surface *dst_surface,
                        const VARectangle *dst_rect,
-                       void *filter_param,
-                       int nlas)
+                       void *filter_param)
 {
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->pp_avs_context;
     struct pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
@@ -2430,6 +2429,9 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     int i;
     AVSState * const avs = &pp_avs_context->state;
     float sx, sy;
+
+    const int nlas = (pp_context->filter_flags & VA_FILTER_SCALING_MASK) ==
+        VA_FILTER_SCALING_NL_ANAMORPHIC;
 
     /* surface */
     obj_surface = (struct object_surface *)src_surface->base;
@@ -2718,23 +2720,6 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
 }
 
 static VAStatus
-pp_nv12_avs_initialize_nlas(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                            const struct i965_surface *src_surface,
-                            const VARectangle *src_rect,
-                            struct i965_surface *dst_surface,
-                            const VARectangle *dst_rect,
-                            void *filter_param)
-{
-    return pp_nv12_avs_initialize(ctx, pp_context,
-                                  src_surface,
-                                  src_rect,
-                                  dst_surface,
-                                  dst_rect,
-                                  filter_param,
-                                  1);
-}
-
-static VAStatus
 gen6_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                              const struct i965_surface *src_surface,
                              const VARectangle *src_rect,
@@ -2747,8 +2732,7 @@ gen6_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_c
                                   src_rect,
                                   dst_surface,
                                   dst_rect,
-                                  filter_param,
-                                  0);    
+                                  filter_param);
 }
 
 static int
