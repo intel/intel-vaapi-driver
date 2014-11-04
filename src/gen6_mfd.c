@@ -515,6 +515,8 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
     int first_mb_in_slice = 0, first_mb_in_next_slice = 0;
     unsigned int chroma_log2_weight_denom, luma_log2_weight_denom;
     int slice_type;
+    int num_surfaces = 0;
+    int i;
 
     if (slice_param->slice_type == SLICE_TYPE_I ||
         slice_param->slice_type == SLICE_TYPE_SI) {
@@ -550,6 +552,15 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
             luma_log2_weight_denom   = 5;
             chroma_log2_weight_denom = 5;
         }
+    }
+
+    /* Don't bind a surface which doesn't exist, that crashes the GPU */
+    for (i = 0; i < ARRAY_ELEMS(gen6_mfd_context->reference_surface); i++)
+        if (gen6_mfd_context->reference_surface[i].surface_id != VA_INVALID_ID)
+            num_surfaces ++;
+    if (num_surfaces == 0) {
+        num_ref_idx_l0 = 0;
+        num_ref_idx_l1 = 0;
     }
 
     first_mb_in_slice = slice_param->first_mb_in_slice;
