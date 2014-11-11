@@ -1155,7 +1155,7 @@ gen8_vme_context_destroy(void *context)
 
 Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    struct gen6_vme_context *vme_context = calloc(1, sizeof(struct gen6_vme_context));
+    struct gen6_vme_context *vme_context = NULL;
     struct i965_kernel *vme_kernel_list = NULL;
     int i965_kernel_num;
 
@@ -1171,7 +1171,13 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         vme_kernel_list = gen8_vme_mpeg2_kernels;
         encoder_context->vme_pipeline = gen8_vme_mpeg2_pipeline;
        	i965_kernel_num = sizeof(gen8_vme_mpeg2_kernels) / sizeof(struct i965_kernel); 
+        break;
 
+   case CODEC_JPEG:
+        //JPEG encode doesnt have vme. So, set the corresponding fields to NULL.
+        encoder_context->vme_context = NULL;
+        encoder_context->vme_pipeline = NULL;
+        encoder_context->vme_context_destroy = NULL;
         break;
 
     default:
@@ -1180,35 +1186,40 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
         break;
     }
-    vme_context->vme_kernel_sum = i965_kernel_num;
-    vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
-    vme_context->gpe_context.idrt_size = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
-    vme_context->gpe_context.curbe_size = CURBE_TOTAL_DATA_LENGTH;
-    vme_context->gpe_context.sampler_size = 0;
+    //If the codec is JPEG, bypass VME
+    if(encoder_context->codec != CODEC_JPEG) {
+        vme_context = calloc(1, sizeof(struct gen6_vme_context));
+        vme_context->vme_kernel_sum = i965_kernel_num;
+        vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
+
+        vme_context->gpe_context.idrt_size = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
+        vme_context->gpe_context.curbe_size = CURBE_TOTAL_DATA_LENGTH;
+        vme_context->gpe_context.sampler_size = 0;
 
 
-    vme_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
-    vme_context->gpe_context.vfe_state.num_urb_entries = 64;
-    vme_context->gpe_context.vfe_state.gpgpu_mode = 0;
-    vme_context->gpe_context.vfe_state.urb_entry_size = 16;
-    vme_context->gpe_context.vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
+        vme_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
+        vme_context->gpe_context.vfe_state.num_urb_entries = 64;
+        vme_context->gpe_context.vfe_state.gpgpu_mode = 0;
+        vme_context->gpe_context.vfe_state.urb_entry_size = 16;
+        vme_context->gpe_context.vfe_state.curbe_allocation_size = CURBE_ALLOCATION_SIZE - 1;
 
-    gen7_vme_scoreboard_init(ctx, vme_context);
+        gen7_vme_scoreboard_init(ctx, vme_context);
 
-    gen8_gpe_load_kernels(ctx,
+        gen8_gpe_load_kernels(ctx,
                           &vme_context->gpe_context,
                           vme_kernel_list,
                           i965_kernel_num);
-    vme_context->vme_surface2_setup = gen8_gpe_surface2_setup;
-    vme_context->vme_media_rw_surface_setup = gen8_gpe_media_rw_surface_setup;
-    vme_context->vme_buffer_suface_setup = gen8_gpe_buffer_suface_setup;
-    vme_context->vme_media_chroma_surface_setup = gen8_gpe_media_chroma_surface_setup;
+        vme_context->vme_surface2_setup = gen8_gpe_surface2_setup;
+        vme_context->vme_media_rw_surface_setup = gen8_gpe_media_rw_surface_setup;
+        vme_context->vme_buffer_suface_setup = gen8_gpe_buffer_suface_setup;
+        vme_context->vme_media_chroma_surface_setup = gen8_gpe_media_chroma_surface_setup;
 
-    encoder_context->vme_context = vme_context;
-    encoder_context->vme_context_destroy = gen8_vme_context_destroy;
+        encoder_context->vme_context = vme_context;
+        encoder_context->vme_context_destroy = gen8_vme_context_destroy;
 
-    vme_context->vme_state_message = malloc(VME_MSG_LENGTH * sizeof(int));
+        vme_context->vme_state_message = malloc(VME_MSG_LENGTH * sizeof(int));
+    }
 
     return True;
 }
