@@ -42,6 +42,7 @@
 #include "gen6_mfc.h"
 #include "gen6_vme.h"
 #include "intel_media.h"
+#include <va/va_enc_jpeg.h>
 
 #define SURFACE_STATE_PADDED_SIZE               SURFACE_STATE_PADDED_SIZE_GEN8
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
@@ -51,6 +52,53 @@
 
 #define B0_STEP_REV		2
 #define IS_STEPPING_BPLUS(i965)	((i965->intel.revision) >= B0_STEP_REV)
+
+//Zigzag scan order of the the Luma and Chroma components
+//Note: Jpeg Spec ISO/IEC 10918-1, Figure A.6 shows the zigzag order differently.
+//The Spec is trying to show the zigzag pattern with number positions. The below
+//table will use the pattern shown by A.6 and map the position of the elements in the array
+static const uint32_t zigzag_direct[64] = {
+    0,   1,  8, 16,  9,  2,  3, 10,
+    17, 24, 32, 25, 18, 11,  4,  5,
+    12, 19, 26, 33, 40, 48, 41, 34,
+    27, 20, 13,  6,  7, 14, 21, 28,
+    35, 42, 49, 56, 57, 50, 43, 36,
+    29, 22, 15, 23, 30, 37, 44, 51,
+    58, 59, 52, 45, 38, 31, 39, 46,
+    53, 60, 61, 54, 47, 55, 62, 63
+};
+
+//Default Luminance quantization table
+//Source: Jpeg Spec ISO/IEC 10918-1, Annex K, Table K.1
+uint8_t jpeg_luma_quant[64] = {
+    16, 11, 10, 16, 24,  40,  51,  61,
+    12, 12, 14, 19, 26,  58,  60,  55,
+    14, 13, 16, 24, 40,  57,  69,  56,
+    14, 17, 22, 29, 51,  87,  80,  62,
+    18, 22, 37, 56, 68,  109, 103, 77,
+    24, 35, 55, 64, 81,  104, 113, 92,
+    49, 64, 78, 87, 103, 121, 120, 101,
+    72, 92, 95, 98, 112, 100, 103, 99    
+};
+
+//Default Chroma quantization table
+//Source: Jpeg Spec ISO/IEC 10918-1, Annex K, Table K.2
+uint8_t jpeg_chroma_quant[64] = {
+    17, 18, 24, 47, 99, 99, 99, 99,
+    18, 21, 26, 66, 99, 99, 99, 99,
+    24, 26, 56, 99, 99, 99, 99, 99,
+    47, 66, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99
+};
+
+
+static const int va_to_gen7_jpeg_hufftable[2] = {
+    MFX_HUFFTABLE_ID_Y,
+    MFX_HUFFTABLE_ID_UV
+};
 
 static const uint32_t gen8_mfc_batchbuffer_avc_intra[][4] = {
 #include "shaders/utils/mfc_batchbuffer_avc_intra.g7b"
@@ -97,7 +145,8 @@ gen8_mfc_pipe_mode_select(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
     assert(standard_select == MFX_FORMAT_MPEG2 ||
-           standard_select == MFX_FORMAT_AVC);
+           standard_select == MFX_FORMAT_AVC   ||
+           standard_select == MFX_FORMAT_JPEG);
 
     BEGIN_BCS_BATCH(batch, 5);
 
@@ -110,7 +159,7 @@ gen8_mfc_pipe_mode_select(VADriverContextP ctx,
                   ((!!mfc_context->pre_deblocking_output.bo) << 8)  | /* Pre Deblocking Output */
                   (0 << 5)  | /* not in stitch mode */
                   (1 << 4)  | /* encoding mode */
-                  (standard_select << 0));  /* standard select: avc or mpeg2 */
+                  (standard_select << 0));  /* standard select: avc or mpeg2 or jpeg*/
     OUT_BCS_BATCH(batch,
                   (0 << 7)  | /* expand NOA bus flag */
                   (0 << 6)  | /* disable slice-level clock gating */
@@ -163,6 +212,7 @@ gen8_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     int vme_size;
+    unsigned int bse_offset;
 
     BEGIN_BCS_BATCH(batch, 26);
 
@@ -175,13 +225,22 @@ gen8_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
-    vme_size = vme_context->vme_output.size_block * vme_context->vme_output.num_blocks;
-    /* the DW6-10 is for MFX Indirect MV Object Base Address */
-    OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
-    OUT_BCS_BATCH(batch, 0);
+    if(encoder_context->codec != CODEC_JPEG) {
+        vme_size = vme_context->vme_output.size_block * vme_context->vme_output.num_blocks;
+        /* the DW6-10 is for MFX Indirect MV Object Base Address */
+        OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
+        OUT_BCS_BATCH(batch, 0);
+    } else {
+        /* No VME for JPEG */
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
     /* the DW11-15 is for MFX IT-COFF. Not used on encoder */
     OUT_BCS_BATCH(batch, 0);
@@ -198,10 +257,11 @@ gen8_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
 
     /* the DW21-25 is for MFC Indirect PAK-BSE Object Base Address for Encoder*/	
+    bse_offset = (encoder_context->codec == CODEC_JPEG) ? (mfc_context->mfc_indirect_pak_bse_object.offset) : 0;
     OUT_BCS_RELOC(batch,
                   mfc_context->mfc_indirect_pak_bse_object.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  0);
+                  bse_offset);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 	
@@ -406,13 +466,19 @@ static void gen8_mfc_init(VADriverContextP ctx,
         VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
         width_in_mbs = pSequenceParameter->picture_width_in_mbs;
         height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    } else {
+    } else if (encoder_context->codec == CODEC_MPEG2) {
         VAEncSequenceParameterBufferMPEG2 *pSequenceParameter = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
 
         assert(encoder_context->codec == CODEC_MPEG2);
 
         width_in_mbs = ALIGN(pSequenceParameter->picture_width, 16) / 16;
         height_in_mbs = ALIGN(pSequenceParameter->picture_height, 16) / 16;
+    } else {
+        assert(encoder_context->codec == CODEC_JPEG);
+        VAEncPictureParameterBufferJPEG *pic_param = (VAEncPictureParameterBufferJPEG *)encode_state->pic_param_ext->buffer;
+
+        width_in_mbs = ALIGN(pic_param->picture_width, 16) / 16;
+        height_in_mbs = ALIGN(pic_param->picture_height, 16) / 16;
     }
 
     slice_batchbuffer_size = 64 * width_in_mbs * height_in_mbs + 4096 +
@@ -2351,6 +2417,786 @@ gen8_mfc_mpeg2_encode_picture(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+/* JPEG encode methods */
+
+static VAStatus
+intel_mfc_jpeg_prepare(VADriverContextP ctx, 
+                        struct encode_state *encode_state,
+                        struct intel_encoder_context *encoder_context)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct object_surface *obj_surface; 
+    struct object_buffer *obj_buffer;
+    struct i965_coded_buffer_segment *coded_buffer_segment;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    dri_bo *bo;
+   
+    /* input YUV surface */
+    obj_surface = encode_state->input_yuv_object;
+    mfc_context->uncompressed_picture_source.bo = obj_surface->bo;
+    dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
+
+    /* coded buffer */
+    obj_buffer = encode_state->coded_buf_object;
+    bo = obj_buffer->buffer_store->bo;
+    mfc_context->mfc_indirect_pak_bse_object.bo = bo;
+    mfc_context->mfc_indirect_pak_bse_object.offset = I965_CODEDBUFFER_HEADER_SIZE;
+    mfc_context->mfc_indirect_pak_bse_object.end_offset = ALIGN(obj_buffer->size_element - 0x1000, 0x1000);
+    dri_bo_reference(mfc_context->mfc_indirect_pak_bse_object.bo);
+
+    /* set the internal flag to 0 to indicate the coded size is unknown */
+    dri_bo_map(bo, 1);
+    coded_buffer_segment = (struct i965_coded_buffer_segment *)bo->virtual;
+    coded_buffer_segment->mapped = 0;
+    coded_buffer_segment->codec = encoder_context->codec;
+    dri_bo_unmap(bo);
+
+    return vaStatus;
+}
+
+
+static void 
+gen8_mfc_jpeg_set_surface_state(VADriverContextP ctx,
+                        struct intel_encoder_context *encoder_context,
+                        struct encode_state *encode_state)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct object_surface *obj_surface = encode_state->input_yuv_object;
+    unsigned int input_fourcc;
+    unsigned int y_cb_offset;
+    unsigned int y_cr_offset;
+    unsigned int surface_format;
+
+    assert(obj_surface);
+
+    y_cb_offset = obj_surface->y_cb_offset;
+    y_cr_offset = obj_surface->y_cr_offset;
+    input_fourcc = obj_surface->fourcc;
+
+    surface_format = (obj_surface->fourcc == VA_FOURCC_Y800) ?
+        MFX_SURFACE_MONOCHROME : MFX_SURFACE_PLANAR_420_8;
+        
+        
+     switch (input_fourcc) {
+        case VA_FOURCC_Y800: {
+            surface_format = MFX_SURFACE_MONOCHROME;
+            break;
+        }
+        case VA_FOURCC_NV12: { 
+            surface_format = MFX_SURFACE_PLANAR_420_8;
+            break;
+        }      
+        case VA_FOURCC_UYVY: { 
+            surface_format = MFX_SURFACE_YCRCB_SWAPY;
+            break;
+        }
+        case VA_FOURCC_YUY2: { 
+            surface_format = MFX_SURFACE_YCRCB_NORMAL;
+            break;
+        }
+        case VA_FOURCC_RGBA: { 
+            surface_format = MFX_SURFACE_R8G8B8A8_UNORM;
+            break;
+        }
+    }
+
+    BEGIN_BCS_BATCH(batch, 6);
+
+    OUT_BCS_BATCH(batch, MFX_SURFACE_STATE | (6 - 2));
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch,
+                  ((obj_surface->orig_height - 1) << 18) |
+                  ((obj_surface->orig_width - 1) << 4));
+    OUT_BCS_BATCH(batch,
+                  (surface_format << 28) | /* Surface Format */
+                  (0 << 27) | /* must be 1 for interleave U/V, hardware requirement for AVC/VC1/MPEG and 0 for JPEG */
+                  (0 << 22) | /* surface object control state, FIXME??? */
+                  ((obj_surface->width - 1) << 3) | /* pitch */
+                  (0 << 2)  | /* must be 0 for interleave U/V */
+                  (1 << 1)  | /* must be tiled */
+                  (I965_TILEWALK_YMAJOR << 0));  /* tile walk, TILEWALK_YMAJOR */
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) | /* X offset for U(Cb), must be 0 */
+                  (y_cb_offset << 0)); /* Y offset for U(Cb) */
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) | /* X offset for V(Cr), must be 0 */
+                  (y_cr_offset << 0)); /* Y offset for V(Cr), must be 0 for video codec, non-zoeo for JPEG */
+                 
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen8_mfc_jpeg_pic_state(VADriverContextP ctx,
+                        struct intel_encoder_context *encoder_context,
+                        struct encode_state *encode_state)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct object_surface *obj_surface = encode_state->input_yuv_object;
+    VAEncPictureParameterBufferJPEG *pic_param;
+    unsigned int  surface_format;
+    unsigned int  frame_width_in_blks;
+    unsigned int  frame_height_in_blks;
+    unsigned int  pixels_in_horizontal_lastMCU;
+    unsigned int  pixels_in_vertical_lastMCU;
+    unsigned int  input_surface_format;
+    unsigned int  output_mcu_format;
+    unsigned int  picture_width;
+    unsigned int  picture_height;  
+
+    assert(encode_state->pic_param_ext && encode_state->pic_param_ext->buffer);
+    assert(obj_surface);
+    pic_param = (VAEncPictureParameterBufferJPEG *)encode_state->pic_param_ext->buffer;
+    surface_format = obj_surface->fourcc;
+    picture_width = pic_param->picture_width;
+    picture_height = pic_param->picture_height;
+    
+    switch (surface_format) {
+        case VA_FOURCC_Y800: {
+            input_surface_format = JPEG_ENC_SURFACE_Y8; 
+            output_mcu_format = JPEG_ENC_MCU_YUV400;
+            break;
+        }
+        case VA_FOURCC_NV12: { 
+            input_surface_format = JPEG_ENC_SURFACE_NV12; 
+            output_mcu_format = JPEG_ENC_MCU_YUV420; 
+            break;
+        }      
+        case VA_FOURCC_UYVY: { 
+            input_surface_format = JPEG_ENC_SURFACE_UYVY; 
+            output_mcu_format = JPEG_ENC_MCU_YUV422H_2Y; 
+            break;
+        }
+        case VA_FOURCC_YUY2: { 
+            input_surface_format = JPEG_ENC_SURFACE_YUY2; 
+            output_mcu_format = JPEG_ENC_MCU_YUV422H_2Y; 
+            break;
+        }
+        case VA_FOURCC_444P: { 
+            input_surface_format = JPEG_ENC_SURFACE_RGB; 
+            output_mcu_format = JPEG_ENC_MCU_RGB; 
+            break;
+        }
+        default : {
+            input_surface_format = JPEG_ENC_SURFACE_NV12; 
+            output_mcu_format = JPEG_ENC_MCU_YUV420;
+            break;
+        }
+    }
+
+    
+    switch (output_mcu_format) {
+        
+        case JPEG_ENC_MCU_YUV400:
+        case JPEG_ENC_MCU_RGB: {
+            pixels_in_horizontal_lastMCU = (picture_width % 8);
+            pixels_in_vertical_lastMCU = (picture_height % 8); 
+
+            //H1=1,V1=1 for YUV400 and YUV444. So, compute these values accordingly
+            frame_width_in_blks = ((picture_width + 7) / 8); 
+            frame_height_in_blks = ((picture_height + 7) / 8);
+            break;
+        }
+        
+        case JPEG_ENC_MCU_YUV420: {        
+            if((picture_width % 2) == 0) 
+                pixels_in_horizontal_lastMCU = picture_width % 16; 
+            else 
+                pixels_in_horizontal_lastMCU   = ((picture_width % 16) + 1) % 16; 
+            
+            if((picture_height % 2) == 0) 
+                pixels_in_vertical_lastMCU     = picture_height % 16; 
+            else 
+                pixels_in_vertical_lastMCU   = ((picture_height % 16) + 1) % 16; 
+
+            //H1=2,V1=2 for YUV420. So, compute these values accordingly
+            frame_width_in_blks = ((picture_width + 15) / 16) * 2;
+            frame_height_in_blks = ((picture_height + 15) / 16) * 2;
+            break;
+        }
+        
+        case JPEG_ENC_MCU_YUV422H_2Y: {
+            if(picture_width % 2 == 0) 
+                pixels_in_horizontal_lastMCU = picture_width % 16; 
+            else 
+                pixels_in_horizontal_lastMCU = ((picture_width % 16) + 1) % 16; 
+            
+            pixels_in_vertical_lastMCU = picture_height % 8;
+            
+            //H1=2,V1=1 for YUV422H_2Y. So, compute these values accordingly
+            frame_width_in_blks = ((picture_width + 15) / 16) * 2;
+            frame_height_in_blks = ((picture_height + 7) / 8);
+            break;            
+        }       
+    } //end of switch
+   
+    BEGIN_BCS_BATCH(batch, 3);
+    /* DWORD 0 */
+    OUT_BCS_BATCH(batch, MFX_JPEG_PIC_STATE | (3 - 2)); 
+    /* DWORD 1 */
+    OUT_BCS_BATCH(batch,
+                  ( pixels_in_horizontal_lastMCU << 26) |    /* Pixels In Horizontal Last MCU */
+                  ( pixels_in_vertical_lastMCU << 21)   |    /* Pixels In Vertical Last MCU */
+                  ( input_surface_format << 8)          |    /* Input Surface format */
+                  ( output_mcu_format << 0));                /* Output MCU Structure */
+    /* DWORD 2 */
+    OUT_BCS_BATCH(batch,
+                  ((frame_height_in_blks - 1) << 16)    |   /* Frame Height In Blks Minus 1 */
+                  (JPEG_ENC_ROUND_QUANT_DEFAULT  << 13) |   /* Rounding Quant set to default value 0 */
+                  ((frame_width_in_blks - 1) << 0));        /* Frame Width In Blks Minus 1 */
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void 
+get_reciprocal_dword_qm(unsigned char *raster_qm, uint32_t *dword_qm)
+{
+    int i = 0, j = 0;
+    short reciprocal_qm[64];
+    
+    for(i=0; i<64; i++) {
+        reciprocal_qm[i] = 65535/(raster_qm[i]);           
+    }
+    
+    for(i=0; i<64; i++) {
+        dword_qm[j] = ((reciprocal_qm[i+1] <<16) | (reciprocal_qm[i]));
+        j++;
+        i++;
+    }    
+    
+}
+
+
+static void 
+gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
+                        struct intel_encoder_context *encoder_context,
+                        struct encode_state *encode_state)
+{
+    uint8_t quality = 0;
+    uint32_t temp, i = 0, j = 0, dword_qm[32];
+    VAEncPictureParameterBufferJPEG *pic_param;
+    VAQMatrixBufferJPEG *qmatrix;
+    unsigned char raster_qm[64];
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    
+    assert(encode_state->pic_param_ext && encode_state->pic_param_ext->buffer);
+    pic_param = (VAEncPictureParameterBufferJPEG *)encode_state->pic_param_ext->buffer;
+    quality = pic_param->quality;
+    
+    //If the app sends the qmatrix, use it, buffer it for using it with the next frames 
+    //The app can send qmatrix for the first frame and not send for the subsequent frames
+    if(encode_state->q_matrix && encode_state->q_matrix->buffer) {
+        qmatrix = (VAQMatrixBufferJPEG *)encode_state->q_matrix->buffer;
+
+        mfc_context->buffered_qmatrix.load_lum_quantiser_matrix = 1;
+        memcpy(mfc_context->buffered_qmatrix.lum_quantiser_matrix, qmatrix->lum_quantiser_matrix, 64 * (sizeof(unsigned char)));
+
+        if(pic_param->num_components > 1) {
+            mfc_context->buffered_qmatrix.load_chroma_quantiser_matrix = 1;
+            memcpy(mfc_context->buffered_qmatrix.chroma_quantiser_matrix, qmatrix->chroma_quantiser_matrix, 64 * (sizeof(unsigned char)));
+        } else {
+            mfc_context->buffered_qmatrix.load_chroma_quantiser_matrix = 0;
+        }
+
+    } else {
+        //If the app doesnt send the qmatrix, use the buffered/default qmatrix
+        printf("App didnt send any qmatrix, using default....\n");
+        qmatrix = &mfc_context->buffered_qmatrix;
+        qmatrix->load_lum_quantiser_matrix = 1;
+        qmatrix->load_chroma_quantiser_matrix = (pic_param->num_components > 1) ? 1 : 0;
+    }   
+ 
+    quality = (quality < 50) ? (5000/quality) : (200 - (quality*2)); 
+    quality = (quality == 0) ? 1 : quality;
+    
+    //Step 1. Apply Quality factor and clip to range [1, 255] for luma and chroma Quantization matrices
+    //Step 2. HW expects the 1/Q[i] values in the qm sent, so get reciprocals
+    //Step 3. HW also expects 32 dwords, hence combine 2 (1/Q) values into 1 dword
+    //Step 4. Send the Quantization matrix to the HW, use gen8_mfc_fqm_state
+    
+    //For luma (Y or R)
+    if(qmatrix->load_lum_quantiser_matrix) {
+        //apply quality to lum_quantiser_matrix
+        for(i=0; i < 64; i++) {
+            temp = qmatrix->lum_quantiser_matrix[i] * (quality/100);
+            //clamp to range [1,255]
+            temp = (temp > 255) ? 255 : temp;
+            temp = (temp < 1) ? 1 : temp;
+            qmatrix->lum_quantiser_matrix[i] = (unsigned char)temp;
+        }       
+        
+        //For VAAPI, the VAQMatrixBuffer needs to be in zigzag order. 
+        //The App should send it in zigzag. Now, the driver has to extract the raster from it. 
+        for (j = 0; j < 64; j++)
+            raster_qm[zigzag_direct[j]] = qmatrix->lum_quantiser_matrix[j];
+
+        //Convert the raster order(row-ordered) to the column-raster (column by column).
+        //To be consistent with the other encoders, send it in column order.
+        //Need to double check if our HW expects col or row raster.
+        for (j = 0; j < 64; j++) {
+            int row = j / 8, col = j % 8;
+            raster_qm[col * 8 + row] = raster_qm[j]; 
+        }
+        
+        //Convert to raster QM to reciprocal. HW expects values in reciprocal.
+        get_reciprocal_dword_qm(raster_qm, dword_qm);
+        
+        //send the luma qm to the command buffer
+        gen8_mfc_fqm_state(ctx, MFX_QM_JPEG_LUMA_Y_QUANTIZER_MATRIX, dword_qm, 32, encoder_context);
+    } 
+    
+    //For Chroma, if chroma exists (Cb, Cr or G, B)
+    if(qmatrix->load_chroma_quantiser_matrix) {
+        //apply quality to chroma_quantiser_matrix
+        for(i=0; i < 64; i++) {
+            temp = qmatrix->chroma_quantiser_matrix[i] * (quality/100);
+            //clamp to range [1,255]
+            temp = (temp > 255) ? 255 : temp;
+            temp = (temp < 1) ? 1 : temp;
+            qmatrix->chroma_quantiser_matrix[i] = (unsigned char)temp;
+        }
+        
+        //For VAAPI, the VAQMatrixBuffer needs to be in zigzag order. 
+        //The App should send it in zigzag. Now, the driver has to extract the raster from it. 
+        for (j = 0; j < 64; j++)
+            raster_qm[zigzag_direct[j]] = qmatrix->chroma_quantiser_matrix[j];
+        
+        //Convert the raster order(row-ordered) to the column-raster (column by column).
+        //To be consistent with the other encoders, send it in column order.
+        //Need to double check if our HW expects col or row raster.
+        for (j = 0; j < 64; j++) {
+            int row = j / 8, col = j % 8;
+            raster_qm[col * 8 + row] = raster_qm[j]; 
+        }
+
+
+        //Convert to raster QM to reciprocal. HW expects values in reciprocal.
+        get_reciprocal_dword_qm(raster_qm, dword_qm);
+
+        //send the same chroma qm to the command buffer (for both U,V or G,B)
+        gen8_mfc_fqm_state(ctx, MFX_QM_JPEG_CHROMA_CB_QUANTIZER_MATRIX, dword_qm, 32, encoder_context);
+        gen8_mfc_fqm_state(ctx, MFX_QM_JPEG_CHROMA_CR_QUANTIZER_MATRIX, dword_qm, 32, encoder_context);        
+    }
+}
+
+
+//Translation of Table K.5 into code: This method takes the huffval from the 
+//Huffmantable buffer and converts into index for the coefficients and size tables
+uint8_t map_huffval_to_index(uint8_t huff_val) 
+{
+    uint8_t index = 0;
+
+    if(huff_val < 0xF0) {
+        index = (((huff_val >> 4) & 0x0F) * 0xA) + (huff_val & 0x0F);
+    } else {
+        index = 1 + (((huff_val >> 4) & 0x0F) * 0xA) + (huff_val & 0x0F);
+    }
+
+    return index;
+}
+
+
+//Implementation of Flow chart Annex C  - Figure C.1
+static void
+generate_huffman_codesizes_table(uint8_t *bits, uint8_t *huff_size_table, uint8_t *lastK) 
+{
+    uint8_t i=1, j=1, k=0;
+
+    while(i <= 16) {
+        while(j <= (uint8_t)bits[i-1]) {
+            huff_size_table[k] = i;
+            k = k+1;
+            j = j+1;
+        }
+        
+        i = i+1;
+        j = 1;
+    }
+    huff_size_table[k] = 0;
+    (*lastK) = k;    
+}
+
+//Implementation of Flow chart Annex C - Figure C.2
+static void
+generate_huffman_codes_table(uint8_t *huff_size_table, uint16_t *huff_code_table)
+{
+    uint8_t k=0;
+    uint16_t code=0;
+    uint8_t si=huff_size_table[k];
+    
+    while(huff_size_table[k] != 0) {
+    
+        while(huff_size_table[k] == si) {
+            
+            // An huffman code can never be 0xFFFF. Replace it with 0 if 0xFFFF 
+            if(code == 0xFFFF) {
+                code = 0x0000;
+            }
+
+            huff_code_table[k] = code;
+            code = code+1;
+            k = k+1;
+        }
+    
+        code <<= 1;
+        si = si+1;
+    }
+    
+}
+
+//Implementation of Flow chat Annex C - Figure C.3
+static void
+generate_ordered_codes_table(uint8_t *huff_vals, uint8_t *huff_size_table, uint16_t *huff_code_table, uint8_t type, uint8_t lastK)
+{
+    uint8_t huff_val_size=0, i=0, k=0;
+    
+    huff_val_size = (type == 0) ? 12 : 162; 
+    uint8_t huff_si_table[huff_val_size]; 
+    uint16_t huff_co_table[huff_val_size];
+    
+    memset(huff_si_table, 0, huff_val_size);
+    memset(huff_co_table, 0, huff_val_size);
+    
+    do {
+        i = map_huffval_to_index(huff_vals[k]);
+        huff_co_table[i] = huff_code_table[k];
+        huff_si_table[i] = huff_size_table[k];
+        k++;
+    } while(k < lastK);
+    
+    memcpy(huff_size_table, huff_si_table, sizeof(uint8_t)*huff_val_size);
+    memcpy(huff_code_table, huff_co_table, sizeof(uint16_t)*huff_val_size);
+}
+
+
+//This method converts the huffman table to code words which is needed by the HW
+//Flowcharts from Jpeg Spec Annex C - Figure C.1, Figure C.2, Figure C.3 are used here
+static void
+convert_hufftable_to_codes(VAHuffmanTableBufferJPEGBaseline *huff_buffer, uint32_t *table, uint8_t type, uint8_t index)
+{
+    uint8_t lastK = 0, i=0; 
+    uint8_t huff_val_size = 0;
+    uint8_t *huff_bits, *huff_vals;
+
+    huff_val_size = (type == 0) ? 12 : 162; 
+    uint8_t huff_size_table[huff_val_size+1]; //The +1 for adding 0 at the end of huff_val_size
+    uint16_t huff_code_table[huff_val_size];
+
+    memset(huff_size_table, 0, huff_val_size);
+    memset(huff_code_table, 0, huff_val_size);
+
+    huff_bits = (type == 0) ? (huff_buffer->huffman_table[index].num_dc_codes) : (huff_buffer->huffman_table[index].num_ac_codes);
+    huff_vals = (type == 0) ? (huff_buffer->huffman_table[index].dc_values) : (huff_buffer->huffman_table[index].ac_values);
+    
+
+    //Generation of table of Huffman code sizes
+    generate_huffman_codesizes_table(huff_bits, huff_size_table, &lastK);
+       
+    //Generation of table of Huffman codes
+    generate_huffman_codes_table(huff_size_table, huff_code_table);
+       
+    //Ordering procedure for encoding procedure code tables
+    generate_ordered_codes_table(huff_vals, huff_size_table, huff_code_table, type, lastK);
+
+    //HW expects Byte0: Code length; Byte1,Byte2: Code Word, Byte3: Dummy
+    //Since IA is littlended, &, | and << accordingly to store the values in the DWord.
+    for(i=0; i<huff_val_size; i++) {
+        table[i] = 0;
+        table[i] = ((huff_size_table[i] & 0xFF) | ((huff_code_table[i] & 0xFFFF) << 8));
+    }
+
+}
+
+//send the huffman table using MFC_JPEG_HUFF_TABLE_STATE
+static void
+gen8_mfc_jpeg_huff_table_state(VADriverContextP ctx,
+                                           struct encode_state *encode_state,
+                                           struct intel_encoder_context *encoder_context,
+                                           int num_tables)
+{
+    VAHuffmanTableBufferJPEGBaseline *huff_buffer;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    uint8_t index;
+    uint32_t dc_table[12], ac_table[162]; 
+    
+    assert(encode_state->huffman_table && encode_state->huffman_table->buffer);
+    huff_buffer = (VAHuffmanTableBufferJPEGBaseline *)encode_state->huffman_table->buffer;
+
+    memset(dc_table, 0, 12);
+    memset(ac_table, 0, 162);
+
+    for (index = 0; index < num_tables; index++) {
+        int id = va_to_gen7_jpeg_hufftable[index];
+ 
+        if (!huff_buffer->load_huffman_table[index])
+            continue;
+     
+        //load DC table with 12 DWords
+        convert_hufftable_to_codes(huff_buffer, dc_table, 0, index);  //0 for Dc
+
+        //load AC table with 162 DWords 
+        convert_hufftable_to_codes(huff_buffer, ac_table, 1, index);  //1 for AC 
+
+        BEGIN_BCS_BATCH(batch, 176);
+        OUT_BCS_BATCH(batch, MFC_JPEG_HUFF_TABLE_STATE | (176 - 2));
+        OUT_BCS_BATCH(batch, id); //Huff table id
+
+        //DWord 2 - 13 has DC_TABLE
+        intel_batchbuffer_data(batch, dc_table, 12*4);
+
+        //Dword 14 -175 has AC_TABLE
+        intel_batchbuffer_data(batch, ac_table, 162*4);
+        ADVANCE_BCS_BATCH(batch);
+    }    
+}
+
+
+//This method is used to compute the MCU count used for setting MFC_JPEG_SCAN_OBJECT
+static void get_Y_sampling_factors(uint32_t surface_format, uint8_t *h_factor, uint8_t *v_factor)
+{ 
+    switch (surface_format) {
+        case VA_FOURCC_Y800: {
+            (* h_factor) = 1; 
+            (* v_factor) = 1;
+            break;
+        }
+        case VA_FOURCC_NV12: { 
+            (* h_factor) = 2;             
+            (* v_factor) = 2;
+            break;
+        }      
+        case VA_FOURCC_UYVY: { 
+            (* h_factor) = 2; 
+            (* v_factor) = 1;
+            break;
+        }
+        case VA_FOURCC_YUY2: { 
+            (* h_factor) = 2; 
+            (* v_factor) = 1;
+            break;
+        }
+        case VA_FOURCC_444P: { 
+            (* h_factor) = 1; 
+            (* v_factor) = 1;
+            break;
+        }
+        default : { //May be  have to insert error handling here. For now just use as below
+            (* h_factor) = 1; 
+            (* v_factor) = 1;
+            break;
+        }
+    }
+}
+
+//set MFC_JPEG_SCAN_OBJECT
+static void
+gen8_mfc_jpeg_scan_object(VADriverContextP ctx,
+                                           struct encode_state *encode_state,
+                                           struct intel_encoder_context *encoder_context)
+{
+    uint32_t mcu_count, surface_format, Mx, My;
+    uint8_t i, horizontal_sampling_factor, vertical_sampling_factor, huff_ac_table=0, huff_dc_table=0;
+    uint8_t is_last_scan = 1;    //Jpeg has only 1 scan per frame. When last scan, HW inserts EOI code.
+    uint8_t head_present_flag=1; //Header has tables and app data 
+    uint16_t num_components, restart_interval;   //Specifies number of MCUs in an ECS.
+    VAEncSliceParameterBufferJPEG *slice_param;
+    VAEncPictureParameterBufferJPEG *pic_param;
+    
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct object_surface *obj_surface = encode_state->input_yuv_object;
+    
+    assert(encode_state->slice_params_ext[0] && encode_state->slice_params_ext[0]->buffer);
+    assert(encode_state->pic_param_ext && encode_state->pic_param_ext->buffer);
+    assert(obj_surface);
+    pic_param = (VAEncPictureParameterBufferJPEG *)encode_state->pic_param_ext->buffer;
+    slice_param = (VAEncSliceParameterBufferJPEG *)encode_state->slice_params_ext[0]->buffer;
+    surface_format = obj_surface->fourcc;
+    
+    get_Y_sampling_factors(surface_format, &horizontal_sampling_factor, &vertical_sampling_factor);
+    
+    // Mx = #MCUs in a row, My = #MCUs in a column
+    Mx = (pic_param->picture_width + (horizontal_sampling_factor*8 -1))/(horizontal_sampling_factor*8);
+    My = (pic_param->picture_height + (vertical_sampling_factor*8 -1))/(vertical_sampling_factor*8);
+    mcu_count = (Mx * My);
+ 
+    num_components = pic_param->num_components;    
+    restart_interval = slice_param->restart_interval;
+    
+    //Depending on number of components and values set for table selectors, 
+    //only those bits are set in 24:22 for AC table, 20:18 for DC table
+    for(i=0; i<num_components; i++) {
+        huff_ac_table |= ((slice_param->components[i].ac_table_selector)<<i);
+        huff_dc_table |= ((slice_param->components[i].dc_table_selector)<<i);
+    }
+    
+    
+    BEGIN_BCS_BATCH(batch, 3);
+    /* DWORD 0 */
+    OUT_BCS_BATCH(batch, MFC_JPEG_SCAN_OBJECT | (3 - 2)); 
+    /* DWORD 1 */
+    OUT_BCS_BATCH(batch, mcu_count << 0);       //MCU Count
+    /* DWORD 2 */
+    OUT_BCS_BATCH(batch,
+                  (huff_ac_table << 22)     |   //Huffman AC Table
+                  (huff_dc_table << 18)     |   //Huffman DC Table
+                  (head_present_flag << 17) |   //Head present flag
+                  (is_last_scan << 16)      |   //Is last scan
+                  (restart_interval << 0));     //Restart Interval
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen8_mfc_jpeg_pak_insert_object(struct intel_encoder_context *encoder_context, unsigned int *insert_data, 
+                                int length_in_dws, int data_bits_in_last_dw, int is_last_header, 
+                                int is_end_of_slice)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    assert(batch);
+    
+    if (data_bits_in_last_dw == 0)
+        data_bits_in_last_dw = 32;
+
+    BEGIN_BCS_BATCH(batch, length_in_dws + 2);
+
+    OUT_BCS_BATCH(batch, MFX_INSERT_OBJECT | (length_in_dws + 2 - 2));
+    //DWord 1
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) |                    //DataByteOffset 0 for JPEG Encoder
+                  (0 << 15) |                    //HeaderLengthExcludeFrmSize 0 for JPEG Encoder
+                  (data_bits_in_last_dw << 8) |  //DataBitsInLastDW
+                  (0 << 4) |                     //SkipEmulByteCount 0 for JPEG Encoder
+                  (0 << 3) |                     //EmulationFlag 0 for JPEG Encoder
+                  ((!!is_last_header) << 2) |    //LastHeaderFlag
+                  ((!!is_end_of_slice) << 1) |   //EndOfSliceFlag
+                  (1 << 0));                     //BitstreamStartReset 1 for JPEG Encoder
+    //Data Paylaod
+    intel_batchbuffer_data(batch, insert_data, length_in_dws*4);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+
+//send the jpeg headers to HW using MFX_PAK_INSERT_OBJECT
+static void
+gen8_mfc_jpeg_add_headers(VADriverContextP ctx,
+                                           struct encode_state *encode_state,
+                                           struct intel_encoder_context *encoder_context)
+{
+    if (encode_state->packed_header_data_ext) {
+        VAEncPackedHeaderParameterBuffer *param = NULL;
+        unsigned int *header_data = (unsigned int *)(*encode_state->packed_header_data_ext)->buffer;
+        unsigned int length_in_bits;
+
+        param = (VAEncPackedHeaderParameterBuffer *)(*encode_state->packed_header_params_ext)->buffer;
+        length_in_bits = param->bit_length;
+
+        gen8_mfc_jpeg_pak_insert_object(encoder_context, 
+                                        header_data, 
+                                        ALIGN(length_in_bits, 32) >> 5,
+                                        length_in_bits & 0x1f,
+                                        1,
+                                        1);
+    }
+}
+
+//Initialize the buffered_qmatrix with the default qmatrix in the driver.
+//If the app sends the qmatrix, this will be replaced with the one app sends.
+static void 
+jpeg_init_default_qmatrix(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    int i=0;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+ 
+    //Load the the QM in zigzag order. If app sends QM, it is always in zigzag order.
+    for(i=0; i<64; i++)
+       mfc_context->buffered_qmatrix.lum_quantiser_matrix[i] = jpeg_luma_quant[zigzag_direct[i]];
+
+    for(i=0; i<64; i++)
+        mfc_context->buffered_qmatrix.chroma_quantiser_matrix[i] = jpeg_chroma_quant[zigzag_direct[i]];
+}    
+ 
+/* This is at the picture level */
+static void
+gen8_mfc_jpeg_pipeline_picture_programing(VADriverContextP ctx,
+                                           struct encode_state *encode_state,
+                                           struct intel_encoder_context *encoder_context)
+{
+    int i, j, component, max_selector = 0;
+    VAEncSliceParameterBufferJPEG *slice_param;
+    
+    gen8_mfc_pipe_mode_select(ctx, MFX_FORMAT_JPEG, encoder_context);
+    gen8_mfc_jpeg_set_surface_state(ctx, encoder_context, encode_state);
+    gen8_mfc_pipe_buf_addr_state(ctx, encoder_context);
+    gen8_mfc_ind_obj_base_addr_state(ctx, encoder_context);
+    gen8_mfc_bsp_buf_base_addr_state(ctx, encoder_context);
+    gen8_mfc_jpeg_pic_state(ctx, encoder_context, encode_state);
+    
+    //do the slice level encoding here
+    gen8_mfc_jpeg_fqm_state(ctx, encoder_context, encode_state);
+
+    //I dont think I need this for loop. Just to be consistent with other encoding logic...
+    for(i = 0; i < encode_state->num_slice_params_ext; i++) {
+        assert(encode_state->slice_params && encode_state->slice_params_ext[i]->buffer);
+        slice_param = (VAEncSliceParameterBufferJPEG *)encode_state->slice_params_ext[i]->buffer;
+        
+        for(j = 0; j < encode_state->slice_params_ext[i]->num_elements; j++) {
+            
+            for(component = 0; component < slice_param->num_components; component++) {
+                if(max_selector < slice_param->components[component].dc_table_selector)
+                    max_selector = slice_param->components[component].dc_table_selector;
+                
+                if (max_selector < slice_param->components[component].ac_table_selector)
+                    max_selector = slice_param->components[component].ac_table_selector;
+            }
+            
+            slice_param++;
+        }
+    }    
+
+    assert(max_selector < 2);
+    //send the huffman table using MFC_JPEG_HUFF_TABLE
+    gen8_mfc_jpeg_huff_table_state(ctx, encode_state, encoder_context, max_selector+1);
+    //set MFC_JPEG_SCAN_OBJECT
+    gen8_mfc_jpeg_scan_object(ctx, encode_state, encoder_context);
+    //add headers using MFX_PAK_INSERT_OBJECT (it is refered as MFX_INSERT_OBJECT in this driver code)
+    gen8_mfc_jpeg_add_headers(ctx, encode_state, encoder_context);
+       
+}
+
+static void
+gen8_mfc_jpeg_pipeline_programing(VADriverContextP ctx,
+                                   struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    
+    // begin programing
+    intel_batchbuffer_start_atomic_bcs(batch, 0x4000); 
+    intel_batchbuffer_emit_mi_flush(batch);
+    
+    // picture level programing
+    gen8_mfc_jpeg_pipeline_picture_programing(ctx, encode_state, encoder_context);
+
+    // end programing
+    intel_batchbuffer_end_atomic(batch);
+
+}
+
+
+static VAStatus
+gen8_mfc_jpeg_encode_picture(VADriverContextP ctx, 
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context)
+{
+    gen8_mfc_init(ctx, encode_state, encoder_context);
+    intel_mfc_jpeg_prepare(ctx, encode_state, encoder_context);
+    /*Programing bcs pipeline*/
+    gen8_mfc_jpeg_pipeline_programing(ctx, encode_state, encoder_context);
+    gen8_mfc_run(ctx, encode_state, encoder_context);
+
+    return VA_STATUS_SUCCESS;
+}
+
+
 static void
 gen8_mfc_context_destroy(void *context)
 {
@@ -2430,6 +3276,11 @@ static VAStatus gen8_mfc_pipeline(VADriverContextP ctx,
         vaStatus = gen8_mfc_mpeg2_encode_picture(ctx, encode_state, encoder_context);
         break;
 
+    case VAProfileJPEGBaseline:
+        jpeg_init_default_qmatrix(ctx, encoder_context);
+        vaStatus = gen8_mfc_jpeg_encode_picture(ctx, encode_state, encoder_context);
+        break;
+        
     default:
         vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         break;

@@ -271,6 +271,32 @@ error:
 }
 
 static VAStatus
+intel_encoder_check_jpeg_parameter(VADriverContextP ctx,
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_buffer *obj_buffer;
+    VAEncPictureParameterBufferJPEG *pic_param = (VAEncPictureParameterBufferJPEG *)encode_state->pic_param_ext->buffer;
+
+
+    assert(!(pic_param->pic_flags.bits.profile)); //Baseline profile is 0.
+
+    obj_buffer = BUFFER(pic_param->coded_buf);
+    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
+
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+        goto error;
+
+    encode_state->coded_buf_object = obj_buffer;
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
 intel_encoder_sanity_check_input(VADriverContextP ctx,
                                  VAProfile profile,
                                  struct encode_state *encode_state,
@@ -291,6 +317,11 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
     case VAProfileMPEG2Main:
         vaStatus = intel_encoder_check_mpeg2_parameter(ctx, encode_state, encoder_context);
         break;
+
+    case VAProfileJPEGBaseline:  {
+        vaStatus = intel_encoder_check_jpeg_parameter(ctx, encode_state, encoder_context);
+        break;
+    }
 
     default:
         vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
@@ -326,7 +357,9 @@ intel_encoder_end_picture(VADriverContextP ctx,
 
     encoder_context->mfc_brc_prepare(encode_state, encoder_context);
 
-    vaStatus = encoder_context->vme_pipeline(ctx, profile, encode_state, encoder_context);
+    if((encoder_context->vme_context && encoder_context->vme_pipeline)) {
+        vaStatus = encoder_context->vme_pipeline(ctx, profile, encode_state, encoder_context);
+    }
 
     if (vaStatus == VA_STATUS_SUCCESS)
         encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
@@ -339,7 +372,10 @@ intel_encoder_context_destroy(void *hw_context)
     struct intel_encoder_context *encoder_context = (struct intel_encoder_context *)hw_context;
 
     encoder_context->mfc_context_destroy(encoder_context->mfc_context);
-    encoder_context->vme_context_destroy(encoder_context->vme_context);
+
+    if (encoder_context->vme_context_destroy && encoder_context->vme_context)
+       encoder_context->vme_context_destroy(encoder_context->vme_context);
+
     intel_batchbuffer_free(encoder_context->base.batch);
     free(encoder_context);
 }
@@ -382,6 +418,10 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     case VAProfileH264MultiviewHigh:
         encoder_context->codec = CODEC_H264_MVC;
         break;
+        
+    case VAProfileJPEGBaseline:
+        encoder_context->codec = CODEC_JPEG;
+        break;
 
     default:
         /* Never get here */
@@ -404,9 +444,11 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     }
 
     vme_context_init(ctx, encoder_context);
-    assert(encoder_context->vme_context);
-    assert(encoder_context->vme_context_destroy);
-    assert(encoder_context->vme_pipeline);
+    if(obj_config->profile != VAProfileJPEGBaseline) {
+        assert(encoder_context->vme_context);
+        assert(encoder_context->vme_context_destroy);
+        assert(encoder_context->vme_pipeline);
+    }
 
     mfc_context_init(ctx, encoder_context);
     assert(encoder_context->mfc_context);
