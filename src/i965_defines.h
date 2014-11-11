@@ -379,8 +379,13 @@
 
 #define MFD_VC1_BSD_OBJECT                      MFX(2, 2, 1, 8)
 
+//MFX_JPEG #defines for JPEG decoder only
 #define MFX_JPEG_PIC_STATE                      MFX(2, 7, 0, 0)
 #define MFX_JPEG_HUFF_TABLE_STATE               MFX(2, 7, 0, 2)
+
+//MFC_JPEG #defines for JPEG encoder only
+#define MFC_JPEG_SCAN_OBJECT                    MFX(2, 7, 2, 9)
+#define MFC_JPEG_HUFF_TABLE_STATE               MFX(2, 7, 2, 3)
 
 #define MFD_JPEG_BSD_OBJECT                     MFX(2, 7, 1, 8)
 
@@ -800,9 +805,12 @@
 #define MFD_MODE_VLD            0
 #define MFD_MODE_IT             1
 
+#define MFX_SURFACE_YCRCB_NORMAL        0
+#define MFX_SURFACE_YCRCB_SWAPY         3
 #define MFX_SURFACE_PLANAR_420_8        4
 #define MFX_SURFACE_PLANAR_411_8        5
 #define MFX_SURFACE_PLANAR_422_8        6
+#define MFX_SURFACE_R8G8B8A8_UNORM      9
 #define MFX_SURFACE_MONOCHROME          12
 
 #define MPEG_I_PICTURE          1
@@ -820,5 +828,26 @@
 #define SUBSAMPLE_YUV444        4
 #define SUBSAMPLE_YUV411        5
 #define SUBSAMPLE_RGBX          6
+#define JPEG_ENC_SURFACE_NV12 1
+#define JPEG_ENC_SURFACE_UYVY 2
+#define JPEG_ENC_SURFACE_YUY2 3
+#define JPEG_ENC_SURFACE_Y8   4
+#define JPEG_ENC_SURFACE_RGB  5
+
+#define JPEG_ENC_MCU_YUV400     0
+#define JPEG_ENC_MCU_YUV420     1
+#define JPEG_ENC_MCU_YUV422H_2Y 2
+#define JPEG_ENC_MCU_RGB        3
+
+#define JPEG_ENC_ROUND_QUANT_DEFAULT 0
+#define JPEG_ENC_ROUND_QUANT_MINUS_128TH 1
+#define JPEG_ENC_ROUND_QUANT_PLUS_128TH 2
+#define JPEG_ENC_ROUND_QUANT_MINUS_64TH 3
+#define JPEG_ENC_ROUND_QUANT_PLUS_64TH 4
+#define JPEG_ENC_ROUND_QUANT_MINUS_32TH 5
+#define JPEG_ENC_ROUND_QUANT_MINUS_16TH 6
+#define JPEG_ENC_ROUND_QUANT_MINUS_8TH 7
+
+
 
 #endif /* _I965_DEFINES_H_ */

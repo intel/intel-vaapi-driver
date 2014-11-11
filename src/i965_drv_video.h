@@ -33,6 +33,7 @@
 #include <va/va.h>
 #include <va/va_enc_h264.h>
 #include <va/va_enc_mpeg2.h>
+#include <va/va_enc_jpeg.h>
 #include <va/va_vpp.h>
 #include <va/va_backend.h>
 #include <va/va_backend_vpp.h>
@@ -142,6 +143,7 @@ struct encode_state
     struct buffer_store *iq_matrix;
     struct buffer_store *q_matrix;
     struct buffer_store **slice_params;
+    struct buffer_store *huffman_table;
     int max_slice_params;
     int num_slice_params;
 
@@ -347,6 +349,7 @@ struct hw_codec_info
     unsigned int h264_mvc_dec_profiles;
     unsigned int h264_dec_chroma_formats;
     unsigned int jpeg_dec_chroma_formats;
+    unsigned int jpeg_enc_chroma_formats;
 
     unsigned int has_mpeg2_decoding:1;
     unsigned int has_mpeg2_encoding:1;
@@ -448,6 +451,7 @@ va_enc_packed_type_to_idx(int packed_type);
 #define CODEC_H264      0
 #define CODEC_MPEG2     1
 #define CODEC_H264_MVC  2
+#define CODEC_JPEG      3
 
 #define H264_DELIMITER0 0x00
 #define H264_DELIMITER1 0x00
@@ -468,7 +472,7 @@ struct i965_coded_buffer_segment
     unsigned char codec;
 };
 
-#define I965_CODEDBUFFER_HEADER_SIZE   ALIGN(sizeof(struct i965_coded_buffer_segment), 64)
+#define I965_CODEDBUFFER_HEADER_SIZE   ALIGN(sizeof(struct i965_coded_buffer_segment), 0x1000)
 
 extern VAStatus i965_MapBuffer(VADriverContextP ctx,
 		VABufferID buf_id,       /* in */
