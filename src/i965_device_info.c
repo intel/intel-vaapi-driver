@@ -41,6 +41,10 @@
     (VA_RT_FORMAT_YUV400 | VA_RT_FORMAT_YUV411 | VA_RT_FORMAT_YUV422 | \
      VA_RT_FORMAT_YUV444)
 
+/* Extra set of chroma formats supported for JPEG encoding (beyond YUV 4:2:0) */
+#define EXTRA_JPEG_ENC_CHROMA_FORMATS \
+    (VA_RT_FORMAT_YUV400| VA_RT_FORMAT_YUV422 | VA_RT_FORMAT_YUV444)     
+     
 /* Defines VA profile as a 32-bit unsigned integer mask */
 #define VA_PROFILE_MASK(PROFILE) \
     (1U << VAProfile##PROFILE)
@@ -268,6 +272,7 @@ static struct hw_codec_info chv_hw_codec_info = {
                               VA_PROFILE_MASK(H264MultiviewHigh)),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
+    .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,
@@ -275,6 +280,7 @@ static struct hw_codec_info chv_hw_codec_info = {
     .has_h264_encoding = 1,
     .has_vc1_decoding = 1,
     .has_jpeg_decoding = 1,
+    .has_jpeg_encoding = 1,
     .has_vpp = 1,
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,
