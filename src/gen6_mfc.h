@@ -190,6 +190,9 @@ struct gen6_mfc_context
         int i_dpb_output_delay_length;
     }vui_hrd;
 
+    //"buffered_QMatrix" will be used to buffer the QMatrix if the app sends one.
+    // Or else, we will load a default QMatrix from the driver for JPEG encode.
+    VAQMatrixBufferJPEG buffered_qmatrix;
     struct i965_gpe_context gpe_context;
     struct i965_buffer_surface mfc_batchbuffer_surface;
     struct intel_batchbuffer *aux_batchbuffer;
