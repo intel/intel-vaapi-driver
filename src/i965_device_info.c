@@ -130,6 +130,8 @@ static struct hw_codec_info snb_hw_codec_info = {
     },
 };
 
+static void gen7_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info);
+
 extern struct hw_context *gen7_dec_hw_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *gen7_enc_hw_context_init(VADriverContextP, struct object_config *);
 static struct hw_codec_info ivb_hw_codec_info = {
@@ -138,6 +140,7 @@ static struct hw_codec_info ivb_hw_codec_info = {
     .proc_hw_context_init = i965_proc_context_init,
     .render_init = genx_render_init,
     .post_processing_context_init = i965_post_processing_context_init,
+    .preinit_hw_codec = gen7_hw_codec_preinit,
 
     .max_width = 4096,
     .max_height = 4096,
@@ -596,6 +599,67 @@ static void gen6_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
 
     if (found) {
         codec_info->has_h264_encoding = 0;
+    }
+    return;
+}
+
+/*
+ * the hook_list for Ivybridge.
+ * It is captured by /proc/cpuinfo and the space character is stripped.
+ */
+const static char *gen7_cpu_hook_list[] =  {
+"Intel(R)Celeron(R)CPU1007U",
+};
+
+static void gen7_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info)
+{
+    char model_string[64];
+    char *model_ptr, *tmp_ptr;
+    int i, model_len, list_len;
+    bool found;
+
+    memset(model_string, 0, sizeof(model_string));
+
+    /* If it can't detect cpu model_string, leave it alone */
+    if (intel_driver_detect_cpustring(model_string))
+        return;
+
+    /* strip the cpufreq info */
+    model_ptr = model_string;
+    tmp_ptr = strstr(model_ptr, "@");
+
+    if (tmp_ptr)
+        *tmp_ptr = '\0';
+
+    /* strip the space character and convert to the lower case */
+    model_ptr = model_string;
+    model_len = strlen(model_string);
+    for (i = 0; i < model_len; i++) {
+         if (model_string[i] != ' ') {
+             *model_ptr = model_string[i];
+             model_ptr++;
+         }
+    }
+    *model_ptr = '\0';
+
+    found = false;
+    list_len = sizeof(gen7_cpu_hook_list) / sizeof(char *);
+    model_len = strlen(model_string);
+    for (i = 0; i < list_len; i++) {
+        model_ptr = (char *)gen7_cpu_hook_list[i];
+
+        if (strlen(model_ptr) != model_len)
+            continue;
+
+        if (strncasecmp(model_string, model_ptr, model_len) == 0) {
+            found = true;
+            break;
+	}
+    }
+
+    if (found) {
+        codec_info->has_h264_encoding = 0;
+        codec_info->has_mpeg2_encoding = 0;
     }
     return;
 }
