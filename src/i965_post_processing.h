@@ -558,7 +558,8 @@ i965_post_processing(
     const VARectangle *src_rect,
     const VARectangle *dst_rect,
     unsigned int       va_flags,
-    int                *has_done_scaling 
+    int                *has_done_scaling,
+    VARectangle *calibrated_rect
 );
 
 VAStatus

@@ -3095,12 +3095,14 @@ intel_render_put_surface(
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_render_state *render_state = &i965->render_state;
     int has_done_scaling = 0;
+    VARectangle calibrated_rect;
     VASurfaceID out_surface_id = i965_post_processing(ctx,
                                                       obj_surface,
                                                       src_rect,
                                                       dst_rect,
                                                       flags,
-                                                      &has_done_scaling);
+                                                      &has_done_scaling,
+                                                      &calibrated_rect);
 
     assert((!has_done_scaling) || (out_surface_id != VA_INVALID_ID));
 
@@ -3111,7 +3113,7 @@ intel_render_put_surface(
             obj_surface = new_obj_surface;
 
         if (has_done_scaling)
-            src_rect = dst_rect;
+            src_rect = &calibrated_rect;
     }
 
     render_state->render_put_surface(ctx, obj_surface, src_rect, dst_rect, flags);

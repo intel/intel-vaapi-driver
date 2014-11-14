@@ -4830,7 +4830,8 @@ i965_post_processing(
     const VARectangle *src_rect,
     const VARectangle *dst_rect,
     unsigned int       va_flags,
-    int               *has_done_scaling  
+    int               *has_done_scaling,
+    VARectangle *calibrated_rect
 )
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -4854,19 +4855,24 @@ i965_post_processing(
         pp_context = i965->pp_context;
         pp_context->filter_flags = va_flags;
         if (avs_is_needed(va_flags)) {
+            VARectangle tmp_dst_rect;
             struct i965_render_state *render_state = &i965->render_state;
             struct intel_region *dest_region = render_state->draw_region;
 
             if (out_surface_id != VA_INVALID_ID)
                 tmp_id = out_surface_id;
 
+            tmp_dst_rect.x = 0;
+            tmp_dst_rect.y = 0;
+            tmp_dst_rect.width = dst_rect->width;
+            tmp_dst_rect.height = dst_rect->height;
             src_surface.base = (struct object_base *)obj_surface;
             src_surface.type = I965_SURFACE_TYPE_SURFACE;
             src_surface.flags = I965_SURFACE_FLAG_FRAME;
 
             status = i965_CreateSurfaces(ctx,
-                                         dest_region->width,
-                                         dest_region->height,
+                                         dst_rect->width,
+                                         dst_rect->height,
                                          VA_RT_FORMAT_YUV420,
                                          1,
                                          &out_surface_id);
@@ -4884,7 +4890,7 @@ i965_post_processing(
                                           &src_surface,
                                           src_rect,
                                           &dst_surface,
-                                          dst_rect,
+                                          &tmp_dst_rect,
                                           PP_NV12_AVS,
                                           NULL);
 
@@ -4892,6 +4898,10 @@ i965_post_processing(
                 i965_DestroySurfaces(ctx, &tmp_id, 1);
                 
             *has_done_scaling = 1;
+            calibrated_rect->x = 0;
+            calibrated_rect->y = 0;
+            calibrated_rect->width = dst_rect->width;
+            calibrated_rect->height = dst_rect->height;
         }
 
         _i965UnlockMutex(&i965->pp_mutex);
