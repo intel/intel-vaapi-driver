@@ -36,6 +36,14 @@
 #include "intel_driver.h"
 uint32_t g_intel_debug_option_flags = 0;
 
+#ifdef I915_PARAM_HAS_BSD2
+#define LOCAL_I915_PARAM_HAS_BSD2 I915_PARAM_HAS_BSD2
+#endif
+
+#ifndef LOCAL_I915_PARAM_HAS_BSD2
+#define LOCAL_I915_PARAM_HAS_BSD2	30
+#endif
+
 static Bool
 intel_driver_get_param(struct intel_driver_data *intel, int param, int *value)
 {
@@ -77,6 +85,7 @@ intel_driver_init(VADriverContextP ctx)
     struct drm_state * const drm_state = (struct drm_state *)ctx->drm_state;
     int has_exec2 = 0, has_bsd = 0, has_blt = 0, has_vebox = 0;
     char *env_str = NULL;
+    int ret_value = 0;
 
     g_intel_debug_option_flags = 0;
     if ((env_str = getenv("VA_INTEL_DEBUG")))
@@ -115,7 +124,11 @@ intel_driver_init(VADriverContextP ctx)
         intel->has_blt = has_blt;
     if (intel_driver_get_param(intel, I915_PARAM_HAS_VEBOX, &has_vebox))
         intel->has_vebox = !!has_vebox;
-   
+
+    intel->has_bsd2 = 0;
+    if (intel_driver_get_param(intel, LOCAL_I915_PARAM_HAS_BSD2, &ret_value))
+        intel->has_bsd2 = !!ret_value;
+
     intel_driver_get_revid(intel, &intel->revision);
     intel_memman_init(intel);
     return true;

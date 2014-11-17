@@ -155,6 +155,7 @@ struct intel_driver_data
     unsigned int has_bsd    : 1; /* Flag: has bitstream decoder for H.264? */
     unsigned int has_blt    : 1; /* Flag: has BLT unit? */
     unsigned int has_vebox  : 1; /* Flag: has VEBOX unit */
+    unsigned int has_bsd2   : 1; /* Flag: has the second BSD video ring unit */
 
     const struct intel_device_info *device_info;
 };

@@ -859,6 +859,7 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
                               struct gen9_hcpd_context *gen9_hcpd_context)
 {
     VAStatus vaStatus;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     VAPictureParameterBufferHEVC *pic_param;
     VASliceParameterBufferHEVC *slice_param, *next_slice_param, *next_slice_group_param;
@@ -873,7 +874,10 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
 
-    intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
+    if (i965->intel.has_bsd2)
+        intel_batchbuffer_start_atomic_bcs_override(batch, 0x1000, BSD_RING0);
+    else
+        intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
     intel_batchbuffer_emit_mi_flush(batch);
 
     gen9_hcpd_pipe_mode_select(ctx, decode_state, HCP_CODEC_HEVC, gen9_hcpd_context);
