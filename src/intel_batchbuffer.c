@@ -33,16 +33,20 @@
 
 #define MAX_BATCH_SIZE		0x400000
 
+
 static void 
 intel_batchbuffer_reset(struct intel_batchbuffer *batch, int buffer_size)
 {
     struct intel_driver_data *intel = batch->intel; 
     int batch_size = buffer_size;
+    int ring_flag;
 
-    assert(batch->flag == I915_EXEC_RENDER ||
-           batch->flag == I915_EXEC_BLT ||
-           batch->flag == I915_EXEC_BSD ||
-           batch->flag == I915_EXEC_VEBOX);
+    ring_flag = batch->flag & I915_EXEC_RING_MASK;
+
+    assert(ring_flag == I915_EXEC_RENDER ||
+           ring_flag == I915_EXEC_BLT ||
+           ring_flag == I915_EXEC_BSD ||
+           ring_flag == I915_EXEC_VEBOX);
 
     dri_bo_unreference(batch->buffer);
     batch->buffer = dri_bo_alloc(intel->bufmgr, 
@@ -69,10 +73,13 @@ struct intel_batchbuffer *
 intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size)
 {
     struct intel_batchbuffer *batch = calloc(1, sizeof(*batch));
-    assert(flag == I915_EXEC_RENDER ||
-           flag == I915_EXEC_BSD ||
-           flag == I915_EXEC_BLT ||
-           flag == I915_EXEC_VEBOX);
+    int ring_flag;
+
+    ring_flag = flag & I915_EXEC_RING_MASK;
+    assert(ring_flag == I915_EXEC_RENDER ||
+           ring_flag == I915_EXEC_BSD ||
+           ring_flag == I915_EXEC_BLT ||
+           ring_flag == I915_EXEC_VEBOX);
 
    if (!buffer_size || buffer_size < BATCH_SIZE) {
 	buffer_size = BATCH_SIZE;
@@ -182,12 +189,15 @@ void
 intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
 {
     struct intel_driver_data *intel = batch->intel; 
+    int ring_flag;
+
+    ring_flag = batch->flag & I915_EXEC_RING_MASK;
 
     if (IS_GEN6(intel->device_info) ||
         IS_GEN7(intel->device_info) ||
         IS_GEN8(intel->device_info) ||
         IS_GEN9(intel->device_info)) {
-        if (batch->flag == I915_EXEC_RENDER) {
+        if (ring_flag == I915_EXEC_RENDER) {
             if (IS_GEN8(intel->device_info) || IS_GEN9(intel->device_info)) {
                 BEGIN_BATCH(batch, 6);
                 OUT_BATCH(batch, CMD_PIPE_CONTROL | (6 - 2));
@@ -248,14 +258,14 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
             }
 
         } else {
-            if (batch->flag == I915_EXEC_BLT) {
+            if (ring_flag == I915_EXEC_BLT) {
                 BEGIN_BLT_BATCH(batch, 4);
                 OUT_BLT_BATCH(batch, MI_FLUSH_DW);
                 OUT_BLT_BATCH(batch, 0);
                 OUT_BLT_BATCH(batch, 0);
                 OUT_BLT_BATCH(batch, 0);
                 ADVANCE_BLT_BATCH(batch);
-            }else if (batch->flag == I915_EXEC_VEBOX) {
+            }else if (ring_flag == I915_EXEC_VEBOX) {
                 BEGIN_VEB_BATCH(batch, 4);
                 OUT_VEB_BATCH(batch, MI_FLUSH_DW);
                 OUT_VEB_BATCH(batch, 0);
@@ -263,7 +273,7 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
                 OUT_VEB_BATCH(batch, 0);
                 ADVANCE_VEB_BATCH(batch);
             } else {
-                assert(batch->flag == I915_EXEC_BSD);
+                assert(ring_flag == I915_EXEC_BSD);
                 BEGIN_BCS_BATCH(batch, 4);
                 OUT_BCS_BATCH(batch, MI_FLUSH_DW | MI_FLUSH_DW_VIDEO_PIPELINE_CACHE_INVALIDATE);
                 OUT_BCS_BATCH(batch, 0);
@@ -273,12 +283,12 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
             }
         }
     } else {
-        if (batch->flag == I915_EXEC_RENDER) {
+        if (ring_flag == I915_EXEC_RENDER) {
             BEGIN_BATCH(batch, 1);
             OUT_BATCH(batch, MI_FLUSH | MI_FLUSH_STATE_INSTRUCTION_CACHE_INVALIDATE);
             ADVANCE_BATCH(batch);		
          } else {
-            assert(batch->flag == I915_EXEC_BSD);
+            assert(ring_flag == I915_EXEC_BSD);
             BEGIN_BCS_BATCH(batch, 1);
             OUT_BCS_BATCH(batch, MI_FLUSH | MI_FLUSH_STATE_INSTRUCTION_CACHE_INVALIDATE);
             ADVANCE_BCS_BATCH(batch);
@@ -302,10 +312,14 @@ intel_batchbuffer_advance_batch(struct intel_batchbuffer *batch)
 void
 intel_batchbuffer_check_batchbuffer_flag(struct intel_batchbuffer *batch, int flag)
 {
-    if (flag != I915_EXEC_RENDER &&
-        flag != I915_EXEC_BLT &&
-        flag != I915_EXEC_BSD &&
-        flag != I915_EXEC_VEBOX)
+    int ring_flag;
+
+    ring_flag = flag & I915_EXEC_RING_MASK;
+
+    if (ring_flag != I915_EXEC_RENDER &&
+        ring_flag != I915_EXEC_BLT &&
+        ring_flag != I915_EXEC_BSD &&
+        ring_flag != I915_EXEC_VEBOX)
         return;
 
     if (batch->flag == flag)
