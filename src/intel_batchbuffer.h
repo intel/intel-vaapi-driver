@@ -51,9 +51,10 @@ int intel_batchbuffer_check_free_space(struct intel_batchbuffer *batch, int size
 int intel_batchbuffer_used_size(struct intel_batchbuffer *batch);
 void intel_batchbuffer_align(struct intel_batchbuffer *batch, unsigned int alignedment);
 
+
 #define __BEGIN_BATCH(batch, n, f) do {                         \
-        assert(f == batch->flag);                               \
-        intel_batchbuffer_check_batchbuffer_flag(batch, f);     \
+        assert(f == (batch->flag & I915_EXEC_RING_MASK));                               \
+        intel_batchbuffer_check_batchbuffer_flag(batch, batch->flag);     \
         intel_batchbuffer_require_space(batch, (n) * 4);        \
         intel_batchbuffer_begin_batch(batch, (n));              \
     } while (0)
