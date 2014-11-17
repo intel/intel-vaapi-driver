@@ -34,6 +34,11 @@
 #define MAX_BATCH_SIZE		0x400000
 
 
+#define LOCAL_I915_EXEC_BSD_MASK		(3<<13)
+#define LOCAL_I915_EXEC_BSD_DEFAULT		(0<<13)	/* default ping-pong mode */
+#define LOCAL_I915_EXEC_BSD_RING0		(1<<13)
+#define LOCAL_I915_EXEC_BSD_RING1		(2<<13)
+
 static void 
 intel_batchbuffer_reset(struct intel_batchbuffer *batch, int buffer_size)
 {
@@ -368,6 +373,25 @@ void
 intel_batchbuffer_start_atomic_veb(struct intel_batchbuffer *batch, unsigned int size)
 {
     intel_batchbuffer_start_atomic_helper(batch, I915_EXEC_VEBOX, size);
+}
+
+void intel_batchbuffer_start_atomic_bcs_override(struct intel_batchbuffer *batch, unsigned int size,
+                                                 bsd_ring_flag override_flag)
+{
+    uint32_t ring_flag;
+
+    switch(override_flag) {
+    case BSD_RING0:
+        ring_flag = I915_EXEC_BSD + LOCAL_I915_EXEC_BSD_RING0;
+        break;
+    case BSD_RING1:
+        ring_flag = I915_EXEC_BSD + LOCAL_I915_EXEC_BSD_RING1;
+        break;
+    default:
+        ring_flag = I915_EXEC_BSD + LOCAL_I915_EXEC_BSD_DEFAULT;
+        break;
+    }
+    intel_batchbuffer_start_atomic_helper(batch, ring_flag, size);
 }
 
 

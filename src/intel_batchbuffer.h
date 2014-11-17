@@ -51,6 +51,14 @@ int intel_batchbuffer_check_free_space(struct intel_batchbuffer *batch, int size
 int intel_batchbuffer_used_size(struct intel_batchbuffer *batch);
 void intel_batchbuffer_align(struct intel_batchbuffer *batch, unsigned int alignedment);
 
+typedef enum {
+    BSD_DEFAULT,
+    BSD_RING0,
+    BSD_RING1,
+} bsd_ring_flag;
+
+void intel_batchbuffer_start_atomic_bcs_override(struct intel_batchbuffer *batch, unsigned int size,
+                                                 bsd_ring_flag override_flag);
 
 #define __BEGIN_BATCH(batch, n, f) do {                         \
         assert(f == (batch->flag & I915_EXEC_RING_MASK));                               \
