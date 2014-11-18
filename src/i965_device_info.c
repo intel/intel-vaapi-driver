@@ -324,6 +324,7 @@ static struct hw_codec_info skl_hw_codec_info = {
                               VA_PROFILE_MASK(H264MultiviewHigh)),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
+    .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,
@@ -331,6 +332,7 @@ static struct hw_codec_info skl_hw_codec_info = {
     .has_h264_encoding = 1,
     .has_vc1_decoding = 1,
     .has_jpeg_decoding = 1,
+    .has_jpeg_encoding = 1,
     .has_vpp = 1,
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,

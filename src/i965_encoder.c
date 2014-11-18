@@ -486,5 +486,8 @@ gen8_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 struct hw_context *
 gen9_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
-    return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
+    if (obj_config->profile == VAProfileJPEGBaseline)
+        return intel_enc_hw_context_init(ctx, obj_config, gen8_vme_context_init, gen8_mfc_context_init);
+    else
+        return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
 }
