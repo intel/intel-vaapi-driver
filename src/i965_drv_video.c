@@ -1798,28 +1798,6 @@ i965_CreateContext(VADriverContextP ctx,
         return vaStatus;
     }
 
-    switch (obj_config->profile) {
-    case VAProfileH264ConstrainedBaseline:
-    case VAProfileH264Main:
-    case VAProfileH264High:
-        if (!HAS_H264_DECODING(i965) &&
-            !HAS_H264_ENCODING(i965))
-            return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
-        break;
-    case VAProfileH264MultiviewHigh:
-    case VAProfileH264StereoHigh:
-        if (!HAS_H264_MVC_DECODING(i965))
-            return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
-        break;
-    case VAProfileJPEGBaseline: { //for gen8 devices
-        if (!HAS_JPEG_ENCODING(i965))
-            return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
-        break;
-    }        
-    default:
-        break;
-    }
-
     *context = contextID;
     obj_context->flags = flag;
     obj_context->context_id = contextID;
