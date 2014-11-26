@@ -3976,15 +3976,9 @@ i965_sw_getimage(VADriverContextP ctx,
     switch (obj_image->image.format.fourcc) {
     case VA_FOURCC_YV12:
     case VA_FOURCC_I420:
-        /* I420 is native format for MPEG-2 decoded surfaces */
-        if (render_state->interleaved_uv)
-            goto operation_failed;
         get_image_i420(obj_image, image_data, obj_surface, rect);
         break;
     case VA_FOURCC_NV12:
-        /* NV12 is native format for H.264 decoded surfaces */
-        if (!render_state->interleaved_uv)
-            goto operation_failed;
         get_image_nv12(obj_image, image_data, obj_surface, rect);
         break;
     case VA_FOURCC_YUY2:
