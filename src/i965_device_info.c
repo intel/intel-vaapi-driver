@@ -43,7 +43,7 @@
 
 /* Extra set of chroma formats supported for JPEG encoding (beyond YUV 4:2:0) */
 #define EXTRA_JPEG_ENC_CHROMA_FORMATS \
-    (VA_RT_FORMAT_YUV400| VA_RT_FORMAT_YUV422 | VA_RT_FORMAT_YUV444)     
+    (VA_RT_FORMAT_YUV400| VA_RT_FORMAT_YUV422 | VA_RT_FORMAT_YUV444 | VA_RT_FORMAT_RGB32)
      
 /* Defines VA profile as a 32-bit unsigned integer mask */
 #define VA_PROFILE_MASK(PROFILE) \
