@@ -122,6 +122,131 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+
+static VAStatus
+intel_encoder_check_jpeg_yuv_surface(VADriverContextP ctx,
+                                VAProfile profile,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_surface src_surface, dst_surface;
+    struct object_surface *obj_surface;
+    VAStatus status;
+    VARectangle rect;
+    int format=0, fourcc=0, subsample=0;
+
+    /* releae the temporary surface */
+    if (encoder_context->is_tmp_id) {
+        i965_DestroySurfaces(ctx, &encoder_context->input_yuv_surface, 1);
+        encode_state->input_yuv_object = NULL;
+    }
+
+    encoder_context->is_tmp_id = 0;
+    obj_surface = SURFACE(encode_state->current_render_target);
+    assert(obj_surface && obj_surface->bo);
+
+    if (!obj_surface || !obj_surface->bo)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    unsigned int tiling = 0, swizzle = 0;
+
+    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
+
+    if (tiling == I915_TILING_Y) {
+        if( (obj_surface->fourcc==VA_FOURCC_NV12)  || (obj_surface->fourcc==VA_FOURCC_UYVY) ||
+            (obj_surface->fourcc==VA_FOURCC_YUY2)  || (obj_surface->fourcc==VA_FOURCC_Y800) ||
+            (obj_surface->fourcc==VA_FOURCC_RGBA)  || (obj_surface->fourcc==VA_FOURCC_444P) ) {
+            encoder_context->input_yuv_surface = encode_state->current_render_target;
+            encode_state->input_yuv_object = obj_surface;
+            return VA_STATUS_SUCCESS;
+        }
+    }
+
+    rect.x = 0;
+    rect.y = 0;
+    rect.width = obj_surface->orig_width;
+    rect.height = obj_surface->orig_height;
+
+    src_surface.base = (struct object_base *)obj_surface;
+    src_surface.type = I965_SURFACE_TYPE_SURFACE;
+    src_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+    switch( obj_surface->fourcc) {
+
+        case VA_FOURCC_YUY2:
+            fourcc = VA_FOURCC_YUY2;
+            format = VA_RT_FORMAT_YUV422;
+            subsample = SUBSAMPLE_YUV422H;
+            break;
+
+        case VA_FOURCC_UYVY:
+            fourcc = VA_FOURCC_UYVY;
+            format = VA_RT_FORMAT_YUV422;
+            subsample = SUBSAMPLE_YUV422H;
+            break;
+
+        case VA_FOURCC_Y800:
+            fourcc = VA_FOURCC_Y800;
+            format = VA_RT_FORMAT_YUV400;
+            subsample = SUBSAMPLE_YUV400;
+            break;
+
+        case VA_FOURCC_444P:
+            fourcc = VA_FOURCC_444P;
+            format = VA_RT_FORMAT_YUV444;
+            subsample = SUBSAMPLE_YUV444;
+            break;
+
+        case VA_FOURCC_RGBA:
+            fourcc = VA_FOURCC_RGBA;
+            format = VA_RT_FORMAT_RGB32;
+            subsample = SUBSAMPLE_RGBX;
+            break;
+
+        default: //All other scenarios will have NV12 format
+            fourcc = VA_FOURCC_NV12;
+            format = VA_RT_FORMAT_YUV420;
+            subsample = SUBSAMPLE_YUV420;
+            break;
+    }
+
+    status = i965_CreateSurfaces(ctx,
+                                 obj_surface->orig_width,
+                                 obj_surface->orig_height,
+                                 format,
+                                 1,
+                                 &encoder_context->input_yuv_surface);
+    assert(status == VA_STATUS_SUCCESS);
+
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
+    encode_state->input_yuv_object = obj_surface;
+    assert(obj_surface);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, fourcc, subsample);
+
+    dst_surface.base = (struct object_base *)obj_surface;
+    dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+    dst_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+    //The Y800 format is expected to be tiled.
+    //Linear Y800 is a corner case and needs code in the i965_image_processing.
+    if(obj_surface->fourcc != VA_FOURCC_Y800){
+        status = i965_image_processing(ctx,
+                                   &src_surface,
+                                   &rect,
+                                   &dst_surface,
+                                   &rect);
+        assert(status == VA_STATUS_SUCCESS);
+    }
+
+    encoder_context->is_tmp_id = 1;
+
+    return VA_STATUS_SUCCESS;
+}
+
 static VAStatus
 intel_encoder_check_misc_parameter(VADriverContextP ctx,
                                   struct encode_state *encode_state,
@@ -309,17 +434,28 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
     case VAProfileH264Main:
     case VAProfileH264High:
     case VAProfileH264MultiviewHigh:
-    case VAProfileH264StereoHigh:
+    case VAProfileH264StereoHigh: {
         vaStatus = intel_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
+        if (vaStatus != VA_STATUS_SUCCESS)
+            goto out;
+        vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
         break;
+    }
 
     case VAProfileMPEG2Simple:
-    case VAProfileMPEG2Main:
+    case VAProfileMPEG2Main: {
         vaStatus = intel_encoder_check_mpeg2_parameter(ctx, encode_state, encoder_context);
+        if (vaStatus != VA_STATUS_SUCCESS)
+            goto out;
+        vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
         break;
+    }
 
     case VAProfileJPEGBaseline:  {
         vaStatus = intel_encoder_check_jpeg_parameter(ctx, encode_state, encoder_context);
+        if (vaStatus != VA_STATUS_SUCCESS)
+            goto out;
+        vaStatus = intel_encoder_check_jpeg_yuv_surface(ctx, profile, encode_state, encoder_context);
         break;
     }
 
@@ -327,11 +463,6 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
         vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         break;
     }
-
-    if (vaStatus != VA_STATUS_SUCCESS)
-        goto out;
-
-    vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
 
     if (vaStatus == VA_STATUS_SUCCESS)
         vaStatus = intel_encoder_check_misc_parameter(ctx, encode_state, encoder_context);

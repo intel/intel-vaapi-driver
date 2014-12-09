@@ -70,7 +70,7 @@ static const uint32_t zigzag_direct[64] = {
 
 //Default Luminance quantization table
 //Source: Jpeg Spec ISO/IEC 10918-1, Annex K, Table K.1
-uint8_t jpeg_luma_quant[64] = {
+static const uint8_t jpeg_luma_quant[64] = {
     16, 11, 10, 16, 24,  40,  51,  61,
     12, 12, 14, 19, 26,  58,  60,  55,
     14, 13, 16, 24, 40,  57,  69,  56,
@@ -83,7 +83,7 @@ uint8_t jpeg_luma_quant[64] = {
 
 //Default Chroma quantization table
 //Source: Jpeg Spec ISO/IEC 10918-1, Annex K, Table K.2
-uint8_t jpeg_chroma_quant[64] = {
+static const uint8_t jpeg_chroma_quant[64] = {
     17, 18, 24, 47, 99, 99, 99, 99,
     18, 21, 26, 66, 99, 99, 99, 99,
     24, 26, 56, 99, 99, 99, 99, 99,
@@ -2494,7 +2494,8 @@ gen8_mfc_jpeg_set_surface_state(VADriverContextP ctx,
             surface_format = MFX_SURFACE_YCRCB_NORMAL;
             break;
         }
-        case VA_FOURCC_RGBA: { 
+        case VA_FOURCC_RGBA:
+        case VA_FOURCC_444P: {
             surface_format = MFX_SURFACE_R8G8B8A8_UNORM;
             break;
         }
@@ -2572,6 +2573,8 @@ gen8_mfc_jpeg_pic_state(VADriverContextP ctx,
             output_mcu_format = JPEG_ENC_MCU_YUV422H_2Y; 
             break;
         }
+
+        case VA_FOURCC_RGBA:
         case VA_FOURCC_444P: { 
             input_surface_format = JPEG_ENC_SURFACE_RGB; 
             output_mcu_format = JPEG_ENC_MCU_RGB; 
@@ -2699,7 +2702,6 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
 
     } else {
         //If the app doesnt send the qmatrix, use the buffered/default qmatrix
-        printf("App didnt send any qmatrix, using default....\n");
         qmatrix = &mfc_context->buffered_qmatrix;
         qmatrix->load_lum_quantiser_matrix = 1;
         qmatrix->load_chroma_quantiser_matrix = (pic_param->num_components > 1) ? 1 : 0;
@@ -2974,6 +2976,7 @@ static void get_Y_sampling_factors(uint32_t surface_format, uint8_t *h_factor, u
             (* v_factor) = 1;
             break;
         }
+        case VA_FOURCC_RGBA:
         case VA_FOURCC_444P: { 
             (* h_factor) = 1; 
             (* v_factor) = 1;
