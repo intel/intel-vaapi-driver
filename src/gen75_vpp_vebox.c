@@ -220,7 +220,8 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
                     13 << 6   |  // chr temp diff th
                     7 );         // chr temp diff low
 
-    if (IS_GEN8(i965->intel.device_info))
+    if (IS_GEN8(i965->intel.device_info) ||
+        IS_GEN9(i965->intel.device_info))
         *p_table ++ = 0;         // parameters for hot pixel, 
 }
 
@@ -1658,3 +1659,464 @@ gen8_vebox_process_picture(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+
+void
+skl_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    unsigned int* p_table ;
+    unsigned int progressive_dn = 1;
+    unsigned int dndi_top_first = 0;
+    unsigned int is_mcdi_enabled = 0;
+
+    if (proc_ctx->is_di_enabled) {
+        const VAProcFilterParameterBufferDeinterlacing * const deint_params =
+            proc_ctx->filter_di;
+
+        progressive_dn = 0;
+
+        /* If we are in "First Frame" mode, i.e. past frames are not
+           available for motion measure, then don't use the TFF flag */
+        dndi_top_first = !(deint_params->flags & (proc_ctx->is_first_frame ?
+                VA_DEINTERLACING_BOTTOM_FIELD :
+                VA_DEINTERLACING_BOTTOM_FIELD_FIRST));
+
+        is_mcdi_enabled =
+            (deint_params->algorithm == VAProcDeinterlacingMotionCompensated);
+    }
+
+    /*
+    VAProcFilterParameterBufferDeinterlacing *di_param =
+            (VAProcFilterParameterBufferDeinterlacing *) proc_ctx->filter_di;
+
+    VAProcFilterParameterBuffer * dn_param =
+            (VAProcFilterParameterBuffer *) proc_ctx->filter_dn;
+    */
+    p_table = (unsigned int *)proc_ctx->dndi_state_table.ptr;
+
+    *p_table ++ = ( 140 << 20 |   // denoise stad threshold . w1
+                    192 << 12 |   // dnmh_history_max
+                    7   << 8  |   // dnmh_delta[3:0]
+                    1 );          // denoise moving pixel threshold
+
+    *p_table ++ = ( 38 << 20 |    // denoise asd threshold
+                    0  << 10 |    // temporal diff th
+                    0 );          // low temporal diff th
+
+    *p_table ++ = ( progressive_dn << 28  |  // progressive dn
+                    38 << 16 |    // denoise th for sum of complexity measure
+                    32 << 10 |    // dnmh_history_init[5:0]
+                    0 );          // reserved
+
+    *p_table ++ = ( 0 << 28  |    // hot pixel count
+                    0 << 20  |    // hot pixel threshold
+                    1 << 12  |    // block noise estimate edge threshold
+                    20 );         // block noise estimate noise threshold
+
+    *p_table ++ = ( 140<< 16 |    // chroma denoise stad threshold
+                    0  << 13 |    // reserved
+                    1  << 12 |    // chrome denoise enable
+                    13 << 6  |    // chr temp diff th
+                    7 );          // chr temp diff low
+
+    *p_table ++ = 0;              // weight
+
+    *p_table ++ = ( 0 << 16  |    // dn_thmax
+                    0 );          // dn_thmin
+
+    *p_table ++ = ( 0 << 16  |    // dn_prt5
+                    0 );          // dn_dyn_thmin
+
+    *p_table ++ = ( 0 << 16  |    // dn_prt4
+                    0 );          // dn_prt3
+
+    *p_table ++ = ( 0 << 16  |    // dn_prt2
+                    0 );          // dn_prt1
+
+    *p_table ++ = ( 0 << 16  |    // dn_prt0
+                    0 << 10  |    // dn_wd22
+                    0 << 5   |    // dh_wd21
+                    0 );          // dh_wd20
+
+   *p_table ++ = ( 0 << 25  |    // dn_wd12
+                    0 << 20  |    // dn_wd11
+                    0 << 15  |    // dn_wd10
+                    0 << 10  |    // dn_wd02
+                    0 << 5   |    // dn_wd01
+                    0 );          // dn_wd00
+
+    *p_table ++ = ( 2 << 10 |     // stmm c2
+                    9 << 6  |     // cat slope minus 1
+                    5 << 2  |     // sad tight threshold
+                    0 );          // smooth mv th
+
+    *p_table ++ = ( 0  << 31 |    // stmm blending constant select
+                    64 << 24 |    // stmm trc1
+                    125<< 16 |    // stmm trc2
+                    0  << 14 |    // reserved
+                    30 << 8  |    // multiplier for vecm
+                    150 );        // maximum stmm
+
+    *p_table ++ = ( 118<< 24  |   // minumum stmm
+                    0  << 22  |   // stmm shift down
+                    1  << 20  |   // stmm shift up
+                    5  << 16  |   // stmm output shift
+                    100 << 8  |   // sdi threshold
+                    5 );          // sdi delta
+
+    *p_table ++ = ( 50  << 24 |   // sdi fallback mode 1 t1 constant
+                    100 << 16 |   // sdi fallback mode 1 t2 constant
+                    37  << 8  |   // sdi fallback mode 2 constant(angle2x1)
+                    175 );        // fmd temporal difference threshold
+
+    *p_table ++ = ( 16 << 24  |   // fmd #1 vertical difference th . w7
+                    100<< 16  |   // fmd #2 vertical difference th
+                    0  << 14  |   // cat threshold
+                    2  << 8   |   // fmd tear threshold
+                    is_mcdi_enabled  << 7  |  // mcdi enable, use motion compensated deinterlace algorithm
+                    dndi_top_first  << 3   |  // dn/di top first
+                    0 );          // reserved
+
+    *p_table ++ = ( 10 << 19  |   // neighbor pixel threshold
+                    0  << 16  |   // fmd for 2nd field of previous frame
+                    25 << 10  |   // mc pixel consistency threshold
+                    0  << 8   |   // fmd for 1st field for current frame
+                    10 << 4   |   // sad thb
+                    5 );          // sad tha
+}
+
+void skl_veb_iecp_csc_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    unsigned int *p_table = (unsigned int*)(proc_ctx->iecp_state_table.ptr + 220);
+    float tran_coef[9] = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
+    float v_coef[3]    = {0.0, 0.0, 0.0};
+    float u_coef[3]    = {0.0, 0.0, 0.0};
+    int   is_transform_enabled = 0;
+
+    if(!(proc_ctx->filters_mask & VPP_IECP_CSC)){
+        memset(p_table, 0, 12 * 4);
+        return;
+    }
+
+    if(proc_ctx->fourcc_input == VA_FOURCC_RGBA &&
+       (proc_ctx->fourcc_output == VA_FOURCC_NV12 ||
+        proc_ctx->fourcc_output == VA_FOURCC_YV12 ||
+        proc_ctx->fourcc_output == VA_FOURCC_YVY2 ||
+        proc_ctx->fourcc_output == VA_FOURCC_AYUV)) {
+
+        tran_coef[0] = 0.257;
+        tran_coef[1] = 0.504;
+        tran_coef[2] = 0.098;
+        tran_coef[3] = -0.148;
+        tran_coef[4] = -0.291;
+        tran_coef[5] = 0.439;
+        tran_coef[6] = 0.439;
+        tran_coef[7] = -0.368;
+        tran_coef[8] = -0.071;
+
+        u_coef[0] = 16 * 4;
+        u_coef[1] = 128 * 4;
+        u_coef[2] = 128 * 4;
+
+        is_transform_enabled = 1;
+    }else if((proc_ctx->fourcc_input  == VA_FOURCC_NV12 ||
+              proc_ctx->fourcc_input  == VA_FOURCC_YV12 ||
+              proc_ctx->fourcc_input  == VA_FOURCC_YUY2 ||
+              proc_ctx->fourcc_input  == VA_FOURCC_AYUV) &&
+             proc_ctx->fourcc_output == VA_FOURCC_RGBA) {
+        tran_coef[0] = 1.164;
+        tran_coef[1] = 0.000;
+        tran_coef[2] = 1.569;
+        tran_coef[3] = 1.164;
+        tran_coef[4] = -0.813;
+        tran_coef[5] = -0.392;
+        tran_coef[6] = 1.164;
+        tran_coef[7] = 2.017;
+        tran_coef[8] = 0.000;
+
+        v_coef[0] = -16 * 4;
+        v_coef[1] = -128 * 4;
+        v_coef[2] = -128 * 4;
+
+        is_transform_enabled = 1;
+    }else if(proc_ctx->fourcc_input != proc_ctx->fourcc_output){
+        //enable when input and output format are different.
+        is_transform_enabled = 1;
+    }
+
+    if(is_transform_enabled == 0){
+        memset(p_table, 0, 12 * 4);
+    }else{
+        *p_table ++ = ( is_transform_enabled << 31 |
+                        0 << 29 | // yuv_channel swap
+                        intel_format_convert(tran_coef[0], 2, 16, 1));          //c0, s2.16 format
+
+        *p_table ++ = ( 0 << 19 | //reserved
+                        intel_format_convert(tran_coef[1], 2, 16, 1));          //c1, s2.16 format
+
+        *p_table ++ = ( 0 << 19 | //reserved
+                        intel_format_convert(tran_coef[2], 2, 16, 1));          //c2, s2.16 format
+
+        *p_table ++ = ( 0 << 19 | //reserved
+                        intel_format_convert(tran_coef[3], 2, 16, 1));          //c3, s2.16 format
+
+        *p_table ++ = ( 0 << 19 | //reserved
+                        intel_format_convert(tran_coef[4], 2, 16, 1));          //c4, s2.16 format
+
+        *p_table ++ = ( 0 << 19 | //reserved
+                        intel_format_convert(tran_coef[5], 2, 16, 1));          //c5, s2.16 format
+
+        *p_table ++ = ( 0 << 19 | //reserved
+                        intel_format_convert(tran_coef[6], 2, 16, 1));          //c6, s2.16 format
+
+        *p_table ++ = ( 0 << 19 | //reserved
+                        intel_format_convert(tran_coef[7], 2, 16, 1));          //c7, s2.16 format
+
+        *p_table ++ = ( 0 << 19 | //reserved
+                        intel_format_convert(tran_coef[8], 2, 16, 1));          //c8, s2.16 format
+
+        *p_table ++ = ( intel_format_convert(u_coef[0], 16, 0, 1) << 16 |
+                        intel_format_convert(v_coef[0], 16, 0, 1));
+
+        *p_table ++ = ( intel_format_convert(u_coef[1], 16, 0, 1) << 16 |
+                        intel_format_convert(v_coef[1], 16, 0, 1));
+
+        *p_table ++ = ( intel_format_convert(u_coef[2], 16, 0, 1) << 16 |
+                        intel_format_convert(v_coef[2], 16, 0, 1));
+    }
+}
+
+void skl_veb_iecp_aoi_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    unsigned int *p_table = (unsigned int*)(proc_ctx->iecp_state_table.ptr + 27 * sizeof(unsigned int));
+
+    if (!(proc_ctx->filters_mask & VPP_IECP_AOI)) {
+        memset(p_table, 0, 3 * 4);
+    } else {
+        *p_table ++ = 0x00000000;
+        *p_table ++ = 0x00030000;
+        *p_table ++ = 0x00030000;
+    }
+}
+
+void skl_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    if(proc_ctx->filters_mask & VPP_DNDI_MASK) {
+        dri_bo *dndi_bo = proc_ctx->dndi_state_table.bo;
+        dri_bo_map(dndi_bo, 1);
+        proc_ctx->dndi_state_table.ptr = dndi_bo->virtual;
+
+        skl_veb_dndi_table(ctx, proc_ctx);
+
+        dri_bo_unmap(dndi_bo);
+    }
+
+    if(proc_ctx->filters_mask & VPP_IECP_MASK) {
+        dri_bo *iecp_bo = proc_ctx->iecp_state_table.bo;
+        dri_bo_map(iecp_bo, 1);
+        proc_ctx->iecp_state_table.ptr = iecp_bo->virtual;
+
+        hsw_veb_iecp_std_table(ctx, proc_ctx);
+        hsw_veb_iecp_ace_table(ctx, proc_ctx);
+        hsw_veb_iecp_tcc_table(ctx, proc_ctx);
+        hsw_veb_iecp_pro_amp_table(ctx, proc_ctx);
+        skl_veb_iecp_csc_table(ctx, proc_ctx);
+        skl_veb_iecp_aoi_table(ctx, proc_ctx);
+
+        dri_bo_unmap(iecp_bo);
+    }
+}
+
+void
+skl_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    struct intel_batchbuffer *batch = proc_ctx->batch;
+
+    BEGIN_VEB_BATCH(batch, 0x10);
+    OUT_VEB_BATCH(batch, VEB_STATE | (0x10 - 2));
+    OUT_VEB_BATCH(batch,
+                  0 << 25 |       // state surface control bits
+                  0 << 23 |       // reserved.
+                  0 << 22 |       // gamut expansion position
+                  0 << 15 |       // reserved.
+                  0 << 14 |       // single slice vebox enable
+                  0 << 13 |       // hot pixel filter enable
+                  0 << 12 |       // alpha plane enable
+                  0 << 11 |       // vignette enable
+                  0 << 10 |       // demosaic enable
+                  proc_ctx->current_output_type << 8  | // DI output frame
+                  1 << 7  |       // 444->422 downsample method
+                  1 << 6  |       // 422->420 downsample method
+                  proc_ctx->is_first_frame  << 5  |   // DN/DI first frame
+                  proc_ctx->is_di_enabled   << 4  |   // DI enable
+                  proc_ctx->is_dn_enabled   << 3  |   // DN enable
+                  proc_ctx->is_iecp_enabled << 2  |   // global IECP enabled
+                  0 << 1  |       // ColorGamutCompressionEnable
+                  0 ) ;           // ColorGamutExpansionEnable.
+
+    OUT_RELOC(batch,
+              proc_ctx->dndi_state_table.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_RELOC(batch,
+              proc_ctx->iecp_state_table.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_RELOC(batch,
+              proc_ctx->gamut_state_table.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_RELOC(batch,
+              proc_ctx->vertex_state_table.bo,
+              I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, 0);/*caputre pipe state pointer*/
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, 0);/*lace lut table state pointer*/
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, 0);/*gamma correction values address*/
+    OUT_VEB_BATCH(batch, 0);
+
+    ADVANCE_VEB_BATCH(batch);
+}
+
+void skl_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *proc_ctx, unsigned int is_output)
+{
+    struct intel_batchbuffer *batch = proc_ctx->batch;
+    unsigned int u_offset_y = 0, v_offset_y = 0;
+    unsigned int is_uv_interleaved = 0, tiling = 0, swizzle = 0;
+    unsigned int surface_format = PLANAR_420_8;
+    struct object_surface* obj_surf = NULL;
+    unsigned int surface_pitch = 0;
+    unsigned int half_pitch_chroma = 0;
+    unsigned int derived_pitch;
+
+    if (is_output) {
+        obj_surf = proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface;
+    } else {
+        obj_surf = proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface;
+    }
+
+    assert(obj_surf->fourcc == VA_FOURCC_NV12 ||
+           obj_surf->fourcc == VA_FOURCC_YUY2 ||
+           obj_surf->fourcc == VA_FOURCC_AYUV ||
+           obj_surf->fourcc == VA_FOURCC_RGBA);
+
+    if (obj_surf->fourcc == VA_FOURCC_NV12) {
+        surface_format = PLANAR_420_8;
+        surface_pitch = obj_surf->width;
+        is_uv_interleaved = 1;
+        half_pitch_chroma = 0;
+    } else if (obj_surf->fourcc == VA_FOURCC_YUY2) {
+        surface_format = YCRCB_NORMAL;
+        surface_pitch = obj_surf->width * 2;
+        is_uv_interleaved = 0;
+        half_pitch_chroma = 0;
+    } else if (obj_surf->fourcc == VA_FOURCC_AYUV) {
+        surface_format = PACKED_444A_8;
+        surface_pitch = obj_surf->width * 4;
+        is_uv_interleaved = 0;
+        half_pitch_chroma = 0;
+    } else if (obj_surf->fourcc == VA_FOURCC_RGBA) {
+        surface_format = R8G8B8A8_UNORM_SRGB;
+        surface_pitch = obj_surf->width * 4;
+        is_uv_interleaved = 0;
+        half_pitch_chroma = 0;
+    }
+
+    derived_pitch = surface_pitch;
+
+    u_offset_y = obj_surf->y_cb_offset;
+    v_offset_y = obj_surf->y_cr_offset;
+
+    dri_bo_get_tiling(obj_surf->bo, &tiling, &swizzle);
+
+    BEGIN_VEB_BATCH(batch, 9);
+    OUT_VEB_BATCH(batch, VEB_SURFACE_STATE | (9 - 2));
+    OUT_VEB_BATCH(batch,
+                  0 << 1 |         // reserved
+                  is_output);      // surface indentification.
+
+    OUT_VEB_BATCH(batch,
+                  (obj_surf->height - 1) << 18 |  // height . w3
+                  (obj_surf->width -1 )  << 4  |  // width
+                  0);                             // reserve
+
+    OUT_VEB_BATCH(batch,
+                  surface_format      << 28  |  // surface format, YCbCr420. w4
+                  is_uv_interleaved   << 27  |  // interleave chrome , two seperate palar
+                  0                   << 20  |  // reserved
+                  (surface_pitch - 1) << 3   |  // surface pitch, 64 align
+                  half_pitch_chroma   << 2   |  // half pitch for chrome
+                  !!tiling            << 1   |  // tiled surface, linear surface used
+                  (tiling == I915_TILING_Y));   // tiled walk, ignored when liner surface
+
+    OUT_VEB_BATCH(batch,
+                  0 << 16  |     // X offset for V(Cb)
+                  u_offset_y);   // Y offset for V(Cb)
+
+    OUT_VEB_BATCH(batch,
+                  0 << 16  |     // X offset for V(Cr)
+                  v_offset_y );  // Y offset for V(Cr)
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, derived_pitch - 1);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    ADVANCE_VEB_BATCH(batch);
+}
+
+VAStatus
+gen9_vebox_process_picture(VADriverContextP ctx,
+    struct intel_vebox_context *proc_ctx)
+{
+    VAStatus status;
+
+    status = gen75_vebox_init_pipe_params(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    status = gen75_vebox_init_filter_params(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    hsw_veb_pre_format_convert(ctx, proc_ctx);
+
+    status = gen75_vebox_ensure_surfaces(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    status = gen75_vebox_ensure_surfaces_storage(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
+        assert(proc_ctx->is_second_field);
+        /* directly copy the saved frame in the second call */
+    } else {
+        intel_batchbuffer_start_atomic_veb(proc_ctx->batch, 0x1000);
+        intel_batchbuffer_emit_mi_flush(proc_ctx->batch);
+        skl_veb_state_table_setup(ctx, proc_ctx);
+        skl_veb_state_command(ctx, proc_ctx);
+        skl_veb_surface_state(ctx, proc_ctx, INPUT_SURFACE);
+        skl_veb_surface_state(ctx, proc_ctx, OUTPUT_SURFACE);
+        bdw_veb_dndi_iecp_command(ctx, proc_ctx);
+        intel_batchbuffer_end_atomic(proc_ctx->batch);
+        intel_batchbuffer_flush(proc_ctx->batch);
+    }
+
+    hsw_veb_post_format_convert(ctx, proc_ctx);
+
+    return VA_STATUS_SUCCESS;
+}
