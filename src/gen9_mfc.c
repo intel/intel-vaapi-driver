@@ -2442,8 +2442,18 @@ static VAStatus gen9_mfc_pipeline(VADriverContextP ctx,
 
 Bool gen9_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    struct gen6_mfc_context *mfc_context = calloc(1, sizeof(struct gen6_mfc_context));
+    struct gen6_mfc_context *mfc_context = NULL;
 
+#if MFC_SOFTWARE_HASWELL
+    if ((encoder_context->codec == CODEC_H264) ||
+        (encoder_context->codec == CODEC_H264_MVC) ||
+        (encoder_context->codec == CODEC_MPEG2)) {
+
+        return gen8_mfc_context_init(ctx, encoder_context);
+    }
+#endif
+
+    mfc_context = calloc(1, sizeof(struct gen6_mfc_context));
     mfc_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
     mfc_context->gpe_context.idrt.max_entries = MAX_GPE_KERNELS;
