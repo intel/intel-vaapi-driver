@@ -27,7 +27,7 @@ INTEL_GEN8_ASM	= $(INTEL_G8A:%.g8a=%.gen8.asm)
 
 
 INTEL_G9B	= intra_frame_gen9.g9b inter_frame_gen9.g9b inter_bframe_gen9.g9b mpeg2_inter_gen9.g9b
-INTEL_G9A	= $(INTEL_G8A)
+INTEL_G9A	= intra_frame_gen9.g9a inter_frame_gen9.g9a inter_bframe_gen9.g9a mpeg2_inter_gen9.g9a
 INTEL_GEN9_INC	= $(INTEL_GEN8_INC)
 INTEL_GEN9_ASM	= $(INTEL_G9A:%.g9a=%.gen9.asm)
 
