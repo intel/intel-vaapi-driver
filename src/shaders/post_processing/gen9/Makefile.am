@@ -1,4 +1,4 @@
-SRCDIR = ../gen8/
+SRCDIR = $(top_srcdir)/src/shaders/post_processing/gen8
 VPATH = $(SRCDIR)
 
 INTEL_PP_G9B = \
@@ -59,10 +59,10 @@ SUFFIXES = .g9b .g9s .asm
 $(INTEL_PP_GEN9_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G9A)
 .asm.g9s:
 	$(AM_V_GEN)cpp $< > _pp0.$@;		\
-	../../gpp.py _pp0.$@ $@;		\
+	$(PYTHON2) $(top_srcdir)/src/shaders/gpp.py _pp0.$@ $@;	\
 	rm _pp0.$@
 .g9s.g9b:
-	$(AM_V_GEN)intel-gen4asm -a -o $@ -g 9 $<
+	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 9 $<
 
 CLEANFILES = $(INTEL_PP_GEN9_ASM)
 

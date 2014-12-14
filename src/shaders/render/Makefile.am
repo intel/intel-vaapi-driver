@@ -170,7 +170,7 @@ $(INTEL_G8S): $(INTEL_G8A) $(INTEL_G8I)
 
 $(INTEL_G9S): $(INTEL_G9A) $(INTEL_G9I)
 .g9a.g9s:
-	$(AM_V_GEN)m4 $< > $@
+	$(AM_V_GEN)m4 -I$(srcdir) $< > $@
 .g9s.g9b:
 	$(AM_V_GEN)$(GEN4ASM) -g 9 -o $@ $<
 
