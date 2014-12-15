@@ -225,11 +225,349 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
         *p_table ++ = 0;         // parameters for hot pixel, 
 }
 
+//Set default values for STDE
+void set_std_table_default(struct intel_vebox_context *proc_ctx, unsigned int *p_table) {
+
+        //DWord 15
+        *p_table ++ = ( 0 << 31     |    // Reserved
+                        0x3F8 << 21 |    // SATB1 (10 bits, default 8, optimized value -8)
+                        31 << 14    |    // SATP3
+                        6 << 7      |    // SATP2
+                        0x7A );          // SATP1 (7 bits, default 6, optimized value -6)
+
+        //DWord 16
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        297 << 20 |    // SATS0
+                        124 << 10 |    // SATB3
+                        8 );           // SATB2
+
+        //DWord 17
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        297 << 11 |    // SATS2
+                        85 );          // SATS1
+
+        //DWord 18
+        *p_table ++ = ( 14 << 25    |    // HUEP3
+                        6 << 18     |    // HUEP2
+                        0x7A << 11  |    // HUEP1 (7 bits, default value -6 = 7Ah)
+                        256 );           // SATS3
+
+        //DWord 19
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        256 << 20 |    // HUEB3
+                        8 << 10   |    // HUEB2
+                        0x3F8 );       // HUEB1 (10 bits, default value 8, optimized value -8)
+
+        //DWord 20
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        85 << 11  |    // HUES1
+                        384 );         // HUES0
+
+        //DWord 21
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3
+                        384 );         // HUES2
+
+        //DWord 22
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        0 << 21   |    // SATB1_DARK
+                        31 << 14  |    // SATP3_DARK
+                        31 << 7   |    // SATP2_DARK
+                        0x7B );        // SATP1_DARK (7 bits, default value -11 = FF5h, optimized value -5)
+
+        //DWord 23
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        305 << 20 |    // SATS0_DARK
+                        124 << 10 |    // SATB3_DARK
+                        124 );         // SATB2_DARK
+
+        //DWord 24
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // SATS2_DARK
+                        220 );         // SATS1_DARK
+
+        //DWord 25
+        *p_table ++ = ( 14 << 25  |    // HUEP3_DARK
+                        14 << 18  |    // HUEP2_DARK
+                        14 << 11  |    // HUEP1_DARK
+                        256 );         // SATS3_DARK
+
+        //DWord 26
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        56 << 20  |    // HUEB3_DARK
+                        56 << 10  |    // HUEB2_DARK
+                        56 );          // HUEB1_DARK
+
+        //DWord 27
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES1_DARK
+                        256 );         // HUES0_DARK
+
+        //DWord 28
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3_DARK
+                        256 );         // HUES2_DARK
+}
+
+//Set values for STDE factor 3
+void set_std_table_3(struct intel_vebox_context *proc_ctx, unsigned int *p_table) {
+
+        //DWord 15
+        *p_table ++ = ( 0 << 31     |    // Reserved
+                        1016 << 21  |    // SATB1 (10 bits, default 8, optimized value 1016)
+                        31 << 14    |    // SATP3
+                        6 << 7      |    // SATP2
+                        122 );           // SATP1 (7 bits, default 6, optimized value 122)
+
+        //DWord 16
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        297 << 20 |    // SATS0
+                        124 << 10 |    // SATB3
+                        8 );           // SATB2
+
+        //DWord 17
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        297 << 11 |    // SATS2
+                        85 );          // SATS1
+
+        //DWord 18
+        *p_table ++ = ( 14 << 25    |    // HUEP3
+                        6 << 18     |    // HUEP2
+                        122 << 11   |    // HUEP1 (7 bits, default value -6 = 7Ah, optimized 122)
+                        256 );           // SATS3
+
+        //DWord 19
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        56 << 20  |    // HUEB3 (default 256, optimized 56)
+                        8 << 10   |    // HUEB2
+                        1016 );        // HUEB1 (10 bits, default value 8, optimized value 1016)
+
+        //DWord 20
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        85 << 11  |    // HUES1
+                        384 );         // HUES0
+
+        //DWord 21
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3
+                        384 );         // HUES2
+
+        //DWord 22
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        0 << 21   |    // SATB1_DARK
+                        31 << 14  |    // SATP3_DARK
+                        31 << 7   |    // SATP2_DARK
+                        123 );         // SATP1_DARK (7 bits, default value -11 = FF5h, optimized value 123)
+
+        //DWord 23
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        305 << 20 |    // SATS0_DARK
+                        124 << 10 |    // SATB3_DARK
+                        124 );         // SATB2_DARK
+
+        //DWord 24
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // SATS2_DARK
+                        220 );         // SATS1_DARK
+
+        //DWord 25
+        *p_table ++ = ( 14 << 25  |    // HUEP3_DARK
+                        14 << 18  |    // HUEP2_DARK
+                        14 << 11  |    // HUEP1_DARK
+                        256 );         // SATS3_DARK
+
+        //DWord 26
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        56 << 20  |    // HUEB3_DARK
+                        56 << 10  |    // HUEB2_DARK
+                        56 );          // HUEB1_DARK
+
+        //DWord 27
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES1_DARK
+                        256 );         // HUES0_DARK
+
+        //DWord 28
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3_DARK
+                        256 );         // HUES2_DARK
+}
+
+//Set values for STDE factor 6
+void set_std_table_6(struct intel_vebox_context *proc_ctx, unsigned int *p_table) {
+
+        //DWord 15
+        *p_table ++ = ( 0 << 31     |    // Reserved
+                        0 << 21     |    // SATB1 (10 bits, default 8, optimized value 0)
+                        31 << 14    |    // SATP3
+                        31 << 7     |    // SATP2 (default 6, optimized 31)
+                        114 );           // SATP1 (7 bits, default 6, optimized value 114)
+
+        //DWord 16
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        467 << 20 |    // SATS0 (default 297, optimized 467)
+                        124 << 10 |    // SATB3
+                        124 );         // SATB2
+
+        //DWord 17
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // SATS2 (default 297, optimized 256)
+                        176 );         // SATS1
+
+        //DWord 18
+        *p_table ++ = ( 14 << 25    |    // HUEP3
+                        14 << 18    |    // HUEP2
+                        14 << 11    |    // HUEP1 (7 bits, default value -6 = 7Ah, optimized value 14)
+                        256 );           // SATS3
+
+        //DWord 19
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        56 << 20  |    // HUEB3
+                        56 << 10  |    // HUEB2
+                        56 );          // HUEB1 (10 bits, default value 8, optimized value 56)
+
+        //DWord 20
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES1
+                        256 );         // HUES0
+
+        //DWord 21
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3
+                        256 );         // HUES2
+
+        //DWord 22
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        0 << 21   |    // SATB1_DARK
+                        31 << 14  |    // SATP3_DARK
+                        31 << 7   |    // SATP2_DARK
+                        123 );         // SATP1_DARK (7 bits, default value -11 = FF5h, optimized value 123)
+
+        //DWord 23
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        305 << 20 |    // SATS0_DARK
+                        124 << 10 |    // SATB3_DARK
+                        124 );         // SATB2_DARK
+
+        //DWord 24
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // SATS2_DARK
+                        220 );         // SATS1_DARK
+
+        //DWord 25
+        *p_table ++ = ( 14 << 25  |    // HUEP3_DARK
+                        14 << 18  |    // HUEP2_DARK
+                        14 << 11  |    // HUEP1_DARK
+                        256 );         // SATS3_DARK
+
+        //DWord 26
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        56 << 20  |    // HUEB3_DARK
+                        56 << 10  |    // HUEB2_DARK
+                        56 );          // HUEB1_DARK
+
+        //DWord 27
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES1_DARK
+                        256 );         // HUES0_DARK
+
+        //DWord 28
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3_DARK
+                        256 );         // HUES2_DARK
+}
+
+//Set values for STDE factor 9
+void set_std_table_9(struct intel_vebox_context *proc_ctx, unsigned int *p_table) {
+
+        //DWord 15
+        *p_table ++ = ( 0 << 31     |    // Reserved
+                        0 << 21     |    // SATB1 (10 bits, default 8, optimized value 0)
+                        31 << 14    |    // SATP3
+                        31 << 7     |    // SATP2 (default 6, optimized 31)
+                        108 );           // SATP1 (7 bits, default 6, optimized value 108)
+
+        //DWord 16
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        721 << 20 |    // SATS0 (default 297, optimized 721)
+                        124 << 10 |    // SATB3
+                        124 );         // SATB2
+
+        //DWord 17
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // SATS2 (default 297, optimized 256)
+                        156 );         // SATS1 (default 176, optimized 156)
+
+        //DWord 18
+        *p_table ++ = ( 14 << 25    |    // HUEP3
+                        14 << 18    |    // HUEP2
+                        14 << 11    |    // HUEP1 (7 bits, default value -6 = 7Ah, optimized value 14)
+                        256 );           // SATS3
+
+        //DWord 19
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        56 << 20  |    // HUEB3
+                        56 << 10  |    // HUEB2
+                        56 );          // HUEB1 (10 bits, default value 8, optimized value 56)
+
+        //DWord 20
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES1
+                        256 );         // HUES0
+
+        //DWord 21
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3
+                        256 );         // HUES2
+
+        //DWord 22
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        0 << 21   |    // SATB1_DARK
+                        31 << 14  |    // SATP3_DARK
+                        31 << 7   |    // SATP2_DARK
+                        123 );         // SATP1_DARK (7 bits, default value -11 = FF5h, optimized value 123)
+
+        //DWord 23
+        *p_table ++ = ( 0 << 31   |    // Reserved
+                        305 << 20 |    // SATS0_DARK
+                        124 << 10 |    // SATB3_DARK
+                        124 );         // SATB2_DARK
+
+        //DWord 24
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // SATS2_DARK
+                        220 );         // SATS1_DARK
+
+        //DWord 25
+        *p_table ++ = ( 14 << 25  |    // HUEP3_DARK
+                        14 << 18  |    // HUEP2_DARK
+                        14 << 11  |    // HUEP1_DARK
+                        256 );         // SATS3_DARK
+
+        //DWord 26
+        *p_table ++ = ( 0 << 30   |    // Reserved
+                        56 << 20  |    // HUEB3_DARK
+                        56 << 10  |    // HUEB2_DARK
+                        56 );          // HUEB1_DARK
+
+        //DWord 27
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES1_DARK
+                        256 );         // HUES0_DARK
+
+        //DWord 28
+        *p_table ++ = ( 0 << 22   |    // Reserved
+                        256 << 11 |    // HUES3_DARK
+                        256 );         // HUES2_DARK
+}
+
+
 void hsw_veb_iecp_std_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     unsigned int *p_table = proc_ctx->iecp_state_table.ptr + 0 ;
-    //VAProcFilterParameterBuffer * std_param =
-    //        (VAProcFilterParameterBuffer *) proc_ctx->filter_std;
+    int stde_factor = 0; //default value
+    VAProcFilterParameterBuffer * std_param = (VAProcFilterParameterBuffer *) proc_ctx->filter_iecp_std;
+    stde_factor = std_param->value;
 
     if(!(proc_ctx->filters_mask & VPP_IECP_STD_STE)){ 
         memset(p_table, 0, 29 * 4);
@@ -328,86 +666,25 @@ void hsw_veb_iecp_std_table(VADriverContextP ctx, struct intel_vebox_context *pr
                         1 << 11   |    // Skin_Types_Enable
                         0 );           // S3U
 
-        //DWord 15
-        *p_table ++ = ( 0 << 31     |    // Reserved
-                        0x3F8 << 21 |    // SATB1 (10 bits, default 8, optimized value -8)
-                        31 << 14    |    // SATP3
-                        6 << 7      |    // SATP2
-                        0x7A );          // SATP1 (7 bits, default 6, optimized value -6)
+        //Set DWord 15 through DWord 28 in their respective methods.
+        switch(stde_factor) {
+            case 3:
+                set_std_table_3(proc_ctx, p_table);
+                break;
 
-        //DWord 16
-        *p_table ++ = ( 0 << 31   |    // Reserved
-                        297 << 20 |    // SATS0
-                        124 << 10 |    // SATB3
-                        8 );           // SATB2
+            case 6:
+                set_std_table_6(proc_ctx, p_table);
+                break;
 
-        //DWord 17
-        *p_table ++ = ( 0 << 22   |    // Reserved
-                        297 << 11 |    // SATS2
-                        85 );          // SATS1
+            case 9:
+                set_std_table_9(proc_ctx, p_table);
+                break;
 
-        //DWord 18
-        *p_table ++ = ( 14 << 25    |    // HUEP3
-                        6 << 18     |    // HUEP2
-                        0x7A << 11  |    // HUEP1 (7 bits, default value -6 = 7Ah)
-                        256 );           // SATS3
-
-        //DWord 19
-        *p_table ++ = ( 0 << 30   |    // Reserved
-                        256 << 20 |    // HUEB3
-                        8 << 10   |    // HUEB2
-                        0x3F8 );       // HUEB1 (10 bits, default value 8, optimized value -8)
-
-        //DWord 20
-        *p_table ++ = ( 0 << 22   |    // Reserved
-                        85 << 11  |    // HUES1
-                        384 );         // HUES
-
-        //DWord 21
-        *p_table ++ = ( 0 << 22   |    // Reserved
-                        256 << 11 |    // HUES3
-                        384 );         // HUES2
-
-        //DWord 22
-        *p_table ++ = ( 0 << 31   |    // Reserved
-                        0 << 21   |    // SATB1_DARK
-                        31 << 14  |    // SATP3_DARK
-                        31 << 7   |    // SATP2_DARK
-                        0x7B );        // SATP1_DARK (7 bits, default value -11 = FF5h, optimized value -5)
-
-        //DWord 23
-        *p_table ++ = ( 0 << 31   |    // Reserved
-                        305 << 20 |    // SATS0_DARK
-                        124 << 10 |    // SATB3_DARK
-                        124 );         // SATB2_DARK
-
-        //DWord 24
-        *p_table ++ = ( 0 << 22   |    // Reserved
-                        256 << 11 |    // SATS2_DARK
-                        220 );         // SATS1_DARK
-
-        //DWord 25
-        *p_table ++ = ( 14 << 25  |    // HUEP3_DARK
-                        14 << 18  |    // HUEP2_DARK
-                        14 << 11  |    // HUEP1_DARK
-                        256 );         // SATS3_DARK
-
-        //DWord 26
-        *p_table ++ = ( 0 << 30   |    // Reserved
-                        56 << 20  |    // HUEB3_DARK
-                        56 << 10  |    // HUEB2_DARK
-                        56 );          // HUEB1_DARK
-
-        //DWord 27
-        *p_table ++ = ( 0 << 22   |    // Reserved
-                        256 << 11 |    // HUES1_DARK
-                        256 );         // HUES0_DARK
-
-        //DWord 28
-        *p_table ++ = ( 0 << 22   |    // Reserved
-                        256 << 11 |    // HUES3_DARK
-                        256 );         // HUES2_DARK
-    }
+            default:
+                set_std_table_default(proc_ctx, p_table);
+                break;
+        }
+    }//end of else
 }
 
 void hsw_veb_iecp_ace_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
