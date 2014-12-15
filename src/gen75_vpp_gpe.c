@@ -860,7 +860,8 @@ vpp_gpe_context_destroy(VADriverContextP ctx,
         vpp_gpe_ctx->surface_tmp_object = NULL;
     }   
 
-    free(vpp_gpe_ctx->batch);
+    if (vpp_gpe_ctx->batch)
+        intel_batchbuffer_free(vpp_gpe_ctx->batch);
 
     free(vpp_gpe_ctx);
 }
