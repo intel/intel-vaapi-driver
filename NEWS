@@ -1,5 +1,14 @@
-libva-intel-driver NEWS -- summary of changes.  2014-10-24
+libva-intel-driver NEWS -- summary of changes.  2014-12-xx
 Copyright (C) 2009-2014 Intel Corporation
+
+Version 1.5.0 - xx.Dec.2014
+* Add support for Skylake
+  - Decoding: H.264/MPEG-2/VC-1/JPEG/VP8/HEVC
+  - Encoding: H.264/MPEG-2/JPEG
+  - VPP: CSC/scaling/NoiseReduction/Deinterlacing{Bob, MotionAdaptive, MotionCompensated}/ColorBalance
+* Add support for JPEG encoding on Braswell
+* Add enhancement for video post/pre processing
+* Fix out of tree builds (Emil Velikov)
 
 Version 1.4.1 - 24.Oct.2014
 * Use a new method to detect encoding capabilitiy on Haswell
