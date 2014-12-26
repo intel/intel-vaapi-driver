@@ -110,7 +110,8 @@ intel_driver_init(VADriverContextP ctx)
     intel->locked = 0;
     pthread_mutex_init(&intel->ctxmutex, NULL);
 
-    intel_driver_get_param(intel, I915_PARAM_CHIPSET_ID, &intel->device_id);
+    intel_memman_init(intel);
+    intel->device_id = drm_intel_bufmgr_gem_get_devid(intel->bufmgr);
     intel->device_info = i965_get_device_info(intel->device_id);
 
     if (!intel->device_info)
@@ -130,7 +131,6 @@ intel_driver_init(VADriverContextP ctx)
         intel->has_bsd2 = !!ret_value;
 
     intel_driver_get_revid(intel, &intel->revision);
-    intel_memman_init(intel);
     return true;
 }
 
