@@ -80,6 +80,7 @@ struct intel_batchbuffer;
 extern uint32_t g_intel_debug_option_flags;
 #define VA_INTEL_DEBUG_OPTION_ASSERT    (1 << 0)
 #define VA_INTEL_DEBUG_OPTION_BENCH     (1 << 1)
+#define VA_INTEL_DEBUG_OPTION_DUMP_AUB  (1 << 2)
 
 #define ASSERT_RET(value, fail_ret) do {    \
         if (!(value)) {                     \
