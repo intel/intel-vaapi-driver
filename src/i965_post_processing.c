@@ -5550,18 +5550,6 @@ i965_proc_picture(VADriverContextP ctx,
         src_rect.height = in_height;
     }
 
-    if (pipeline_param->output_region) {
-        dst_rect.x = pipeline_param->output_region->x;
-        dst_rect.y = pipeline_param->output_region->y;
-        dst_rect.width = pipeline_param->output_region->width;
-        dst_rect.height = pipeline_param->output_region->height;
-    } else {
-        dst_rect.x = 0;
-        dst_rect.y = 0;
-        dst_rect.width = in_width;
-        dst_rect.height = in_height;
-    }
-
     proc_context->pp_context.pipeline_param = pipeline_param;
 
     for (i = 0; i < pipeline_param->num_filters; i++) {
@@ -5619,6 +5607,18 @@ i965_proc_picture(VADriverContextP ctx,
     if (!obj_surface) {
         status = VA_STATUS_ERROR_INVALID_SURFACE;
         goto error;
+    }
+
+    if (pipeline_param->output_region) {
+        dst_rect.x = pipeline_param->output_region->x;
+        dst_rect.y = pipeline_param->output_region->y;
+        dst_rect.width = pipeline_param->output_region->width;
+        dst_rect.height = pipeline_param->output_region->height;
+    } else {
+        dst_rect.x = 0;
+        dst_rect.y = 0;
+        dst_rect.width = obj_surface->orig_width;
+        dst_rect.height = obj_surface->orig_height;
     }
 
     int csc_needed = 0;
