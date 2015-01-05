@@ -5516,7 +5516,7 @@ VAStatus i965_QueryVideoProcPipelineCaps(
                    VA_STATUS_ERROR_INVALID_PARAMETER);
             
             if (deint->algorithm == VAProcDeinterlacingMotionAdaptive ||
-                deint->algorithm == VAProcDeinterlacingMotionCompensated);
+                deint->algorithm == VAProcDeinterlacingMotionCompensated)
                 pipeline_cap->num_forward_references++;
         } else if (base->type == VAProcFilterSkinToneEnhancement) {
                 VAProcFilterParameterBuffer *stde = (VAProcFilterParameterBuffer *)base;
