@@ -704,6 +704,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
     /* Other attributes don't seem to be defined */
     /* What to do if we don't know the attribute? */
     for (i = 0; i < num_attribs; i++) {
+        attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
         switch (attrib_list[i].type) {
         case VAConfigAttribRTFormat:
             attrib_list[i].value = i965_get_default_chroma_formats(ctx,
@@ -719,6 +720,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     attrib_list[i].value |= VA_RC_CBR;
                 break;
             }
+            break;
 
         case VAConfigAttribEncPackedHeaders:
             if (entrypoint == VAEntrypointEncSlice) {
@@ -733,12 +735,14 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 }
                 break;
             }
+            break;
 
 	case VAConfigAttribEncMaxRefFrames:
 	    if (entrypoint == VAEntrypointEncSlice) {
 		attrib_list[i].value = (1 << 16) | (1 << 0);
 		break;
 	    }
+            break;
 
 	case VAConfigAttribEncQualityRange:
 	    if (entrypoint == VAEntrypointEncSlice) {
@@ -749,6 +753,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     attrib_list[i].value = ENCODER_QUALITY_RANGE;
 		break;
 	    }
+            break;
     
     case VAConfigAttribEncJPEG: 
         if( entrypoint == VAEntrypointEncPicture) {
