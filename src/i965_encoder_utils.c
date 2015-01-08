@@ -30,6 +30,7 @@
 #include <va/va_enc_h264.h>
 #include <va/va_enc_mpeg2.h>
 #include <va/va_enc_vp8.h>
+#include <va/va_enc_hevc.h>
 #include <math.h>
 #include "gen6_mfc.h"
 #include "i965_encoder_utils.h"
@@ -61,6 +62,17 @@
 #define PROFILE_IDC_BASELINE    66
 #define PROFILE_IDC_MAIN        77
 #define PROFILE_IDC_HIGH        100
+
+/*HEVC*/
+#define VPS_NUT		32
+#define SPS_NUT		33
+#define PPS_NUT		34
+#define IDR_WRADL_NUT	19
+#define IDR_NLP_NUT	20
+#define SLICE_TRAIL_N_NUT	0
+#define SLICE_TRAIL_R_NUT	1
+#define PREFIX_SEI_NUT	39
+#define SUFFIX_SEI_NUT	40
 
 struct __avc_bitstream {
     unsigned int *buffer;
@@ -665,4 +677,449 @@ void binarize_vp8_frame_header(VAEncSequenceParameterBufferVP8 *seq_param,
 
     mfc_context->vp8_state.vp8_frame_header = (unsigned char *)bs.buffer;
     mfc_context->vp8_state.frame_header_bit_count = bs.bit_offset;
+}
+
+/* HEVC to do for internal header generated*/
+
+void nal_header_hevc(avc_bitstream *bs, int nal_unit_type, int temporalid)
+{
+    /* forbidden_zero_bit: 0 */
+    avc_bitstream_put_ui(bs, 0, 1);
+    /* nal unit_type */
+    avc_bitstream_put_ui(bs, nal_unit_type, 6);
+    /* layer_id. currently it is zero */
+    avc_bitstream_put_ui(bs, 0, 6);
+    /* teporalid + 1 .*/
+    avc_bitstream_put_ui(bs, temporalid + 1, 3);
+}
+
+int build_hevc_sei_buffering_period(int init_cpb_removal_delay_length,
+                                unsigned int init_cpb_removal_delay,
+                                unsigned int init_cpb_removal_delay_offset,
+                                unsigned char **sei_buffer)
+{
+    unsigned char *byte_buf;
+    int bp_byte_size, i;
+    //unsigned int cpb_removal_delay;
+
+    avc_bitstream nal_bs;
+    avc_bitstream sei_bp_bs;
+
+    avc_bitstream_start(&sei_bp_bs);
+    avc_bitstream_put_ue(&sei_bp_bs, 0);       /*seq_parameter_set_id*/
+    /* SEI buffer period info */
+    /* NALHrdBpPresentFlag == 1 */
+    avc_bitstream_put_ui(&sei_bp_bs, init_cpb_removal_delay,init_cpb_removal_delay_length);
+    avc_bitstream_put_ui(&sei_bp_bs, init_cpb_removal_delay_offset,init_cpb_removal_delay_length);
+    if ( sei_bp_bs.bit_offset & 0x7) {
+        avc_bitstream_put_ui(&sei_bp_bs, 1, 1);
+    }
+    avc_bitstream_end(&sei_bp_bs);
+    bp_byte_size = (sei_bp_bs.bit_offset + 7) / 8;
+
+    avc_bitstream_start(&nal_bs);
+    nal_start_code_prefix(&nal_bs);
+    nal_header_hevc(&nal_bs, PREFIX_SEI_NUT ,0);
+
+    /* Write the SEI buffer period data */
+    avc_bitstream_put_ui(&nal_bs, 0, 8);
+    avc_bitstream_put_ui(&nal_bs, bp_byte_size, 8);
+
+    byte_buf = (unsigned char *)sei_bp_bs.buffer;
+    for(i = 0; i < bp_byte_size; i++) {
+        avc_bitstream_put_ui(&nal_bs, byte_buf[i], 8);
+    }
+    free(byte_buf);
+
+    avc_rbsp_trailing_bits(&nal_bs);
+    avc_bitstream_end(&nal_bs);
+
+    *sei_buffer = (unsigned char *)nal_bs.buffer;
+
+    return nal_bs.bit_offset;
+}
+
+int build_hevc_idr_sei_buffer_timing(unsigned int init_cpb_removal_delay_length,
+                                 unsigned int init_cpb_removal_delay,
+                                 unsigned int init_cpb_removal_delay_offset,
+                                 unsigned int cpb_removal_length,
+                                 unsigned int cpb_removal_delay,
+                                 unsigned int dpb_output_length,
+                                 unsigned int dpb_output_delay,
+                                 unsigned char **sei_buffer)
+{
+    unsigned char *byte_buf;
+    int bp_byte_size, i, pic_byte_size;
+    //unsigned int cpb_removal_delay;
+
+    avc_bitstream nal_bs;
+    avc_bitstream sei_bp_bs, sei_pic_bs;
+
+    avc_bitstream_start(&sei_bp_bs);
+    avc_bitstream_put_ue(&sei_bp_bs, 0);       /*seq_parameter_set_id*/
+    /* SEI buffer period info */
+    /* NALHrdBpPresentFlag == 1 */
+    avc_bitstream_put_ui(&sei_bp_bs, init_cpb_removal_delay,init_cpb_removal_delay_length);
+    avc_bitstream_put_ui(&sei_bp_bs, init_cpb_removal_delay_offset,init_cpb_removal_delay_length);
+    if ( sei_bp_bs.bit_offset & 0x7) {
+        avc_bitstream_put_ui(&sei_bp_bs, 1, 1);
+    }
+    avc_bitstream_end(&sei_bp_bs);
+    bp_byte_size = (sei_bp_bs.bit_offset + 7) / 8;
+
+    /* SEI pic timing info */
+    avc_bitstream_start(&sei_pic_bs);
+    /* The info of CPB and DPB delay is controlled by CpbDpbDelaysPresentFlag,
+    * which is derived as 1 if one of the following conditions is true:
+    * nal_hrd_parameters_present_flag is present in the avc_bitstream and is equal to 1,
+    * vcl_hrd_parameters_present_flag is present in the avc_bitstream and is equal to 1,
+    */
+    //cpb_removal_delay = (hevc_context.current_cpb_removal - hevc_context.prev_idr_cpb_removal);
+    avc_bitstream_put_ui(&sei_pic_bs, cpb_removal_delay, cpb_removal_length);
+    avc_bitstream_put_ui(&sei_pic_bs, dpb_output_delay,dpb_output_length);
+    if ( sei_pic_bs.bit_offset & 0x7) {
+        avc_bitstream_put_ui(&sei_pic_bs, 1, 1);
+    }
+    /* The pic_structure_present_flag determines whether the pic_structure
+    * info is written into the SEI pic timing info.
+    * Currently it is set to zero.
+    */
+    avc_bitstream_end(&sei_pic_bs);
+    pic_byte_size = (sei_pic_bs.bit_offset + 7) / 8;
+
+    avc_bitstream_start(&nal_bs);
+    nal_start_code_prefix(&nal_bs);
+    nal_header_hevc(&nal_bs, PREFIX_SEI_NUT ,0);
+
+    /* Write the SEI buffer period data */
+    avc_bitstream_put_ui(&nal_bs, 0, 8);
+    avc_bitstream_put_ui(&nal_bs, bp_byte_size, 8);
+
+    byte_buf = (unsigned char *)sei_bp_bs.buffer;
+    for(i = 0; i < bp_byte_size; i++) {
+        avc_bitstream_put_ui(&nal_bs, byte_buf[i], 8);
+    }
+    free(byte_buf);
+    /* write the SEI pic timing data */
+    avc_bitstream_put_ui(&nal_bs, 0x01, 8);
+    avc_bitstream_put_ui(&nal_bs, pic_byte_size, 8);
+
+    byte_buf = (unsigned char *)sei_pic_bs.buffer;
+    for(i = 0; i < pic_byte_size; i++) {
+        avc_bitstream_put_ui(&nal_bs, byte_buf[i], 8);
+    }
+    free(byte_buf);
+
+    avc_rbsp_trailing_bits(&nal_bs);
+    avc_bitstream_end(&nal_bs);
+
+    *sei_buffer = (unsigned char *)nal_bs.buffer;
+
+    return nal_bs.bit_offset;
+}
+
+int build_hevc_sei_pic_timing(unsigned int cpb_removal_length, unsigned int cpb_removal_delay,
+                         unsigned int dpb_output_length, unsigned int dpb_output_delay,
+                         unsigned char **sei_buffer)
+{
+    unsigned char *byte_buf;
+    int i, pic_byte_size;
+    //unsigned int cpb_removal_delay;
+
+    avc_bitstream nal_bs;
+    avc_bitstream sei_pic_bs;
+
+    avc_bitstream_start(&sei_pic_bs);
+    /* The info of CPB and DPB delay is controlled by CpbDpbDelaysPresentFlag,
+    * which is derived as 1 if one of the following conditions is true:
+    * nal_hrd_parameters_present_flag is present in the avc_bitstream and is equal to 1,
+    * vcl_hrd_parameters_present_flag is present in the avc_bitstream and is equal to 1,
+    */
+    //cpb_removal_delay = (hevc_context.current_cpb_removal - hevc_context.current_idr_cpb_removal);
+    avc_bitstream_put_ui(&sei_pic_bs, cpb_removal_delay, cpb_removal_length);
+    avc_bitstream_put_ui(&sei_pic_bs, dpb_output_delay,	 dpb_output_length);
+    if ( sei_pic_bs.bit_offset & 0x7) {
+        avc_bitstream_put_ui(&sei_pic_bs, 1, 1);
+    }
+
+    /* The pic_structure_present_flag determines whether the pic_structure
+    * info is written into the SEI pic timing info.
+    * Currently it is set to zero.
+    */
+    avc_bitstream_end(&sei_pic_bs);
+    pic_byte_size = (sei_pic_bs.bit_offset + 7) / 8;
+
+    avc_bitstream_start(&nal_bs);
+    nal_start_code_prefix(&nal_bs);
+    nal_header_hevc(&nal_bs, PREFIX_SEI_NUT ,0);
+
+    /* write the SEI Pic timing data */
+    avc_bitstream_put_ui(&nal_bs, 0x01, 8);
+    avc_bitstream_put_ui(&nal_bs, pic_byte_size, 8);
+
+    byte_buf = (unsigned char *)sei_pic_bs.buffer;
+    for(i = 0; i < pic_byte_size; i++) {
+        avc_bitstream_put_ui(&nal_bs, byte_buf[i], 8);
+    }
+    free(byte_buf);
+
+    avc_rbsp_trailing_bits(&nal_bs);
+    avc_bitstream_end(&nal_bs);
+
+    *sei_buffer = (unsigned char *)nal_bs.buffer;
+
+    return nal_bs.bit_offset;
+}
+
+typedef struct _RefPicSet
+{
+    unsigned char    num_negative_pics;
+    unsigned char    num_positive_pics;
+    unsigned char    delta_poc_s0_minus1[8];
+    unsigned char    used_by_curr_pic_s0_flag[8];
+    unsigned char    delta_poc_s1_minus1[8];
+    unsigned char    used_by_curr_pic_s1_flag[8];
+    unsigned int     inter_ref_pic_set_prediction_flag;
+}hevcRefPicSet;
+
+void hevc_short_term_ref_pic_set(avc_bitstream *bs,VAEncSliceParameterBufferHEVC *slice_param,int curPicOrderCnt)
+{
+    hevcRefPicSet hevc_rps;
+    int rps_idx = 1, ref_idx = 0;
+    int i = 0;
+
+    hevc_rps.inter_ref_pic_set_prediction_flag = 0;
+    /* s0: between I and P/B; s1 : between P and B */
+    hevc_rps.num_negative_pics               = (slice_param->slice_type!=SLICE_TYPE_I) ? 1 : 0;
+    hevc_rps.num_positive_pics               = (slice_param->slice_type==SLICE_TYPE_B) ? 1 : 0;
+    hevc_rps.delta_poc_s0_minus1[0]          = 0;
+    hevc_rps.used_by_curr_pic_s0_flag[0]     = 0;
+    hevc_rps.delta_poc_s1_minus1[0]          = 0;
+    hevc_rps.used_by_curr_pic_s1_flag[0]     = 0;
+    if(slice_param->num_ref_idx_l0_active_minus1==0 )
+    {
+        hevc_rps.delta_poc_s0_minus1[0]          = (slice_param->slice_type==SLICE_TYPE_I) ? 0 : ( curPicOrderCnt - slice_param->ref_pic_list0[0].pic_order_cnt-1); //0;
+        hevc_rps.used_by_curr_pic_s0_flag[0]     = 1;
+    }
+    if(slice_param->num_ref_idx_l1_active_minus1==0 )
+    {
+        hevc_rps.delta_poc_s1_minus1[0]          = (slice_param->slice_type==SLICE_TYPE_I) ? 0 : ( slice_param->ref_pic_list1[0].pic_order_cnt -curPicOrderCnt -1);
+        hevc_rps.used_by_curr_pic_s1_flag[0]     = 1;
+    }
+
+    if (rps_idx)
+        avc_bitstream_put_ui(bs, hevc_rps.inter_ref_pic_set_prediction_flag, 1);
+
+    if (hevc_rps.inter_ref_pic_set_prediction_flag)
+    {
+        /* not support */
+        /* to do */
+    } else {
+        avc_bitstream_put_ue(bs, hevc_rps.num_negative_pics);
+        avc_bitstream_put_ue(bs, hevc_rps.num_positive_pics);
+
+        for (i = 0; i < hevc_rps.num_negative_pics; i++)
+        {
+            avc_bitstream_put_ue(bs, hevc_rps.delta_poc_s0_minus1[ref_idx]);
+            avc_bitstream_put_ui(bs, hevc_rps.used_by_curr_pic_s0_flag[ref_idx], 1);
+        }
+        for (i = 0; i < hevc_rps.num_positive_pics; i++)
+        {
+            avc_bitstream_put_ue(bs, hevc_rps.delta_poc_s1_minus1[ref_idx]);
+            avc_bitstream_put_ui(bs, hevc_rps.used_by_curr_pic_s1_flag[ref_idx], 1);
+        }
+    }
+
+    return;
+}
+
+static void slice_rbsp(avc_bitstream *bs,
+                       int slice_index,
+                       VAEncSequenceParameterBufferHEVC *seq_param,
+                       VAEncPictureParameterBufferHEVC *pic_param,
+                       VAEncSliceParameterBufferHEVC *slice_param)
+{
+    int log2_cu_size = seq_param->log2_min_luma_coding_block_size_minus3 + 3;
+    int log2_ctb_size = seq_param->log2_diff_max_min_luma_coding_block_size + log2_cu_size;
+    int ctb_size = 1 << log2_ctb_size;
+
+    int picture_width_in_ctb = (seq_param->pic_width_in_luma_samples + ctb_size - 1) / ctb_size;
+    int picture_height_in_ctb = (seq_param->pic_height_in_luma_samples + ctb_size - 1) / ctb_size;
+
+    /* first_slice_segment_in_pic_flag */
+    if (slice_index == 0)
+    {
+        avc_bitstream_put_ui(bs, 1, 1);
+    }
+    else
+    {
+        avc_bitstream_put_ui(bs, 0, 1);
+    }
+
+    /* no_output_of_prior_pics_flag. This doesn't exist on TRAIL_N */
+
+    /* slice_pic_parameter_set_id */
+    avc_bitstream_put_ue(bs, 0);
+
+    /* not the first slice */
+    if (slice_index)
+    {
+        /* TBD */
+        int bit_size;
+
+        float num_ctus;
+
+        num_ctus = picture_width_in_ctb * picture_height_in_ctb;
+        bit_size = ceilf(log2f(num_ctus));
+
+        if (pic_param->pic_fields.bits.dependent_slice_segments_enabled_flag)
+        {
+            avc_bitstream_put_ui(bs,
+                slice_param->slice_fields.bits.dependent_slice_segment_flag, 1);
+        }
+        /* slice_segment_address is based on Ceil(log2(PictureSizeinCtbs)) */
+        avc_bitstream_put_ui(bs, slice_param->slice_segment_address, bit_size);
+    }
+    if (!slice_param->slice_fields.bits.dependent_slice_segment_flag)
+    {
+        /* slice_reserved_flag */
+
+        /* slice_type */
+        avc_bitstream_put_ue(bs, slice_param->slice_type);
+        /* use the inferred the value of pic_output_flag */
+
+        /* colour_plane_id */
+        if (seq_param->seq_fields.bits.separate_colour_plane_flag)
+        {
+            avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.colour_plane_id, 1);
+        }
+
+        if (!pic_param->pic_fields.bits.idr_pic_flag)
+        {
+            int Log2MaxPicOrderCntLsb = 8;
+            avc_bitstream_put_ui(bs, pic_param->decoded_curr_pic.pic_order_cnt, Log2MaxPicOrderCntLsb);
+
+            //if (!slice_param->short_term_ref_pic_set_sps_flag)
+            {
+                /* short_term_ref_pic_set_sps_flag.
+                * Use zero and then pass the RPS from slice_header
+                */
+                avc_bitstream_put_ui(bs, 0, 1);
+                /* TBD
+                * Add the short_term reference picture set
+                */
+                hevc_short_term_ref_pic_set(bs,slice_param,pic_param->decoded_curr_pic.pic_order_cnt);
+            }
+            /* long term reference present flag. unpresent */
+            /* TBD */
+
+            /* sps temporal MVP*/
+            if (seq_param->seq_fields.bits.sps_temporal_mvp_enabled_flag)
+            {
+                avc_bitstream_put_ui(bs,
+                    slice_param->slice_fields.bits.slice_temporal_mvp_enabled_flag, 1);
+            }
+        }
+
+        /* long term reference present flag. unpresent */
+        if (seq_param->seq_fields.bits.sps_temporal_mvp_enabled_flag)
+        {
+            avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.slice_temporal_mvp_enabled_flag, 1);
+        }
+        /* sample adaptive offset enabled flag */
+        if (seq_param->seq_fields.bits.sample_adaptive_offset_enabled_flag)
+        {
+            avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.slice_sao_luma_flag, 1);
+            avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.slice_sao_chroma_flag, 1);
+        }
+
+        if (slice_param->slice_type != SLICE_TYPE_I)
+        {
+            /* num_ref_idx_active_override_flag. 0 */
+            avc_bitstream_put_ui(bs, 0, 1);
+            /* lists_modification_flag is unpresent NumPocTotalCurr > 1 ,here it is 1*/
+
+            /* No reference picture set modification */
+
+            /* MVD_l1_zero_flag */
+            if (slice_param->slice_type == SLICE_TYPE_B)
+                avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.mvd_l1_zero_flag, 1);
+
+            /* cabac_init_present_flag. 0 */
+
+            /* slice_temporal_mvp_enabled_flag. */
+            if (slice_param->slice_fields.bits.slice_temporal_mvp_enabled_flag)
+            {
+                /*
+                * TBD: Add the collocated_l0_ref_flag and
+                * collocated_ref_idx.
+                */
+            }
+            if (((pic_param->pic_fields.bits.weighted_pred_flag) &&
+                (slice_param->slice_type == SLICE_TYPE_P)) ||
+                ((pic_param->pic_fields.bits.weighted_bipred_flag) &&
+                (slice_param->slice_type == SLICE_TYPE_B)))
+            {
+                /* TBD:
+                * add the weighted table
+                */
+            }
+            avc_bitstream_put_ue(bs, slice_param->max_num_merge_cand);
+        }
+        /* slice_qp_delta */
+        avc_bitstream_put_ue(bs, slice_param->slice_qp_delta);
+
+        /* slice_cb/cr_qp_offset is controlled by pps_slice_chroma_qp_offsets_present_flag
+        * The present flag is set to 1.
+        */
+        avc_bitstream_put_ue(bs, slice_param->slice_cb_qp_offset);
+        avc_bitstream_put_ue(bs, slice_param->slice_cr_qp_offset);
+
+        /*
+        * deblocking_filter_override_flag is controlled by
+        * deblocking_filter_override_enabled_flag.
+        * The override_enabled_flag is zero.
+        * deblocking_filter_override_flag is zero. then
+        * slice_deblocking_filter_disabled_flag is also zero
+        * (It is inferred to be equal to pps_deblocking_filter_disabled_flag.
+        */
+
+        /* slice_loop_filter_across_slices_enabled_flag is controlled
+        * by pps_loop_filter_across_slices_enabled_flag &&
+        * (slice_sao_luma_flag | | slice_sao_chroma_flag | |
+        *  !slice_deblocking_filter_disabled_flag ))
+        *
+        */
+    }
+
+    if (pic_param->pic_fields.bits.tiles_enabled_flag ||
+        pic_param->pic_fields.bits.entropy_coding_sync_enabled_flag)
+    {
+        /* TBD.
+        * Add the Entry-points && tile definition.
+        */
+    }
+
+    /* slice_segment_header_extension_present_flag. Not present */
+
+    /* byte_alignment */
+    avc_rbsp_trailing_bits(bs);
+}
+
+int build_hevc_slice_header(VAEncSequenceParameterBufferHEVC *seq_param,
+                       VAEncPictureParameterBufferHEVC *pic_param,
+                       VAEncSliceParameterBufferHEVC *slice_param,
+                       unsigned char **header_buffer,
+                       int slice_index)
+{
+    avc_bitstream bs;
+
+    avc_bitstream_start(&bs);
+    nal_start_code_prefix(&bs);
+    nal_header_hevc(&bs, SLICE_TRAIL_N_NUT, 0);
+    slice_rbsp(&bs, slice_index, seq_param,pic_param,slice_param);
+    avc_bitstream_end(&bs);
+
+    *header_buffer = (unsigned char *)bs.buffer;
+    return bs.bit_offset;
 }
