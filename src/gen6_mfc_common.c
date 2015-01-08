@@ -1687,3 +1687,226 @@ void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
 
     return;
 }
+
+/* HEVC */
+static int
+hevc_temporal_find_surface(VAPictureHEVC *curr_pic,
+                           VAPictureHEVC *ref_list,
+                           int num_pictures,
+                           int dir)
+{
+    int i, found = -1, min = 0x7FFFFFFF;
+
+    for (i = 0; i < num_pictures; i++) {
+        int tmp;
+
+        if ((ref_list[i].flags & VA_PICTURE_HEVC_INVALID) ||
+            (ref_list[i].picture_id == VA_INVALID_SURFACE))
+            break;
+
+        tmp = curr_pic->pic_order_cnt - ref_list[i].pic_order_cnt;
+
+        if (dir)
+            tmp = -tmp;
+
+        if (tmp > 0 && tmp < min) {
+            min = tmp;
+            found = i;
+        }
+    }
+
+    return found;
+}
+void
+intel_hevc_vme_reference_state(VADriverContextP ctx,
+                               struct encode_state *encode_state,
+                               struct intel_encoder_context *encoder_context,
+                               int list_index,
+                               int surface_index,
+                               void (* vme_source_surface_state)(
+                                   VADriverContextP ctx,
+                                   int index,
+                                   struct object_surface *obj_surface,
+                                   struct intel_encoder_context *encoder_context))
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    struct object_surface *obj_surface = NULL;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VASurfaceID ref_surface_id;
+    VAEncPictureParameterBufferHEVC *pic_param = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferHEVC *slice_param = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
+    int max_num_references;
+    VAPictureHEVC *curr_pic;
+    VAPictureHEVC *ref_list;
+    int ref_idx;
+
+    if (list_index == 0) {
+        max_num_references = pic_param->num_ref_idx_l0_default_active_minus1 + 1;
+        ref_list = slice_param->ref_pic_list0;
+    } else {
+        max_num_references = pic_param->num_ref_idx_l1_default_active_minus1 + 1;
+        ref_list = slice_param->ref_pic_list1;
+    }
+
+    if (max_num_references == 1) {
+        if (list_index == 0) {
+            ref_surface_id = slice_param->ref_pic_list0[0].picture_id;
+            vme_context->used_references[0] = &slice_param->ref_pic_list0[0];
+        } else {
+            ref_surface_id = slice_param->ref_pic_list1[0].picture_id;
+            vme_context->used_references[1] = &slice_param->ref_pic_list1[0];
+        }
+
+        if (ref_surface_id != VA_INVALID_SURFACE)
+            obj_surface = SURFACE(ref_surface_id);
+
+        if (!obj_surface ||
+            !obj_surface->bo) {
+            obj_surface = encode_state->reference_objects[list_index];
+            vme_context->used_references[list_index] = &pic_param->reference_frames[list_index];
+        }
+
+        ref_idx = 0;
+    } else {
+        curr_pic = &pic_param->decoded_curr_pic;
+
+        /* select the reference frame in temporal space */
+        ref_idx = hevc_temporal_find_surface(curr_pic, ref_list, max_num_references, list_index == 1);
+        ref_surface_id = ref_list[ref_idx].picture_id;
+
+        if (ref_surface_id != VA_INVALID_SURFACE) /* otherwise warning later */
+            obj_surface = SURFACE(ref_surface_id);
+
+        vme_context->used_reference_objects[list_index] = obj_surface;
+        vme_context->used_references[list_index] = &ref_list[ref_idx];
+    }
+
+    if (obj_surface &&
+        obj_surface->bo) {
+        assert(ref_idx >= 0);
+        vme_context->used_reference_objects[list_index] = obj_surface;
+        vme_source_surface_state(ctx, surface_index, obj_surface, encoder_context);
+        vme_context->ref_index_in_mb[list_index] = (ref_idx << 24 |
+                ref_idx << 16 |
+                ref_idx <<  8 |
+                ref_idx);
+    } else {
+        vme_context->used_reference_objects[list_index] = NULL;
+        vme_context->used_references[list_index] = NULL;
+        vme_context->ref_index_in_mb[list_index] = 0;
+    }
+}
+
+void intel_vme_hevc_update_mbmv_cost(VADriverContextP ctx,
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context)
+{
+    //struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncPictureParameterBufferHEVC *pic_param = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferHEVC *slice_param = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
+    int qp, m_cost, j, mv_count;
+    uint8_t *vme_state_message = (uint8_t *)(vme_context->vme_state_message);
+    float   lambda, m_costf;
+
+    /* here no SI SP slice for HEVC, do not need slice fixup */
+    int slice_type = slice_param->slice_type;
+
+
+    /* to do for CBR*/
+    //if (encoder_context->rate_control_mode == VA_RC_CQP)
+    qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+    //else
+    //qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
+
+    if (vme_state_message == NULL)
+        return;
+
+    assert(qp <= QP_MAX);
+    lambda = intel_lambda_qp(qp);
+    if (slice_type == SLICE_TYPE_I) {
+        vme_state_message[MODE_INTRA_16X16] = 0;
+        m_cost = lambda * 4;
+        vme_state_message[MODE_INTRA_8X8] = intel_format_lutvalue(m_cost, 0x8f);
+        m_cost = lambda * 16;
+        vme_state_message[MODE_INTRA_4X4] = intel_format_lutvalue(m_cost, 0x8f);
+        m_cost = lambda * 3;
+        vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
+    } else {
+        m_cost = 0;
+        vme_state_message[MODE_INTER_MV0] = intel_format_lutvalue(m_cost, 0x6f);
+        for (j = 1; j < 3; j++) {
+            m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+            m_cost = (int)m_costf;
+            vme_state_message[MODE_INTER_MV0 + j] = intel_format_lutvalue(m_cost, 0x6f);
+        }
+        mv_count = 3;
+        for (j = 4; j <= 64; j *= 2) {
+            m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+            m_cost = (int)m_costf;
+            vme_state_message[MODE_INTER_MV0 + mv_count] = intel_format_lutvalue(m_cost, 0x6f);
+            mv_count++;
+        }
+
+        if (qp <= 25) {
+            vme_state_message[MODE_INTRA_16X16] = 0x4a;
+            vme_state_message[MODE_INTRA_8X8] = 0x4a;
+            vme_state_message[MODE_INTRA_4X4] = 0x4a;
+            vme_state_message[MODE_INTRA_NONPRED] = 0x4a;
+            vme_state_message[MODE_INTER_16X16] = 0x4a;
+            vme_state_message[MODE_INTER_16X8] = 0x4a;
+            vme_state_message[MODE_INTER_8X8] = 0x4a;
+            vme_state_message[MODE_INTER_8X4] = 0x4a;
+            vme_state_message[MODE_INTER_4X4] = 0x4a;
+            vme_state_message[MODE_INTER_BWD] = 0x2a;
+            return;
+        }
+        m_costf = lambda * 10;
+        vme_state_message[MODE_INTRA_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+        m_cost = lambda * 14;
+        vme_state_message[MODE_INTRA_8X8] = intel_format_lutvalue(m_cost, 0x8f);
+        m_cost = lambda * 24;
+        vme_state_message[MODE_INTRA_4X4] = intel_format_lutvalue(m_cost, 0x8f);
+        m_costf = lambda * 3.5;
+        m_cost = m_costf;
+        vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
+        if (slice_type == SLICE_TYPE_P) {
+            m_costf = lambda * 2.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+            m_costf = lambda * 4;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
+            m_costf = lambda * 1.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 3;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_8X4] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
+            /* BWD is not used in P-frame */
+            vme_state_message[MODE_INTER_BWD] = 0;
+        } else {
+            m_costf = lambda * 2.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+            m_costf = lambda * 5.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
+            m_costf = lambda * 3.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 5.0;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_8X4] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 6.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
+            m_costf = lambda * 1.5;
+            m_cost = m_costf;
+            vme_state_message[MODE_INTER_BWD] = intel_format_lutvalue(m_cost, 0x6f);
+        }
+    }
+}
