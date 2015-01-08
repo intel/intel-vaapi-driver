@@ -106,6 +106,7 @@ source_h = \
 	gen75_vpp_vebox.h	\
 	gen8_post_processing.h	\
 	gen9_mfd.h		\
+	gen9_mfc.h		\
 	i965_avc_bsd.h		\
 	i965_avc_hw_scoreboard.h\
 	i965_avc_ildb.h		\
