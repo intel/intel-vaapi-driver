@@ -501,7 +501,7 @@ static void cpuid(unsigned int op,
                          uint32_t *eax, uint32_t *ebx,
                          uint32_t *ecx, uint32_t *edx)
 {
-	__cpuid_count(op, 0, *eax, *ebx, *ecx, *edx);
+    __cpuid_count(op, 0, *eax, *ebx, *ecx, *edx);
 }
 
 /*
@@ -522,7 +522,7 @@ static int intel_driver_detect_cpustring(char *model_id)
 
     /* If the max extended CPUID info is less than 0x80000004, fail */
     if (rdata[0] < 0x80000004)
-	return -EINVAL;
+        return -EINVAL;
 
     /* obtain the CPUID string */
     cpuid(0x80000002, &rdata[0], &rdata[1], &rdata[2], &rdata[3]);
@@ -584,18 +584,18 @@ static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *cod
         model_ptr = (char *)hsw_cpu_hook_list[i];
 
         if (strlen(model_ptr) != model_len)
-	    continue;
+            continue;
 
         if (strncasecmp(model_string, model_ptr, model_len) == 0) {
             found = true;
             break;
-	}
+        }
     }
 
     if (found) {
-	codec_info->has_h264_encoding = 0;
-	codec_info->has_h264_mvc_encoding = 0;
-	codec_info->has_mpeg2_encoding = 0;
+        codec_info->has_h264_encoding = 0;
+        codec_info->has_h264_mvc_encoding = 0;
+        codec_info->has_mpeg2_encoding = 0;
     }
     return;
 }
@@ -712,7 +712,7 @@ static void gen7_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
         if (strncasecmp(model_string, model_ptr, model_len) == 0) {
             found = true;
             break;
-	}
+        }
     }
 
     if (found) {

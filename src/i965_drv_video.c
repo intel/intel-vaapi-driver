@@ -753,37 +753,37 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             }
             break;
 
-	case VAConfigAttribEncMaxRefFrames:
-	    if (entrypoint == VAEntrypointEncSlice) {
-		attrib_list[i].value = (1 << 16) | (1 << 0);
-		break;
-	    }
+        case VAConfigAttribEncMaxRefFrames:
+            if (entrypoint == VAEntrypointEncSlice) {
+                attrib_list[i].value = (1 << 16) | (1 << 0);
+                break;
+            }
             break;
 
-	case VAConfigAttribEncQualityRange:
-	    if (entrypoint == VAEntrypointEncSlice) {
-		attrib_list[i].value = 1;
+        case VAConfigAttribEncQualityRange:
+            if (entrypoint == VAEntrypointEncSlice) {
+                attrib_list[i].value = 1;
                 if (profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
                     profile == VAProfileH264High )
                     attrib_list[i].value = ENCODER_QUALITY_RANGE;
-		break;
-	    }
+                break;
+            }
             break;
     
-    case VAConfigAttribEncJPEG: 
-        if( entrypoint == VAEntrypointEncPicture) {
-            VAConfigAttribValEncJPEG *configVal = (VAConfigAttribValEncJPEG*)&(attrib_list[i].value);
-            (configVal->bits).arithmatic_coding_mode = 0; // Huffman coding is used
-            (configVal->bits).progressive_dct_mode = 0;   // Only Sequential DCT is supported
-            (configVal->bits).non_interleaved_mode = 1;   // Support both interleaved and non-interleaved
-            (configVal->bits).differential_mode = 0;      // Baseline DCT is non-differential 
-            (configVal->bits).max_num_components = 3;     // Only 3 components supported
-            (configVal->bits).max_num_scans = 1;          // Only 1 scan per frame
-            (configVal->bits).max_num_huffman_tables = 3; // Max 3 huffman tables
-            (configVal->bits).max_num_quantization_tables = 3; // Max 3 quantization tables
-        }
-        break;
+        case VAConfigAttribEncJPEG:
+            if( entrypoint == VAEntrypointEncPicture) {
+                VAConfigAttribValEncJPEG *configVal = (VAConfigAttribValEncJPEG*)&(attrib_list[i].value);
+                (configVal->bits).arithmatic_coding_mode = 0; // Huffman coding is used
+                (configVal->bits).progressive_dct_mode = 0;   // Only Sequential DCT is supported
+                (configVal->bits).non_interleaved_mode = 1;   // Support both interleaved and non-interleaved
+                (configVal->bits).differential_mode = 0;      // Baseline DCT is non-differential 
+                (configVal->bits).max_num_components = 3;     // Only 3 components supported
+                (configVal->bits).max_num_scans = 1;          // Only 1 scan per frame
+                (configVal->bits).max_num_huffman_tables = 3; // Max 3 huffman tables
+                (configVal->bits).max_num_quantization_tables = 3; // Max 3 quantization tables
+            }
+            break;
 
         default:
             /* Do nothing */
@@ -987,7 +987,7 @@ i965_surface_native_memory(VADriverContextP ctx,
         expected_fourcc == VA_FOURCC_YV12 ||
         expected_fourcc == VA_FOURCC_YV16)
         tiling = 0;
-		
+
     i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, get_sampling_from_fourcc(expected_fourcc));
 
     return VA_STATUS_SUCCESS;
@@ -3236,10 +3236,10 @@ i965_CreateImage(VADriverContextP ctx,
     awidth = ALIGN(width, i965->codec_info->min_linear_wpitch);
 
     if ((format->fourcc == VA_FOURCC_YV12) ||
-    		(format->fourcc == VA_FOURCC_I420)) {
-	if (awidth % 128 != 0) {
-		awidth = ALIGN(width, 128);	
-	}
+        (format->fourcc == VA_FOURCC_I420)) {
+            if (awidth % 128 != 0) {
+                awidth = ALIGN(width, 128);	
+            }
     }
 
     aheight = ALIGN(height, i965->codec_info->min_linear_hpitch);

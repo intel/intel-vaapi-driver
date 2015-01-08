@@ -51,13 +51,13 @@
 
 #define VME_INTRA_SHADER        0
 #define VME_INTER_SHADER        1
-#define VME_BINTER_SHADER	2
+#define VME_BINTER_SHADER       2
 
 #define CURBE_ALLOCATION_SIZE   37              /* in 256-bit */
 #define CURBE_TOTAL_DATA_LENGTH (4 * 32)        /* in byte, it should be less than or equal to CURBE_ALLOCATION_SIZE * 32 */
 #define CURBE_URB_ENTRY_LENGTH  4               /* in 256-bit, it should be less than or equal to CURBE_TOTAL_DATA_LENGTH / 32 */
 
-#define VME_MSG_LENGTH		32
+#define VME_MSG_LENGTH          32
 
 static const uint32_t gen9_vme_intra_frame[][4] = {
 #include "shaders/vme/intra_frame_gen9.g9b"
@@ -337,15 +337,15 @@ gen9_vme_surface_setup(VADriverContextP ctx,
     gen9_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);
 
     if (!is_intra) {
-	VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
-	int slice_type;
+        VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+        int slice_type;
 
-	slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
-	assert(slice_type != SLICE_TYPE_I && slice_type != SLICE_TYPE_SI);
+        slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+        assert(slice_type != SLICE_TYPE_I && slice_type != SLICE_TYPE_SI);
 
-	intel_avc_vme_reference_state(ctx, encode_state, encoder_context, 0, 1, gen9_vme_source_surface_state);
+        intel_avc_vme_reference_state(ctx, encode_state, encoder_context, 0, 1, gen9_vme_source_surface_state);
 
-	if (slice_type == SLICE_TYPE_B)
+        if (slice_type == SLICE_TYPE_B)
             intel_avc_vme_reference_state(ctx, encode_state, encoder_context, 1, 2, gen9_vme_source_surface_state);
     }
 
@@ -481,107 +481,107 @@ gen9wa_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     command_ptr = vme_context->vme_batchbuffer.bo->virtual;
 
     for (s = 0; s < encode_state->num_slice_params_ext; s++) {
-	VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer;
-	int first_mb = pSliceParameter->macroblock_address;
-	int num_mb = pSliceParameter->num_macroblocks;
-	unsigned int mb_intra_ub, score_dep;
-	int x_outer, y_outer, x_inner, y_inner;
-	int xtemp_outer = 0;
+        VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[s]->buffer;
+        int first_mb = pSliceParameter->macroblock_address;
+        int num_mb = pSliceParameter->num_macroblocks;
+        unsigned int mb_intra_ub, score_dep;
+        int x_outer, y_outer, x_inner, y_inner;
+        int xtemp_outer = 0;
 
-	x_outer = first_mb % mb_width;
-	y_outer = first_mb / mb_width;
-	mb_row = y_outer;
+        x_outer = first_mb % mb_width;
+        y_outer = first_mb / mb_width;
+        mb_row = y_outer;
 
-	for (; x_outer < (mb_width -2 ) && !loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
-	    x_inner = x_outer;
-	    y_inner = y_outer;
-	    for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
-		mb_intra_ub = 0;
-		score_dep = 0;
-		if (x_inner != 0) {
-		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
-		    score_dep |= MB_SCOREBOARD_A;
-                }
-		if (y_inner != mb_row) {
-		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
-		    score_dep |= MB_SCOREBOARD_B;
-		    if (x_inner != 0)
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
-		    if (x_inner != (mb_width -1)) {
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-			score_dep |= MB_SCOREBOARD_C;
-                    }
-		}
-
-		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
-		*command_ptr++ = kernel;
-		*command_ptr++ = USE_SCOREBOARD;
-		/* Indirect data */
-		*command_ptr++ = 0;
-		/* the (X, Y) term of scoreboard */
-		*command_ptr++ = ((y_inner << 16) | x_inner);
-		*command_ptr++ = score_dep;
-		/*inline data */
-		*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
-		*command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
-                *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
-                *command_ptr++ = 0;
-
-		x_inner -= 2;
-		y_inner += 1;
-	    }
-	    x_outer += 1;
-	}
-
-	xtemp_outer = mb_width - 2;
-	if (xtemp_outer < 0)
-            xtemp_outer = 0;
-	x_outer = xtemp_outer;
-	y_outer = first_mb / mb_width;
-	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+        for (; x_outer < (mb_width -2 ) && !loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+            x_inner = x_outer;
             y_inner = y_outer;
-	    x_inner = x_outer;
-	    for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
-		mb_intra_ub = 0;
-		score_dep = 0;
-		if (x_inner != 0) {
-		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
-		    score_dep |= MB_SCOREBOARD_A;
+            for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+                mb_intra_ub = 0;
+                score_dep = 0;
+                if (x_inner != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+                    score_dep |= MB_SCOREBOARD_A;
                 }
-		if (y_inner != mb_row) {
-		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
-		    score_dep |= MB_SCOREBOARD_B;
-		    if (x_inner != 0)
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
-
-		    if (x_inner != (mb_width -1)) {
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-			score_dep |= MB_SCOREBOARD_C;
+                if (y_inner != mb_row) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+                    score_dep |= MB_SCOREBOARD_B;
+                    if (x_inner != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+                    if (x_inner != (mb_width -1)) {
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                        score_dep |= MB_SCOREBOARD_C;
                     }
-		}
+                }
 
-		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
-		*command_ptr++ = kernel;
-		*command_ptr++ = USE_SCOREBOARD;
-		/* Indirect data */
-		*command_ptr++ = 0;
-		/* the (X, Y) term of scoreboard */
-		*command_ptr++ = ((y_inner << 16) | x_inner);
-		*command_ptr++ = score_dep;
-		/*inline data */
-		*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
-		*command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = kernel;
+                *command_ptr++ = USE_SCOREBOARD;
+                /* Indirect data */
+                *command_ptr++ = 0;
+                /* the (X, Y) term of scoreboard */
+                *command_ptr++ = ((y_inner << 16) | x_inner);
+                *command_ptr++ = score_dep;
+                /*inline data */
+                *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+                *command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+                *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
+                *command_ptr++ = 0;
+
+                x_inner -= 2;
+                y_inner += 1;
+            }
+            x_outer += 1;
+        }
+
+        xtemp_outer = mb_width - 2;
+        if (xtemp_outer < 0)
+            xtemp_outer = 0;
+        x_outer = xtemp_outer;
+        y_outer = first_mb / mb_width;
+        for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+            y_inner = y_outer;
+            x_inner = x_outer;
+            for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+                mb_intra_ub = 0;
+                score_dep = 0;
+                if (x_inner != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+                    score_dep |= MB_SCOREBOARD_A;
+                }
+                if (y_inner != mb_row) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+                    score_dep |= MB_SCOREBOARD_B;
+                    if (x_inner != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+
+                    if (x_inner != (mb_width -1)) {
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                        score_dep |= MB_SCOREBOARD_C;
+                    }
+                }
+
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = kernel;
+                *command_ptr++ = USE_SCOREBOARD;
+                /* Indirect data */
+                *command_ptr++ = 0;
+                /* the (X, Y) term of scoreboard */
+                *command_ptr++ = ((y_inner << 16) | x_inner);
+                *command_ptr++ = score_dep;
+                /*inline data */
+                *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+                *command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
 
                 *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
                 *command_ptr++ = 0;
-		x_inner -= 2;
-		y_inner += 1;
-	    }
-	    x_outer++;
-	    if (x_outer >= mb_width) {
-		y_outer += 1;
-		x_outer = xtemp_outer;
-	    }
+                x_inner -= 2;
+                y_inner += 1;
+            }
+            x_outer++;
+            if (x_outer >= mb_width) {
+                y_outer += 1;
+                x_outer = xtemp_outer;
+            }
         }
     }
 
@@ -612,34 +612,34 @@ gen9_vme_fill_vme_batchbuffer(VADriverContextP ctx,
         int slice_mb_begin = pSliceParameter->macroblock_address;
         int slice_mb_number = pSliceParameter->num_macroblocks;
         unsigned int mb_intra_ub;
-	int slice_mb_x = pSliceParameter->macroblock_address % mb_width;
+        int slice_mb_x = pSliceParameter->macroblock_address % mb_width;
         for (i = 0; i < slice_mb_number;  ) {
             int mb_count = i + slice_mb_begin;
             mb_x = mb_count % mb_width;
             mb_y = mb_count / mb_width;
-	    mb_intra_ub = 0;
-	    if (mb_x != 0) {
-		mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
-	    }
-	    if (mb_y != 0) {
-		mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
-		if (mb_x != 0)
+            mb_intra_ub = 0;
+            if (mb_x != 0) {
+                mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+            }
+            if (mb_y != 0) {
+                mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+                if (mb_x != 0)
                     mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
-		if (mb_x != (mb_width -1))
+                if (mb_x != (mb_width -1))
                     mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-	    }
-	    if (i < mb_width) {
-		if (i == 0)
+            }
+            if (i < mb_width) {
+                if (i == 0)
                     mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_AE);
-		mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_BCD_MASK);
-		if ((i == (mb_width - 1)) && slice_mb_x) {
+                mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_BCD_MASK);
+                if ((i == (mb_width - 1)) && slice_mb_x) {
                     mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-		}
-	    }
+                }
+            }
 
-	    if ((i == mb_width) && slice_mb_x) {
-		mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
-	    }
+            if ((i == mb_width) && slice_mb_x) {
+                mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
+            }
             *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
             *command_ptr++ = kernel;
             *command_ptr++ = 0;
@@ -763,7 +763,7 @@ static VAStatus gen9_vme_prepare(VADriverContextP ctx,
 
     if (!vme_context->h264_level ||
         (vme_context->h264_level != pSequenceParameter->level_idc)) {
-	vme_context->h264_level = pSequenceParameter->level_idc;
+            vme_context->h264_level = pSequenceParameter->level_idc;
     }
 
     intel_vme_update_mbmv_cost(ctx, encode_state, encoder_context);
@@ -893,109 +893,109 @@ gen9wa_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     command_ptr = vme_context->vme_batchbuffer.bo->virtual;
 
     {
-	unsigned int mb_intra_ub, score_dep;
-	int x_outer, y_outer, x_inner, y_inner;
-	int xtemp_outer = 0;
-	int first_mb = 0;
-	int num_mb = mb_width * mb_height;
+        unsigned int mb_intra_ub, score_dep;
+        int x_outer, y_outer, x_inner, y_inner;
+        int xtemp_outer = 0;
+        int first_mb = 0;
+        int num_mb = mb_width * mb_height;
 
-	x_outer = 0;
-	y_outer = 0;
+        x_outer = 0;
+        y_outer = 0;
 
-	for (; x_outer < (mb_width -2 ) && !loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
-	    x_inner = x_outer;
-	    y_inner = y_outer;
-	    for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
-		mb_intra_ub = 0;
-		score_dep = 0;
-		if (x_inner != 0) {
-		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
-		    score_dep |= MB_SCOREBOARD_A;
-                }
-		if (y_inner != 0) {
-		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
-		    score_dep |= MB_SCOREBOARD_B;
-
-		    if (x_inner != 0)
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
-
-		    if (x_inner != (mb_width -1)) {
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-			score_dep |= MB_SCOREBOARD_C;
-		    }
-		}
-
-		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
-		*command_ptr++ = kernel;
-		*command_ptr++ = MPEG2_SCOREBOARD;
-		/* Indirect data */
-		*command_ptr++ = 0;
-		/* the (X, Y) term of scoreboard */
-		*command_ptr++ = ((y_inner << 16) | x_inner);
-		*command_ptr++ = score_dep;
-		/*inline data */
-		*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
-		*command_ptr++ = ((1 << 18) | (1 << 16) | (mb_intra_ub << 8));
-                *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
-                *command_ptr++ = 0;
-
-		x_inner -= 2;
-		y_inner += 1;
-	    }
-	    x_outer += 1;
-	}
-
-	xtemp_outer = mb_width - 2;
-	if (xtemp_outer < 0)
-            xtemp_outer = 0;
-	x_outer = xtemp_outer;
-	y_outer = 0;
-	for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+        for (; x_outer < (mb_width -2 ) && !loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+            x_inner = x_outer;
             y_inner = y_outer;
-	    x_inner = x_outer;
-	    for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
-		mb_intra_ub = 0;
-		score_dep = 0;
-		if (x_inner != 0) {
-		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
-		    score_dep |= MB_SCOREBOARD_A;
+            for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+                mb_intra_ub = 0;
+                score_dep = 0;
+                if (x_inner != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+                    score_dep |= MB_SCOREBOARD_A;
                 }
-		if (y_inner != 0) {
-		    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
-		    score_dep |= MB_SCOREBOARD_B;
+                if (y_inner != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+                    score_dep |= MB_SCOREBOARD_B;
 
-		    if (x_inner != 0)
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+                    if (x_inner != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
 
-		    if (x_inner != (mb_width -1)) {
-			mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
-			score_dep |= MB_SCOREBOARD_C;
-		    }
-		}
+                    if (x_inner != (mb_width -1)) {
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                        score_dep |= MB_SCOREBOARD_C;
+                    }
+                }
 
-		*command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
-		*command_ptr++ = kernel;
-		*command_ptr++ = MPEG2_SCOREBOARD;
-		/* Indirect data */
-		*command_ptr++ = 0;
-		/* the (X, Y) term of scoreboard */
-		*command_ptr++ = ((y_inner << 16) | x_inner);
-		*command_ptr++ = score_dep;
-		/*inline data */
-		*command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
-		*command_ptr++ = ((1 << 18) | (1 << 16) | (mb_intra_ub << 8));
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = kernel;
+                *command_ptr++ = MPEG2_SCOREBOARD;
+                /* Indirect data */
+                *command_ptr++ = 0;
+                /* the (X, Y) term of scoreboard */
+                *command_ptr++ = ((y_inner << 16) | x_inner);
+                *command_ptr++ = score_dep;
+                /*inline data */
+                *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+                *command_ptr++ = ((1 << 18) | (1 << 16) | (mb_intra_ub << 8));
+                *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
+                *command_ptr++ = 0;
+
+                x_inner -= 2;
+                y_inner += 1;
+            }
+            x_outer += 1;
+        }
+
+        xtemp_outer = mb_width - 2;
+        if (xtemp_outer < 0)
+            xtemp_outer = 0;
+        x_outer = xtemp_outer;
+        y_outer = 0;
+        for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+            y_inner = y_outer;
+            x_inner = x_outer;
+            for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+                mb_intra_ub = 0;
+                score_dep = 0;
+                if (x_inner != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+                    score_dep |= MB_SCOREBOARD_A;
+                }
+                if (y_inner != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+                    score_dep |= MB_SCOREBOARD_B;
+
+                    if (x_inner != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+
+                    if (x_inner != (mb_width -1)) {
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                        score_dep |= MB_SCOREBOARD_C;
+                    }
+                }
+
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = kernel;
+                *command_ptr++ = MPEG2_SCOREBOARD;
+                /* Indirect data */
+                *command_ptr++ = 0;
+                /* the (X, Y) term of scoreboard */
+                *command_ptr++ = ((y_inner << 16) | x_inner);
+                *command_ptr++ = score_dep;
+                /*inline data */
+                *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+                *command_ptr++ = ((1 << 18) | (1 << 16) | (mb_intra_ub << 8));
 
                 *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
                 *command_ptr++ = 0;
-		x_inner -= 2;
-		y_inner += 1;
-	    }
-	    x_outer++;
-	    if (x_outer >= mb_width) {
-		y_outer += 1;
-		x_outer = xtemp_outer;
+                x_inner -= 2;
+                y_inner += 1;
             }
-	}
+            x_outer++;
+            if (x_outer >= mb_width) {
+                y_outer += 1;
+                x_outer = xtemp_outer;
+            }
+        }
     }
 
     *command_ptr++ = MI_BATCH_BUFFER_END;
@@ -1094,23 +1094,23 @@ gen9_vme_mpeg2_pipeline_programing(VADriverContextP ctx,
     VAEncPictureParameterBufferMPEG2 *pic_param = NULL;
 
     for (s = 0; s < encode_state->num_slice_params_ext; s++) {
-	int j;
+        int j;
         VAEncSliceParameterBufferMPEG2 *slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[s]->buffer;
 
         for (j = 0; j < encode_state->slice_params_ext[s]->num_elements; j++) {
-	    if (slice_param->macroblock_address % width_in_mbs) {
-		allow_hwscore = false;
-		break;
-	    }
-	}
+            if (slice_param->macroblock_address % width_in_mbs) {
+                allow_hwscore = false;
+                break;
+            }
+        }
     }
 
     pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
     if (pic_param->picture_type == VAEncPictureTypeIntra) {
-	allow_hwscore = false;
-	kernel_shader = VME_INTRA_SHADER;
+        allow_hwscore = false;
+        kernel_shader = VME_INTRA_SHADER;
     } else {
-	kernel_shader = VME_INTER_SHADER;
+        kernel_shader = VME_INTER_SHADER;
     }
 
     if (allow_hwscore)
@@ -1120,7 +1120,7 @@ gen9_vme_mpeg2_pipeline_programing(VADriverContextP ctx,
                                                    kernel_shader,
                                                    encoder_context);
     else
-	gen9_vme_mpeg2_fill_vme_batchbuffer(ctx,
+        gen9_vme_mpeg2_fill_vme_batchbuffer(ctx,
                                             encode_state,
                                             width_in_mbs, height_in_mbs,
                                             is_intra ? VME_INTRA_SHADER : VME_INTER_SHADER,
@@ -1156,7 +1156,7 @@ gen9_vme_mpeg2_prepare(VADriverContextP ctx,
 
     if ((!vme_context->mpeg2_level) ||
         (vme_context->mpeg2_level != (seq_param->sequence_extension.bits.profile_and_level_indication & MPEG2_LEVEL_MASK))) {
-	vme_context->mpeg2_level = seq_param->sequence_extension.bits.profile_and_level_indication & MPEG2_LEVEL_MASK;
+            vme_context->mpeg2_level = seq_param->sequence_extension.bits.profile_and_level_indication & MPEG2_LEVEL_MASK;
     }
 
     /*Setup all the memory object*/
@@ -1772,8 +1772,8 @@ gen9_vme_context_destroy(void *context)
     vme_context->vme_batchbuffer.bo = NULL;
 
     if (vme_context->vme_state_message) {
-	free(vme_context->vme_state_message);
-	vme_context->vme_state_message = NULL;
+        free(vme_context->vme_state_message);
+        vme_context->vme_state_message = NULL;
     }
 
     free(vme_context);
