@@ -63,6 +63,7 @@ source_c = \
 	gen8_vme.c		\
 	gen9_vme.c		\
 	gen9_mfc.c		\
+	gen9_mfc_hevc.c		\
 	gen9_mfd.c		\
 	gen75_picture_process.c	\
 	gen75_vme.c		\

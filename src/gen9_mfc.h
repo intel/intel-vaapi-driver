@@ -234,4 +234,55 @@ struct gen9_hcpe_context {
                                 unsigned long surface_state_offset);
 };
 
+VAStatus gen9_hcpe_pipeline(VADriverContextP ctx,
+                            VAProfile profile,
+                            struct encode_state *encode_state,
+                            struct intel_encoder_context *encoder_context);
+
+/* HEVC BRC */
+extern int intel_hcpe_update_hrd(struct encode_state *encode_state,
+                                 struct gen9_hcpe_context *hcpe_context,
+                                 int frame_bits);
+
+extern int intel_hcpe_brc_postpack(struct encode_state *encode_state,
+                                   struct gen9_hcpe_context *hcpe_context,
+                                   int frame_bits);
+
+extern void intel_hcpe_hrd_context_update(struct encode_state *encode_state,
+        struct gen9_hcpe_context *hcpe_context);
+
+extern int intel_hcpe_interlace_check(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context);
+
+extern void intel_hcpe_brc_prepare(struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context);
+
+/* HEVC HCP pipeline */
+extern void intel_hcpe_hevc_pipeline_header_programing(VADriverContextP ctx,
+        struct encode_state *encode_state,
+        struct intel_encoder_context *encoder_context,
+        struct intel_batchbuffer *slice_batch);
+
+extern VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
+                                        struct encode_state *encode_state,
+                                        struct intel_encoder_context *encoder_context);
+
+extern void
+intel_hcpe_hevc_ref_idx_state(VADriverContextP ctx,
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context);
+
+extern void
+intel_hevc_slice_insert_packed_data(VADriverContextP ctx,
+                                    struct encode_state *encode_state,
+                                    struct intel_encoder_context *encoder_context,
+                                    int slice_index,
+                                    struct intel_batchbuffer *slice_batch);
+
+extern
+Bool gen9_hcpe_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+
+void gen9_hcpe_context_destroy(void *context);
+
 #endif  /* GEN9_MFC_H */
