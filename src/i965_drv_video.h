@@ -1,5 +1,5 @@
 /*
- * Copyright © 2009 Intel Corporation
+ * Copyright ?2009 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -33,6 +33,7 @@
 #include <va/va.h>
 #include <va/va_enc_h264.h>
 #include <va/va_enc_mpeg2.h>
+#include <va/va_enc_hevc.h>
 #include <va/va_enc_jpeg.h>
 #include <va/va_enc_vp8.h>
 #include <va/va_vpp.h>
@@ -151,8 +152,8 @@ struct encode_state
     /* for ext */
     struct buffer_store *seq_param_ext;
     struct buffer_store *pic_param_ext;
-    struct buffer_store *packed_header_param[4];
-    struct buffer_store *packed_header_data[4];
+    struct buffer_store *packed_header_param[5];
+    struct buffer_store *packed_header_data[5];
     struct buffer_store **slice_params_ext;
     int max_slice_params_ext;
     int num_slice_params_ext;
@@ -172,6 +173,8 @@ struct encode_state
     int max_packed_header_data_ext;
     int num_packed_header_data_ext;
 
+    /* the index of current vps and sps ,special for HEVC*/
+    int vps_sps_seq_index;
     /* the index of current slice */
     int slice_index;
     /* the array is determined by max_slice_params_ext */
@@ -370,6 +373,7 @@ struct hw_codec_info
     unsigned int has_vp8_encoding:1;
     unsigned int has_h264_mvc_encoding:1;
     unsigned int has_hevc_decoding:1;
+    unsigned int has_hevc_encoding:1;
 
     unsigned int num_filters;
     struct i965_filter filters[VAProcFilterCount];
@@ -455,6 +459,7 @@ va_enc_packed_type_to_idx(int packed_type);
 #define CODEC_H264_MVC  2
 #define CODEC_JPEG      3
 #define CODEC_VP8       4
+#define CODEC_HEVC      5
 
 #define H264_DELIMITER0 0x00
 #define H264_DELIMITER1 0x00
@@ -467,6 +472,12 @@ va_enc_packed_type_to_idx(int packed_type);
 #define MPEG2_DELIMITER2        0x00
 #define MPEG2_DELIMITER3        0x00
 #define MPEG2_DELIMITER4        0xb0
+
+#define HEVC_DELIMITER0 0x00
+#define HEVC_DELIMITER1 0x00
+#define HEVC_DELIMITER2 0x00
+#define HEVC_DELIMITER3 0x00
+#define HEVC_DELIMITER4 0x00
 
 struct i965_coded_buffer_segment
 {
