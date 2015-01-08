@@ -83,6 +83,7 @@ struct gen6_vme_context
                                            unsigned long surface_state_offset);
     void *vme_state_message;
     unsigned int h264_level;
+    unsigned int hevc_level;
     unsigned int video_coding_type;
     unsigned int vme_kernel_sum;
     unsigned int mpeg2_level;
@@ -177,6 +178,24 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
                                   int index,
                                   struct object_surface *obj_surface,
                                   struct intel_encoder_context *encoder_context));
+
+/* HEVC */
+void
+intel_hevc_vme_reference_state(VADriverContextP ctx,
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context,
+                              int list_index,
+                              int surface_index,
+                              void (* vme_source_surface_state)(
+                                  VADriverContextP ctx,
+                                  int index,
+                                  struct object_surface *obj_surface,
+                                  struct intel_encoder_context *encoder_context));
+
+void intel_vme_hevc_update_mbmv_cost(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context);
+
 
 extern Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 

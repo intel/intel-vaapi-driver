@@ -145,6 +145,43 @@ static struct i965_kernel gen9_vme_vp8_kernels[] = {
     },
 };
 
+/* HEVC */
+
+static const uint32_t gen9_vme_hevc_intra_frame[][4] = {
+#include "shaders/vme/intra_frame_gen9.g9b"
+};
+
+static const uint32_t gen9_vme_hevc_inter_frame[][4] = {
+#include "shaders/vme/inter_frame_gen9.g9b"
+};
+
+static const uint32_t gen9_vme_hevc_inter_bframe[][4] = {
+#include "shaders/vme/inter_bframe_gen9.g9b"
+};
+
+static struct i965_kernel gen9_vme_hevc_kernels[] = {
+    {
+        "VME Intra Frame",
+        VME_INTRA_SHADER, /*index*/
+        gen9_vme_hevc_intra_frame,
+        sizeof(gen9_vme_hevc_intra_frame),
+        NULL
+    },
+    {
+        "VME inter Frame",
+        VME_INTER_SHADER,
+        gen9_vme_hevc_inter_frame,
+        sizeof(gen9_vme_hevc_inter_frame),
+        NULL
+    },
+    {
+        "VME inter BFrame",
+        VME_BINTER_SHADER,
+        gen9_vme_hevc_inter_bframe,
+        sizeof(gen9_vme_hevc_inter_bframe),
+        NULL
+    }
+};
 /* only used for VME source surface state */
 static void
 gen9_vme_source_surface_state(VADriverContextP ctx,
@@ -379,6 +416,13 @@ static VAStatus gen9_vme_constant_setup(VADriverContextP ctx,
         }
     } else if (encoder_context->codec == CODEC_MPEG2) {
         mv_num = 2;
+    }else if (encoder_context->codec == CODEC_HEVC) {
+        if (vme_context->hevc_level >= 30*3) {
+            mv_num = 16;
+
+            if (vme_context->hevc_level >= 31*3)
+                mv_num = 8;
+        }/* use the avc level setting */
     }
 
     vme_state_message[31] = mv_num;
@@ -1277,6 +1321,440 @@ gen9_vme_vp8_pipeline(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+/* HEVC */
+
+static void
+gen9_vme_hevc_output_buffer_setup(VADriverContextP ctx,
+                             struct encode_state *encode_state,
+                             int index,
+                             struct intel_encoder_context *encoder_context)
+
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
+    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
+    int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + 15)/16;
+    int height_in_mbs = (pSequenceParameter->pic_height_in_luma_samples + 15)/16;
+
+
+    vme_context->vme_output.num_blocks = width_in_mbs * height_in_mbs;
+    vme_context->vme_output.pitch = 16; /* in bytes, always 16 */
+
+    if (is_intra)
+        vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 2;
+    else
+        vme_context->vme_output.size_block = INTRA_VME_OUTPUT_IN_BYTES * 24;
+    /*
+     * Inter MV . 32-byte Intra search + 16 IME info + 128 IME MV + 32 IME Ref
+     * + 16 FBR Info + 128 FBR MV + 32 FBR Ref.
+     * 16 * (2 + 2 * (1 + 8 + 2))= 16 * 24.
+     */
+
+    vme_context->vme_output.bo = dri_bo_alloc(i965->intel.bufmgr,
+                                              "VME output buffer",
+                                              vme_context->vme_output.num_blocks * vme_context->vme_output.size_block,
+                                              0x1000);
+    assert(vme_context->vme_output.bo);
+    vme_context->vme_buffer_suface_setup(ctx,
+                                         &vme_context->gpe_context,
+                                         &vme_context->vme_output,
+                                         BINDING_TABLE_OFFSET(index),
+                                         SURFACE_STATE_OFFSET(index));
+}
+
+static void
+gen9_vme_hevc_output_vme_batchbuffer_setup(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      int index,
+                                      struct intel_encoder_context *encoder_context)
+
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + 15)/16;
+    int height_in_mbs = (pSequenceParameter->pic_height_in_luma_samples + 15)/16;
+
+    vme_context->vme_batchbuffer.num_blocks = width_in_mbs * height_in_mbs + 1;
+    vme_context->vme_batchbuffer.size_block = 64; /* 4 OWORDs */
+    vme_context->vme_batchbuffer.pitch = 16;
+    vme_context->vme_batchbuffer.bo = dri_bo_alloc(i965->intel.bufmgr,
+                                                   "VME batchbuffer",
+                                                   vme_context->vme_batchbuffer.num_blocks * vme_context->vme_batchbuffer.size_block,
+                                                   0x1000);
+}
+static VAStatus
+gen9_vme_hevc_surface_setup(VADriverContextP ctx,
+                       struct encode_state *encode_state,
+                       int is_intra,
+                       struct intel_encoder_context *encoder_context)
+{
+    struct object_surface *obj_surface;
+
+    /*Setup surfaces state*/
+    /* current picture for encoding */
+    obj_surface = encode_state->input_yuv_object;
+    gen9_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
+    gen9_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
+    gen9_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);
+
+    if (!is_intra) {
+        VAEncSliceParameterBufferHEVC *slice_param = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
+        int slice_type;
+
+        slice_type = slice_param->slice_type;
+        assert(slice_type != SLICE_TYPE_I && slice_type != SLICE_TYPE_SI);
+
+        /* to do HEVC */
+        intel_hevc_vme_reference_state(ctx, encode_state, encoder_context, 0, 1, gen9_vme_source_surface_state);
+
+        if (slice_type == SLICE_TYPE_B)
+            intel_hevc_vme_reference_state(ctx, encode_state, encoder_context, 1, 2, gen9_vme_source_surface_state);
+    }
+
+    /* VME output */
+    gen9_vme_hevc_output_buffer_setup(ctx, encode_state, 3, encoder_context);
+    gen9_vme_hevc_output_vme_batchbuffer_setup(ctx, encode_state, 5, encoder_context);
+
+    return VA_STATUS_SUCCESS;
+}
+static void
+gen9wa_vme_hevc_walker_fill_vme_batchbuffer(VADriverContextP ctx,
+                                     struct encode_state *encode_state,
+                                     int mb_width, int mb_height,
+                                     int kernel,
+                                     int transform_8x8_mode_flag,
+                                     struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    int mb_row;
+    int s;
+    unsigned int *command_ptr;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    int log2_cu_size = pSequenceParameter->log2_min_luma_coding_block_size_minus3 + 3;
+    int log2_ctb_size = pSequenceParameter->log2_diff_max_min_luma_coding_block_size + log2_cu_size;
+    int ctb_size = 1 << log2_ctb_size;
+    int num_mb_in_ctb = (ctb_size + 15)/16;
+    num_mb_in_ctb = num_mb_in_ctb * num_mb_in_ctb;
+
+#define		USE_SCOREBOARD		(1 << 21)
+
+    dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
+    command_ptr = vme_context->vme_batchbuffer.bo->virtual;
+
+    /*slice_segment_address  must picture_width_in_ctb alainment */
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+        VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[s]->buffer;
+        int first_mb = pSliceParameter->slice_segment_address * num_mb_in_ctb;
+        int num_mb = pSliceParameter->num_ctu_in_slice * num_mb_in_ctb;
+        unsigned int mb_intra_ub, score_dep;
+        int x_outer, y_outer, x_inner, y_inner;
+        int xtemp_outer = 0;
+
+        x_outer = first_mb % mb_width;
+        y_outer = first_mb / mb_width;
+        mb_row = y_outer;
+
+        for (; x_outer < (mb_width -2 ) && !loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+            x_inner = x_outer;
+            y_inner = y_outer;
+            for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+                mb_intra_ub = 0;
+                score_dep = 0;
+                if (x_inner != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+                    score_dep |= MB_SCOREBOARD_A;
+                }
+                if (y_inner != mb_row) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+                    score_dep |= MB_SCOREBOARD_B;
+                    if (x_inner != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+                    if (x_inner != (mb_width -1)) {
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                        score_dep |= MB_SCOREBOARD_C;
+                    }
+                }
+
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = kernel;
+                *command_ptr++ = USE_SCOREBOARD;
+                /* Indirect data */
+                *command_ptr++ = 0;
+                /* the (X, Y) term of scoreboard */
+                *command_ptr++ = ((y_inner << 16) | x_inner);
+                *command_ptr++ = score_dep;
+                /*inline data */
+                *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+                *command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+                *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
+                *command_ptr++ = 0;
+
+                x_inner -= 2;
+                y_inner += 1;
+            }
+            x_outer += 1;
+        }
+
+        xtemp_outer = mb_width - 2;
+        if (xtemp_outer < 0)
+            xtemp_outer = 0;
+        x_outer = xtemp_outer;
+        y_outer = first_mb / mb_width;
+        for (;!loop_in_bounds(x_outer, y_outer, first_mb, num_mb, mb_width, mb_height); ) {
+            y_inner = y_outer;
+            x_inner = x_outer;
+            for (; !loop_in_bounds(x_inner, y_inner, first_mb, num_mb, mb_width, mb_height);) {
+                mb_intra_ub = 0;
+                score_dep = 0;
+                if (x_inner != 0) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+                    score_dep |= MB_SCOREBOARD_A;
+                }
+                if (y_inner != mb_row) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+                    score_dep |= MB_SCOREBOARD_B;
+                    if (x_inner != 0)
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+
+                    if (x_inner != (mb_width -1)) {
+                        mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                        score_dep |= MB_SCOREBOARD_C;
+                    }
+                }
+
+                *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+                *command_ptr++ = kernel;
+                *command_ptr++ = USE_SCOREBOARD;
+                /* Indirect data */
+                *command_ptr++ = 0;
+                /* the (X, Y) term of scoreboard */
+                *command_ptr++ = ((y_inner << 16) | x_inner);
+                *command_ptr++ = score_dep;
+                /*inline data */
+                *command_ptr++ = (mb_width << 16 | y_inner << 8 | x_inner);
+                *command_ptr++ = ((1 << 18) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+
+                *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
+                *command_ptr++ = 0;
+                x_inner -= 2;
+                y_inner += 1;
+            }
+            x_outer++;
+            if (x_outer >= mb_width) {
+                y_outer += 1;
+                x_outer = xtemp_outer;
+            }
+        }
+    }
+
+    *command_ptr++ = MI_BATCH_BUFFER_END;
+    *command_ptr++ = 0;
+
+    dri_bo_unmap(vme_context->vme_batchbuffer.bo);
+}
+
+static void
+gen9_vme_hevc_fill_vme_batchbuffer(VADriverContextP ctx,
+                              struct encode_state *encode_state,
+                              int mb_width, int mb_height,
+                              int kernel,
+                              int transform_8x8_mode_flag,
+                              struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    int mb_x = 0, mb_y = 0;
+    int i, s;
+    unsigned int *command_ptr;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    int log2_cu_size = pSequenceParameter->log2_min_luma_coding_block_size_minus3 + 3;
+    int log2_ctb_size = pSequenceParameter->log2_diff_max_min_luma_coding_block_size + log2_cu_size;
+
+    int ctb_size = 1 << log2_ctb_size;
+    int num_mb_in_ctb = (ctb_size + 15)/16;
+    num_mb_in_ctb = num_mb_in_ctb * num_mb_in_ctb;
+
+    dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
+    command_ptr = vme_context->vme_batchbuffer.bo->virtual;
+
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+        VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[s]->buffer;
+        int slice_mb_begin = pSliceParameter->slice_segment_address * num_mb_in_ctb;
+        int slice_mb_number = pSliceParameter->num_ctu_in_slice * num_mb_in_ctb;
+
+        unsigned int mb_intra_ub;
+        int slice_mb_x = slice_mb_begin % mb_width;
+        for (i = 0; i < slice_mb_number;  ) {
+            int mb_count = i + slice_mb_begin;
+            mb_x = mb_count % mb_width;
+            mb_y = mb_count / mb_width;
+            mb_intra_ub = 0;
+
+            if (mb_x != 0) {
+                mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_AE;
+            }
+            if (mb_y != 0) {
+                mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_B;
+                if (mb_x != 0)
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_D;
+                if (mb_x != (mb_width -1))
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+            }
+            if (i < mb_width) {
+                if (i == 0)
+                    mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_AE);
+                mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_BCD_MASK);
+                if ((i == (mb_width - 1)) && slice_mb_x) {
+                    mb_intra_ub |= INTRA_PRED_AVAIL_FLAG_C;
+                }
+            }
+
+            if ((i == mb_width) && slice_mb_x) {
+                mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
+            }
+
+            *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+            *command_ptr++ = kernel;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+
+            /*inline data */
+            *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
+            *command_ptr++ = ( (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+
+            *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
+            *command_ptr++ = 0;
+            i += 1;
+        }
+    }
+
+    *command_ptr++ = MI_BATCH_BUFFER_END;
+    *command_ptr++ = 0;
+
+    dri_bo_unmap(vme_context->vme_batchbuffer.bo);
+}
+
+static void gen9_vme_hevc_pipeline_programing(VADriverContextP ctx,
+                                         struct encode_state *encode_state,
+                                         struct intel_encoder_context *encoder_context)
+{
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + 15)/16;
+    int height_in_mbs = (pSequenceParameter->pic_height_in_luma_samples + 15)/16;
+    int kernel_shader;
+    bool allow_hwscore = true;
+    int s;
+
+    int log2_cu_size = pSequenceParameter->log2_min_luma_coding_block_size_minus3 + 3;
+    int log2_ctb_size = pSequenceParameter->log2_diff_max_min_luma_coding_block_size + log2_cu_size;
+
+    int ctb_size = 1 << log2_ctb_size;
+    int num_mb_in_ctb = (ctb_size + 15)/16;
+    int transform_8x8_mode_flag = 1;
+    num_mb_in_ctb = num_mb_in_ctb * num_mb_in_ctb;
+
+    for (s = 0; s < encode_state->num_slice_params_ext; s++) {
+        pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[s]->buffer;
+        int slice_mb_begin = pSliceParameter->slice_segment_address * num_mb_in_ctb;
+        if ((slice_mb_begin % width_in_mbs)) {
+            allow_hwscore = false;
+            break;
+        }
+    }
+
+    if (pSliceParameter->slice_type == SLICE_TYPE_I) {
+        kernel_shader = VME_INTRA_SHADER;
+    } else if (pSliceParameter->slice_type == SLICE_TYPE_P) {
+        kernel_shader = VME_INTER_SHADER;
+    } else {
+        kernel_shader = VME_BINTER_SHADER;
+        if (!allow_hwscore)
+            kernel_shader = VME_INTER_SHADER;
+    }
+    if (allow_hwscore)
+        gen9wa_vme_hevc_walker_fill_vme_batchbuffer(ctx,
+                                               encode_state,
+                                               width_in_mbs, height_in_mbs,
+                                               kernel_shader,
+                                               transform_8x8_mode_flag,
+                                               encoder_context);
+    else
+        gen9_vme_hevc_fill_vme_batchbuffer(ctx,
+                                      encode_state,
+                                      width_in_mbs, height_in_mbs,
+                                      kernel_shader,
+                                      transform_8x8_mode_flag,
+                                      encoder_context);
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+    gen9_gpe_pipeline_setup(ctx, &vme_context->gpe_context, batch);
+    BEGIN_BATCH(batch, 3);
+    OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
+    OUT_RELOC(batch,
+              vme_context->vme_batchbuffer.bo,
+              I915_GEM_DOMAIN_COMMAND, 0,
+              0);
+    OUT_BATCH(batch, 0);
+    ADVANCE_BATCH(batch);
+
+    gen9_gpe_pipeline_end(ctx, &vme_context->gpe_context, batch);
+
+    intel_batchbuffer_end_atomic(batch);
+}
+
+static VAStatus gen9_vme_hevc_prepare(VADriverContextP ctx,
+                                 struct encode_state *encode_state,
+                                 struct intel_encoder_context *encoder_context)
+{
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
+    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+
+    /* here use the avc level for hevc vme */
+    if (!vme_context->hevc_level ||
+        (vme_context->hevc_level != pSequenceParameter->general_level_idc)) {
+        vme_context->hevc_level = pSequenceParameter->general_level_idc;
+    }
+
+    intel_vme_hevc_update_mbmv_cost(ctx, encode_state, encoder_context);
+
+    /*Setup all the memory object*/
+    gen9_vme_hevc_surface_setup(ctx, encode_state, is_intra, encoder_context);
+    gen9_vme_interface_setup(ctx, encode_state, encoder_context);
+    //gen9_vme_vme_state_setup(ctx, encode_state, is_intra, encoder_context);
+    gen9_vme_constant_setup(ctx, encode_state, encoder_context);
+
+    /*Programing media pipeline*/
+    gen9_vme_hevc_pipeline_programing(ctx, encode_state, encoder_context);
+
+    return vaStatus;
+}
+
+
+static VAStatus
+gen9_vme_hevc_pipeline(VADriverContextP ctx,
+                  VAProfile profile,
+                  struct encode_state *encode_state,
+                  struct intel_encoder_context *encoder_context)
+{
+    gen9_vme_media_init(ctx, encoder_context);
+    gen9_vme_hevc_prepare(ctx, encode_state, encoder_context);
+    gen9_vme_run(ctx, encode_state, encoder_context);
+    gen9_vme_stop(ctx, encode_state, encoder_context);
+
+    return VA_STATUS_SUCCESS;
+}
+
+
 static void
 gen9_vme_context_destroy(void *context)
 {
@@ -1325,6 +1803,12 @@ Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         vme_kernel_list = gen9_vme_vp8_kernels;
         encoder_context->vme_pipeline = gen9_vme_vp8_pipeline;
         i965_kernel_num = sizeof(gen9_vme_vp8_kernels) / sizeof(struct i965_kernel);
+        break;
+
+    case CODEC_HEVC:
+        vme_kernel_list = gen9_vme_hevc_kernels;
+        encoder_context->vme_pipeline = gen9_vme_hevc_pipeline;
+        i965_kernel_num = sizeof(gen9_vme_hevc_kernels) / sizeof(struct i965_kernel);
         break;
 
     default:
