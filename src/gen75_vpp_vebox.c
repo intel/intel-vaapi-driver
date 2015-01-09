@@ -565,13 +565,14 @@ void set_std_table_9(struct intel_vebox_context *proc_ctx, unsigned int *p_table
 void hsw_veb_iecp_std_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     unsigned int *p_table = proc_ctx->iecp_state_table.ptr + 0 ;
-    int stde_factor = 0; //default value
-    VAProcFilterParameterBuffer * std_param = (VAProcFilterParameterBuffer *) proc_ctx->filter_iecp_std;
-    stde_factor = std_param->value;
 
     if(!(proc_ctx->filters_mask & VPP_IECP_STD_STE)){ 
         memset(p_table, 0, 29 * 4);
     }else{
+        int stde_factor = 0; //default value
+        VAProcFilterParameterBuffer * std_param = (VAProcFilterParameterBuffer *) proc_ctx->filter_iecp_std;
+        stde_factor = std_param->value;
+
         //DWord 0
         *p_table ++ = ( 154 << 24 |   // V_Mid
                         110 << 16 |   // U_Mid
