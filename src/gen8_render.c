@@ -1001,6 +1001,10 @@ gen8_emit_vertex_element_state(VADriverContextP ctx)
 	OUT_BATCH(batch, i);
 	OUT_BATCH(batch, 0);
     }
+
+    /* Disable system-generated values. */
+    OUT_BATCH(batch, GEN8_3DSTATE_VF_SGVS | (2 - 2));
+    OUT_BATCH(batch, 0);
 }
 
 static void
