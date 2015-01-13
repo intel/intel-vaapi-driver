@@ -936,6 +936,9 @@ gen9_emit_vertices(VADriverContextP ctx)
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
 
+    OUT_BATCH(batch, GEN8_3DSTATE_VF_SGVS | (2 - 2));
+    OUT_BATCH(batch, 0);
+
     BEGIN_BATCH(batch, 7);
     OUT_BATCH(batch, CMD_3DPRIMITIVE | (7 - 2));
     OUT_BATCH(batch,
