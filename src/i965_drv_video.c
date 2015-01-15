@@ -2173,13 +2173,7 @@ i965_MapBuffer(VADriverContextP ctx,
                     //In JPEG End of Image (EOI = 0xDDF9) marker can be used for delimiter.
                     delimiter0 = 0xFF;
                     delimiter1 = 0xD9;
-                } else if (coded_buffer_segment->codec == CODEC_VP8) {
-                    delimiter0 = VP8_DELIMITER0;
-                    delimiter1 = VP8_DELIMITER1;
-                    delimiter2 = VP8_DELIMITER2;
-                    delimiter3 = VP8_DELIMITER3;
-                    delimiter4 = VP8_DELIMITER4;
-                 } else {
+                } else if (coded_buffer_segment->codec != CODEC_VP8) {
                     ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
                 }
 
@@ -2189,13 +2183,10 @@ i965_MapBuffer(VADriverContextP ctx,
                             break;
                         }
                    }
-
-                   if (i == obj_buffer->size_element - I965_CODEDBUFFER_HEADER_SIZE - 1 - 0x1000) {
-                       coded_buffer_segment->base.status |= VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
-                   }
- 
                    coded_buffer_segment->base.size = i + 2;
-                } else {
+                } else if (coded_buffer_segment->codec != CODEC_VP8) {
+                    /* vp8 coded buffer size can be told by vp8 internal statistics buffer,
+                       so it don't need to traversal the coded buffer */
                     for (i = 0; i < obj_buffer->size_element - I965_CODEDBUFFER_HEADER_SIZE - 3 - 0x1000; i++) {
                         if ((buffer[i] == delimiter0) &&
                             (buffer[i + 1] == delimiter1) &&
@@ -2209,6 +2200,10 @@ i965_MapBuffer(VADriverContextP ctx,
                             coded_buffer_segment->base.status |= VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
                         }
                     coded_buffer_segment->base.size = i;
+                }
+
+                if (coded_buffer_segment->base.size >= obj_buffer->size_element - I965_CODEDBUFFER_HEADER_SIZE - 0x1000) {
+                    coded_buffer_segment->base.status |= VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
                 }
 
                 coded_buffer_segment->mapped = 1;

@@ -3115,6 +3115,33 @@ gen9_mfc_vp8_pipeline_programing(VADriverContextP ctx,
     dri_bo_unreference(slice_batch_bo);
 }
 
+static void gen9_mfc_calc_vp8_coded_buffer_size(VADriverContextP ctx,
+                          struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
+    unsigned char is_intra_frame = !pic_param->pic_flags.bits.frame_type;
+    unsigned int *vp8_encoding_status, first_partition_bytes, token_partition_bytes, vp8_coded_bytes;
+
+    dri_bo_map(mfc_context->vp8_state.token_statistics_bo, 0);
+
+    vp8_encoding_status = (unsigned int *)mfc_context->vp8_state.token_statistics_bo->virtual;
+    first_partition_bytes = (*vp8_encoding_status + 7) / 8;
+    token_partition_bytes = (*(unsigned int *)(vp8_encoding_status + 9) + 7) / 8;
+    
+    /*coded_bytes includes P0~P8 partitions bytes + uncompresse date bytes + partion_size bytes in bitstream */
+    vp8_coded_bytes = first_partition_bytes + token_partition_bytes + (3 + 7 * !!is_intra_frame) + (pic_param->pic_flags.bits.num_token_partitions - 1) * 3;
+
+    dri_bo_unmap(mfc_context->vp8_state.token_statistics_bo);
+
+    dri_bo_map(mfc_context->vp8_state.final_frame_bo, 0);
+    struct i965_coded_buffer_segment *coded_buffer_segment = (struct i965_coded_buffer_segment *)(mfc_context->vp8_state.final_frame_bo->virtual);
+    coded_buffer_segment->base.size = vp8_coded_bytes;
+    dri_bo_unmap(mfc_context->vp8_state.final_frame_bo);
+}
+
 static VAStatus
 gen9_mfc_vp8_encode_picture(VADriverContextP ctx,
                               struct encode_state *encode_state,
@@ -3125,6 +3152,7 @@ gen9_mfc_vp8_encode_picture(VADriverContextP ctx,
     /*Programing bcs pipeline*/
     gen9_mfc_vp8_pipeline_programing(ctx, encode_state, encoder_context);
     gen9_mfc_run(ctx, encode_state, encoder_context);
+    gen9_mfc_calc_vp8_coded_buffer_size(ctx, encode_state, encoder_context);
 
     return VA_STATUS_SUCCESS;
 }
