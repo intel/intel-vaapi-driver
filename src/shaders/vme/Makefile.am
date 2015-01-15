@@ -20,8 +20,8 @@ INTEL_GEN75_INC	= batchbuffer.inc vme75.inc vme75_mpeg2.inc
 INTEL_GEN75_ASM	= $(INTEL_G75A:%.g75a=%.gen75.asm)
 
 
-INTEL_G8B	= intra_frame_gen8.g8b inter_frame_gen8.g8b inter_bframe_gen8.g8b mpeg2_inter_gen8.g8b
-INTEL_G8A	= intra_frame_gen8.g8a inter_frame_gen8.g8a inter_bframe_gen8.g8a mpeg2_inter_gen8.g8a
+INTEL_G8B	= intra_frame_gen8.g8b inter_frame_gen8.g8b inter_bframe_gen8.g8b mpeg2_inter_gen8.g8b vp8_intra_frame_gen8.g8b vp8_inter_frame_gen8.g8b
+INTEL_G8A	= intra_frame_gen8.g8a inter_frame_gen8.g8a inter_bframe_gen8.g8a mpeg2_inter_gen8.g8a vp8_intra_frame_gen8.g8a vp8_inter_frame_gen8.g8a
 INTEL_GEN8_INC	= vme8.inc vme75_mpeg2.inc
 INTEL_GEN8_ASM	= $(INTEL_G8A:%.g8a=%.gen8.asm)
 

@@ -522,7 +522,7 @@ void binarize_vp8_frame_header(VAEncSequenceParameterBufferVP8 *seq_param,
     avc_bitstream bs;
     int i, j;
     int is_intra_frame = !pic_param->pic_flags.bits.frame_type;
-    int log2num = (int)log2(pic_param->pic_flags.bits.num_token_partitions);
+    int log2num = pic_param->pic_flags.bits.num_token_partitions;
 
     /* modify picture paramters */
     pic_param->pic_flags.bits.loop_filter_adj_enable = 1;
@@ -530,6 +530,10 @@ void binarize_vp8_frame_header(VAEncSequenceParameterBufferVP8 *seq_param,
     pic_param->pic_flags.bits.forced_lf_adjustment = 1;
     pic_param->pic_flags.bits.refresh_entropy_probs = 1;
     pic_param->pic_flags.bits.segmentation_enabled = 0;
+
+    pic_param->pic_flags.bits.loop_filter_type = pic_param->pic_flags.bits.version / 2;
+    if (pic_param->pic_flags.bits.version > 1)
+        pic_param->loop_filter_level[0] = 0; 
 
     avc_bitstream_start(&bs);
 
