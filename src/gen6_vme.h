@@ -106,6 +106,10 @@ extern void intel_vme_update_mbmv_cost(VADriverContextP ctx,
                                        struct encode_state *encode_state,
                                        struct intel_encoder_context *encoder_context);
 
+void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context);
+
 Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 #define		MODE_INTRA_NONPRED	0

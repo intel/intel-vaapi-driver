@@ -440,7 +440,6 @@ mov  (8) vme_msg_1<1>:UD        vme_m1.0<8,8,1>:UD {align1};
 
 /* m0 */        
 mov  (1) vme_m0.12<1>:UD        INTRA_SAD_HAAR:UD {align1};    /* 16x16 Source, Intra_harr */
-mov  (1) vme_m0.15<1>:UB        SUB_PART_8x4_DISABLE + SUB_PART_4x8_DISABLE {align1}; /* vp8 don't support 8x4 and 4x8 partion */
 mov  (8) vme_msg_0.0<1>:UD      vme_m0.0<8,8,1>:UD {align1};
 
 /* after verification it will be passed by using payload */
@@ -492,7 +491,7 @@ send (16)
         {align1};
 
 /* IME search */
-mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_SINGLE + INTER_PART_MASK + INTER_SAD_HAAR:UD {align1};    /* 16x16 Source, harr */
+mov  (1) vme_m0.12<1>:UD        SEARCH_CTRL_SINGLE + VP8_INTER_PART_MASK + INTER_SAD_HAAR:UD {align1};    /* 16x16 Source, harr */
 mov  (1) vme_m0.22<1>:UW        REF_REGION_SIZE {align1};         /* Reference Width&Height, 48x40 */
 
 mov  (1) vme_m0.0<1>:UD		vme_m0.8<0,1,0>:UD      {align1};
