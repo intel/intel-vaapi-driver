@@ -34,6 +34,7 @@
 #include <va/va_enc_h264.h>
 #include <va/va_enc_mpeg2.h>
 #include <va/va_enc_jpeg.h>
+#include <va/va_enc_vp8.h>
 #include <va/va_vpp.h>
 #include <va/va_backend.h>
 #include <va/va_backend_vpp.h>
@@ -453,6 +454,7 @@ va_enc_packed_type_to_idx(int packed_type);
 #define CODEC_MPEG2     1
 #define CODEC_H264_MVC  2
 #define CODEC_JPEG      3
+#define CODEC_VP8       4
 
 #define H264_DELIMITER0 0x00
 #define H264_DELIMITER1 0x00
