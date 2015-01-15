@@ -30,7 +30,7 @@
 #include <va/va_enc_h264.h>
 #include <va/va_enc_mpeg2.h>
 #include <va/va_enc_vp8.h>
-
+#include <math.h>
 #include "gen6_mfc.h"
 #include "i965_encoder_utils.h"
 
@@ -520,17 +520,16 @@ void binarize_vp8_frame_header(VAEncSequenceParameterBufferVP8 *seq_param,
                            struct gen6_mfc_context *mfc_context)
 {
     avc_bitstream bs;
-    int i;
+    int i, j;
     int is_intra_frame = !pic_param->pic_flags.bits.frame_type;
     int log2num = (int)log2(pic_param->pic_flags.bits.num_token_partitions);
 
-    if (is_intra_frame) {
-        pic_param->pic_flags.bits.loop_filter_adj_enable = 1;
-        pic_param->pic_flags.bits.mb_no_coeff_skip = 1;
-
-        pic_param->pic_flags.bits.forced_lf_adjustment = 1;
-        pic_param->pic_flags.bits.refresh_entropy_probs = 1;
-    }
+    /* modify picture paramters */
+    pic_param->pic_flags.bits.loop_filter_adj_enable = 1;
+    pic_param->pic_flags.bits.mb_no_coeff_skip = 1;
+    pic_param->pic_flags.bits.forced_lf_adjustment = 1;
+    pic_param->pic_flags.bits.refresh_entropy_probs = 1;
+    pic_param->pic_flags.bits.segmentation_enabled = 0;
 
     avc_bitstream_start(&bs);
 
@@ -606,7 +605,17 @@ void binarize_vp8_frame_header(VAEncSequenceParameterBufferVP8 *seq_param,
         binarize_qindex_delta(&bs, q_matrix->quantization_index_delta[i]);
 
     if (!is_intra_frame) {
-        /*put reference frames info*/ 
+        avc_bitstream_put_ui(&bs, pic_param->pic_flags.bits.refresh_golden_frame, 1); 
+        avc_bitstream_put_ui(&bs, pic_param->pic_flags.bits.refresh_alternate_frame, 1);
+
+        if (!pic_param->pic_flags.bits.refresh_golden_frame)
+            avc_bitstream_put_ui(&bs, pic_param->pic_flags.bits.copy_buffer_to_golden, 2);
+
+        if (!pic_param->pic_flags.bits.refresh_alternate_frame)
+            avc_bitstream_put_ui(&bs, pic_param->pic_flags.bits.copy_buffer_to_alternate, 2);
+       
+        avc_bitstream_put_ui(&bs, pic_param->pic_flags.bits.sign_bias_golden, 1);
+        avc_bitstream_put_ui(&bs, pic_param->pic_flags.bits.sign_bias_alternate, 1);
     }
    
     avc_bitstream_put_ui(&bs, pic_param->pic_flags.bits.refresh_entropy_probs, 1);
@@ -616,7 +625,7 @@ void binarize_vp8_frame_header(VAEncSequenceParameterBufferVP8 *seq_param,
 
     mfc_context->vp8_state.frame_header_token_update_pos = bs.bit_offset;
 
-    for (i =0; i < 4 * 8 * 3 * 11; i++)
+    for (i = 0; i < 4 * 8 * 3 * 11; i++)
         avc_bitstream_put_ui(&bs, 0, 1); //don't update coeff_probs
 
     avc_bitstream_put_ui(&bs, pic_param->pic_flags.bits.mb_no_coeff_skip, 1);
@@ -627,9 +636,25 @@ void binarize_vp8_frame_header(VAEncSequenceParameterBufferVP8 *seq_param,
         avc_bitstream_put_ui(&bs, mfc_context->vp8_state.prob_intra, 8);
         avc_bitstream_put_ui(&bs, mfc_context->vp8_state.prob_last, 8);
         avc_bitstream_put_ui(&bs, mfc_context->vp8_state.prob_gf, 8);
+ 
+        avc_bitstream_put_ui(&bs, 1, 1); //y_mode_update_flag = 1
+        for (i = 0; i < 4; i++) {
+            avc_bitstream_put_ui(&bs, mfc_context->vp8_state.y_mode_probs[i], 8);
+        } 
+
+        avc_bitstream_put_ui(&bs, 1, 1); //uv_mode_update_flag = 1
+        for (i = 0; i < 3; i++) {
+            avc_bitstream_put_ui(&bs, mfc_context->vp8_state.uv_mode_probs[i], 8);
+        } 
 
         mfc_context->vp8_state.frame_header_bin_mv_upate_pos = bs.bit_offset;
-        /*add mode_probs*/ 
+        
+        for (i = 0; i < 2 ; i++) {
+            for (j = 0; j < 19; j++) {
+                avc_bitstream_put_ui(&bs, 0, 1);
+                //avc_bitstream_put_ui(&bs, mfc_context->vp8_state.mv_probs[i][j], 7);
+            }
+        } 
     }
 
     avc_bitstream_end(&bs);

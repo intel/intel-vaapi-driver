@@ -125,7 +125,7 @@ static const uint32_t gen9_vme_vp8_intra_frame[][4] = {
 };
 
 static const uint32_t gen9_vme_vp8_inter_frame[][4] = {
-#include "shaders/vme/inter_frame_gen9.g9b"
+#include "shaders/vme/vp8_inter_frame_gen9.g9b"
 };
 
 static struct i965_kernel gen9_vme_vp8_kernels[] = {
