@@ -2,7 +2,7 @@ VME_CORE	= batchbuffer.asm intra_frame.asm inter_frame.asm
 VME7_CORE	= batchbuffer.asm intra_frame_ivb.asm inter_frame_ivb.asm inter_bframe_ivb.asm mpeg2_inter_ivb.asm
 VME75_CORE	= batchbuffer.asm intra_frame_haswell.asm inter_frame_haswell.asm inter_bframe_haswell.asm mpeg2_inter_haswell.asm
 VME8_CORE	= intra_frame_gen8.asm	inter_frame_gen8.asm inter_bframe_gen8.asm mpeg2_inter_gen8.asm
-VME9_CORE	= $(VME8_CORE)
+VME9_CORE	= $(VME8_CORE) vp8_intra_frame_gen9.asm
 
 INTEL_G6B	= batchbuffer.g6b intra_frame.g6b inter_frame.g6b
 INTEL_G6A	= batchbuffer.g6a intra_frame.g6a inter_frame.g6a
@@ -26,8 +26,8 @@ INTEL_GEN8_INC	= vme8.inc vme75_mpeg2.inc
 INTEL_GEN8_ASM	= $(INTEL_G8A:%.g8a=%.gen8.asm)
 
 
-INTEL_G9B	= intra_frame_gen9.g9b inter_frame_gen9.g9b inter_bframe_gen9.g9b mpeg2_inter_gen9.g9b
-INTEL_G9A	= intra_frame_gen9.g9a inter_frame_gen9.g9a inter_bframe_gen9.g9a mpeg2_inter_gen9.g9a
+INTEL_G9B	= intra_frame_gen9.g9b inter_frame_gen9.g9b inter_bframe_gen9.g9b mpeg2_inter_gen9.g9b vp8_intra_frame_gen9.g9b
+INTEL_G9A	= intra_frame_gen9.g9a inter_frame_gen9.g9a inter_bframe_gen9.g9a mpeg2_inter_gen9.g9a vp8_intra_frame_gen9.g9a
 INTEL_GEN9_INC	= $(INTEL_GEN8_INC)
 INTEL_GEN9_ASM	= $(INTEL_G9A:%.g9a=%.gen9.asm)
 
