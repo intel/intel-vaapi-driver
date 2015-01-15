@@ -46,6 +46,9 @@ define(`LUMA_INTRA_16x16_DISABLE',      `0x1')
 define(`LUMA_INTRA_8x8_DISABLE',        `0x2')
 define(`LUMA_INTRA_4x4_DISABLE',        `0x4')
 
+define(`SUB_PART_8x4_DISABLE',          `0x20')
+define(`SUB_PART_4x8_DISABLE',          `0x40')
+
 define(`INTRA_PRED_AVAIL_FLAG_AE',      `0x60')
 define(`INTRA_PRED_AVAIL_FLAG_B',       `0x10')
 define(`INTRA_PRED_AVAIL_FLAG_C',       `0x8')
@@ -87,6 +90,8 @@ define(`START_CENTER',                  `0x30000000')
 
 define(`ADAPTIVE_SEARCH_ENABLE',        `0x00000002') 
 define(`INTRA_PREDICTORE_MODE',         `0x11111111:UD')
+
+define(`INTRA_PLANAR_MODE_MASK',        `0x10001000:UD')
 
 define(`INTER_VME_OUTPUT_IN_OWS',       `10')
 define(`INTER_VME_OUTPUT_MV_IN_OWS',    `8')
