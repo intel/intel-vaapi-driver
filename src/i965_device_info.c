@@ -294,6 +294,7 @@ static struct hw_codec_info chv_hw_codec_info = {
     .has_di_motion_adptive = 1,
     .has_di_motion_compensated = 1,
     .has_vp8_decoding = 1,
+    .has_vp8_encoding = 1,
     .has_h264_mvc_encoding = 1,
 
     .num_filters = 5,

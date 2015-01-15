@@ -42,27 +42,27 @@
 #ifndef VP8_PROBS_H
 #define VP8_PROBS_H
 
-const unsigned char vp8_ymode_prob[4] =
+static const unsigned char vp8_ymode_prob[4] =
 {
     112, 86, 140, 37
 };
 
-const unsigned char vp8_kf_ymode_prob[4] =
+static const unsigned char vp8_kf_ymode_prob[4] =
 {
     145, 156, 163, 128
 };
 
-const unsigned char vp8_uv_mode_prob[3] =
+static const unsigned char vp8_uv_mode_prob[3] =
 {
     162, 101, 204
 };
 
-static  const unsigned char vp8_kf_uv_mode_prob[3] =
+static const unsigned char vp8_kf_uv_mode_prob[3] =
 {
     142, 114, 183
 };
 
-const unsigned char vp8_base_skip_false_prob[128] =
+static const unsigned char vp8_base_skip_false_prob[128] =
 {
     255, 255, 255, 255, 255, 255, 255, 255,
     255, 255, 255, 255, 255, 255, 255, 255,
@@ -82,7 +82,7 @@ const unsigned char vp8_base_skip_false_prob[128] =
     30,  28,  26,  24,  22,  20,  18, 16,
 };
 
-const unsigned char vp8_mv_update_probs[2][19] =
+static const unsigned char vp8_mv_update_probs[2][19] =
 {
     {
         237,
@@ -98,7 +98,7 @@ const unsigned char vp8_mv_update_probs[2][19] =
     }
 };
 
-const unsigned char vp8_default_mv_context[2][19] =
+static const unsigned char vp8_default_mv_context[2][19] =
 {
     {
         162,                                        /* is short */
@@ -116,7 +116,7 @@ const unsigned char vp8_default_mv_context[2][19] =
     }
 };
 
-const unsigned char vp8_default_coef_probs[4][8][3][11] =
+static const unsigned char vp8_default_coef_probs[4][8][3][11] =
 {
     { /* Block Type ( 0 ) */
         { /* Coeff Band ( 0 )*/
