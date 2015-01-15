@@ -422,6 +422,71 @@ error:
 }
 
 static VAStatus
+intel_encoder_check_vp8_parameter(VADriverContextP ctx,
+                                    struct encode_state *encode_state,
+                                    struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
+    struct object_surface *obj_surface;
+    struct object_buffer *obj_buffer;
+    int i = 0;
+    int is_key_frame = !pic_param->pic_flags.bits.frame_type;
+ 
+    obj_surface = SURFACE(pic_param->reconstructed_frame);
+    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
+    
+    if (!obj_surface)
+        goto error;
+    
+    encode_state->reconstructed_object = obj_surface;    
+    obj_buffer = BUFFER(pic_param->coded_buf);
+    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
+
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+        goto error;
+
+    encode_state->coded_buf_object = obj_buffer;
+
+    if (!is_key_frame) {
+        assert(pic_param->ref_last_frame != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->ref_last_frame);
+        assert(obj_surface && obj_surface->bo);
+
+        if (!obj_surface || !obj_surface->bo)
+            goto error;
+
+        encode_state->reference_objects[i++] = obj_surface;
+
+        assert(pic_param->ref_gf_frame != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->ref_gf_frame);
+        assert(obj_surface && obj_surface->bo);
+
+        if (!obj_surface || !obj_surface->bo)
+            goto error;
+
+        encode_state->reference_objects[i++] = obj_surface;
+
+        assert(pic_param->ref_arf_frame != VA_INVALID_SURFACE);
+        obj_surface = SURFACE(pic_param->ref_arf_frame);
+        assert(obj_surface && obj_surface->bo);
+
+        if (!obj_surface || !obj_surface->bo)
+            goto error;
+
+        encode_state->reference_objects[i++] = obj_surface;
+    }
+
+    for ( ; i < 16; i++)
+        encode_state->reference_objects[i] = NULL;
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
 intel_encoder_sanity_check_input(VADriverContextP ctx,
                                  VAProfile profile,
                                  struct encode_state *encode_state,
@@ -456,6 +521,14 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
         if (vaStatus != VA_STATUS_SUCCESS)
             goto out;
         vaStatus = intel_encoder_check_jpeg_yuv_surface(ctx, profile, encode_state, encoder_context);
+        break;
+    }
+ 
+    case VAProfileVP8Version0_3: {
+        vaStatus = intel_encoder_check_vp8_parameter(ctx, encode_state, encoder_context);
+         if (vaStatus != VA_STATUS_SUCCESS)
+            goto out;
+        vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
         break;
     }
 

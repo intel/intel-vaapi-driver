@@ -468,6 +468,12 @@ va_enc_packed_type_to_idx(int packed_type);
 #define MPEG2_DELIMITER3        0x00
 #define MPEG2_DELIMITER4        0xb0
 
+#define VP8_DELIMITER0 0x00
+#define VP8_DELIMITER1 0x00
+#define VP8_DELIMITER2 0x00
+#define VP8_DELIMITER3 0x00
+#define VP8_DELIMITER4 0x00
+
 struct i965_coded_buffer_segment
 {
     VACodedBufferSegment base;

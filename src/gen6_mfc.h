@@ -34,6 +34,7 @@
 #include <intel_bufmgr.h>
 
 #include "i965_gpe_utils.h"
+#include "i965_encoder.h"
 
 struct encode_state;
 
@@ -189,6 +190,37 @@ struct gen6_mfc_context
         int i_cpb_removal_delay_length;
         int i_dpb_output_delay_length;
     }vui_hrd;
+ 
+    struct {
+        unsigned char *vp8_frame_header;
+        unsigned int frame_header_bit_count;
+        unsigned int frame_header_qindex_update_pos;
+        unsigned int frame_header_lf_update_pos;
+        unsigned int frame_header_token_update_pos;
+        unsigned int frame_header_bin_mv_upate_pos;
+
+        unsigned int intermediate_partition_offset[8];
+        unsigned int intermediate_buffer_max_size;
+        unsigned int final_frame_byte_offset;
+
+        unsigned char mb_segment_tree_probs[3];
+        unsigned char y_mode_probs[4];
+        unsigned char uv_mode_probs[3];
+        unsigned char mv_probs[2][19];
+
+        unsigned char prob_skip_false;
+        unsigned char prob_intra;
+        unsigned char prob_last;
+        unsigned char prob_gf;
+        
+        dri_bo *frame_header_bo;
+        dri_bo *intermediate_bo;
+        dri_bo *final_frame_bo;
+        dri_bo *stream_out_bo;
+        dri_bo *coeff_probs_stream_in_bo;
+        dri_bo *token_statistics_bo;
+        dri_bo *mpc_row_store_bo;
+    }vp8_state;
 
     //"buffered_QMatrix" will be used to buffer the QMatrix if the app sends one.
     // Or else, we will load a default QMatrix from the driver for JPEG encode.

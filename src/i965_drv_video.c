@@ -2173,7 +2173,13 @@ i965_MapBuffer(VADriverContextP ctx,
                     //In JPEG End of Image (EOI = 0xDDF9) marker can be used for delimiter.
                     delimiter0 = 0xFF;
                     delimiter1 = 0xD9;
-                }  else {
+                } else if (coded_buffer_segment->codec == CODEC_VP8) {
+                    delimiter0 = VP8_DELIMITER0;
+                    delimiter1 = VP8_DELIMITER1;
+                    delimiter2 = VP8_DELIMITER2;
+                    delimiter3 = VP8_DELIMITER3;
+                    delimiter4 = VP8_DELIMITER4;
+                 } else {
                     ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
                 }
 
@@ -2868,7 +2874,8 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
             return VA_STATUS_ERROR_INVALID_PARAMETER;
         }
         if ((obj_context->codec_state.encode.num_slice_params <=0) &&
-                (obj_context->codec_state.encode.num_slice_params_ext <=0)) {
+                (obj_context->codec_state.encode.num_slice_params_ext <=0) &&
+                (obj_config->profile != VAProfileVP8Version0_3)) {
             return VA_STATUS_ERROR_INVALID_PARAMETER;
         }
 
