@@ -174,6 +174,8 @@ gen9_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
+    vme_size = vme_context->vme_output.size_block * vme_context->vme_output.num_blocks;
+
     /* the DW4-5 is the MFX upper bound */
     if (encoder_context->codec == CODEC_VP8) {
         OUT_BCS_RELOC(batch,
@@ -181,18 +183,22 @@ gen9_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 mfc_context->mfc_indirect_pak_bse_object.end_offset);
         OUT_BCS_BATCH(batch, 0);
+        /* the DW6-10 is for MFX Indirect MV Object Base Address */
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
     } else {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
+        /* the DW6-10 is for MFX Indirect MV Object Base Address */
+        OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
+        OUT_BCS_BATCH(batch, 0);
     }
-
-    vme_size = vme_context->vme_output.size_block * vme_context->vme_output.num_blocks;
-    /* the DW6-10 is for MFX Indirect MV Object Base Address */
-    OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
-    OUT_BCS_BATCH(batch, 0);
 
     /* the DW11-15 is for MFX IT-COFF. Not used on encoder */
     OUT_BCS_BATCH(batch, 0);
@@ -2622,33 +2628,16 @@ intel_mfc_vp8_prepare(VADriverContextP ctx,
     mfc_context->surface_state.w_pitch = obj_surface->width;
     mfc_context->surface_state.h_pitch = obj_surface->height;
 
-    /* forward reference */
-    obj_surface = encode_state->reference_objects[0];
+    /* set vp8 reference frames */
+    for (i = 0; i < ARRAY_ELEMS(mfc_context->reference_surfaces); i++) {
+        obj_surface = encode_state->reference_objects[i];
 
-    if (obj_surface && obj_surface->bo) {
-        mfc_context->reference_surfaces[0].bo = obj_surface->bo;
-        dri_bo_reference(mfc_context->reference_surfaces[0].bo);
-    } else
-        mfc_context->reference_surfaces[0].bo = NULL;
-
-    /* backward reference */
-    obj_surface = encode_state->reference_objects[1];
-
-    if (obj_surface && obj_surface->bo) {
-        mfc_context->reference_surfaces[1].bo = obj_surface->bo;
-        dri_bo_reference(mfc_context->reference_surfaces[1].bo);
-    } else {
-        mfc_context->reference_surfaces[1].bo = mfc_context->reference_surfaces[0].bo;
-
-        if (mfc_context->reference_surfaces[1].bo)
-            dri_bo_reference(mfc_context->reference_surfaces[1].bo);
-    }
-
-    for (i = 2; i < ARRAY_ELEMS(mfc_context->reference_surfaces); i++) {
-        mfc_context->reference_surfaces[i].bo = mfc_context->reference_surfaces[i & 1].bo;
-
-        if (mfc_context->reference_surfaces[i].bo)
+        if (obj_surface && obj_surface->bo) {
+            mfc_context->reference_surfaces[i].bo = obj_surface->bo;
             dri_bo_reference(mfc_context->reference_surfaces[i].bo);
+        } else {
+            mfc_context->reference_surfaces[i].bo = NULL;
+        }
     }
 
     /* input YUV surface */
@@ -2987,7 +2976,37 @@ gen9_mfc_vp8_pak_object_inter(VADriverContextP ctx,
                               int x, int y,
                               struct intel_batchbuffer *batch)
 {
- /* Add it later */
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+
+    if (batch == NULL)
+        batch = encoder_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 7);
+
+    OUT_BCS_BATCH(batch, MFX_VP8_PAK_OBJECT | (7 - 2));
+    OUT_BCS_BATCH(batch,
+                  (0 << 29) |           /* enable inline mv data: disable */
+                  64);
+    OUT_BCS_BATCH(batch,
+                  0);
+    OUT_BCS_BATCH(batch,
+                  (4 << 20) |           /* mv format: inter */
+                  (0 << 18) |           /* Segment ID */
+                  (0 << 17) |           /* coeff clamp: disable */
+                  (0 << 13) |		/* intra mb flag: inter mb */
+                  (0 << 11) | 		/* refer picture select: last frame */
+                  (0 << 8) |            /* mb type: 16x16 */
+                  (0 << 4) |		/* mb uv mode: dc_pred */
+                  (0 << 2) |		/* skip mb flag: disable */
+                  0);
+
+    OUT_BCS_BATCH(batch, (y << 16) | x);
+
+    /*zero mv*/
+    OUT_BCS_BATCH(batch, 0x88888888);
+    OUT_BCS_BATCH(batch, 0x88888888);
+
+    ADVANCE_BCS_BATCH(batch);
 }
 
 static void
