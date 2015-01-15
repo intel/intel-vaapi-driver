@@ -399,6 +399,11 @@
 
 #define MFD_VP8_BSD_OBJECT                      MFX(2, 4, 1, 8)
 
+#define MFX_VP8_ENCODER_CFG                     MFX(2, 4, 2, 1)
+
+#define MFX_VP8_BSP_BUF_BASE_ADDR_STATE         MFX(2, 4, 2, 3)
+
+#define MFX_VP8_PAK_OBJECT                      MFX(2, 4, 2, 9)
 
 #define VEB(pipeline, op, sub_opa, sub_opb)     \
      (3 << 29 |                                 \
