@@ -554,6 +554,10 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         encoder_context->codec = CODEC_JPEG;
         break;
 
+    case VAProfileVP8Version0_3:
+        encoder_context->codec = CODEC_VP8;
+        break;
+
     default:
         /* Never get here */
         assert(0);
