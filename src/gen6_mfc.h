@@ -62,6 +62,66 @@ struct encode_state;
 
 #define CMD_LEN_IN_OWORD        4
 
+typedef enum {
+   VME_V_PRED = 0,
+   VME_H_PRED = 1,
+   VME_DC_PRED = 2,
+   VME_PL_PRED = 3,
+
+   VME_MB_INTRA_MODE_COUNT
+} VME_MB_INTRA_PRED_MODE;
+
+typedef enum {
+   PAK_DC_PRED = 0,
+   PAK_V_PRED = 1,
+   PAK_H_PRED = 2,
+   PAK_TM_PRED = 3,
+
+   PAK_MB_INTRA_MODE_COUNT
+} VP8_PAK_MB_INTRA_PRED_MODE;
+
+typedef enum
+{
+    VME_B_V_PRED = 0,
+    VME_B_H_PRED = 1,
+    VME_B_DC_PRED = 2,
+    VME_B_DL_PRED = 3,
+    VME_B_DR_PRED = 4,
+    VME_B_VR_PRED = 5,
+    VME_B_HD_PRED = 6,
+    VME_B_VL_PRED = 7,
+    VME_B_HU_PRED = 8,
+
+    VME_B_INTRA_MODE_COUNT
+} VME_BLOCK_INTRA_PRED_MODE;
+
+typedef enum
+{
+    PAK_B_DC_PRED = 0,
+    PAK_B_TM_PRED = 1,
+    PAK_B_VE_PRED = 2,
+    PAK_B_HE_PRED = 3,
+    PAK_B_LD_PRED = 4,
+    PAK_B_RD_PRED = 5,
+    PAK_B_VR_PRED = 6,
+    PAK_B_VL_PRED = 7,
+    PAK_B_HD_PRED = 8,
+    PAK_B_HU_PRED = 9,
+
+    PAK_B_INTRA_MODE_COUNT
+} VP8_PAK_BLOCK_INTRA_PRED_MODE;
+
+typedef struct
+{
+  int vme_intra_mb_mode;
+  int vp8_pak_intra_mb_mode;
+} vp8_intra_mb_mode_map_t;
+
+typedef struct
+{
+  int vme_intra_block_mode;
+  int vp8_pak_intra_block_mode;
+} vp8_intra_block_mode_map_t;
 
 typedef enum _gen6_brc_status
 {

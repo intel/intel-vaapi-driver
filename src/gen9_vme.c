@@ -1249,8 +1249,8 @@ static VAStatus gen9_vme_vp8_prepare(VADriverContextP ctx,
     VAEncPictureParameterBufferVP8 *pPicParameter = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     int is_intra = !pPicParameter->pic_flags.bits.frame_type;
 
-    /* add update vp8 mbmv cost later */
-    //intel_vme_update_mbmv_cost(ctx, encode_state, encoder_context);
+    /* update vp8 mbmv cost */
+    intel_vme_vp8_update_mbmv_cost(ctx, encode_state, encoder_context);
 
     /*Setup all the memory object*/
     gen9_vme_vp8_surface_setup(ctx, encode_state, is_intra, encoder_context);

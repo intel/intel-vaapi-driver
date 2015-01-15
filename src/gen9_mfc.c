@@ -84,6 +84,7 @@ static struct i965_kernel gen9_mfc_kernels[] = {
 #define		INTER_16X8		0x01
 #define		INTER_8X16		0x02
 #define		SUBMB_SHAPE_MASK	0x00FF00
+#define		INTER_16X16		0x00
 
 #define		INTER_MV8		(4 << 20)
 #define		INTER_MV32		(6 << 20)
@@ -183,22 +184,17 @@ gen9_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 mfc_context->mfc_indirect_pak_bse_object.end_offset);
         OUT_BCS_BATCH(batch, 0);
-        /* the DW6-10 is for MFX Indirect MV Object Base Address */
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
     } else {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
-        /* the DW6-10 is for MFX Indirect MV Object Base Address */
-        OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_BATCH(batch, 0);
-        OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
-        OUT_BCS_BATCH(batch, 0);
     }
+
+    /* the DW6-10 is for MFX Indirect MV Object Base Address */
+    OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
+    OUT_BCS_BATCH(batch, 0);
 
     /* the DW11-15 is for MFX IT-COFF. Not used on encoder */
     OUT_BCS_BATCH(batch, 0);
@@ -2684,7 +2680,7 @@ gen9_mfc_vp8_encoder_cfg(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   0 << 9 | /* compressed bitstream output disable */
                   1 << 7 | /* disable per-segment delta qindex and loop filter in RC */
-                  0 << 6 | /* RC initial pass */
+                  1 << 6 | /* RC initial pass */
                   0 << 4 | /* upate segment feature date flag */
                   1 << 3 | /* bitstream statistics output enable */
                   1 << 2 | /* token statistics output enable */
@@ -2936,6 +2932,45 @@ gen9_mfc_vp8_pipeline_picture_programing(VADriverContextP ctx,
     gen9_mfc_vp8_encoder_cfg(ctx, encode_state, encoder_context);
 }
 
+static const unsigned char
+vp8_intra_mb_mode_map[VME_MB_INTRA_MODE_COUNT] = {
+    PAK_V_PRED,
+    PAK_H_PRED,
+    PAK_DC_PRED,
+    PAK_TM_PRED
+};
+
+static const unsigned char
+vp8_intra_block_mode_map[VME_B_INTRA_MODE_COUNT] = {
+    PAK_B_VE_PRED,
+    PAK_B_HE_PRED,
+    PAK_B_DC_PRED,
+    PAK_B_LD_PRED,
+    PAK_B_RD_PRED,
+    PAK_B_VR_PRED,
+    PAK_B_HD_PRED,
+    PAK_B_VL_PRED,
+    PAK_B_HU_PRED
+};
+
+static int inline gen9_mfc_vp8_intra_mb_mode_map(unsigned int vme_pred_mode, int is_luma_4x4)
+{
+    unsigned int i, j, pak_pred_mode = 0;
+    unsigned int vme_sub_blocks_pred_mode[8], pak_sub_blocks_pred_mode[8]; /* 8 blocks's intra mode */
+
+    if (!is_luma_4x4) {
+        pak_pred_mode = vp8_intra_mb_mode_map[vme_pred_mode & 0x3];
+    } else {
+        for (i = 0; i < 8; i++) { 
+            vme_sub_blocks_pred_mode[i] = ((vme_pred_mode >> (4 * i)) & 0xf);
+            assert(vme_sub_blocks_pred_mode[i] < VME_B_INTRA_MODE_COUNT);
+            pak_sub_blocks_pred_mode[i] = vp8_intra_block_mode_map[vme_sub_blocks_pred_mode[i]];
+            pak_pred_mode |= (pak_sub_blocks_pred_mode[i] << (4 * i));
+        }
+    }
+
+    return pak_pred_mode;
+}
 static void
 gen9_mfc_vp8_pak_object_intra(VADriverContextP ctx, 
                               struct intel_encoder_context *encoder_context,
@@ -2943,8 +2978,24 @@ gen9_mfc_vp8_pak_object_intra(VADriverContextP ctx,
                               int x, int y,
                               struct intel_batchbuffer *batch)
 {
+    unsigned int vme_intra_mb_mode, vme_chroma_pred_mode;
+    unsigned int pak_intra_mb_mode, pak_chroma_pred_mode;
+    unsigned int vme_luma_pred_mode[2], pak_luma_pred_mode[2];
+
     if (batch == NULL)
         batch = encoder_context->base.batch;
+
+    vme_intra_mb_mode = ((msg[0] & 0x30) >> 4);
+    assert((vme_intra_mb_mode == 0) || (vme_intra_mb_mode == 2)); //vp8 only support intra_16x16 and intra_4x4
+    pak_intra_mb_mode = (vme_intra_mb_mode >> 1);
+
+    vme_luma_pred_mode[0] = msg[1];
+    vme_luma_pred_mode[1] = msg[2];
+    vme_chroma_pred_mode = msg[3] & 0x3;
+
+    pak_luma_pred_mode[0] = gen9_mfc_vp8_intra_mb_mode_map(vme_luma_pred_mode[0], pak_intra_mb_mode);
+    pak_luma_pred_mode[1] = gen9_mfc_vp8_intra_mb_mode_map(vme_luma_pred_mode[1], pak_intra_mb_mode);
+    pak_chroma_pred_mode = gen9_mfc_vp8_intra_mb_mode_map(vme_chroma_pred_mode, 0);
 
     BEGIN_BCS_BATCH(batch, 7);
 
@@ -2952,19 +3003,19 @@ gen9_mfc_vp8_pak_object_intra(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch,
-                  (0 << 20) |           /* mv format: intra mb */
-                  (0 << 18) |           /* Segment ID */
-                  (0 << 17) |           /* disable coeff clamp */
-                  (1 << 13) |		/* intra mb flag */
-                  (0 << 11) | 		/* refer picture select: last frame */
-                  (0 << 8) |		/* mb type: 16x16 intra mb */
-                  (0 << 4) |		/* mb uv mode: dc_pred */
-                  (0 << 2) |		/* skip mb flag: disable */
+                  (0 << 20) |                    /* mv format: intra mb */
+                  (0 << 18) |                    /* Segment ID */
+                  (0 << 17) |                    /* disable coeff clamp */
+                  (1 << 13) |                    /* intra mb flag */
+                  (0 << 11) | 		         /* refer picture select: last frame */
+                  (pak_intra_mb_mode << 8) |     /* mb type */
+                  (pak_chroma_pred_mode << 4) |  /* mb uv mode */
+                  (0 << 2) |                     /* skip mb flag: disable */
                   0);
 
     OUT_BCS_BATCH(batch, (y << 16) | x);
-    OUT_BCS_BATCH(batch, 0);  /* y_mode: dc_pred */
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, pak_luma_pred_mode[0]);
+    OUT_BCS_BATCH(batch, pak_luma_pred_mode[1]);
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -2973,14 +3024,24 @@ static void
 gen9_mfc_vp8_pak_object_inter(VADriverContextP ctx, 
                               struct intel_encoder_context *encoder_context,
                               unsigned int *msg,
+                              int offset,
                               int x, int y,
                               struct intel_batchbuffer *batch)
 {
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    int i;
 
     if (batch == NULL)
         batch = encoder_context->base.batch;
 
+    /* only support inter_16x16 now */
+    assert((msg[AVC_INTER_MSG_OFFSET] & INTER_MODE_MASK) == INTER_16X16);
+    /* for inter_16x16, all 16 MVs should be same, 
+     * and move mv to the vme mb start address to make sure offset is 64 bytes aligned */
+    msg[0] = (msg[AVC_INTER_MV_OFFSET/4] & 0xfffefffe);
+    for (i = 1; i < 16; i++) {
+        msg[i] = msg[0];
+    }
+    
     BEGIN_BCS_BATCH(batch, 7);
 
     OUT_BCS_BATCH(batch, MFX_VP8_PAK_OBJECT | (7 - 2));
@@ -2988,7 +3049,7 @@ gen9_mfc_vp8_pak_object_inter(VADriverContextP ctx,
                   (0 << 29) |           /* enable inline mv data: disable */
                   64);
     OUT_BCS_BATCH(batch,
-                  0);
+                  offset);
     OUT_BCS_BATCH(batch,
                   (4 << 20) |           /* mv format: inter */
                   (0 << 18) |           /* Segment ID */
@@ -3002,9 +3063,9 @@ gen9_mfc_vp8_pak_object_inter(VADriverContextP ctx,
 
     OUT_BCS_BATCH(batch, (y << 16) | x);
 
-    /*zero mv*/
-    OUT_BCS_BATCH(batch, 0x88888888);
-    OUT_BCS_BATCH(batch, 0x88888888);
+    /*new mv*/
+    OUT_BCS_BATCH(batch, 0x8);
+    OUT_BCS_BATCH(batch, 0x8);
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -3022,17 +3083,18 @@ gen9_mfc_vp8_pak_pipeline(VADriverContextP ctx,
     int height_in_mbs = ALIGN(seq_param->frame_height, 16) / 16;
     unsigned int *msg = NULL;
     unsigned char *msg_ptr = NULL;
-    unsigned int i, is_intra_frame;
+    unsigned int i, offset, is_intra_frame;
 
     is_intra_frame = !pic_param->pic_flags.bits.frame_type;
 
     dri_bo_map(vme_context->vme_output.bo , 1);
-    msg = msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
+    msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
 
     for( i = 0; i < width_in_mbs * height_in_mbs; i++) {
         int h_pos = i % width_in_mbs;
         int v_pos = i / width_in_mbs;
-
+        msg = (unsigned int *) (msg_ptr + i * vme_context->vme_output.size_block);
+        
         if (is_intra_frame) {
             gen9_mfc_vp8_pak_object_intra(ctx,
                     encoder_context,
@@ -3040,11 +3102,25 @@ gen9_mfc_vp8_pak_pipeline(VADriverContextP ctx,
                     h_pos, v_pos,
                     slice_batch);
         } else {
-            gen9_mfc_vp8_pak_object_inter(ctx,
-                    encoder_context,
-                    msg,
-                    h_pos, v_pos,
-                    slice_batch);
+            int inter_rdo, intra_rdo;
+            inter_rdo = msg[AVC_INTER_RDO_OFFSET] & AVC_RDO_MASK;
+            intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
+
+            if (intra_rdo < inter_rdo) {
+                gen9_mfc_vp8_pak_object_intra(ctx,
+                        encoder_context,
+                        msg,
+                        h_pos, v_pos,
+                        slice_batch);
+            } else {
+                offset = i * vme_context->vme_output.size_block;
+                gen9_mfc_vp8_pak_object_inter(ctx,
+                        encoder_context,
+                        msg,
+                        offset,
+                        h_pos, v_pos,
+                        slice_batch);
+            }
         }
     }
 

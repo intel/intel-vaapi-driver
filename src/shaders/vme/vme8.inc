@@ -46,8 +46,8 @@ define(`LUMA_INTRA_16x16_DISABLE',      `0x1')
 define(`LUMA_INTRA_8x8_DISABLE',        `0x2')
 define(`LUMA_INTRA_4x4_DISABLE',        `0x4')
 
-define(`SUB_PART_8x4_DISABLE',          `0x20')
-define(`SUB_PART_4x8_DISABLE',          `0x40')
+define(`SUB_PART_8x4_DISABLE',          `0x10')
+define(`SUB_PART_4x8_DISABLE',          `0x20')
 
 define(`INTRA_PRED_AVAIL_FLAG_AE',      `0x60')
 define(`INTRA_PRED_AVAIL_FLAG_B',       `0x10')
@@ -71,6 +71,7 @@ define(`INTRA_SAD_NONE',                `0x00000000')
 define(`INTRA_SAD_HAAR',                `0x00800000')
 
 define(`INTER_PART_MASK',               `0x00000000')
+define(`VP8_INTER_PART_MASK',           `0x7e000000')
 
 define(`SEARCH_CTRL_SINGLE',            `0x00000000')
 define(`SEARCH_CTRL_DUAL_START',        `0x00000100')

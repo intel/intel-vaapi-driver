@@ -938,6 +938,75 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
     }
 }
 
+void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
+    VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
+    VAQMatrixBufferVP8 *q_matrix = (VAQMatrixBufferVP8 *)encode_state->q_matrix->buffer;
+    int qp, m_cost, j, mv_count;
+    uint8_t *vme_state_message = (uint8_t *)(vme_context->vme_state_message);
+    float   lambda, m_costf;
+
+    int is_key_frame = !pic_param->pic_flags.bits.frame_type;
+  
+    if (vme_state_message == NULL)
+	return;
+ 
+    lambda = intel_lambda_qp(q_matrix->quantization_index[0] >> 1);
+    if (is_key_frame) {
+	vme_state_message[MODE_INTRA_16X16] = 0;
+	m_cost = lambda * 16; 
+	vme_state_message[MODE_INTRA_4X4] = intel_format_lutvalue(m_cost, 0x8f);
+    } else {
+    	m_cost = 0;
+	vme_state_message[MODE_INTER_MV0] = intel_format_lutvalue(m_cost, 0x6f);
+	for (j = 1; j < 3; j++) {
+            m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+            m_cost = (int)m_costf;
+            vme_state_message[MODE_INTER_MV0 + j] = intel_format_lutvalue(m_cost, 0x6f);
+   	}
+    	mv_count = 3;
+    	for (j = 4; j <= 64; j *= 2) {
+            m_costf = (log2f((float)(j + 1)) + 1.718f) * lambda;
+            m_cost = (int)m_costf;
+            vme_state_message[MODE_INTER_MV0 + mv_count] = intel_format_lutvalue(m_cost, 0x6f);
+            mv_count++;
+	}
+
+	if (q_matrix->quantization_index[0] < 32 ) {
+            vme_state_message[MODE_INTRA_16X16] = 0x4a;
+            vme_state_message[MODE_INTRA_4X4] = 0x4a;
+            vme_state_message[MODE_INTRA_NONPRED] = 0x4a;
+            vme_state_message[MODE_INTER_16X16] = 0x4a;
+            vme_state_message[MODE_INTER_16X8] = 0x4a;
+            vme_state_message[MODE_INTER_8X8] = 0x4a;
+            vme_state_message[MODE_INTER_4X4] = 0x4a;
+            return;
+	}
+	m_costf = lambda * 10;
+	vme_state_message[MODE_INTRA_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+	m_cost = lambda * 24; 
+	vme_state_message[MODE_INTRA_4X4] = intel_format_lutvalue(m_cost, 0x8f);
+            
+        m_costf = lambda * 2.5;
+        m_cost = m_costf;
+        vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
+        m_costf = lambda * 4;
+        m_cost = m_costf;
+        vme_state_message[MODE_INTER_16X8] = intel_format_lutvalue(m_cost, 0x8f);
+        m_costf = lambda * 1.5;
+        m_cost = m_costf;
+        vme_state_message[MODE_INTER_8X8] = intel_format_lutvalue(m_cost, 0x6f);
+        m_costf = lambda * 5;
+        m_cost = m_costf;
+        vme_state_message[MODE_INTER_4X4] = intel_format_lutvalue(m_cost, 0x6f);
+        /* BWD is not used in P-frame */
+        vme_state_message[MODE_INTER_BWD] = 0;
+    }
+}
 
 #define		MB_SCOREBOARD_A		(1 << 0)
 #define		MB_SCOREBOARD_B		(1 << 1)
