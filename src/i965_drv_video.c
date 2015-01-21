@@ -735,6 +735,10 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 }
                 break;
             }
+            else if (entrypoint == VAEntrypointEncPicture) {
+                if (profile == VAProfileJPEGBaseline)
+                    attrib_list[i].value = VA_ENC_PACKED_HEADER_RAW_DATA;
+            }
             break;
 
 	case VAConfigAttribEncMaxRefFrames:
