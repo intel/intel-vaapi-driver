@@ -1986,20 +1986,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     struct object_buffer *obj_buffer = NULL;
     struct buffer_store *buffer_store = NULL;
     int bufferID;
-    struct object_context *obj_context = NULL;
-    struct object_config *obj_config = NULL;
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
-
-    if (i965->current_context_id == VA_INVALID_ID)
-        return vaStatus;
-
-    obj_context = CONTEXT(i965->current_context_id);
-
-    if (!obj_context)
-        return vaStatus;
-
-    obj_config = obj_context->obj_config;
-    assert(obj_config);
 
     /* Validate type */
     switch (type) {
@@ -2073,11 +2060,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
             struct i965_coded_buffer_segment *coded_buffer_segment;
 
             dri_bo_map(buffer_store->bo, 1);
-            if(obj_config->profile == VAProfileHEVCMain){
-                coded_buffer_segment = (struct i965_coded_buffer_segment *)(buffer_store->bo->virtual + ALIGN(size - 0x1000, 0x1000));
-            }else {
-                coded_buffer_segment = (struct i965_coded_buffer_segment *)buffer_store->bo->virtual;
-            }
+            coded_buffer_segment = (struct i965_coded_buffer_segment *)buffer_store->bo->virtual;
             coded_buffer_segment->base.size = size - I965_CODEDBUFFER_HEADER_SIZE;
             coded_buffer_segment->base.bit_offset = 0;
             coded_buffer_segment->base.status = 0;
@@ -2155,21 +2138,8 @@ i965_MapBuffer(VADriverContextP ctx,
                void **pbuf)             /* out */
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct object_context *obj_context = NULL;
-    struct object_config *obj_config = NULL;
     struct object_buffer *obj_buffer = BUFFER(buf_id);
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
-
-    if (i965->current_context_id == VA_INVALID_ID)
-        return vaStatus;
-
-    obj_context = CONTEXT(i965->current_context_id);
-
-    if (!obj_context)
-        return vaStatus;
-
-    obj_config = obj_context->obj_config;
-    assert(obj_config);
 
     ASSERT_RET(obj_buffer && obj_buffer->buffer_store, VA_STATUS_ERROR_INVALID_BUFFER);
     ASSERT_RET(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_INVALID_BUFFER);
