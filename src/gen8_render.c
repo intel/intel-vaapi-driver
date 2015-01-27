@@ -1451,7 +1451,8 @@ gen8_emit_wm_state(VADriverContextP ctx, int kernel)
     /* DW3. PS shader flag .Binding table cnt/sample cnt */
     OUT_BATCH(batch,
               (1 << GEN7_PS_SAMPLER_COUNT_SHIFT) |
-              (5 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT));
+              (5 << GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT) |
+              GEN7_PS_VECTOR_MASK_ENABLE);
     /* DW4-5. Scatch space */
     OUT_BATCH(batch, 0); /* scratch space base offset */
     OUT_BATCH(batch, 0);
