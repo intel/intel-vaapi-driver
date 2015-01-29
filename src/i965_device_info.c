@@ -359,6 +359,54 @@ static struct hw_codec_info skl_hw_codec_info = {
     },
 };
 
+
+static struct hw_codec_info bxt_hw_codec_info = {
+    .dec_hw_context_init = gen9_dec_hw_context_init,
+    .enc_hw_context_init = gen9_enc_hw_context_init,
+    .proc_hw_context_init = gen75_proc_context_init,
+    .render_init = gen9_render_init,
+    .post_processing_context_init = gen9_post_processing_context_init,
+
+    .max_width = 4096,
+    .max_height = 4096,
+    .min_linear_wpitch = 64,
+    .min_linear_hpitch = 16,
+
+    .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
+                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
+    .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
+    .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
+
+    .has_mpeg2_decoding = 1,
+    .has_h264_decoding = 1,
+    .has_h264_encoding = 1,
+    .has_vc1_decoding = 1,
+    .has_jpeg_decoding = 1,
+    .has_jpeg_encoding = 1,
+    .has_vpp = 1,
+    .has_accelerated_getimage = 1,
+    .has_accelerated_putimage = 1,
+    .has_tiled_surface = 1,
+    .has_di_motion_adptive = 1,
+    .has_di_motion_compensated = 1,
+    .has_vp8_decoding = 1,
+    .has_vp8_encoding = 1,
+    .has_h264_mvc_encoding = 1,
+    .has_hevc_decoding = 1,
+    .has_hevc_encoding = 1,
+
+    .num_filters = 5,
+    .filters = {
+        { VAProcFilterNoiseReduction, I965_RING_VEBOX },
+        { VAProcFilterDeinterlacing, I965_RING_VEBOX },
+        { VAProcFilterSharpening, I965_RING_NULL },
+        { VAProcFilterColorBalance, I965_RING_VEBOX},
+        { VAProcFilterSkinToneEnhancement, I965_RING_VEBOX},
+    },
+};
+
+
 struct hw_codec_info *
 i965_get_codec_info(int devid)
 {
@@ -485,6 +533,14 @@ static const struct intel_device_info skl_device_info = {
 
     .urb_size = 4096,
     .max_wm_threads = 64,       /* per PSD */
+};
+
+static const struct intel_device_info bxt_device_info = {
+    .gen = 9,
+
+    .urb_size = 4096,
+    .max_wm_threads = 64,       /* per PSD */
+    .is_broxton = 1,
 };
 
 const struct intel_device_info *

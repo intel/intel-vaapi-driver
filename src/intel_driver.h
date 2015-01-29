@@ -136,6 +136,7 @@ struct intel_device_info
     unsigned int is_baytrail    : 1; /* gen7 */
     unsigned int is_haswell     : 1; /* gen7 */
     unsigned int is_cherryview  : 1; /* gen8 */
+    unsigned int is_broxton     : 1; /* gen9 */
 };
 
 struct intel_driver_data 
