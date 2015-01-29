@@ -59,7 +59,8 @@ INTEL_G6B =				\
 	exa_wm_yuv_color_balance.g6b	\
 	exa_wm_yuv_rgb.g6b
 
-INTEL_G7I = $(INTEL_G4I)
+INTEL_G7I = $(INTEL_G4I)		\
+	exa_wm_write.g7i
 
 INTEL_G7A =				\
 	exa_wm_src_affine.g7a 		\
