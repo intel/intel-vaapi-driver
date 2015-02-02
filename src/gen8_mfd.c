@@ -282,7 +282,7 @@ gen8_mfd_ind_obj_base_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 	/* Upper bound 4-5 */	
-    OUT_BCS_BATCH(batch, 0x80000000); /* must set, up to 2G */
+    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
 	/* MFX indirect MV 6-10 */
@@ -2493,7 +2493,7 @@ gen8_jpeg_wa_ind_obj_base_addr_state(VADriverContextP ctx,
                   gen7_mfd_context->jpeg_wa_slice_data_bo,
                   I915_GEM_DOMAIN_INSTRUCTION, 0,
                   0);
-    OUT_BCS_BATCH(batch, 0x80000000); /* must set, up to 2G */
+    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0); /* ignore for VLD mode */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0); /* ignore for VLD mode */
