@@ -5149,6 +5149,18 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
     attribs[i].value.value.p = NULL; /* ignore */
     i++;
 
+    attribs[i].type = VASurfaceAttribMaxWidth;
+    attribs[i].value.type = VAGenericValueTypeInteger;
+    attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+    attribs[i].value.value.i = i965->codec_info->max_width;
+    i++;
+
+    attribs[i].type = VASurfaceAttribMaxHeight;
+    attribs[i].value.type = VAGenericValueTypeInteger;
+    attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+    attribs[i].value.value.i = i965->codec_info->max_height;
+    i++;
+
     if (i > *num_attribs) {
         *num_attribs = i;
         free(attribs);
