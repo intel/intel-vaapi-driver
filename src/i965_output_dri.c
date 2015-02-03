@@ -123,7 +123,6 @@ i965_put_surface_dri(
     union dri_buffer *buffer;
     struct intel_region *dest_region;
     struct object_surface *obj_surface; 
-    bool new_region = false;
     uint32_t name;
     int i, ret;
 
@@ -146,27 +145,21 @@ i965_put_surface_dri(
     assert(buffer);
     
     dest_region = render_state->draw_region;
-
-    if (dest_region) {
-        assert(dest_region->bo);
-        dri_bo_flink(dest_region->bo, &name);
-        
-        if (buffer->dri2.name != name) {
-            new_region = True;
-            dri_bo_unreference(dest_region->bo);
-        }
-    } else {
+    if (dest_region == NULL) {
         dest_region = (struct intel_region *)calloc(1, sizeof(*dest_region));
         assert(dest_region);
         render_state->draw_region = dest_region;
-        new_region = True;
     }
 
-    if (new_region) {
-        dest_region->x = dri_drawable->x;
-        dest_region->y = dri_drawable->y;
-        dest_region->width = dri_drawable->width;
-        dest_region->height = dri_drawable->height;
+    if (dest_region->bo) {
+        dri_bo_flink(dest_region->bo, &name);
+        if (buffer->dri2.name != name) {
+            dri_bo_unreference(dest_region->bo);
+	    dest_region->bo = NULL;
+	}
+    }
+
+    if (dest_region->bo == NULL) {
         dest_region->cpp = buffer->dri2.cpp;
         dest_region->pitch = buffer->dri2.pitch;
 
@@ -176,6 +169,11 @@ i965_put_surface_dri(
         ret = dri_bo_get_tiling(dest_region->bo, &(dest_region->tiling), &(dest_region->swizzle));
         assert(ret == 0);
     }
+
+    dest_region->x = dri_drawable->x;
+    dest_region->y = dri_drawable->y;
+    dest_region->width = dri_drawable->width;
+    dest_region->height = dri_drawable->height;
 
     if (!(flags & VA_SRC_COLOR_MASK))
         flags |= VA_SRC_BT601;
