@@ -3001,9 +3001,7 @@ gen8_mfd_vp8_bsd_object(VADriverContextP ctx,
         offset += slice_param->partition_size[i];
     }
 
-    OUT_BCS_BATCH(batch,
-                  1 << 31 | /* concealment method */
-                  0);
+    OUT_BCS_BATCH(batch, 0); /* concealment method */
 
     ADVANCE_BCS_BATCH(batch);
 }
