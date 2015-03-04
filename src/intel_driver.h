@@ -119,7 +119,7 @@ extern uint32_t g_intel_debug_option_flags;
         static int g_once = 1;                  \
         if (g_once) {                           \
             g_once = 0;                         \
-            printf("WARNING: " __VA_ARGS__);    \
+            fprintf(stderr, "WARNING: " __VA_ARGS__);    \
         }                                       \
     } while (0)
 
