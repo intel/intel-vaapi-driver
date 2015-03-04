@@ -221,7 +221,7 @@ gen75_proc_picture(VADriverContextP ctx,
                  filter->type != VAProcFilterDeinterlacing        &&
                  filter->type != VAProcFilterSkinToneEnhancement  &&
                  filter->type != VAProcFilterColorBalance) {
-                 printf("Do not support multiply filters outside vebox pipeline \n");
+                 fprintf(stderr, "Do not support multiply filters outside vebox pipeline \n");
                  assert(0);
              }
          }
