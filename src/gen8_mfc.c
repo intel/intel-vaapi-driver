@@ -2674,7 +2674,7 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
                         struct intel_encoder_context *encoder_context,
                         struct encode_state *encode_state)
 {
-    uint8_t quality = 0;
+    unsigned int quality = 0;
     uint32_t temp, i = 0, j = 0, dword_qm[32];
     VAEncPictureParameterBufferJPEG *pic_param;
     VAQMatrixBufferJPEG *qmatrix;
@@ -2706,7 +2706,9 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
         qmatrix->load_lum_quantiser_matrix = 1;
         qmatrix->load_chroma_quantiser_matrix = (pic_param->num_components > 1) ? 1 : 0;
     }   
- 
+
+    if (quality > 100)
+      quality = 100;
     quality = (quality < 50) ? (5000/quality) : (200 - (quality*2)); 
     quality = (quality == 0) ? 1 : quality;
     
