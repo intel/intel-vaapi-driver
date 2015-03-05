@@ -2678,7 +2678,7 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
     uint32_t temp, i = 0, j = 0, dword_qm[32];
     VAEncPictureParameterBufferJPEG *pic_param;
     VAQMatrixBufferJPEG *qmatrix;
-    unsigned char raster_qm[64];
+    unsigned char raster_qm[64], column_raster_qm[64];
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     
     assert(encode_state->pic_param_ext && encode_state->pic_param_ext->buffer);
@@ -2738,11 +2738,11 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
         //Need to double check if our HW expects col or row raster.
         for (j = 0; j < 64; j++) {
             int row = j / 8, col = j % 8;
-            raster_qm[col * 8 + row] = raster_qm[j]; 
+            column_raster_qm[col * 8 + row] = raster_qm[j];
         }
         
         //Convert to raster QM to reciprocal. HW expects values in reciprocal.
-        get_reciprocal_dword_qm(raster_qm, dword_qm);
+        get_reciprocal_dword_qm(column_raster_qm, dword_qm);
         
         //send the luma qm to the command buffer
         gen8_mfc_fqm_state(ctx, MFX_QM_JPEG_LUMA_Y_QUANTIZER_MATRIX, dword_qm, 32, encoder_context);
@@ -2769,12 +2769,12 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
         //Need to double check if our HW expects col or row raster.
         for (j = 0; j < 64; j++) {
             int row = j / 8, col = j % 8;
-            raster_qm[col * 8 + row] = raster_qm[j]; 
+            column_raster_qm[col * 8 + row] = raster_qm[j];
         }
 
 
         //Convert to raster QM to reciprocal. HW expects values in reciprocal.
-        get_reciprocal_dword_qm(raster_qm, dword_qm);
+        get_reciprocal_dword_qm(column_raster_qm, dword_qm);
 
         //send the same chroma qm to the command buffer (for both U,V or G,B)
         gen8_mfc_fqm_state(ctx, MFX_QM_JPEG_CHROMA_CB_QUANTIZER_MATRIX, dword_qm, 32, encoder_context);
