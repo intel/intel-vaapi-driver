@@ -2721,7 +2721,7 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
     if(qmatrix->load_lum_quantiser_matrix) {
         //apply quality to lum_quantiser_matrix
         for(i=0; i < 64; i++) {
-            temp = qmatrix->lum_quantiser_matrix[i] * (quality/100);
+            temp = (qmatrix->lum_quantiser_matrix[i] * quality)/100;
             //clamp to range [1,255]
             temp = (temp > 255) ? 255 : temp;
             temp = (temp < 1) ? 1 : temp;
@@ -2752,7 +2752,7 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
     if(qmatrix->load_chroma_quantiser_matrix) {
         //apply quality to chroma_quantiser_matrix
         for(i=0; i < 64; i++) {
-            temp = qmatrix->chroma_quantiser_matrix[i] * (quality/100);
+            temp = (qmatrix->chroma_quantiser_matrix[i] * quality)/100;
             //clamp to range [1,255]
             temp = (temp > 255) ? 255 : temp;
             temp = (temp < 1) ? 1 : temp;
