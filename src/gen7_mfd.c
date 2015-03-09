@@ -1043,20 +1043,28 @@ uint32_t mpeg2_get_slice_data_length(dri_bo *slice_data_bo, VASliceParameterBuff
     uint8_t *buf;
     uint32_t buf_offset = slice_param->slice_data_offset + (slice_param->macroblock_offset >> 3);
     uint32_t buf_size = slice_param->slice_data_size - (slice_param->macroblock_offset >> 3);
-    uint32_t i;
+    uint32_t i = 0;
 
     dri_bo_map(slice_data_bo, 0);
     buf = (uint8_t *)slice_data_bo->virtual + buf_offset;
 
-    for (i = 3; i < buf_size; i++) {
-        if (buf[i - 3] &&
-            !buf[i - 2] &&
-            !buf[i - 1] &&
-            !buf[i]) {
-            dri_bo_unmap(slice_data_bo);
-            return i - 3 + 1;
-        }
+    if (buf_size < 4)
+      return buf_size;
+
+    while (i <= (buf_size - 4)) {
+      if (buf[i + 2] > 1) {
+        i += 3;
+      } else if (buf[i + 1]) {
+        i += 2;
+      } else if (buf[i] || buf[i + 2] != 1) {
+        i++;
+      } else {
+        break;
+      }
     }
+
+    if (i <= (buf_size - 4))
+      buf_size = i;
 
     dri_bo_unmap(slice_data_bo);
     return buf_size;
