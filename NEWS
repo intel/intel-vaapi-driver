@@ -1,5 +1,19 @@
-libva-intel-driver NEWS -- summary of changes.  2014-12-28
-Copyright (C) 2009-2014 Intel Corporation
+libva-intel-driver NEWS -- summary of changes.  2015-03-xx
+Copyright (C) 2009-2015 Intel Corporation
+
+Version 1.5.1 - DD.03.2015
+* Fix forward reference requirement for Bob deinterlacing
+* Fix a lot of potential rendering issues on GEN8+
+* Fix scaling of NV12 surfaces when no output_region is set
+* Fix the broken attribute setting of i965_GetConfigAttrib
+* Fix the GetConfigAttributes() for JPEGBaseline profile
+* Fix the wrong overlap setting for VC-1 decoding on GEN6+
+* Fix VP8 decoding issue on GEN8+, HW needs 1 extra byte for each partition
+* Fix JPEG encoding issue.
+* Add support for aub dump
+* Enhance STD on GEN8+
+* Implement max width and height in QuerySurfaceAttributes
+* Add new SKL PCI ids
 
 Version 1.5.0 - 28.Dec.2014
 * Add support for Skylake
