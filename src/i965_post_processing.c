@@ -1210,6 +1210,7 @@ pp_dndi_context_init_surface_params(struct pp_dndi_context *dndi_ctx,
             dndi_ctx->is_first_frame = 1;
             break;
         case VAProcDeinterlacingMotionAdaptive:
+        case VAProcDeinterlacingMotionCompensated:
             fs = &dndi_ctx->frame_store[DNDI_FRAME_IN_CURRENT];
             if (fs->surface_id == VA_INVALID_ID)
                 dndi_ctx->is_first_frame = 1;
@@ -3884,7 +3885,8 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     sampler_dndi[index].dw6.dndi_stream_id = 1;
     sampler_dndi[index].dw6.dndi_first_frame = dndi_ctx->is_first_frame;
     sampler_dndi[index].dw6.progressive_dn = 0;
-    sampler_dndi[index].dw6.mcdi_enable = 0;
+    sampler_dndi[index].dw6.mcdi_enable =
+        (deint_params->algorithm == VAProcDeinterlacingMotionCompensated);
     sampler_dndi[index].dw6.fmd_tear_threshold = 2;
     sampler_dndi[index].dw6.cat_th1 = 0;
     sampler_dndi[index].dw6.fmd2_vertical_difference_threshold = 100;
