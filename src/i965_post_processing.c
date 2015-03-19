@@ -3457,7 +3457,7 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
     sampler_dndi[index].dw4.sdi_threshold = 100;
     sampler_dndi[index].dw4.stmm_output_shift = 5;                      // stmm_max - stmm_min = 2 ^ stmm_output_shift
     sampler_dndi[index].dw4.stmm_shift_up = 1;
-    sampler_dndi[index].dw4.stmm_shift_down = 0;
+    sampler_dndi[index].dw4.stmm_shift_down = 3;
     sampler_dndi[index].dw4.minimum_stmm = 118;
 
     sampler_dndi[index].dw5.fmd_temporal_difference_threshold = 175;
@@ -3871,7 +3871,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     sampler_dndi[index].dw4.sdi_threshold = 100;
     sampler_dndi[index].dw4.stmm_output_shift = 5;                      // stmm_max - stmm_min = 2 ^ stmm_output_shift
     sampler_dndi[index].dw4.stmm_shift_up = 1;
-    sampler_dndi[index].dw4.stmm_shift_down = 0;
+    sampler_dndi[index].dw4.stmm_shift_down = 3;
     sampler_dndi[index].dw4.minimum_stmm = 118;
 
     sampler_dndi[index].dw5.fmd_temporal_difference_threshold = 175;
