@@ -1386,7 +1386,8 @@ gen8_post_processing(
 }
 
 static void
-gen8_post_processing_context_finalize(struct i965_post_processing_context *pp_context)
+gen8_post_processing_context_finalize(VADriverContextP ctx,
+    struct i965_post_processing_context *pp_context)
 {
     dri_bo_unreference(pp_context->surface_state_binding_table.bo);
     pp_context->surface_state_binding_table.bo = NULL;

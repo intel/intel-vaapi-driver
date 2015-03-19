@@ -5272,7 +5272,8 @@ i965_image_processing(VADriverContextP ctx,
 }       
 
 static void
-i965_post_processing_context_finalize(struct i965_post_processing_context *pp_context)
+i965_post_processing_context_finalize(VADriverContextP ctx,
+    struct i965_post_processing_context *pp_context)
 {
     int i;
 
@@ -5301,6 +5302,13 @@ i965_post_processing_context_finalize(struct i965_post_processing_context *pp_co
     dri_bo_unreference(pp_context->pp_dndi_context.stmm_bo);
     pp_context->pp_dndi_context.stmm_bo = NULL;
 
+    if (pp_context->pp_dndi_context.current_out_surface != VA_INVALID_ID) {
+        i965_DestroySurfaces(ctx,
+            &pp_context->pp_dndi_context.current_out_surface, 1);
+        pp_context->pp_dndi_context.current_out_surface = VA_INVALID_ID;
+        pp_context->pp_dndi_context.current_out_obj_surface = NULL;
+    }
+
     dri_bo_unreference(pp_context->pp_dn_context.stmm_bo);
     pp_context->pp_dn_context.stmm_bo = NULL;
 
@@ -5324,7 +5332,7 @@ i965_post_processing_terminate(VADriverContextP ctx)
     struct i965_post_processing_context *pp_context = i965->pp_context;
 
     if (pp_context) {
-        pp_context->finalize(pp_context);
+        pp_context->finalize(ctx, pp_context);
         free(pp_context);
     }
 
@@ -5938,9 +5946,10 @@ error:
 static void
 i965_proc_context_destroy(void *hw_context)
 {
-    struct i965_proc_context *proc_context = (struct i965_proc_context *)hw_context;
+    struct i965_proc_context * const proc_context = hw_context;
+    VADriverContextP const ctx = proc_context->driver_context;
 
-    i965_post_processing_context_finalize(&proc_context->pp_context);
+    i965_post_processing_context_finalize(ctx, &proc_context->pp_context);
     intel_batchbuffer_free(proc_context->base.batch);
     free(proc_context);
 }
@@ -5955,6 +5964,7 @@ i965_proc_context_init(VADriverContextP ctx, struct object_config *obj_config)
     proc_context->base.destroy = i965_proc_context_destroy;
     proc_context->base.run = i965_proc_picture;
     proc_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
+    proc_context->driver_context = ctx;
     i965->codec_info->post_processing_context_init(ctx, &proc_context->pp_context, proc_context->base.batch);
 
     return (struct hw_context *)proc_context;

@@ -542,12 +542,14 @@ struct i965_post_processing_context
 				const VARectangle *dst_rect,
 				int   pp_index,
 				void * filter_param);
-    void (*finalize)(struct i965_post_processing_context *pp_context);
+    void (*finalize)(VADriverContextP ctx,
+        struct i965_post_processing_context *pp_context);
 };
 
 struct i965_proc_context
 {
     struct hw_context base;
+    void *driver_context;
     struct i965_post_processing_context pp_context;
 };
 
