@@ -88,14 +88,33 @@ struct pp_avs_context
     float horiz_range;
 };
 
+enum {
+    DNDI_FRAME_IN_CURRENT = 0,
+    DNDI_FRAME_IN_PREVIOUS,
+    DNDI_FRAME_IN_STMM,
+    DNDI_FRAME_OUT_STMM,
+    DNDI_FRAME_OUT_CURRENT,
+    DNDI_FRAME_OUT_PREVIOUS,
+    DNDI_FRAME_STORE_COUNT
+};
+
+typedef struct dndi_frame_store {
+    struct object_surface *obj_surface;
+    VASurfaceID surface_id; /* always relative to the input surface */
+    unsigned int is_scratch_surface : 1;
+} DNDIFrameStore;
+
 struct pp_dndi_context
 {
     int dest_w;
     int dest_h;
-    dri_bo *stmm_bo;
-    int frame_order; /* -1 for the first frame */
-    VASurfaceID current_out_surface;
-    struct object_surface *current_out_obj_surface;
+    DNDIFrameStore frame_store[DNDI_FRAME_STORE_COUNT];
+
+    /* Temporary flags live until the current picture is processed */
+    unsigned int is_di_enabled          : 1;
+    unsigned int is_di_adv_enabled      : 1;
+    unsigned int is_first_frame         : 1;
+    unsigned int is_second_field        : 1;
 };
 
 struct pp_dn_context

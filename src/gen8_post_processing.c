@@ -1392,9 +1392,6 @@ gen8_post_processing_context_finalize(VADriverContextP ctx,
     dri_bo_unreference(pp_context->surface_state_binding_table.bo);
     pp_context->surface_state_binding_table.bo = NULL;
 
-    dri_bo_unreference(pp_context->pp_dndi_context.stmm_bo);
-    pp_context->pp_dndi_context.stmm_bo = NULL;
-
     dri_bo_unreference(pp_context->pp_dn_context.stmm_bo);
     pp_context->pp_dn_context.stmm_bo = NULL;
 
@@ -1498,9 +1495,6 @@ gen8_post_processing_context_common_init(VADriverContextP ctx,
     pp_context->pp_static_parameter = calloc(sizeof(struct gen7_pp_static_parameter), 1);
     pp_context->pp_inline_parameter = calloc(sizeof(struct gen7_pp_inline_parameter), 1);
 
-    pp_context->pp_dndi_context.current_out_surface = VA_INVALID_SURFACE;
-    pp_context->pp_dndi_context.current_out_obj_surface = NULL;
-    pp_context->pp_dndi_context.frame_order = -1;
     pp_context->batch = batch;
 
     pp_context->idrt_size = 5 * sizeof(struct gen8_interface_descriptor_data);
