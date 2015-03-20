@@ -5445,6 +5445,241 @@ static const int proc_frame_to_pp_frame[3] = {
     I965_SURFACE_FLAG_BOTTOME_FIELD_FIRST
 };
 
+enum {
+    PP_OP_CHANGE_FORMAT = 1 << 0,
+    PP_OP_CHANGE_SIZE   = 1 << 1,
+    PP_OP_DEINTERLACE   = 1 << 2,
+    PP_OP_COMPLEX       = 1 << 3,
+};
+
+static int
+pp_get_kernel_index(uint32_t src_fourcc, uint32_t dst_fourcc, uint32_t pp_ops,
+    uint32_t filter_flags)
+{
+    int pp_index = -1;
+
+    if (!dst_fourcc)
+        dst_fourcc = src_fourcc;
+
+    switch (src_fourcc) {
+    case VA_FOURCC_RGBX:
+    case VA_FOURCC_RGBA:
+    case VA_FOURCC_BGRX:
+    case VA_FOURCC_BGRA:
+        switch (dst_fourcc) {
+        case VA_FOURCC_NV12:
+            pp_index = PP_RGBX_LOAD_SAVE_NV12;
+            break;
+        }
+        break;
+    case VA_FOURCC_YUY2:
+    case VA_FOURCC_UYVY:
+        switch (dst_fourcc) {
+        case VA_FOURCC_NV12:
+            pp_index = PP_PA_LOAD_SAVE_NV12;
+            break;
+        case VA_FOURCC_I420:
+        case VA_FOURCC_YV12:
+            pp_index = PP_PA_LOAD_SAVE_PL3;
+            break;
+        case VA_FOURCC_YUY2:
+        case VA_FOURCC_UYVY:
+            pp_index = PP_PA_LOAD_SAVE_PA;
+            break;
+        }
+        break;
+    case VA_FOURCC_NV12:
+        switch (dst_fourcc) {
+        case VA_FOURCC_NV12:
+            if (pp_ops & PP_OP_CHANGE_SIZE)
+                pp_index = avs_is_needed(filter_flags) ?
+                    PP_NV12_AVS : PP_NV12_SCALING;
+            else
+                pp_index = PP_NV12_LOAD_SAVE_N12;
+            break;
+        case VA_FOURCC_I420:
+        case VA_FOURCC_YV12:
+        case VA_FOURCC_IMC1:
+        case VA_FOURCC_IMC3:
+            pp_index = PP_NV12_LOAD_SAVE_PL3;
+            break;
+        case VA_FOURCC_YUY2:
+        case VA_FOURCC_UYVY:
+            pp_index = PP_NV12_LOAD_SAVE_PA;
+            break;
+        case VA_FOURCC_RGBX:
+        case VA_FOURCC_RGBA:
+        case VA_FOURCC_BGRX:
+        case VA_FOURCC_BGRA:
+            pp_index = PP_NV12_LOAD_SAVE_RGBX;
+            break;
+        }
+        break;
+    case VA_FOURCC_I420:
+    case VA_FOURCC_YV12:
+    case VA_FOURCC_IMC1:
+    case VA_FOURCC_IMC3:
+    case VA_FOURCC_YV16:
+    case VA_FOURCC_411P:
+    case VA_FOURCC_422H:
+    case VA_FOURCC_422V:
+    case VA_FOURCC_444P:
+        switch (dst_fourcc) {
+        case VA_FOURCC_NV12:
+            pp_index = PP_PL3_LOAD_SAVE_N12;
+            break;
+        case VA_FOURCC_I420:
+        case VA_FOURCC_YV12:
+        case VA_FOURCC_IMC1:
+        case VA_FOURCC_IMC3:
+            pp_index = PP_PL3_LOAD_SAVE_PL3;
+            break;
+        case VA_FOURCC_YUY2:
+        case VA_FOURCC_UYVY:
+            pp_index = PP_PL3_LOAD_SAVE_PA;
+            break;
+        }
+        break;
+    }
+    return pp_index;
+}
+
+static VAStatus
+i965_proc_picture_fast(VADriverContextP ctx,
+    struct i965_proc_context *proc_context, struct proc_state *proc_state)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    const VAProcPipelineParameterBuffer * const pipeline_param =
+        (VAProcPipelineParameterBuffer *)proc_state->pipeline_param->buffer;
+    struct object_surface *src_obj_surface, *dst_obj_surface;
+    struct i965_surface src_surface, dst_surface;
+    const VAProcFilterParameterBufferDeinterlacing *deint_params = NULL;
+    VARectangle src_rect, dst_rect;
+    VAStatus status;
+    uint32_t i, filter_flags = 0, pp_ops = 0;
+    int pp_index;
+
+    /* Validate pipeline parameters */
+    if (pipeline_param->num_filters > 0 && !pipeline_param->filters)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    for (i = 0; i < pipeline_param->num_filters; i++) {
+        const VAProcFilterParameterBuffer *filter;
+        struct object_buffer * const obj_buffer =
+            BUFFER(pipeline_param->filters[i]);
+
+        assert(obj_buffer && obj_buffer->buffer_store);
+        if (!obj_buffer || !obj_buffer->buffer_store)
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+        filter = (VAProcFilterParameterBuffer *)
+            obj_buffer->buffer_store->buffer;
+        switch (filter->type) {
+        case VAProcFilterDeinterlacing:
+            pp_ops |= PP_OP_DEINTERLACE;
+            deint_params = (VAProcFilterParameterBufferDeinterlacing *)filter;
+            break;
+        default:
+            pp_ops |= PP_OP_COMPLEX;
+            break;
+        }
+    }
+    filter_flags |= pipeline_param->filter_flags & VA_FILTER_SCALING_MASK;
+
+    /* Validate source surface */
+    src_obj_surface = SURFACE(pipeline_param->surface);
+    if (!src_obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    if (!src_obj_surface->fourcc)
+        return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
+
+    if (pipeline_param->surface_region) {
+        src_rect.x = pipeline_param->surface_region->x;
+        src_rect.y = pipeline_param->surface_region->y;
+        src_rect.width = pipeline_param->surface_region->width;
+        src_rect.height = pipeline_param->surface_region->height;
+    } else {
+        src_rect.x = 0;
+        src_rect.y = 0;
+        src_rect.width = src_obj_surface->orig_width;
+        src_rect.height = src_obj_surface->orig_height;
+    }
+
+    src_surface.base  = &src_obj_surface->base;
+    src_surface.type  = I965_SURFACE_TYPE_SURFACE;
+    src_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+    if (pp_ops & PP_OP_DEINTERLACE) {
+        filter_flags |= !(deint_params->flags & VA_DEINTERLACING_BOTTOM_FIELD) ?
+            VA_TOP_FIELD : VA_BOTTOM_FIELD;
+        if (deint_params->algorithm != VAProcDeinterlacingBob)
+            pp_ops |= PP_OP_COMPLEX;
+    }
+    else if (pipeline_param->filter_flags & (VA_TOP_FIELD | VA_BOTTOM_FIELD)) {
+        filter_flags |= (pipeline_param->filter_flags & VA_TOP_FIELD) ?
+            VA_TOP_FIELD : VA_BOTTOM_FIELD;
+        pp_ops |= PP_OP_DEINTERLACE;
+    }
+    if (pp_ops & PP_OP_DEINTERLACE) // XXX: no bob-deinterlacing optimization yet
+        pp_ops |= PP_OP_COMPLEX;
+
+    /* Validate target surface */
+    dst_obj_surface = SURFACE(proc_state->current_render_target);
+    if (!dst_obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    if (dst_obj_surface->fourcc &&
+        dst_obj_surface->fourcc != src_obj_surface->fourcc)
+        pp_ops |= PP_OP_CHANGE_FORMAT;
+
+    if (pipeline_param->output_region) {
+        dst_rect.x = pipeline_param->output_region->x;
+        dst_rect.y = pipeline_param->output_region->y;
+        dst_rect.width = pipeline_param->output_region->width;
+        dst_rect.height = pipeline_param->output_region->height;
+    } else {
+        dst_rect.x = 0;
+        dst_rect.y = 0;
+        dst_rect.width = dst_obj_surface->orig_width;
+        dst_rect.height = dst_obj_surface->orig_height;
+    }
+
+    if (dst_rect.width != src_rect.width || dst_rect.height != src_rect.height)
+        pp_ops |= PP_OP_CHANGE_SIZE;
+
+    dst_surface.base  = &dst_obj_surface->base;
+    dst_surface.type  = I965_SURFACE_TYPE_SURFACE;
+    dst_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+    /* Validate "fast-path" processing capabilities */
+    if (!IS_GEN7(i965->intel.device_info)) {
+        if ((pp_ops & PP_OP_CHANGE_FORMAT) && (pp_ops & PP_OP_CHANGE_SIZE))
+            return VA_STATUS_ERROR_UNIMPLEMENTED; // temporary surface is needed
+    }
+    if (pipeline_param->pipeline_flags & VA_PROC_PIPELINE_FAST) {
+        filter_flags &= ~VA_FILTER_SCALING_MASK;
+        filter_flags |= VA_FILTER_SCALING_FAST;
+    }
+    else {
+        if (pp_ops & PP_OP_COMPLEX)
+            return VA_STATUS_ERROR_UNIMPLEMENTED; // full pipeline is needed
+        if ((filter_flags & VA_FILTER_SCALING_MASK) > VA_FILTER_SCALING_HQ)
+            return VA_STATUS_ERROR_UNIMPLEMENTED;
+    }
+
+    pp_index = pp_get_kernel_index(src_obj_surface->fourcc,
+        dst_obj_surface->fourcc, pp_ops, filter_flags);
+    if (pp_index < 0)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    proc_context->pp_context.filter_flags = filter_flags;
+    status = i965_post_processing_internal(ctx, &proc_context->pp_context,
+        &src_surface, &src_rect, &dst_surface, &dst_rect, pp_index, NULL);
+    intel_batchbuffer_flush(proc_context->pp_context.batch);
+    return status;
+}
+
 VAStatus 
 i965_proc_picture(VADriverContextP ctx, 
                   VAProfile profile, 
@@ -5464,6 +5699,10 @@ i965_proc_picture(VADriverContextP ctx,
     int num_tmp_surfaces = 0;
     unsigned int tiling = 0, swizzle = 0;
     int in_width, in_height;
+
+    status = i965_proc_picture_fast(ctx, proc_context, proc_state);
+    if (status != VA_STATUS_ERROR_UNIMPLEMENTED)
+        return status;
 
     if (pipeline_param->surface == VA_INVALID_ID ||
         proc_state->current_render_target == VA_INVALID_ID) {
