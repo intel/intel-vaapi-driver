@@ -1,7 +1,7 @@
-libva-intel-driver NEWS -- summary of changes.  2015-03-xx
+libva-intel-driver NEWS -- summary of changes.  2015-03-20
 Copyright (C) 2009-2015 Intel Corporation
 
-Version 1.5.1 - DD.03.2015
+Version 1.5.1 - 20.03.2015
 * Fix forward reference requirement for Bob deinterlacing
 * Fix a lot of potential rendering issues on GEN8+
 * Fix scaling of NV12 surfaces when no output_region is set
