@@ -2720,10 +2720,20 @@ gen8_mfc_jpeg_fqm_state(VADriverContextP ctx,
         qmatrix->load_chroma_quantiser_matrix = (pic_param->num_components > 1) ? 1 : 0;
     }   
 
-    if (quality > 100)
-      quality = 100;
+
+    //As per the design, normalization of the quality factor and scaling of the Quantization tables
+    //based on the quality factor needs to be done in the driver before sending the values to the HW.
+    //But note, the driver expects the scaled quantization tables (as per below logic) to be sent as
+    //packed header information. The packed header is written as the header of the jpeg file. This
+    //header information is used to decode the jpeg file. So, it is the app's responsibility to send
+    //the correct header information (See build_packed_jpeg_header_buffer() in jpegenc.c in LibVa on
+    //how to do this). QTables can be different for different applications. If no tables are provided,
+    //the default tables in the driver are used.
+
+    //Normalization of the quality factor
+    if (quality > 100) quality=100;
+    if (quality == 0)  quality=1;
     quality = (quality < 50) ? (5000/quality) : (200 - (quality*2)); 
-    quality = (quality == 0) ? 1 : quality;
     
     //Step 1. Apply Quality factor and clip to range [1, 255] for luma and chroma Quantization matrices
     //Step 2. HW expects the 1/Q[i] values in the qm sent, so get reciprocals
