@@ -1294,25 +1294,32 @@ pp_dndi_context_ensure_surfaces_storage(VADriverContextP ctx,
         VASurfaceID new_surface;
         unsigned int width, height;
 
-        if (dndi_ctx->frame_store[i].obj_surface)
+        if (dndi_ctx->frame_store[i].obj_surface &&
+            dndi_ctx->frame_store[i].obj_surface->bo)
             continue; // user allocated surface, not VPP internal
 
-        if (i <= DNDI_FRAME_IN_STMM) {
-            width = src_surface->orig_width;
-            height = src_surface->orig_height;
-        }
-        else {
-            width = dst_surface->orig_width;
-            height = dst_surface->orig_height;
-        }
+        if (dndi_ctx->frame_store[i].obj_surface) {
+            obj_surface = dndi_ctx->frame_store[i].obj_surface;
+            dndi_ctx->frame_store[i].is_scratch_surface = 0;
+        } else {
+            if (i <= DNDI_FRAME_IN_STMM) {
+                width = src_surface->orig_width;
+                height = src_surface->orig_height;
+            }
+            else {
+                width = dst_surface->orig_width;
+                height = dst_surface->orig_height;
+            }
 
-        status = i965_CreateSurfaces(ctx, width, height, VA_RT_FORMAT_YUV420,
-            1, &new_surface);
-        if (status != VA_STATUS_SUCCESS)
-            return status;
+            status = i965_CreateSurfaces(ctx, width, height, VA_RT_FORMAT_YUV420,
+                                         1, &new_surface);
+            if (status != VA_STATUS_SUCCESS)
+                return status;
 
-        obj_surface = SURFACE(new_surface);
-        assert(obj_surface != NULL);
+            obj_surface = SURFACE(new_surface);
+            assert(obj_surface != NULL);
+            dndi_ctx->frame_store[i].is_scratch_surface = 1;
+        }
 
         if (i <= DNDI_FRAME_IN_PREVIOUS) {
             status = i965_check_alloc_surface_bo(ctx, obj_surface,
@@ -1330,7 +1337,6 @@ pp_dndi_context_ensure_surfaces_storage(VADriverContextP ctx,
             return status;
 
         dndi_ctx->frame_store[i].obj_surface = obj_surface;
-        dndi_ctx->frame_store[i].is_scratch_surface = 1;
     }
     return VA_STATUS_SUCCESS;
 }
