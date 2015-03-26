@@ -3423,11 +3423,7 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
         obj_surface->orig_width, obj_surface->orig_height, obj_surface->width,
         I965_SURFACEFORMAT_R8_UNORM, 20, 1);
 
-    /* If we are in "First Frame" mode, i.e. past frames are not
-       available for motion measure, then don't use the TFF flag */
-    dndi_top_first = !(deint_params->flags & (dndi_ctx->is_first_frame ?
-            VA_DEINTERLACING_BOTTOM_FIELD :
-            VA_DEINTERLACING_BOTTOM_FIELD_FIRST));
+    dndi_top_first = !(deint_params->flags & VA_DEINTERLACING_BOTTOM_FIELD);
 
     /* sampler dndi */
     dri_bo_map(pp_context->sampler_state_table.bo, True);
@@ -3833,11 +3829,7 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
         obj_surface->orig_width, obj_surface->orig_height, obj_surface->width,
         I965_SURFACEFORMAT_R8_UNORM, 33, 1);
 
-    /* If we are in "First Frame" mode, i.e. past frames are not
-       available for motion measure, then don't use the TFF flag */
-    dndi_top_first = !(deint_params->flags & (dndi_ctx->is_first_frame ?
-            VA_DEINTERLACING_BOTTOM_FIELD :
-            VA_DEINTERLACING_BOTTOM_FIELD_FIRST));
+    dndi_top_first = !(deint_params->flags & VA_DEINTERLACING_BOTTOM_FIELD);
 
     /* sampler dndi */
     dri_bo_map(pp_context->sampler_state_table.bo, True);
