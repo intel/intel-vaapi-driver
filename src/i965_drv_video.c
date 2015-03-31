@@ -361,13 +361,14 @@ is_surface_busy(struct i965_driver_data *i965,
 
 /* Checks whether the image is in busy state */
 static bool
-is_image_busy(struct i965_driver_data *i965, struct object_image *obj_image)
+is_image_busy(struct i965_driver_data *i965, struct object_image *obj_image, VASurfaceID surface)
 {
     struct object_buffer *obj_buffer;
 
     assert(obj_image != NULL);
 
-    if (obj_image->derived_surface != VA_INVALID_ID)
+    if (obj_image->derived_surface != VA_INVALID_ID &&
+        obj_image->derived_surface == surface)
         return true;
 
     obj_buffer = BUFFER(obj_image->image.buf);
@@ -4095,7 +4096,7 @@ i965_GetImage(VADriverContextP ctx,
 
     if (!obj_image || !obj_image->bo)
         return VA_STATUS_ERROR_INVALID_IMAGE;
-    if (is_image_busy(i965, obj_image))
+    if (is_image_busy(i965, obj_image, surface))
         return VA_STATUS_ERROR_SURFACE_BUSY;
 
     if (x < 0 || y < 0)
@@ -4406,7 +4407,7 @@ i965_PutImage(VADriverContextP ctx,
 
     if (!obj_image || !obj_image->bo)
         return VA_STATUS_ERROR_INVALID_IMAGE;
-    if (is_image_busy(i965, obj_image))
+    if (is_image_busy(i965, obj_image, surface))
         return VA_STATUS_ERROR_SURFACE_BUSY;
 
     if (src_x < 0 ||
