@@ -1180,7 +1180,7 @@ gen8_gpe_load_kernels(VADriverContextP ctx,
                       unsigned int num_kernels)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    int i, kernel_size;
+    int i, kernel_size = 0;
     unsigned int kernel_offset, end_offset;
     unsigned char *kernel_ptr;
     struct i965_kernel *kernel;
@@ -1189,11 +1189,10 @@ gen8_gpe_load_kernels(VADriverContextP ctx,
     memcpy(gpe_context->kernels, kernel_list, sizeof(*kernel_list) * num_kernels);
     gpe_context->num_kernels = num_kernels;
 
-    kernel_size = num_kernels * 64;
     for (i = 0; i < num_kernels; i++) {
         kernel = &gpe_context->kernels[i];
 
-        kernel_size += kernel->size;
+        kernel_size += ALIGN(kernel->size, 64);
     }
 
     gpe_context->instruction_state.bo = dri_bo_alloc(i965->intel.bufmgr,
