@@ -389,10 +389,10 @@ static VAStatus gen8_vme_constant_setup(VADriverContextP ctx,
 
     vme_state_message[31] = mv_num;
 
-    dri_bo_map(vme_context->gpe_context.dynamic_state.bo, 1);
-    assert(vme_context->gpe_context.dynamic_state.bo->virtual);
-    constant_buffer = (unsigned char *)vme_context->gpe_context.dynamic_state.bo->virtual +
-                                         vme_context->gpe_context.curbe_offset;
+    dri_bo_map(vme_context->gpe_context.curbe.bo, 1);
+    assert(vme_context->gpe_context.curbe.bo->virtual);
+    constant_buffer = (unsigned char *)vme_context->gpe_context.curbe.bo->virtual +
+                                         vme_context->gpe_context.curbe.offset;
 
     /* VME MV/Mb cost table is passed by using const buffer */
     /* Now it uses the fixed search path. So it is constructed directly
@@ -400,7 +400,7 @@ static VAStatus gen8_vme_constant_setup(VADriverContextP ctx,
      */
     memcpy(constant_buffer, (char *)vme_context->vme_state_message, 128);
 	
-    dri_bo_unmap(vme_context->gpe_context.dynamic_state.bo);
+    dri_bo_unmap(vme_context->gpe_context.curbe.bo);
 
     return VA_STATUS_SUCCESS;
 }
@@ -1379,7 +1379,7 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
         vme_context->gpe_context.idrt_size = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
-        vme_context->gpe_context.curbe_size = CURBE_TOTAL_DATA_LENGTH;
+        vme_context->gpe_context.curbe.length = CURBE_TOTAL_DATA_LENGTH;
         vme_context->gpe_context.sampler_size = 0;
 
 

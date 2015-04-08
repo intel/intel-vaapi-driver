@@ -1066,8 +1066,8 @@ gen8_gpe_curbe_load(VADriverContextP ctx,
 
     OUT_BATCH(batch, CMD_MEDIA_CURBE_LOAD | (4 - 2));
     OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, gpe_context->curbe_size);
-    OUT_BATCH(batch, gpe_context->curbe_offset);
+    OUT_BATCH(batch, gpe_context->curbe.length);
+    OUT_BATCH(batch, gpe_context->curbe.offset);
 
     ADVANCE_BATCH(batch);
 }
@@ -1122,7 +1122,7 @@ gen8_gpe_context_init(VADriverContextP ctx,
     assert(bo);
     gpe_context->surface_state_binding_table.bo = bo;
 
-    bo_size = gpe_context->idrt_size + gpe_context->curbe_size + gpe_context->sampler_size + 192;
+    bo_size = gpe_context->idrt_size + gpe_context->curbe.length + gpe_context->sampler_size + 192;
     dri_bo_unreference(gpe_context->dynamic_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "surface state & binding table",
@@ -1137,8 +1137,11 @@ gen8_gpe_context_init(VADriverContextP ctx,
 
     /* Constant buffer offset */
     start_offset = ALIGN(end_offset, 64);
-    gpe_context->curbe_offset = start_offset;
-    end_offset = start_offset + gpe_context->curbe_size;
+    dri_bo_unreference(gpe_context->curbe.bo);
+    gpe_context->curbe.bo = bo;
+    dri_bo_reference(gpe_context->curbe.bo);
+    gpe_context->curbe.offset = start_offset;
+    end_offset = start_offset + gpe_context->curbe.length;
 
     /* Interface descriptor offset */
     start_offset = ALIGN(end_offset, 64);
@@ -1170,6 +1173,8 @@ gen8_gpe_context_destroy(struct i965_gpe_context *gpe_context)
     dri_bo_unreference(gpe_context->indirect_state.bo);
     gpe_context->indirect_state.bo = NULL;
 
+    dri_bo_unreference(gpe_context->curbe.bo);
+    gpe_context->curbe.bo = NULL;
 }
 
 
@@ -1619,7 +1624,12 @@ gen8_gpe_context_set_dynamic_buffer(VADriverContextP ctx,
     dri_bo_reference(gpe_context->dynamic_state.bo);
     gpe_context->dynamic_state.bo_size = ds->bo_size;
 
-    gpe_context->curbe_offset = ds->curbe_offset;
+    /* curbe buffer is a part of the dynamic buffer */
+    dri_bo_unreference(gpe_context->curbe.bo);
+    gpe_context->curbe.bo = ds->bo;
+    dri_bo_reference(gpe_context->curbe.bo);
+    gpe_context->curbe.offset = ds->curbe_offset;
+
     gpe_context->idrt_offset = ds->idrt_offset;
     gpe_context->sampler_offset = ds->sampler_offset;
 
@@ -1629,15 +1639,15 @@ gen8_gpe_context_set_dynamic_buffer(VADriverContextP ctx,
 void *
 gen8p_gpe_context_map_curbe(struct i965_gpe_context *gpe_context)
 {
-    dri_bo_map(gpe_context->dynamic_state.bo, 1);
+    dri_bo_map(gpe_context->curbe.bo, 1);
 
-    return (char *)gpe_context->dynamic_state.bo->virtual + gpe_context->curbe_offset;
+    return (char *)gpe_context->curbe.bo->virtual + gpe_context->curbe.offset;
 }
 
 void
 gen8p_gpe_context_unmap_curbe(struct i965_gpe_context *gpe_context)
 {
-    dri_bo_unmap(gpe_context->dynamic_state.bo);
+    dri_bo_unmap(gpe_context->curbe.bo);
 }
 
 void

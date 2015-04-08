@@ -538,8 +538,7 @@ gen9_post_processing_context_init(VADriverContextP ctx,
     gen8_gpe_load_kernels(ctx, gpe_context, &scaling_kernel, 1);
     gpe_context->idrt_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
     gpe_context->sampler_size = ALIGN(sizeof(struct gen8_sampler_state), 64);
-    gpe_context->curbe_size = ALIGN(sizeof(struct scaling_input_parameter), 64);
-    gpe_context->curbe.length = gpe_context->curbe_size;
+    gpe_context->curbe.length = ALIGN(sizeof(struct scaling_input_parameter), 64);
 
     gpe_context->surface_state_binding_table.max_entries = MAX_SCALING_SURFACES;
     gpe_context->surface_state_binding_table.binding_table_offset = 0;

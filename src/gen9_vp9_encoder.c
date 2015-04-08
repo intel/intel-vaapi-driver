@@ -1820,18 +1820,18 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
     /* 4. Mbenc curbe input buffer */
     gen9_add_dri_buffer_gpe_surface(ctx,
                                     brc_gpe_context,
-                                    mbenc_gpe_context->dynamic_state.bo,
+                                    mbenc_gpe_context->curbe.bo,
                                     0,
-                                    ALIGN(mbenc_gpe_context->curbe_size, 64),
-                                    mbenc_gpe_context->curbe_offset,
+                                    ALIGN(mbenc_gpe_context->curbe.length, 64),
+                                    mbenc_gpe_context->curbe.offset,
                                     VP9_BTI_BRC_MBENC_CURBE_INPUT_G9);
     /* 5. Mbenc curbe output buffer */
     gen9_add_dri_buffer_gpe_surface(ctx,
                                     brc_gpe_context,
-                                    mbenc_gpe_context->dynamic_state.bo,
+                                    mbenc_gpe_context->curbe.bo,
                                     0,
-                                    ALIGN(mbenc_gpe_context->curbe_size, 64),
-                                    mbenc_gpe_context->curbe_offset,
+                                    ALIGN(mbenc_gpe_context->curbe.length, 64),
+                                    mbenc_gpe_context->curbe.offset,
                                     VP9_BTI_BRC_MBENC_CURBE_OUTPUT_G9);
 
     /* 6. BRC_PIC_STATE read buffer */
@@ -3289,10 +3289,10 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         gen9_add_dri_buffer_gpe_surface(ctx,
                                         gpe_context,
-                                        mbenc_param->gpe_context_tx->dynamic_state.bo,
+                                        mbenc_param->gpe_context_tx->curbe.bo,
                                         0,
                                         ALIGN(res_size, 64),
-                                        mbenc_param->gpe_context_tx->curbe_offset,
+                                        mbenc_param->gpe_context_tx->curbe.offset,
                                         VP9_BTI_MBENC_TX_CURBE_G9);
 
         break;
@@ -3441,10 +3441,10 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         gen9_add_dri_buffer_gpe_surface(ctx,
                                         gpe_context,
-                                        mbenc_param->gpe_context_tx->dynamic_state.bo,
+                                        mbenc_param->gpe_context_tx->curbe.bo,
                                         0,
                                         ALIGN(res_size, 64),
-                                        mbenc_param->gpe_context_tx->curbe_offset,
+                                        mbenc_param->gpe_context_tx->curbe.offset,
                                         VP9_BTI_MBENC_TX_CURBE_G9);
 
 
@@ -3683,8 +3683,6 @@ gen9_init_gpe_context_vp9(struct i965_gpe_context *gpe_context,
                           struct vp9_encoder_kernel_parameter *kernel_param)
 {
     gpe_context->curbe.length = kernel_param->curbe_size; // in bytes
-
-    gpe_context->curbe_size = ALIGN(kernel_param->curbe_size, 64);
 
     gpe_context->sampler_size = 0;
     if (kernel_param->sampler_size) {

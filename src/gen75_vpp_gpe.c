@@ -890,7 +890,7 @@ vpp_gpe_context_init(VADriverContextP ctx)
         gpe_ctx->surface_state_binding_table.length =
                (SURFACE_STATE_PADDED_SIZE_GEN8 + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
-        gpe_ctx->curbe_size = CURBE_TOTAL_DATA_LENGTH;
+        gpe_ctx->curbe.length = CURBE_TOTAL_DATA_LENGTH;
         gpe_ctx->idrt_size  = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
 
     }

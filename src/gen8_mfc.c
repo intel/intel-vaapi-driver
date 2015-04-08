@@ -4609,7 +4609,7 @@ Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     mfc_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
     mfc_context->gpe_context.idrt_size = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
-    mfc_context->gpe_context.curbe_size = 32 * 4;
+    mfc_context->gpe_context.curbe.length = 32 * 4;
     mfc_context->gpe_context.sampler_size = 0;
 
     mfc_context->gpe_context.vfe_state.max_num_threads = 60 - 1;

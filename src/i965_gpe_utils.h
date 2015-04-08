@@ -92,6 +92,7 @@ struct i965_gpe_context
     struct {
         dri_bo *bo;
         unsigned int length;            /* in bytes */
+        unsigned int offset;
     } curbe;
 
     struct {
@@ -168,8 +169,6 @@ struct i965_gpe_context
     int sampler_size;
     unsigned int idrt_offset;
     int idrt_size;
-    unsigned int curbe_offset;
-    int curbe_size;
 };
 
 struct gpe_mi_flush_dw_parameter
