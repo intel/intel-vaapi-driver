@@ -536,7 +536,8 @@ gen9_post_processing_context_init(VADriverContextP ctx,
     scaling_kernel.bin = pp_10bit_scaling_gen9;
     scaling_kernel.size = sizeof(pp_10bit_scaling_gen9);
     gen8_gpe_load_kernels(ctx, gpe_context, &scaling_kernel, 1);
-    gpe_context->idrt_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
+    gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
+    gpe_context->idrt.max_entries = 1;
     gpe_context->sampler_size = ALIGN(sizeof(struct gen8_sampler_state), 64);
     gpe_context->curbe.length = ALIGN(sizeof(struct scaling_input_parameter), 64);
 

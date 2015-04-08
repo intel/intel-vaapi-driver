@@ -3691,8 +3691,6 @@ gen9_init_gpe_context_vp9(struct i965_gpe_context *gpe_context,
 
     gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64); // 8 dws, 1 register
     gpe_context->idrt.max_entries = NUM_KERNELS_PER_GPE_CONTEXT;
-    gpe_context->idrt_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64) *
-                                   NUM_KERNELS_PER_GPE_CONTEXT;
 
     gpe_context->surface_state_binding_table.max_entries = MAX_VP9_ENCODER_SURFACES;
     gpe_context->surface_state_binding_table.binding_table_offset = 0;

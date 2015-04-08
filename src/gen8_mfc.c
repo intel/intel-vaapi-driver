@@ -1333,10 +1333,10 @@ gen8_mfc_batchbuffer_idrt_setup(VADriverContextP ctx,
     dri_bo *bo;
     unsigned char *desc_ptr;
 
-    bo = mfc_context->gpe_context.dynamic_state.bo;
+    bo = mfc_context->gpe_context.idrt.bo;
     dri_bo_map(bo, 1);
     assert(bo->virtual);
-    desc_ptr = (unsigned char *)bo->virtual + mfc_context->gpe_context.idrt_offset;
+    desc_ptr = (unsigned char *)bo->virtual + mfc_context->gpe_context.idrt.offset;
 
     desc = (struct gen8_interface_descriptor_data *)desc_ptr;
 
@@ -4608,7 +4608,8 @@ Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     assert(mfc_context);
     mfc_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
-    mfc_context->gpe_context.idrt_size = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
+    mfc_context->gpe_context.idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
+    mfc_context->gpe_context.idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
     mfc_context->gpe_context.curbe.length = 32 * 4;
     mfc_context->gpe_context.sampler_size = 0;
 

@@ -376,10 +376,10 @@ static VAStatus gen9_vme_interface_setup(VADriverContextP ctx,
     dri_bo *bo;
     unsigned char *desc_ptr;
 
-    bo = vme_context->gpe_context.dynamic_state.bo;
+    bo = vme_context->gpe_context.idrt.bo;
     dri_bo_map(bo, 1);
     assert(bo->virtual);
-    desc_ptr = (unsigned char *)bo->virtual + vme_context->gpe_context.idrt_offset;
+    desc_ptr = (unsigned char *)bo->virtual + vme_context->gpe_context.idrt.offset;
 
     desc = (struct gen8_interface_descriptor_data *)desc_ptr;
 
@@ -2031,7 +2031,8 @@ Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     vme_context->vme_kernel_sum = i965_kernel_num;
     vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
-    vme_context->gpe_context.idrt_size = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
+    vme_context->gpe_context.idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
+    vme_context->gpe_context.idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
     vme_context->gpe_context.curbe.length = CURBE_TOTAL_DATA_LENGTH;
     vme_context->gpe_context.sampler_size = 0;
 

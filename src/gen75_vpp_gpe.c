@@ -406,13 +406,13 @@ gen8_gpe_process_interface_setup(VADriverContextP ctx,
                     struct vpp_gpe_context *vpp_gpe_ctx)
 {
     struct gen8_interface_descriptor_data *desc;
-    dri_bo *bo = vpp_gpe_ctx->gpe_ctx.dynamic_state.bo;
+    dri_bo *bo = vpp_gpe_ctx->gpe_ctx.idrt.bo;
     int i;
 
     dri_bo_map(bo, 1);
     assert(bo->virtual);
     desc = (struct gen8_interface_descriptor_data *)(bo->virtual
-                               + vpp_gpe_ctx->gpe_ctx.idrt_offset);
+                               + vpp_gpe_ctx->gpe_ctx.idrt.offset);
 
     /*Setup the descritor table*/
     for (i = 0; i < vpp_gpe_ctx->sub_shader_sum; i++){
@@ -880,7 +880,7 @@ vpp_gpe_context_init(VADriverContextP ctx)
 
         gpe_ctx->curbe.length = CURBE_TOTAL_DATA_LENGTH;
         gpe_ctx->idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
-        gpe_ctx->idrt.entry_size = sizeof(struct gen6_interface_descriptor_data);
+        gpe_ctx->idrt.entry_size = ALIGN(sizeof(struct gen6_interface_descriptor_data), 64);
 
     } else if (IS_GEN8(i965->intel.device_info) ||
                IS_GEN9(i965->intel.device_info)) {
@@ -891,8 +891,8 @@ vpp_gpe_context_init(VADriverContextP ctx)
                (SURFACE_STATE_PADDED_SIZE_GEN8 + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
         gpe_ctx->curbe.length = CURBE_TOTAL_DATA_LENGTH;
-        gpe_ctx->idrt_size  = sizeof(struct gen8_interface_descriptor_data) * MAX_INTERFACE_DESC_GEN6;
-
+        gpe_ctx->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
+        gpe_ctx->idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
     }
 
     return vpp_gpe_ctx;

@@ -87,6 +87,7 @@ struct i965_gpe_context
         dri_bo *bo;
         unsigned int max_entries;
         unsigned int entry_size;        /* in bytes */
+        unsigned int offset;
     } idrt;
 
     struct {
@@ -167,8 +168,6 @@ struct i965_gpe_context
     unsigned int sampler_offset;
     int sampler_entries;
     int sampler_size;
-    unsigned int idrt_offset;
-    int idrt_size;
 };
 
 struct gpe_mi_flush_dw_parameter

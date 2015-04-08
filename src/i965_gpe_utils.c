@@ -1084,8 +1084,8 @@ gen8_gpe_idrt(VADriverContextP ctx,
 
     OUT_BATCH(batch, CMD_MEDIA_INTERFACE_LOAD | (4 - 2));
     OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, gpe_context->idrt_size);
-    OUT_BATCH(batch, gpe_context->idrt_offset);
+    OUT_BATCH(batch, gpe_context->idrt.max_entries * gpe_context->idrt.entry_size);
+    OUT_BATCH(batch, gpe_context->idrt.offset);
 
     ADVANCE_BATCH(batch);
 }
@@ -1122,7 +1122,7 @@ gen8_gpe_context_init(VADriverContextP ctx,
     assert(bo);
     gpe_context->surface_state_binding_table.bo = bo;
 
-    bo_size = gpe_context->idrt_size + gpe_context->curbe.length + gpe_context->sampler_size + 192;
+    bo_size = gpe_context->idrt.max_entries * gpe_context->idrt.entry_size + gpe_context->curbe.length + gpe_context->sampler_size + 192;
     dri_bo_unreference(gpe_context->dynamic_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "surface state & binding table",
@@ -1145,8 +1145,11 @@ gen8_gpe_context_init(VADriverContextP ctx,
 
     /* Interface descriptor offset */
     start_offset = ALIGN(end_offset, 64);
-    gpe_context->idrt_offset = start_offset;
-    end_offset = start_offset + gpe_context->idrt_size;
+    dri_bo_unreference(gpe_context->idrt.bo);
+    gpe_context->idrt.bo = bo;
+    dri_bo_reference(gpe_context->idrt.bo);
+    gpe_context->idrt.offset = start_offset;
+    end_offset = start_offset + gpe_context->idrt.entry_size * gpe_context->idrt.max_entries;
 
     /* Sampler state offset */
     start_offset = ALIGN(end_offset, 64);
@@ -1175,6 +1178,9 @@ gen8_gpe_context_destroy(struct i965_gpe_context *gpe_context)
 
     dri_bo_unreference(gpe_context->curbe.bo);
     gpe_context->curbe.bo = NULL;
+
+    dri_bo_unreference(gpe_context->idrt.bo);
+    gpe_context->idrt.bo = NULL;
 }
 
 
@@ -1630,7 +1636,12 @@ gen8_gpe_context_set_dynamic_buffer(VADriverContextP ctx,
     dri_bo_reference(gpe_context->curbe.bo);
     gpe_context->curbe.offset = ds->curbe_offset;
 
-    gpe_context->idrt_offset = ds->idrt_offset;
+    /* idrt buffer is a part of the dynamic buffer */
+    dri_bo_unreference(gpe_context->idrt.bo);
+    gpe_context->idrt.bo = ds->bo;
+    dri_bo_reference(gpe_context->idrt.bo);
+    gpe_context->idrt.offset = ds->idrt_offset;
+
     gpe_context->sampler_offset = ds->sampler_offset;
 
     return;
@@ -1677,10 +1688,10 @@ gen8_gpe_setup_interface_data(VADriverContextP ctx,
     dri_bo *bo;
     unsigned char *desc_ptr;
 
-    bo = gpe_context->dynamic_state.bo;
+    bo = gpe_context->idrt.bo;
     dri_bo_map(bo, 1);
     assert(bo->virtual);
-    desc_ptr = (unsigned char *)bo->virtual + gpe_context->idrt_offset;
+    desc_ptr = (unsigned char *)bo->virtual + gpe_context->idrt.offset;
     desc = (struct gen8_interface_descriptor_data *)desc_ptr;
 
     for (i = 0; i < gpe_context->num_kernels; i++) {
