@@ -1122,7 +1122,8 @@ gen8_gpe_context_init(VADriverContextP ctx,
     assert(bo);
     gpe_context->surface_state_binding_table.bo = bo;
 
-    bo_size = gpe_context->idrt.max_entries * gpe_context->idrt.entry_size + gpe_context->curbe.length + gpe_context->sampler_size + 192;
+    bo_size = gpe_context->idrt.max_entries * gpe_context->idrt.entry_size + gpe_context->curbe.length +
+        gpe_context->sampler.max_entries * gpe_context->sampler.entry_size + 192;
     dri_bo_unreference(gpe_context->dynamic_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "surface state & binding table",
@@ -1153,8 +1154,11 @@ gen8_gpe_context_init(VADriverContextP ctx,
 
     /* Sampler state offset */
     start_offset = ALIGN(end_offset, 64);
-    gpe_context->sampler_offset = start_offset;
-    end_offset = start_offset + gpe_context->sampler_size;
+    dri_bo_unreference(gpe_context->sampler.bo);
+    gpe_context->sampler.bo = bo;
+    dri_bo_reference(gpe_context->sampler.bo);
+    gpe_context->sampler.offset = start_offset;
+    end_offset = start_offset + gpe_context->sampler.entry_size * gpe_context->sampler.max_entries;
 
     /* update the end offset of dynamic_state */
     gpe_context->dynamic_state.end_offset = end_offset;
@@ -1181,6 +1185,9 @@ gen8_gpe_context_destroy(struct i965_gpe_context *gpe_context)
 
     dri_bo_unreference(gpe_context->idrt.bo);
     gpe_context->idrt.bo = NULL;
+
+    dri_bo_unreference(gpe_context->sampler.bo);
+    gpe_context->sampler.bo = NULL;
 }
 
 
@@ -1642,7 +1649,11 @@ gen8_gpe_context_set_dynamic_buffer(VADriverContextP ctx,
     dri_bo_reference(gpe_context->idrt.bo);
     gpe_context->idrt.offset = ds->idrt_offset;
 
-    gpe_context->sampler_offset = ds->sampler_offset;
+    /* sampler buffer is a part of the dynamic buffer */
+    dri_bo_unreference(gpe_context->sampler.bo);
+    gpe_context->sampler.bo = ds->bo;
+    dri_bo_reference(gpe_context->sampler.bo);
+    gpe_context->sampler.offset = ds->sampler_offset;
 
     return;
 }
@@ -1704,7 +1715,7 @@ gen8_gpe_setup_interface_data(VADriverContextP ctx,
         memset(desc, 0, sizeof(*desc));
         desc->desc0.kernel_start_pointer = kernel->kernel_offset >> 6;
         desc->desc3.sampler_count = 0;
-        desc->desc3.sampler_state_pointer = (gpe_context->sampler_offset >> 5);
+        desc->desc3.sampler_state_pointer = (gpe_context->sampler.offset >> 5);
         desc->desc4.binding_table_entry_count = 0;
         desc->desc4.binding_table_pointer = (gpe_context->surface_state_binding_table.binding_table_offset >> 5);
         desc->desc5.constant_urb_entry_read_offset = 0;

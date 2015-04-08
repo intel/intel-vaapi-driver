@@ -97,6 +97,13 @@ struct i965_gpe_context
     } curbe;
 
     struct {
+        dri_bo *bo;
+        unsigned int max_entries;
+        unsigned int entry_size;        /* in bytes */
+        unsigned int offset;
+    } sampler;
+
+    struct {
         unsigned int gpgpu_mode : 1;
         unsigned int pad0 : 7;
         unsigned int max_num_threads : 16;
@@ -164,10 +171,6 @@ struct i965_gpe_context
         int bo_size;
         unsigned int end_offset;
     } dynamic_state;
-
-    unsigned int sampler_offset;
-    int sampler_entries;
-    int sampler_size;
 };
 
 struct gpe_mi_flush_dw_parameter

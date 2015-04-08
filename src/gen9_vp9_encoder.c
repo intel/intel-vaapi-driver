@@ -2594,13 +2594,13 @@ gen9_vp9_dys_set_sampler_state(struct i965_gpe_context *gpe_context)
     if (!gpe_context)
         return;
 
-    dri_bo_map(gpe_context->dynamic_state.bo, 1);
+    dri_bo_map(gpe_context->sampler.bo, 1);
 
-    if (!gpe_context->dynamic_state.bo->virtual)
+    if (!gpe_context->sampler.bo->virtual)
         return;
 
     sampler_cmd = (struct gen9_sampler_8x8_avs *)
-       (gpe_context->dynamic_state.bo->virtual + gpe_context->sampler_offset);
+       (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
 
     memset(sampler_cmd, 0, sizeof(struct gen9_sampler_8x8_avs));
 
@@ -2658,7 +2658,7 @@ gen9_vp9_dys_set_sampler_state(struct i965_gpe_context *gpe_context)
            &gen9_vp9_avs_coeffs[17 * 8],
            15 * sizeof(struct gen8_sampler_8x8_avs_coefficients));
 
-    dri_bo_unmap(gpe_context->dynamic_state.bo);
+    dri_bo_unmap(gpe_context->sampler.bo);
 }
 
 static void
@@ -3684,9 +3684,12 @@ gen9_init_gpe_context_vp9(struct i965_gpe_context *gpe_context,
 {
     gpe_context->curbe.length = kernel_param->curbe_size; // in bytes
 
-    gpe_context->sampler_size = 0;
+    gpe_context->sampler.entry_size = 0;
+    gpe_context->sampler.max_entries = 0;
+
     if (kernel_param->sampler_size) {
-        gpe_context->sampler_size = ALIGN(kernel_param->sampler_size, 64);
+        gpe_context->sampler.entry_size = ALIGN(kernel_param->sampler_size, 64);
+        gpe_context->sampler.max_entries = 1;
     }
 
     gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64); // 8 dws, 1 register

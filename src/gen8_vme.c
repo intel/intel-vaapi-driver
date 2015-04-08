@@ -1382,8 +1382,8 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         vme_context->gpe_context.idrt.max_entries = MAX_INTERFACE_DESC_GEN6;
 
         vme_context->gpe_context.curbe.length = CURBE_TOTAL_DATA_LENGTH;
-        vme_context->gpe_context.sampler_size = 0;
-
+        vme_context->gpe_context.sampler.entry_size = 0;
+        vme_context->gpe_context.sampler.max_entries = 0;
 
         vme_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
         vme_context->gpe_context.vfe_state.num_urb_entries = 64;

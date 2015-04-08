@@ -488,15 +488,15 @@ gen9_p010_scaling_sample_state(VADriverContextP ctx,
 
     if (gpe_context == NULL || !src_rect || !dst_rect)
         return;
-    dri_bo_map(gpe_context->dynamic_state.bo, 1);
+    dri_bo_map(gpe_context->sampler.bo, 1);
 
-    if (gpe_context->dynamic_state.bo->virtual == NULL)
+    if (gpe_context->sampler.bo->virtual == NULL)
         return;
 
-    assert(gpe_context->dynamic_state.bo->virtual);
+    assert(gpe_context->sampler.bo->virtual);
 
     sampler_state = (struct gen8_sampler_state *)
-       (gpe_context->dynamic_state.bo->virtual + gpe_context->sampler_offset);
+       (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
 
     memset(sampler_state, 0, sizeof(*sampler_state));
 
@@ -513,7 +513,7 @@ gen9_p010_scaling_sample_state(VADriverContextP ctx,
     sampler_state->ss3.s_wrap_mode = I965_TEXCOORDMODE_CLAMP;
     sampler_state->ss3.t_wrap_mode = I965_TEXCOORDMODE_CLAMP;
 
-    dri_bo_unmap(gpe_context->dynamic_state.bo);
+    dri_bo_unmap(gpe_context->sampler.bo);
 }
 
 void
@@ -538,7 +538,8 @@ gen9_post_processing_context_init(VADriverContextP ctx,
     gen8_gpe_load_kernels(ctx, gpe_context, &scaling_kernel, 1);
     gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
     gpe_context->idrt.max_entries = 1;
-    gpe_context->sampler_size = ALIGN(sizeof(struct gen8_sampler_state), 64);
+    gpe_context->sampler.entry_size = ALIGN(sizeof(struct gen8_sampler_state), 64);
+    gpe_context->sampler.max_entries = 1;
     gpe_context->curbe.length = ALIGN(sizeof(struct scaling_input_parameter), 64);
 
     gpe_context->surface_state_binding_table.max_entries = MAX_SCALING_SURFACES;
