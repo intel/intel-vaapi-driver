@@ -1066,7 +1066,7 @@ gen8_gpe_curbe_load(VADriverContextP ctx,
 
     OUT_BATCH(batch, CMD_MEDIA_CURBE_LOAD | (4 - 2));
     OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, gpe_context->curbe.length);
+    OUT_BATCH(batch, ALIGN(gpe_context->curbe.length, 64));
     OUT_BATCH(batch, gpe_context->curbe.offset);
 
     ADVANCE_BATCH(batch);
