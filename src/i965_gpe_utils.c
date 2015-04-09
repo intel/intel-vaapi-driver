@@ -1122,8 +1122,9 @@ gen8_gpe_context_init(VADriverContextP ctx,
     assert(bo);
     gpe_context->surface_state_binding_table.bo = bo;
 
-    bo_size = gpe_context->idrt.max_entries * gpe_context->idrt.entry_size + gpe_context->curbe.length +
-        gpe_context->sampler.max_entries * gpe_context->sampler.entry_size + 192;
+    bo_size = gpe_context->idrt.max_entries * ALIGN(gpe_context->idrt.entry_size, 64) +
+        ALIGN(gpe_context->curbe.length, 64) +
+        gpe_context->sampler.max_entries * ALIGN(gpe_context->sampler.entry_size, 64);
     dri_bo_unreference(gpe_context->dynamic_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "surface state & binding table",
@@ -1150,7 +1151,7 @@ gen8_gpe_context_init(VADriverContextP ctx,
     gpe_context->idrt.bo = bo;
     dri_bo_reference(gpe_context->idrt.bo);
     gpe_context->idrt.offset = start_offset;
-    end_offset = start_offset + gpe_context->idrt.entry_size * gpe_context->idrt.max_entries;
+    end_offset = start_offset + ALIGN(gpe_context->idrt.entry_size, 64) * gpe_context->idrt.max_entries;
 
     /* Sampler state offset */
     start_offset = ALIGN(end_offset, 64);
@@ -1158,7 +1159,7 @@ gen8_gpe_context_init(VADriverContextP ctx,
     gpe_context->sampler.bo = bo;
     dri_bo_reference(gpe_context->sampler.bo);
     gpe_context->sampler.offset = start_offset;
-    end_offset = start_offset + gpe_context->sampler.entry_size * gpe_context->sampler.max_entries;
+    end_offset = start_offset + ALIGN(gpe_context->sampler.entry_size, 64) * gpe_context->sampler.max_entries;
 
     /* update the end offset of dynamic_state */
     gpe_context->dynamic_state.end_offset = end_offset;
