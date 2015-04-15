@@ -1146,20 +1146,18 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
                                       int qp, unsigned int *msg,
                                       int ctb_x, int ctb_y,
                                       int mb_x, int mb_y,
-                                      int ctb_width_in_mb, int width_in_ctb, int num_cu_record, int slice_type)
+                                      int ctb_width_in_mb, int width_in_ctb, int num_cu_record, int slice_type,int cu_index,int index)
 {
     /* here cu == mb, so we use mb address as the cu address */
     /* to fill the indirect cu by the vme out */
-    static int mb_addr_raster_to_zigzag_64[4][4] = { {0, 1, 4, 5}, {2, 3, 6, 7}, {8, 9, 12, 13}, {10, 11, 14, 15} };
-    static int mb_addr_raster_to_zigzag_32[2][2] = { {0, 1}, {2, 3 } };
     static int intra_mode_8x8_avc2hevc[9] = {26, 10, 1, 34, 18, 24, 13, 28, 8};
     static int intra_mode_16x16_avc2hevc[4] = {26, 10, 1, 34};
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     unsigned char * cu_record_ptr = NULL;
     unsigned int * cu_msg = NULL;
     int ctb_address = (ctb_y * width_in_ctb + ctb_x) * num_cu_record;
-    int mb_address_in_ctb = ((ctb_width_in_mb == 4) ? mb_addr_raster_to_zigzag_64[mb_x][mb_y] : ((ctb_width_in_mb == 2) ? mb_addr_raster_to_zigzag_32[mb_x][mb_y] : 0));
-    int cu_address = (ctb_address + mb_address_in_ctb) * 16 * 4;
+    int mb_address_in_ctb = 0;
+    int cu_address = (ctb_address + mb_address_in_ctb + cu_index) * 16 * 4;
     int zero = 0;
     int is_inter = 0;
     int intraMbMode = 0;
@@ -1167,6 +1165,9 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
     int intraMode[4];
     int inerpred_idc = 0;
     int intra_chroma_mode = 5;
+    int cu_size = 1;
+    int tu_size = 0x55;
+    int tu_count = 4;
 
     if (!is_inter) inerpred_idc = 0xff;
 
@@ -1176,29 +1177,37 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
     if (intraMbMode == AVC_INTRA_16X16) {
         cu_part_mode = 0; //2Nx2N
         intra_chroma_mode = 5;
+        cu_size = 1;
+        tu_size = 0x55;
+        tu_count = 4;
         intraMode[0] = intra_mode_16x16_avc2hevc[msg[1] & 0xf];
         intraMode[1] = intra_mode_16x16_avc2hevc[msg[1] & 0xf];
         intraMode[2] = intra_mode_16x16_avc2hevc[msg[1] & 0xf];
         intraMode[3] = intra_mode_16x16_avc2hevc[msg[1] & 0xf];
     } else if (intraMbMode == AVC_INTRA_8X8) {
-        cu_part_mode = 3; //NxN
-        intra_chroma_mode = 0;
-        intraMode[0] = intra_mode_8x8_avc2hevc[msg[1] & 0xf];
-        intraMode[1] = intra_mode_8x8_avc2hevc[(msg[1] >> 4) & 0xf];
-        intraMode[2] = intra_mode_8x8_avc2hevc[(msg[1] >> 8) & 0xf];
-        intraMode[3] = intra_mode_8x8_avc2hevc[(msg[1] >> 12) & 0xf];
+        cu_part_mode = 0; //2Nx2N
+        intra_chroma_mode = 5;
+        cu_size = 0;
+        tu_size = 0;
+        tu_count = 4;
+        intraMode[0] = intra_mode_8x8_avc2hevc[msg[1] >> (index << 2) & 0xf];
+        intraMode[1] = intra_mode_8x8_avc2hevc[msg[1] >> (index << 2) & 0xf];
+        intraMode[2] = intra_mode_8x8_avc2hevc[msg[1] >> (index << 2) & 0xf];
+        intraMode[3] = intra_mode_8x8_avc2hevc[msg[1] >> (index << 2) & 0xf];
 
     } else { // for 4x4 to use 8x8 replace
         cu_part_mode = 3; //NxN
         intra_chroma_mode = 0;
-        intraMode[0] = intra_mode_8x8_avc2hevc[0];
-        intraMode[1] = intra_mode_8x8_avc2hevc[0];
-        intraMode[2] = intra_mode_8x8_avc2hevc[0];
-        intraMode[3] = intra_mode_8x8_avc2hevc[0];
+        cu_size = 0;
+        tu_size = 0;
+        tu_count = 4;
+        intraMode[0] = intra_mode_8x8_avc2hevc[msg[1] >> ((index << 4) + 0) & 0xf];
+        intraMode[1] = intra_mode_8x8_avc2hevc[msg[1] >> ((index << 4) + 4) & 0xf];
+        intraMode[2] = intra_mode_8x8_avc2hevc[msg[1] >> ((index << 4) + 8) & 0xf];
+        intraMode[3] = intra_mode_8x8_avc2hevc[msg[1] >> ((index << 4) + 12) & 0xf];
 
     }
 
-    dri_bo_map(mfc_context->hcp_indirect_cu_object.bo , 1);
     cu_record_ptr = (unsigned char *)mfc_context->hcp_indirect_cu_object.bo->virtual;
     /* get the mb info from the vme out */
     cu_msg = (unsigned int *)(cu_record_ptr + cu_address);
@@ -1212,7 +1221,7 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
                  cu_part_mode << 4 |    /* cu_part_mode */
                  zero << 3 |    /* cu_transquant_bypass_flag */
                  is_inter << 2 |    /* cu_pred_mode :intra 1,inter 1*/
-                 1          /* cu_size */
+                 cu_size          /* cu_size */
                 );
     cu_msg[1] = (zero << 30 |   /* reserved  */
                  intraMode[3] << 24 |   /* intra_mode */
@@ -1260,8 +1269,8 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
                   zero          /* ref_idx_l0[0] */
                  );
 
-    cu_msg[11] = 0x55; /* tu_size 00000000 00000000 00000000 10101010  or 0x0*/
-    cu_msg[12] = (3 << 28 | /* tu count - 1 */
+    cu_msg[11] = tu_size; /* tu_size 00000000 00000000 00000000 10101010  or 0x0*/
+    cu_msg[12] = ((tu_count - 1) << 28 | /* tu count - 1 */
                   zero << 16 |  /* reserved  */
                   zero          /* tu_xform_Yskip[15:0] */
                  );
@@ -1270,9 +1279,6 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
                  );
     cu_msg[14] = zero ;
     cu_msg[15] = zero ;
-
-    dri_bo_unmap(mfc_context->hcp_indirect_cu_object.bo);
-
 }
 
 /* here 1 MB = 1CU = 16x16 */
@@ -1283,24 +1289,24 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
                                       int qp, unsigned int *msg,
                                       int ctb_x, int ctb_y,
                                       int mb_x, int mb_y,
-                                      int ctb_width_in_mb, int width_in_ctb, int num_cu_record, int slice_type)
+                                      int ctb_width_in_mb, int width_in_ctb, int num_cu_record, int slice_type, int cu_index,int index)
 {
     /* here cu == mb, so we use mb address as the cu address */
     /* to fill the indirect cu by the vme out */
-    static int mb_addr_raster_to_zigzag_64[4][4] = { {0, 1, 4, 5}, {2, 3, 6, 7}, {8, 9, 12, 13}, {10, 11, 14, 15} };
-    static int mb_addr_raster_to_zigzag_32[2][2] = { {0, 1}, {2, 3 } };
-
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     unsigned char * cu_record_ptr = NULL;
     unsigned int * cu_msg = NULL;
     int ctb_address = (ctb_y * width_in_ctb + ctb_x) * num_cu_record;
-    int mb_address_in_ctb = ((ctb_width_in_mb == 4) ? mb_addr_raster_to_zigzag_64[mb_x][mb_y] : ((ctb_width_in_mb == 2) ? mb_addr_raster_to_zigzag_32[mb_x][mb_y] : 0));
-    int cu_address = (ctb_address + mb_address_in_ctb) * 16 * 4;
+    int mb_address_in_ctb = 0;
+    int cu_address = (ctb_address + mb_address_in_ctb + cu_index) * 16 * 4;
     int zero = 0;
     int cu_part_mode = 0;
     int submb_pre_mode = 0;
     int is_inter = 1;
+    int cu_size = 1;
+    int tu_size = 0x55;
+    int tu_count = 4;
 
     unsigned int *mv_ptr;
     {
@@ -1314,7 +1320,6 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
         /* 0/2/4/6/8... ： l0, 1/3/5/7...: l1 ; now it only support 16x16,16x8,8x16,8x8*/
 
         if ((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_16X16) {
-            // MV[0] and MV[2] are replicated
             mv_ptr[4] = mv_ptr[0];
             mv_ptr[5] = mv_ptr[1];
             mv_ptr[2] = mv_ptr[0];
@@ -1322,8 +1327,10 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
             mv_ptr[6] = mv_ptr[0];
             mv_ptr[7] = mv_ptr[1];
             cu_part_mode = 0;
+            cu_size = 1;
+            tu_size = 0x55;
+            tu_count = 4;
         } else if ((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_8X16) {
-            // MV[0] and MV[2] are replicated
             mv_ptr[4] = mv_ptr[0];
             mv_ptr[5] = mv_ptr[1];
             mv_ptr[2] = mv_ptr[8];
@@ -1331,8 +1338,10 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
             mv_ptr[6] = mv_ptr[8];
             mv_ptr[7] = mv_ptr[9];
             cu_part_mode = 1;
+            cu_size = 1;
+            tu_size = 0x55;
+            tu_count = 4;
         } else if ((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_16X8) {
-            // MV[0] and MV[1] are replicated
             mv_ptr[2] = mv_ptr[0];
             mv_ptr[3] = mv_ptr[1];
             mv_ptr[4] = mv_ptr[16];
@@ -1340,30 +1349,39 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
             mv_ptr[6] = mv_ptr[24];
             mv_ptr[7] = mv_ptr[25];
             cu_part_mode = 2;
-        } else if (((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_8X8) &&
-                   !(msg[1] & SUBMB_SHAPE_MASK)) {
-            // Don't touch MV[0] or MV[1]
-            mv_ptr[2] = mv_ptr[8];
-            mv_ptr[3] = mv_ptr[9];
-            mv_ptr[4] = mv_ptr[16];
-            mv_ptr[5] = mv_ptr[17];
-            mv_ptr[6] = mv_ptr[24];
-            mv_ptr[7] = mv_ptr[25];
-            cu_part_mode = 3;
-        } else {
-            // Don't touch MV[0] or MV[1]
-            // default use 8x8
-            mv_ptr[2] = mv_ptr[8];
-            mv_ptr[3] = mv_ptr[9];
-            mv_ptr[4] = mv_ptr[16];
-            mv_ptr[5] = mv_ptr[17];
-            mv_ptr[6] = mv_ptr[24];
-            mv_ptr[7] = mv_ptr[25];
-            cu_part_mode = 3;
+            cu_size = 1;
+            tu_size = 0x55;
+            tu_count = 4;
+        }else if((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_8X8) {
+            mv_ptr[0] = mv_ptr[index * 8 + 0 ];
+            mv_ptr[1] = mv_ptr[index * 8 + 1 ];
+            mv_ptr[2] = mv_ptr[index * 8 + 0 ];
+            mv_ptr[3] = mv_ptr[index * 8 + 1 ];
+            mv_ptr[4] = mv_ptr[index * 8 + 0 ];
+            mv_ptr[5] = mv_ptr[index * 8 + 1 ];
+            mv_ptr[6] = mv_ptr[index * 8 + 0 ];
+            mv_ptr[7] = mv_ptr[index * 8 + 1 ];
+            cu_part_mode = 0;
+            cu_size = 0;
+            tu_size = 0x0;
+            tu_count = 4;
+
+        }else
+        {
+            mv_ptr[4] = mv_ptr[0];
+            mv_ptr[5] = mv_ptr[1];
+            mv_ptr[2] = mv_ptr[0];
+            mv_ptr[3] = mv_ptr[1];
+            mv_ptr[6] = mv_ptr[0];
+            mv_ptr[7] = mv_ptr[1];
+            cu_part_mode = 0;
+            cu_size = 1;
+            tu_size = 0x55;
+            tu_count = 4;
+
         }
     }
 
-    dri_bo_map(mfc_context->hcp_indirect_cu_object.bo , 1);
     cu_record_ptr = (unsigned char *)mfc_context->hcp_indirect_cu_object.bo->virtual;
     /* get the mb info from the vme out */
     cu_msg = (unsigned int *)(cu_record_ptr + cu_address);
@@ -1377,7 +1395,7 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
                  cu_part_mode << 4 |    /* cu_part_mode */
                  zero << 3 |    /* cu_transquant_bypass_flag */
                  is_inter << 2 |    /* cu_pred_mode :intra 1,inter 1*/
-                 1          /* cu_size */
+                 cu_size          /* cu_size */
                 );
     cu_msg[1] = (zero << 30 |   /* reserved  */
                  zero << 24 |   /* intra_mode */
@@ -1425,8 +1443,8 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
                   ((vme_context->ref_index_in_mb[0] >> 0) & 0xf)            /* ref_idx_l0[0] */
                  );
 
-    cu_msg[11] = 0x55; /* tu_size 00000000 00000000 00000000 10101010  or 0x0*/
-    cu_msg[12] = (3 << 28 | /* tu count - 1 */
+    cu_msg[11] = tu_size; /* tu_size 00000000 00000000 00000000 10101010  or 0x0*/
+    cu_msg[12] = ((tu_count - 1) << 28 | /* tu count - 1 */
                   zero << 16 |  /* reserved  */
                   zero          /* tu_xform_Yskip[15:0] */
                  );
@@ -1435,105 +1453,12 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
                  );
     cu_msg[14] = zero ;
     cu_msg[15] = zero ;
-
-    dri_bo_unmap(mfc_context->hcp_indirect_cu_object.bo);
-
-}
-
-static void
-gen9_hcpe_hevc_vmeout_to_indirect_cu_buffer(VADriverContextP ctx,
-        struct encode_state *encode_state,
-        struct intel_encoder_context *encoder_context,
-        int slice_index)
-{
-    /* to do */
-    /* to fill the indirect cu by the vme out */
-    struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
-    struct gen6_vme_context *vme_context = encoder_context->vme_context;
-    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
-    VAEncPictureParameterBufferHEVC *pPicParameter = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
-    VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[slice_index]->buffer;
-    unsigned int *msg = NULL;
-    unsigned char *msg_ptr = NULL;
-    int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
-
-    int slice_type = pSliceParameter->slice_type;
-    int is_intra = slice_type == HEVC_SLICE_I;
-
-    int log2_cu_size = pSequenceParameter->log2_min_luma_coding_block_size_minus3 + 3;
-    int log2_ctb_size = pSequenceParameter->log2_diff_max_min_luma_coding_block_size + log2_cu_size;
-    int ctb_size = 1 << log2_ctb_size;
-    int ctb_width_in_mb = (ctb_size + 15) / 16;
-    int num_mb_in_ctb = ctb_width_in_mb * ctb_width_in_mb;
-
-    int width_in_ctb = (pSequenceParameter->pic_width_in_luma_samples + ctb_size - 1) / ctb_size;
-
-    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
-
-    int num_cu_record = 64;
-
-    if (log2_ctb_size == 5) num_cu_record = 16;
-    else if (log2_ctb_size == 4) num_cu_record = 4;
-    else if (log2_ctb_size == 6) num_cu_record = 64;
-
-    int i_ctb;
-    int ctb_x, ctb_y;
-
-    int macroblock_address = 0;
-
-    if (rate_control_mode == VA_RC_CBR) {
-        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
-        pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
-    }
-
-    dri_bo_map(vme_context->vme_output.bo , 1);
-    msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
-
-    for (i_ctb = pSliceParameter->slice_segment_address; i_ctb < pSliceParameter->slice_segment_address + pSliceParameter->num_ctu_in_slice; i_ctb++) {
-        ctb_x = i_ctb % width_in_ctb;
-        ctb_y = i_ctb / width_in_ctb;
-
-        int mb_x, mb_y;
-        int mb_addr = 0;
-        macroblock_address = (i_ctb - ctb_x) * num_mb_in_ctb + ctb_x * ctb_width_in_mb;
-        for (mb_y = 0; mb_y < ctb_width_in_mb; mb_y++) {
-            mb_addr = macroblock_address + mb_y * width_in_mbs ;
-            for (mb_x = 0; mb_x < ctb_width_in_mb; mb_x++) {
-                mb_addr++;
-
-                /* get the mb info from the vme out */
-                msg = (unsigned int *)(msg_ptr + mb_addr * vme_context->vme_output.size_block);
-
-                /*fill to indirect cu */
-                /*to do */
-                if (is_intra) {
-                    /* fill intra cu */
-                    gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type);
-                } else {
-                    int inter_rdo, intra_rdo;
-                    inter_rdo = msg[AVC_INTER_RDO_OFFSET] & AVC_RDO_MASK;
-                    intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
-                    if (intra_rdo < inter_rdo) {
-                        /* fill intra cu */
-                        gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type);
-                    } else {
-                        msg += AVC_INTER_MSG_OFFSET;
-                        /* fill inter cu */
-                        gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type);
-                    }
-                }
-
-            }
-        }
-    }
-
-    dri_bo_unmap(vme_context->vme_output.bo);
 }
 
 #define HEVC_SPLIT_CU_FLAG_64_64 ((0x1<<20)|(0xf<<16)|(0x0<<12)|(0x0<<8)|(0x0<<4)|(0x0))
 #define HEVC_SPLIT_CU_FLAG_32_32 ((0x1<<20)|(0x0<<16)|(0x0<<12)|(0x0<<8)|(0x0<<4)|(0x0))
 #define HEVC_SPLIT_CU_FLAG_16_16 ((0x0<<20)|(0x0<<16)|(0x0<<12)|(0x0<<8)|(0x0<<4)|(0x0))
+#define HEVC_SPLIT_CU_FLAG_8_8   ((0x1<<20)|(0x0<<16)|(0x0<<12)|(0x0<<8)|(0x0<<4)|(0x0))
 
 
 void
@@ -1646,6 +1571,7 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
         struct intel_batchbuffer *slice_batch)
 {
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
+    struct gen6_vme_context *vme_context = encoder_context->vme_context;
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     VAEncPictureParameterBufferHEVC *pPicParameter = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[slice_index]->buffer;
@@ -1666,7 +1592,24 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
     int num_mb_in_ctb = ctb_width_in_mb * ctb_width_in_mb;
     int i_ctb, ctb_x, ctb_y;
     unsigned int split_coding_unit_flag = 0;
+    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
+    int row_pad_flag = (pSequenceParameter->pic_height_in_luma_samples % ctb_size)> 0 ? 1:0;
 
+    int is_intra = (slice_type == HEVC_SLICE_I);
+    unsigned int *msg = NULL;
+    unsigned char *msg_ptr = NULL;
+    int macroblock_address = 0;
+    int num_cu_record = 64;
+    int cu_count = 1;
+    int tmp_mb_mode = 0;
+    int mb_x = 0, mb_y = 0;
+    int mb_addr = 0;
+    int cu_index = 0;
+    int inter_rdo, intra_rdo;
+
+    if (log2_ctb_size == 5) num_cu_record = 16;
+    else if (log2_ctb_size == 4) num_cu_record = 4;
+    else if (log2_ctb_size == 6) num_cu_record = 64;
     if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
         pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
@@ -1706,15 +1649,84 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
 
     split_coding_unit_flag = (ctb_width_in_mb == 4) ? HEVC_SPLIT_CU_FLAG_64_64 : ((ctb_width_in_mb == 2) ? HEVC_SPLIT_CU_FLAG_32_32 : HEVC_SPLIT_CU_FLAG_16_16);
 
-    for (i_ctb = pSliceParameter->slice_segment_address;
-         i_ctb < pSliceParameter->slice_segment_address + pSliceParameter->num_ctu_in_slice; i_ctb++) {
+    dri_bo_map(vme_context->vme_output.bo , 1);
+    msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
+    dri_bo_map(mfc_context->hcp_indirect_cu_object.bo , 1);
+
+    for (i_ctb = pSliceParameter->slice_segment_address;i_ctb < pSliceParameter->slice_segment_address + pSliceParameter->num_ctu_in_slice; i_ctb++) {
         int last_ctb = (i_ctb == (pSliceParameter->slice_segment_address + pSliceParameter->num_ctu_in_slice - 1));
+        int ctb_height_in_mb = ctb_width_in_mb;
         ctb_x = i_ctb % width_in_ctb;
         ctb_y = i_ctb / width_in_ctb;
+        if(ctb_y == (height_in_ctb - 1) && row_pad_flag)  ctb_height_in_mb = 1;
 
-        gen9_hcpe_hevc_pak_object(ctx, ctb_x, ctb_y, last_ctb, encoder_context, num_mb_in_ctb, split_coding_unit_flag, slice_batch);
+        mb_x = 0;
+        mb_y = 0;
+        macroblock_address = (i_ctb - ctb_x) * num_mb_in_ctb + ctb_x * ctb_width_in_mb;
+        split_coding_unit_flag = ((ctb_width_in_mb == 2) ? HEVC_SPLIT_CU_FLAG_32_32 : HEVC_SPLIT_CU_FLAG_16_16);
+        cu_count = 1;
+        cu_index = 0;
+        mb_addr = 0;
+        msg = NULL;
+        for (mb_y = 0; mb_y < ctb_height_in_mb; mb_y++)
+        {
+            mb_addr = macroblock_address + mb_y * width_in_mbs ;
+            for (mb_x = 0; mb_x < ctb_width_in_mb; mb_x++)
+            {
+                split_coding_unit_flag = ((ctb_width_in_mb == 2) ? HEVC_SPLIT_CU_FLAG_32_32 : HEVC_SPLIT_CU_FLAG_16_16);
+                /* get the mb info from the vme out */
+                msg = (unsigned int *)(msg_ptr + mb_addr * vme_context->vme_output.size_block);
 
+                inter_rdo = msg[AVC_INTER_RDO_OFFSET] & AVC_RDO_MASK;
+                intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
+                /*fill to indirect cu */
+                /*to do */
+                if (is_intra || intra_rdo < inter_rdo) {
+                    /* fill intra cu */
+                    tmp_mb_mode = (msg[0] & AVC_INTRA_MODE_MASK) >> 4;
+                    if (tmp_mb_mode == AVC_INTRA_16X16) {
+                        gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
+                    } else { // for 4x4 to use 8x8 replace
+                        gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
+                        gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,1);
+                        gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,2);
+                        gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,3);
+                        if(ctb_width_in_mb == 2)
+                            split_coding_unit_flag |= 0x1 << (mb_x + mb_y * ctb_width_in_mb + 16);
+                        else if(ctb_width_in_mb == 1)
+                            split_coding_unit_flag |= 0x1 << 20;
+                    }
+                } else {
+                    msg += AVC_INTER_MSG_OFFSET;
+                    /* fill inter cu */
+                    tmp_mb_mode = msg[0] & AVC_INTER_MODE_MASK;
+                    if (tmp_mb_mode == AVC_INTER_8X8){
+                        gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
+                        gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,1);
+                        gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,2);
+                        gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,3);
+                        if(ctb_width_in_mb == 2)
+                            split_coding_unit_flag |= 0x1 << (mb_x + mb_y * ctb_width_in_mb + 16);
+                        else if(ctb_width_in_mb == 1)
+                            split_coding_unit_flag |= 0x1 << 20;
+
+                    }else if(tmp_mb_mode == AVC_INTER_16X16 ||
+                        tmp_mb_mode == AVC_INTER_8X16 ||
+                        tmp_mb_mode == AVC_INTER_16X8) {
+                        gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
+                    }
+                }
+                mb_addr++;
+            }
+        }
+
+        cu_count = cu_index;
+        // PAK object fill accordingly.
+        gen9_hcpe_hevc_pak_object(ctx, ctb_x, ctb_y, last_ctb, encoder_context, cu_count, split_coding_unit_flag, slice_batch);
     }
+
+    dri_bo_unmap(mfc_context->hcp_indirect_cu_object.bo);
+    dri_bo_unmap(vme_context->vme_output.bo);
 
     if (last_slice) {
         mfc_context->insert_object(ctx, encoder_context,
@@ -1741,7 +1753,6 @@ gen9_hcpe_hevc_software_batchbuffer(VADriverContextP ctx,
     batch_bo = batch->buffer;
 
     for (i = 0; i < encode_state->num_slice_params_ext; i++) {
-        gen9_hcpe_hevc_vmeout_to_indirect_cu_buffer(ctx, encode_state, encoder_context, i);
         gen9_hcpe_hevc_pipeline_slice_programing(ctx, encode_state, encoder_context, i, batch);
     }
 
