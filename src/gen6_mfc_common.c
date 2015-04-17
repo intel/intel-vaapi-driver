@@ -134,8 +134,8 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    VAEncMiscParameterBuffer* pMiscParamHRD = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer;
-    VAEncMiscParameterHRD* pParameterHRD = (VAEncMiscParameterHRD*)pMiscParamHRD->data;
+    VAEncMiscParameterBuffer* pMiscParamHRD = NULL;
+    VAEncMiscParameterHRD* pParameterHRD = NULL;
     double bitrate = pSequenceParameter->bits_per_second;
     double framerate = (double)pSequenceParameter->time_scale /(2 * (double)pSequenceParameter->num_units_in_tick);
     int inum = 1, pnum = 0, bnum = 0; /* Gop structure: number of I, P, B frames in the Gop. */
@@ -144,6 +144,12 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
     double qp1_size = 0.1 * 8 * 3 * (pSequenceParameter->picture_width_in_mbs<<4) * (pSequenceParameter->picture_height_in_mbs<<4)/2;
     double qp51_size = 0.001 * 8 * 3 * (pSequenceParameter->picture_width_in_mbs<<4) * (pSequenceParameter->picture_height_in_mbs<<4)/2;
     double bpf;
+
+    if (!encode_state->misc_param[VAEncMiscParameterTypeHRD] || !encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer)
+        return;
+
+    pMiscParamHRD = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer;
+    pParameterHRD = (VAEncMiscParameterHRD*)pMiscParamHRD->data;
 
     if (pSequenceParameter->ip_period) {
         pnum = (intra_period + ip_period - 1)/ip_period - 1;
