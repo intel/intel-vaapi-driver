@@ -679,12 +679,30 @@ intel_update_hevc_frame_store_index(
     GenFrameStoreContext         *fs_ctx
     )
 {
-    intel_update_codec_frame_store_index(ctx,
-                                         decode_state,
-                                         pic_param->CurrPic.pic_order_cnt,
-                                         frame_store,
-                                         MAX_GEN_HCP_REFERENCE_FRAMES,
-                                         fs_ctx);
+    int i, n = 0;
+
+    for (i = 0; i < ARRAY_ELEMS(decode_state->reference_objects); i++) {
+        struct object_surface * const obj_surface = decode_state->reference_objects[i];
+
+        if (!obj_surface)
+            continue;
+
+        GenFrameStore * const fs = &frame_store[n];
+        fs->surface_id = obj_surface->base.id;
+        fs->obj_surface = obj_surface;
+        fs->frame_store_id = n++;
+
+        if (n == MAX_GEN_HCP_REFERENCE_FRAMES)
+            break;
+    }
+
+    for (; n < MAX_GEN_HCP_REFERENCE_FRAMES; n++) {
+        GenFrameStore * const fs = &frame_store[n];
+
+        fs->surface_id = VA_INVALID_ID;
+        fs->obj_surface = NULL;
+        fs->frame_store_id = -1;
+    }
 }
 
 void
@@ -1149,8 +1167,18 @@ intel_decoder_check_hevc_parameter(VADriverContextP ctx,
         const VAPictureHEVC * const va_pic = &pic_param->ReferenceFrames[i];
 
         obj_surface = NULL;
+
+        /*
+         * Only the index with (VA_PICTURE_HEVC_RPS_ST_CURR_BEFORE |
+         * VA_PICTURE_HEVC_RPS_ST_CURR_AFTER | VA_PICTURE_HEVC_RPS_LT_CURR)
+         * is valid
+         */
         if (!(va_pic->flags & VA_PICTURE_HEVC_INVALID) &&
-            va_pic->picture_id != VA_INVALID_ID) {
+            (va_pic->picture_id != VA_INVALID_ID) &&
+            (va_pic->flags & (VA_PICTURE_HEVC_RPS_ST_CURR_BEFORE |
+                              VA_PICTURE_HEVC_RPS_ST_CURR_AFTER |
+                              VA_PICTURE_HEVC_RPS_LT_CURR))) {
+
             obj_surface = SURFACE(pic_param->ReferenceFrames[i].picture_id);
 
             if (!obj_surface) {
