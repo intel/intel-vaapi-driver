@@ -814,7 +814,7 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
                   (5 - slice_param->five_minus_max_num_merge_cand - 1) << 23 |
                   slice_param->LongSliceFlags.fields.cabac_init_flag << 22 |
                   slice_param->luma_log2_weight_denom << 19 |
-                  (slice_param->luma_log2_weight_denom + slice_param->delta_chroma_log2_weight_denom) << 16 |
+                  ((slice_param->luma_log2_weight_denom + slice_param->delta_chroma_log2_weight_denom) & 0x7) << 16 |
                   slice_param->LongSliceFlags.fields.collocated_from_l0_flag << 15 |
                   gen9_hcpd_is_low_delay(ctx, pic_param, slice_param) << 14 |
                   slice_param->LongSliceFlags.fields.mvd_l1_zero_flag << 13 |
