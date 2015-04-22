@@ -649,8 +649,8 @@ gen9_hcpd_weightoffset_state_1(struct intel_batchbuffer *batch,
     for (i = 0; i < 16; i++) {
         if (i < MIN((num_ref_minus1 + 1), 15)) {
             OUT_BCS_BATCH(batch,
-                          luma_offset[i] << 8 |
-                          delta_luma_weight[i]);
+                          (luma_offset[i] & 0xff) << 8 |
+                          (delta_luma_weight[i] & 0xff));
         } else {
             OUT_BCS_BATCH(batch, 0);
         }
@@ -658,10 +658,10 @@ gen9_hcpd_weightoffset_state_1(struct intel_batchbuffer *batch,
     for (i = 0; i < 16; i++) {
         if (i < MIN((num_ref_minus1 + 1), 15)) {
             OUT_BCS_BATCH(batch,
-                          chroma_offset[i][1] << 24 |
-                          delta_chroma_weight[i][1] << 16 |
-                          chroma_offset[i][0] << 8 |
-                          delta_chroma_weight[i][0]);
+                          (chroma_offset[i][1] & 0xff) << 24 |
+                          (delta_chroma_weight[i][1] & 0xff) << 16 |
+                          (chroma_offset[i][0] & 0xff) << 8 |
+                          (delta_chroma_weight[i][0] & 0xff));
         } else {
             OUT_BCS_BATCH(batch, 0);
         }
