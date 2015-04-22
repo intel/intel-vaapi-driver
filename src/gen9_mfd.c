@@ -197,6 +197,10 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->sao_tile_column_buffer), "sao tile column buffer", size);
 
+    gen9_hcpd_context->first_inter_slice_collocated_ref_idx = 0;
+    gen9_hcpd_context->first_inter_slice_collocated_from_l0_flag = 0;
+    gen9_hcpd_context->first_inter_slice_valid = 0;
+
     return VA_STATUS_SUCCESS;
 }
 
@@ -707,6 +711,9 @@ gen9_hcpd_get_collocated_ref_idx(VADriverContextP ctx,
     if (slice_param->collocated_ref_idx > 14)
         return 0;
 
+    if (!slice_param->LongSliceFlags.fields.slice_temporal_mvp_enabled_flag)
+        return 0;
+
     if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_I)
         return 0;
 
@@ -779,6 +786,7 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     int slice_hor_pos, slice_ver_pos, next_slice_hor_pos, next_slice_ver_pos;
+    unsigned short collocated_ref_idx, collocated_from_l0_flag;
 
     slice_hor_pos = slice_param->slice_segment_address % gen9_hcpd_context->picture_width_in_ctbs;
     slice_ver_pos = slice_param->slice_segment_address / gen9_hcpd_context->picture_width_in_ctbs;
@@ -789,6 +797,25 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
     } else {
         next_slice_hor_pos = 0;
         next_slice_ver_pos = 0;
+    }
+
+    collocated_ref_idx = gen9_hcpd_get_collocated_ref_idx(ctx, pic_param, slice_param, gen9_hcpd_context);
+    collocated_from_l0_flag = slice_param->LongSliceFlags.fields.collocated_from_l0_flag;
+
+    if ((!gen9_hcpd_context->first_inter_slice_valid) &&
+        (slice_param->LongSliceFlags.fields.slice_type != HEVC_SLICE_I) &&
+        slice_param->LongSliceFlags.fields.slice_temporal_mvp_enabled_flag) {
+        gen9_hcpd_context->first_inter_slice_collocated_ref_idx = collocated_ref_idx;
+        gen9_hcpd_context->first_inter_slice_collocated_from_l0_flag = collocated_from_l0_flag;
+        gen9_hcpd_context->first_inter_slice_valid = 1;
+    }
+
+    /* HW requirement */
+    if (gen9_hcpd_context->first_inter_slice_valid &&
+        ((slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_I) ||
+         (!slice_param->LongSliceFlags.fields.slice_temporal_mvp_enabled_flag))) {
+        collocated_ref_idx = gen9_hcpd_context->first_inter_slice_collocated_ref_idx;
+        collocated_from_l0_flag = gen9_hcpd_context->first_inter_slice_collocated_from_l0_flag;
     }
 
     BEGIN_BCS_BATCH(batch, 9);
@@ -810,12 +837,12 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
                   !next_slice_param << 2 |
                   slice_param->LongSliceFlags.fields.slice_type);
     OUT_BCS_BATCH(batch,
-                  gen9_hcpd_get_collocated_ref_idx(ctx, pic_param, slice_param, gen9_hcpd_context) << 26 |
+                  collocated_ref_idx << 26 |
                   (5 - slice_param->five_minus_max_num_merge_cand - 1) << 23 |
                   slice_param->LongSliceFlags.fields.cabac_init_flag << 22 |
                   slice_param->luma_log2_weight_denom << 19 |
                   ((slice_param->luma_log2_weight_denom + slice_param->delta_chroma_log2_weight_denom) & 0x7) << 16 |
-                  slice_param->LongSliceFlags.fields.collocated_from_l0_flag << 15 |
+                  collocated_from_l0_flag << 15 |
                   gen9_hcpd_is_low_delay(ctx, pic_param, slice_param) << 14 |
                   slice_param->LongSliceFlags.fields.mvd_l1_zero_flag << 13 |
                   slice_param->LongSliceFlags.fields.slice_sao_luma_flag << 12 |

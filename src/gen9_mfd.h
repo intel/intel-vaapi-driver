@@ -65,6 +65,10 @@ struct gen9_hcpd_context
     GenBuffer sao_line_buffer;
     GenBuffer sao_tile_line_buffer;
     GenBuffer sao_tile_column_buffer;
+
+    unsigned short first_inter_slice_collocated_ref_idx;
+    unsigned short first_inter_slice_collocated_from_l0_flag;
+    int first_inter_slice_valid;
 };
 
 #endif /* GEN9_MFD_H */
