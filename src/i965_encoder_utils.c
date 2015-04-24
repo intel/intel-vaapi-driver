@@ -529,12 +529,24 @@ static void binarize_qindex_delta(avc_bitstream *bs, int qindex_delta)
 void binarize_vp8_frame_header(VAEncSequenceParameterBufferVP8 *seq_param,
                            VAEncPictureParameterBufferVP8 *pic_param,
                            VAQMatrixBufferVP8 *q_matrix,
-                           struct gen6_mfc_context *mfc_context)
+                           struct gen6_mfc_context *mfc_context,
+                           struct intel_encoder_context *encoder_context)
 {
     avc_bitstream bs;
     int i, j;
     int is_intra_frame = !pic_param->pic_flags.bits.frame_type;
     int log2num = pic_param->pic_flags.bits.num_token_partitions;
+    int is_key_frame = !pic_param->pic_flags.bits.frame_type;
+    int slice_type = (is_key_frame ? SLICE_TYPE_I : SLICE_TYPE_P);
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
+
+    if (rate_control_mode == VA_RC_CBR) {
+        q_matrix->quantization_index[0] = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
+        for (i = 1; i < 4; i++)
+            q_matrix->quantization_index[i] = q_matrix->quantization_index[0];
+        for (i = 0; i < 5; i++)
+            q_matrix->quantization_index_delta[i] = 0;
+    }
 
     /* modify picture paramters */
     pic_param->pic_flags.bits.loop_filter_adj_enable = 1;

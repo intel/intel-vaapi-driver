@@ -62,6 +62,25 @@ struct encode_state;
 
 #define CMD_LEN_IN_OWORD        4
 
+#define BRC_CLIP(x, min, max)                                   \
+    {                                                           \
+        x = ((x > (max)) ? (max) : ((x < (min)) ? (min) : x));  \
+    }
+
+#define BRC_P_B_QP_DIFF 4
+#define BRC_I_P_QP_DIFF 2
+#define BRC_I_B_QP_DIFF (BRC_I_P_QP_DIFF + BRC_P_B_QP_DIFF)
+
+#define BRC_PWEIGHT 0.6  /* weight if P slice with comparison to I slice */
+#define BRC_BWEIGHT 0.25 /* weight if B slice with comparison to I slice */
+
+#define BRC_QP_MAX_CHANGE 5 /* maximum qp modification */
+#define BRC_CY 0.1 /* weight for */
+#define BRC_CX_UNDERFLOW 5.
+#define BRC_CX_OVERFLOW -4.
+
+#define BRC_PI_0_5 1.5707963267948966192313216916398
+
 typedef enum {
    VME_V_PRED = 0,
    VME_H_PRED = 1,
