@@ -3722,9 +3722,9 @@ static void gen8_mfc_vp8_init(VADriverContextP ctx,
     assert(bo);
     mfc_context->vp8_state.frame_header_bo = bo;
 
-    mfc_context->vp8_state.intermediate_buffer_max_size = width_in_mbs * height_in_mbs * 256 * 9;
+    mfc_context->vp8_state.intermediate_buffer_max_size = width_in_mbs * height_in_mbs * 384 * 9;
     for(i = 0; i < 8; i++) {
-        mfc_context->vp8_state.intermediate_partition_offset[i] = width_in_mbs * height_in_mbs * 256 * (i + 1);
+        mfc_context->vp8_state.intermediate_partition_offset[i] = width_in_mbs * height_in_mbs * 384 * (i + 1);
     }
     dri_bo_unreference(mfc_context->vp8_state.intermediate_bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
