@@ -27,38 +27,61 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES :=              \
-        gen6_mfc_common.c       \
-        gen6_mfc.c              \
-        gen6_mfd.c              \
-        gen6_vme.c              \
-        gen7_mfd.c              \
-        gen7_mfc.c              \
-        gen7_vme.c              \
-        gen75_mfc.c             \
-        gen75_mfd.c             \
-        gen75_vme.c             \
-        gen75_picture_process.c \
-        gen75_vpp_vebox.c       \
-        gen75_vpp_gpe.c         \
-        i965_avc_bsd.c          \
-        i965_avc_hw_scoreboard.c\
-        i965_avc_ildb.c         \
-        i965_decoder_utils.c    \
-        i965_drv_video.c        \
-        i965_encoder.c          \
-        i965_encoder_utils.c    \
-        i965_gpe_utils.c        \
-        i965_media.c            \
-        i965_media_h264.c       \
-        i965_media_mpeg2.c      \
-        i965_post_processing.c  \
-        i965_render.c           \
-        intel_media_common.c    \
-        intel_batchbuffer.c     \
-        intel_batchbuffer_dump.c\
-        intel_driver.c          \
-        intel_memman.c          \
-        object_heap.c
+	dso_utils.c		\
+	gen6_mfc.c		\
+	gen6_mfc_common.c	\
+	gen6_mfd.c		\
+	gen6_vme.c		\
+	gen7_vme.c		\
+	gen7_mfc.c		\
+	gen7_mfd.c		\
+	gen75_mfd.c		\
+	gen75_mfc.c		\
+	gen8_mfc.c		\
+	gen8_mfd.c		\
+	gen8_vme.c		\
+	gen9_vme.c		\
+	gen9_mfc.c		\
+	gen9_mfc_hevc.c		\
+	gen9_mfd.c		\
+	gen75_picture_process.c	\
+	gen75_vme.c		\
+	gen75_vpp_gpe.c  	\
+	gen75_vpp_vebox.c	\
+	gen9_post_processing.c	\
+	i965_avc_bsd.c		\
+	i965_avc_hw_scoreboard.c\
+	i965_avc_ildb.c		\
+	i965_decoder_utils.c	\
+	i965_device_info.c	\
+	i965_drv_video.c	\
+	i965_encoder.c		\
+	i965_encoder_utils.c	\
+	i965_media.c		\
+	i965_media_h264.c	\
+	i965_media_mpeg2.c	\
+	i965_gpe_utils.c	\
+	i965_post_processing.c	\
+	gen8_post_processing.c	\
+	i965_render.c		\
+	i965_vpp_avs.c		\
+	gen8_render.c		\
+	gen9_render.c		\
+	intel_batchbuffer.c	\
+	intel_batchbuffer_dump.c\
+	intel_driver.c		\
+	intel_memman.c		\
+	object_heap.c		\
+	intel_media_common.c		\
+	$(NULL)
+
+GEN := $(LOCAL_PATH)/intel_version.h
+$(GEN): SCRIPT := $(LOCAL_PATH)/../build/gen_version.sh
+$(GEN): PRIVATE_PATH := $(LOCAL_PATH)
+$(GEN): PRIVATE_CUSTOM_TOOL = sh $(SCRIPT) $(PRIVATE_PATH)/.. $(PRIVATE_PATH) > $@
+$(GEN): $(LOCAL_PATH)/%.h : $(LOCAL_PATH)/%.h.in $(SCRIPT)
+	$(transform-generated-source)
+LOCAL_GENERATED_SOURCES += $(GEN)
 
 LOCAL_CFLAGS := -DLINUX -DANDROID -g -Wall -Wno-unused -fvisibility=hidden
 
