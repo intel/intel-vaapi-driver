@@ -4210,8 +4210,11 @@ gen8_mfc_vp8_pak_object_inter(VADriverContextP ctx,
     /* only support inter_16x16 now */
     assert((msg[AVC_INTER_MSG_OFFSET] & INTER_MODE_MASK) == INTER_16X16);
     /* for inter_16x16, all 16 MVs should be same, 
-     * and move mv to the vme mb start address to make sure offset is 64 bytes aligned */
-    msg[0] = (msg[AVC_INTER_MV_OFFSET/4] & 0xfffefffe);
+     * and move mv to the vme mb start address to make sure offset is 64 bytes aligned
+     * as vp8 spec, all vp8 luma motion vectors are doulbled stored
+     */
+    msg[0] = (((msg[AVC_INTER_MV_OFFSET/4] & 0xffff0000) << 1) | ((msg[AVC_INTER_MV_OFFSET/4] << 1) & 0xffff));
+
     for (i = 1; i < 16; i++) {
         msg[i] = msg[0];
     }
