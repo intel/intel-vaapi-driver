@@ -93,6 +93,8 @@ struct gen7_mfd_context
     dri_bo *jpeg_wa_slice_data_bo;
 
     int                 wa_mpeg2_slice_vertical_position;
+
+    void *driver_context;
 };
 
 #endif /* _GEN7_MFD_H_ */

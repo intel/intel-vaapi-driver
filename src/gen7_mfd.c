@@ -2668,7 +2668,10 @@ out:
 static void
 gen7_mfd_context_destroy(void *hw_context)
 {
+    VADriverContextP ctx;
     struct gen7_mfd_context *gen7_mfd_context = (struct gen7_mfd_context *)hw_context;
+
+    ctx = (VADriverContextP)(gen7_mfd_context->driver_context);
 
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
     gen7_mfd_context->post_deblocking_output.bo = NULL;
@@ -2692,6 +2695,13 @@ gen7_mfd_context_destroy(void *hw_context)
     gen7_mfd_context->bitplane_read_buffer.bo = NULL;
 
     dri_bo_unreference(gen7_mfd_context->jpeg_wa_slice_data_bo);
+
+    if (gen7_mfd_context->jpeg_wa_surface_id != VA_INVALID_SURFACE) {
+        i965_DestroySurfaces(ctx,
+                             &gen7_mfd_context->jpeg_wa_surface_id,
+                             1);
+        gen7_mfd_context->jpeg_wa_surface_object = NULL;
+    }
 
     intel_batchbuffer_free(gen7_mfd_context->base.batch);
     free(gen7_mfd_context);
@@ -2741,5 +2751,7 @@ gen7_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     default:
         break;
     }
+
+    gen7_mfd_context->driver_context = ctx;
     return (struct hw_context *)gen7_mfd_context;
 }
