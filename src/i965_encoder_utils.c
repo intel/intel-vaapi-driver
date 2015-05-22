@@ -957,7 +957,9 @@ static void slice_rbsp(avc_bitstream *bs,
         avc_bitstream_put_ui(bs, 0, 1);
     }
 
-    /* no_output_of_prior_pics_flag. This doesn't exist on TRAIL_N */
+    /* no_output_of_prior_pics_flag */
+    if (pic_param->pic_fields.bits.idr_pic_flag)
+        avc_bitstream_put_ui(bs, 1, 1);
 
     /* slice_pic_parameter_set_id */
     avc_bitstream_put_ue(bs, 0);
@@ -1023,10 +1025,7 @@ static void slice_rbsp(avc_bitstream *bs,
         }
 
         /* long term reference present flag. unpresent */
-        if (seq_param->seq_fields.bits.sps_temporal_mvp_enabled_flag)
-        {
-            avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.slice_temporal_mvp_enabled_flag, 1);
-        }
+
         /* sample adaptive offset enabled flag */
         if (seq_param->seq_fields.bits.sample_adaptive_offset_enabled_flag)
         {
@@ -1051,9 +1050,10 @@ static void slice_rbsp(avc_bitstream *bs,
             /* slice_temporal_mvp_enabled_flag. */
             if (slice_param->slice_fields.bits.slice_temporal_mvp_enabled_flag)
             {
+                if (slice_param->slice_type == HEVC_SLICE_B)
+                    avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.collocated_from_l0_flag, 1);
                 /*
-                * TBD: Add the collocated_l0_ref_flag and
-                * collocated_ref_idx.
+                * TBD: Add the collocated_ref_idx.
                 */
             }
             if (((pic_param->pic_fields.bits.weighted_pred_flag) &&
@@ -1065,7 +1065,7 @@ static void slice_rbsp(avc_bitstream *bs,
                 * add the weighted table
                 */
             }
-            avc_bitstream_put_ue(bs, slice_param->max_num_merge_cand);
+            avc_bitstream_put_ue(bs, 5 - slice_param->max_num_merge_cand);
         }
         /* slice_qp_delta */
         avc_bitstream_put_ue(bs, slice_param->slice_qp_delta);
