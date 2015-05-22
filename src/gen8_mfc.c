@@ -3627,6 +3627,7 @@ static void gen8_mfc_vp8_init(VADriverContextP ctx,
     int width_in_mbs = 0;
     int height_in_mbs = 0;
     int slice_batchbuffer_size;
+    int is_key_frame, slice_type, rate_control_mode;
 
     VAEncSequenceParameterBufferVP8 *pSequenceParameter = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
     VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
@@ -3634,6 +3635,18 @@ static void gen8_mfc_vp8_init(VADriverContextP ctx,
 
     width_in_mbs = ALIGN(pSequenceParameter->frame_height, 16) / 16;
     height_in_mbs = ALIGN(pSequenceParameter->frame_height, 16) / 16;
+
+    is_key_frame = !pic_param->pic_flags.bits.frame_type;
+    slice_type = (is_key_frame ? SLICE_TYPE_I : SLICE_TYPE_P);
+    rate_control_mode = encoder_context->rate_control_mode;
+
+    if (rate_control_mode == VA_RC_CBR) {
+        q_matrix->quantization_index[0] = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
+        for (i = 1; i < 4; i++)
+            q_matrix->quantization_index[i] = q_matrix->quantization_index[0];
+        for (i = 0; i < 5; i++)
+            q_matrix->quantization_index_delta[i] = 0;
+    }
 
     slice_batchbuffer_size = 64 * width_in_mbs * height_in_mbs + 4096 +
         (SLICE_HEADER + SLICE_TAIL);
