@@ -891,20 +891,20 @@ void hevc_short_term_ref_pic_set(avc_bitstream *bs,VAEncSliceParameterBufferHEVC
 
     hevc_rps.inter_ref_pic_set_prediction_flag = 0;
     /* s0: between I and P/B; s1 : between P and B */
-    hevc_rps.num_negative_pics               = (slice_param->slice_type!=SLICE_TYPE_I) ? 1 : 0;
-    hevc_rps.num_positive_pics               = (slice_param->slice_type==SLICE_TYPE_B) ? 1 : 0;
+    hevc_rps.num_negative_pics               = (slice_param->slice_type!=HEVC_SLICE_I) ? 1 : 0;
+    hevc_rps.num_positive_pics               = (slice_param->slice_type==HEVC_SLICE_B) ? 1 : 0;
     hevc_rps.delta_poc_s0_minus1[0]          = 0;
     hevc_rps.used_by_curr_pic_s0_flag[0]     = 0;
     hevc_rps.delta_poc_s1_minus1[0]          = 0;
     hevc_rps.used_by_curr_pic_s1_flag[0]     = 0;
     if(slice_param->num_ref_idx_l0_active_minus1==0 )
     {
-        hevc_rps.delta_poc_s0_minus1[0]          = (slice_param->slice_type==SLICE_TYPE_I) ? 0 : ( curPicOrderCnt - slice_param->ref_pic_list0[0].pic_order_cnt-1); //0;
+        hevc_rps.delta_poc_s0_minus1[0]          = (slice_param->slice_type==HEVC_SLICE_I) ? 0 : ( curPicOrderCnt - slice_param->ref_pic_list0[0].pic_order_cnt-1); //0;
         hevc_rps.used_by_curr_pic_s0_flag[0]     = 1;
     }
     if(slice_param->num_ref_idx_l1_active_minus1==0 )
     {
-        hevc_rps.delta_poc_s1_minus1[0]          = (slice_param->slice_type==SLICE_TYPE_I) ? 0 : ( slice_param->ref_pic_list1[0].pic_order_cnt -curPicOrderCnt -1);
+        hevc_rps.delta_poc_s1_minus1[0]          = (slice_param->slice_type==HEVC_SLICE_I) ? 0 : ( slice_param->ref_pic_list1[0].pic_order_cnt -curPicOrderCnt -1);
         hevc_rps.used_by_curr_pic_s1_flag[0]     = 1;
     }
 
@@ -1034,7 +1034,7 @@ static void slice_rbsp(avc_bitstream *bs,
             avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.slice_sao_chroma_flag, 1);
         }
 
-        if (slice_param->slice_type != SLICE_TYPE_I)
+        if (slice_param->slice_type != HEVC_SLICE_I)
         {
             /* num_ref_idx_active_override_flag. 0 */
             avc_bitstream_put_ui(bs, 0, 1);
@@ -1043,7 +1043,7 @@ static void slice_rbsp(avc_bitstream *bs,
             /* No reference picture set modification */
 
             /* MVD_l1_zero_flag */
-            if (slice_param->slice_type == SLICE_TYPE_B)
+            if (slice_param->slice_type == HEVC_SLICE_B)
                 avc_bitstream_put_ui(bs, slice_param->slice_fields.bits.mvd_l1_zero_flag, 1);
 
             /* cabac_init_present_flag. 0 */
@@ -1057,9 +1057,9 @@ static void slice_rbsp(avc_bitstream *bs,
                 */
             }
             if (((pic_param->pic_fields.bits.weighted_pred_flag) &&
-                (slice_param->slice_type == SLICE_TYPE_P)) ||
+                (slice_param->slice_type == HEVC_SLICE_P)) ||
                 ((pic_param->pic_fields.bits.weighted_bipred_flag) &&
-                (slice_param->slice_type == SLICE_TYPE_B)))
+                (slice_param->slice_type == HEVC_SLICE_B)))
             {
                 /* TBD:
                 * add the weighted table

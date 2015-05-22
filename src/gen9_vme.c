@@ -1334,7 +1334,7 @@ gen9_vme_hevc_output_buffer_setup(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
-    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
+    int is_intra = pSliceParameter->slice_type == HEVC_SLICE_I;
     int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + 15)/16;
     int height_in_mbs = (pSequenceParameter->pic_height_in_luma_samples + 15)/16;
 
@@ -1405,12 +1405,12 @@ gen9_vme_hevc_surface_setup(VADriverContextP ctx,
         int slice_type;
 
         slice_type = slice_param->slice_type;
-        assert(slice_type != SLICE_TYPE_I && slice_type != SLICE_TYPE_SI);
+        assert(slice_type != HEVC_SLICE_I);
 
         /* to do HEVC */
         intel_hevc_vme_reference_state(ctx, encode_state, encoder_context, 0, 1, gen9_vme_source_surface_state);
 
-        if (slice_type == SLICE_TYPE_B)
+        if (slice_type == HEVC_SLICE_B)
             intel_hevc_vme_reference_state(ctx, encode_state, encoder_context, 1, 2, gen9_vme_source_surface_state);
     }
 
@@ -1669,9 +1669,9 @@ static void gen9_vme_hevc_pipeline_programing(VADriverContextP ctx,
         }
     }
 
-    if (pSliceParameter->slice_type == SLICE_TYPE_I) {
+    if (pSliceParameter->slice_type == HEVC_SLICE_I) {
         kernel_shader = VME_INTRA_SHADER;
-    } else if (pSliceParameter->slice_type == SLICE_TYPE_P) {
+    } else if (pSliceParameter->slice_type == HEVC_SLICE_P) {
         kernel_shader = VME_INTER_SHADER;
     } else {
         kernel_shader = VME_BINTER_SHADER;
@@ -1715,7 +1715,7 @@ static VAStatus gen9_vme_hevc_prepare(VADriverContextP ctx,
 {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
-    int is_intra = pSliceParameter->slice_type == SLICE_TYPE_I;
+    int is_intra = pSliceParameter->slice_type == HEVC_SLICE_I;
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
 

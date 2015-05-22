@@ -1818,7 +1818,7 @@ void intel_vme_hevc_update_mbmv_cost(VADriverContextP ctx,
 
     assert(qp <= QP_MAX);
     lambda = intel_lambda_qp(qp);
-    if (slice_type == SLICE_TYPE_I) {
+    if (slice_type == HEVC_SLICE_I) {
         vme_state_message[MODE_INTRA_16X16] = 0;
         m_cost = lambda * 4;
         vme_state_message[MODE_INTRA_8X8] = intel_format_lutvalue(m_cost, 0x8f);
@@ -1864,7 +1864,7 @@ void intel_vme_hevc_update_mbmv_cost(VADriverContextP ctx,
         m_costf = lambda * 3.5;
         m_cost = m_costf;
         vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
-        if (slice_type == SLICE_TYPE_P) {
+        if (slice_type == HEVC_SLICE_P) {
             m_costf = lambda * 2.5;
             m_cost = m_costf;
             vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
