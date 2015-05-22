@@ -799,6 +799,7 @@ int intel_format_lutvalue(int value, int max)
 
 
 #define		QP_MAX			52
+#define		VP8_QP_MAX	        128
 
 
 static float intel_lambda_qp(int qp)
@@ -938,11 +939,17 @@ void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
     float   lambda, m_costf;
 
     int is_key_frame = !pic_param->pic_flags.bits.frame_type;
+    int slice_type = (is_key_frame ? SLICE_TYPE_I : SLICE_TYPE_P);
   
     if (vme_state_message == NULL)
 	return;
  
-    lambda = intel_lambda_qp(q_matrix->quantization_index[0] >> 1);
+    if (encoder_context->rate_control_mode == VA_RC_CQP)
+        qp = q_matrix->quantization_index[0];
+    else
+        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
+
+    lambda = intel_lambda_qp(qp * QP_MAX / VP8_QP_MAX);
     if (is_key_frame) {
 	vme_state_message[MODE_INTRA_16X16] = 0;
 	m_cost = lambda * 16; 
@@ -963,7 +970,7 @@ void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
             mv_count++;
 	}
 
-	if (q_matrix->quantization_index[0] < 32 ) {
+	if (qp < 32 ) {
             vme_state_message[MODE_INTRA_16X16] = 0x4a;
             vme_state_message[MODE_INTRA_4X4] = 0x4a;
             vme_state_message[MODE_INTRA_NONPRED] = 0x4a;
