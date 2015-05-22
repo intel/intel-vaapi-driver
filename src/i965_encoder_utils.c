@@ -1107,6 +1107,16 @@ static void slice_rbsp(avc_bitstream *bs,
     avc_rbsp_trailing_bits(bs);
 }
 
+int get_hevc_slice_nalu_type (VAEncPictureParameterBufferHEVC *pic_param)
+{
+    if (pic_param->pic_fields.bits.idr_pic_flag)
+      return IDR_WRADL_NUT;
+    else if (pic_param->pic_fields.bits.reference_pic_flag)
+      return SLICE_TRAIL_R_NUT;
+    else
+      return SLICE_TRAIL_N_NUT;
+}
+
 int build_hevc_slice_header(VAEncSequenceParameterBufferHEVC *seq_param,
                        VAEncPictureParameterBufferHEVC *pic_param,
                        VAEncSliceParameterBufferHEVC *slice_param,
@@ -1117,7 +1127,7 @@ int build_hevc_slice_header(VAEncSequenceParameterBufferHEVC *seq_param,
 
     avc_bitstream_start(&bs);
     nal_start_code_prefix(&bs);
-    nal_header_hevc(&bs, SLICE_TRAIL_N_NUT, 0);
+    nal_header_hevc(&bs, get_hevc_slice_nalu_type(pic_param), 0);
     slice_rbsp(&bs, slice_index, seq_param,pic_param,slice_param);
     avc_bitstream_end(&bs);
 
