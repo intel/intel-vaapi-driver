@@ -737,8 +737,8 @@ gen9_hcpe_hevc_slice_state(VADriverContextP ctx,
     slice_hor_pos = slice_param->slice_segment_address % width_in_ctb;
     slice_ver_pos = slice_param->slice_segment_address / width_in_ctb;
 
-    next_slice_hor_pos = (slice_param->slice_segment_address + slice_param->num_ctu_in_slice + 1) % width_in_ctb;
-    next_slice_ver_pos = (slice_param->slice_segment_address + slice_param->num_ctu_in_slice + 1) / width_in_ctb;
+    next_slice_hor_pos = (slice_param->slice_segment_address + slice_param->num_ctu_in_slice) % width_in_ctb;
+    next_slice_ver_pos = (slice_param->slice_segment_address + slice_param->num_ctu_in_slice) / width_in_ctb;
 
     /* only support multi slice begin from row start address */
     assert((slice_param->slice_segment_address % width_in_ctb) == 0);
