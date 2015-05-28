@@ -106,6 +106,9 @@
 #define HAS_HEVC_ENCODING(ctx)          ((ctx)->codec_info->has_hevc_encoding && \
                                          (ctx)->intel.has_bsd)
 
+#define HAS_VP9_DECODING(ctx)          ((ctx)->codec_info->has_vp9_decoding && \
+                                         (ctx)->intel.has_bsd)
+
 #define HAS_HEVC10_DECODING(ctx)        ((ctx)->codec_info->has_hevc10_decoding && \
                                          (ctx)->intel.has_bsd)
 
@@ -591,6 +594,10 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileHEVCMain10;
     }
 
+    if(HAS_VP9_DECODING(i965)) {
+        profile_list[i++] = VAProfileVP9Profile0;
+    }
+
     if (i965->wrapper_pdrvctx) {
         VAProfile wrapper_list[4];
         int wrapper_num;
@@ -701,6 +708,9 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
         break;
 
     case VAProfileVP9Profile0:
+        if(HAS_VP9_DECODING(i965))
+            entrypoint_list[n++] = VAEntrypointVLD;
+
         if (i965->wrapper_pdrvctx) {
             VAStatus va_status = VA_STATUS_SUCCESS;
             VADriverContextP pdrvctx = i965->wrapper_pdrvctx;
@@ -820,7 +830,9 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         break;
 
     case VAProfileVP9Profile0:
-        if (i965->wrapper_pdrvctx)
+        if ((HAS_VP9_DECODING(i965)) && (entrypoint == VAEntrypointVLD))
+            va_status = VA_STATUS_SUCCESS;
+        else if (i965->wrapper_pdrvctx)
             va_status = VA_STATUS_SUCCESS;
         else
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
