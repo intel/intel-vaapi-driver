@@ -2834,7 +2834,8 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
                   pic_param->pic_fields.bits.sign_bias_golden << 12 |
                   pic_param->pic_fields.bits.loop_filter_adj_enable << 11 |
                   pic_param->pic_fields.bits.mb_no_coeff_skip << 10 |
-                  pic_param->pic_fields.bits.update_mb_segmentation_map << 9 |
+                  (enable_segmentation &&
+                   pic_param->pic_fields.bits.update_mb_segmentation_map) << 9 |
                   pic_param->pic_fields.bits.segmentation_enabled << 8 |
                   (enable_segmentation &&
                    !pic_param->pic_fields.bits.update_mb_segmentation_map) << 7 |
