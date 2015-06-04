@@ -1,5 +1,18 @@
-libva-intel-driver NEWS -- summary of changes.  2015-03-xx
+libva-intel-driver NEWS -- summary of changes.  2015-06-xx
 Copyright (C) 2009-2015 Intel Corporation
+
+Version 1.6.0 - DD.06.2015
+* Add support for VP8 encoding (CQP, CBR) on BSW/SKL
+* Add support for HEVC decoding on BSW
+* Add support for HEVC encoding (CQP) on SKL
+* Add support for low-power mode (VA_PROC_PIPELINE_FAST) in VPP to discard
+  any complex operation that would consume too many HW resources
+* Fix memory leak issue for JPEG decoding
+* Fix HEVC decoding issue on BSW/SKL
+* Fix GPU hang issue caused by VP8 decoding on BDW/BSW
+* Fix MADI/MCDI issues on SNB/IVB
+* Improve the JPEG encoding quality
+* Optimize MPEG-2 start code search on IVB
 
 Version 1.5.1 - DD.03.2015
 * Fix forward reference requirement for Bob deinterlacing
