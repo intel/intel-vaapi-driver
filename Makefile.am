@@ -21,3 +21,5 @@ deb.upstream: dist
 	tar zxvf ../$(PACKAGE)-$(VERSION).tar.gz	&& \
 	cd $(PACKAGE)-$(VERSION)			&& \
 	$(MAKE) deb -f Makefile.am
+
+EXTRA_DIST = Android.mk

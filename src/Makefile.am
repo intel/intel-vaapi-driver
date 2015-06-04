@@ -190,7 +190,7 @@ $(PKG_VERSION_FILE): $(NEW_VERSION_FILE)
 	@cp -f $< $@
 
 BUILT_SOURCES	+= intel_version.h
-EXTRA_DIST	+= intel_version.h.in $(PKG_VERSION_FILE)
+EXTRA_DIST	+= Android.mk intel_version.h.in $(PKG_VERSION_FILE)
 
 # Wayland protocol
 protocol_source_h = wayland-drm-client-protocol.h
