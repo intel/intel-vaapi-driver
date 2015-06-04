@@ -10,8 +10,8 @@ m4_append([intel_driver_version], intel_driver_pre_version, [.pre])
 ])
 
 # libva minimum version requirement
-m4_define([va_api_version], [0.37])
-m4_define([libva_package_version], [1.5.0])
+m4_define([va_api_version], [0.38])
+m4_define([libva_package_version], [1.6.0])
 
 # libdrm minimum version requirement
 m4_define([libdrm_version], [2.4.45])
