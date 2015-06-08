@@ -970,7 +970,7 @@ void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
             mv_count++;
 	}
 
-	if (qp < 32 ) {
+	if (qp < 92 ) {
             vme_state_message[MODE_INTRA_16X16] = 0x4a;
             vme_state_message[MODE_INTRA_4X4] = 0x4a;
             vme_state_message[MODE_INTRA_NONPRED] = 0x4a;
