@@ -109,6 +109,7 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     VAPictureParameterBufferHEVC *pic_param;
     struct object_surface *obj_surface;
     uint32_t size;
+    int size_shift = 3;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
@@ -134,12 +135,16 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     hevc_ensure_surface_bo(ctx, decode_state, obj_surface, pic_param);
     gen9_hcpd_init_hevc_surface(ctx, pic_param, obj_surface, gen9_hcpd_context);
 
-    size = ALIGN(gen9_hcpd_context->picture_width_in_pixels, 32) >> 3;
+    if((pic_param->bit_depth_luma_minus8 > 0)
+        || (pic_param->bit_depth_chroma_minus8 > 0))
+        size_shift = 2;
+
+    size = ALIGN(gen9_hcpd_context->picture_width_in_pixels, 32) >> size_shift;
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_line_buffer), "line buffer", size);
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_tile_line_buffer), "tile line buffer", size);
 
-    size = ALIGN(gen9_hcpd_context->picture_height_in_pixels + 6 * gen9_hcpd_context->picture_height_in_ctbs, 32) >> 3;
+    size = ALIGN(gen9_hcpd_context->picture_height_in_pixels + 6 * gen9_hcpd_context->picture_height_in_ctbs, 32) >> size_shift;
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_tile_column_buffer), "tile column buffer", size);
 
@@ -158,15 +163,15 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_column_buffer), "metadata tile column buffer", size);
 
-    size = ALIGN(((gen9_hcpd_context->picture_width_in_pixels >> 1) + 3 * gen9_hcpd_context->picture_width_in_ctbs), 16) >> 3;
+    size = ALIGN(((gen9_hcpd_context->picture_width_in_pixels >> 1) + 3 * gen9_hcpd_context->picture_width_in_ctbs), 16) >> size_shift;
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->sao_line_buffer), "sao line buffer", size);
 
-    size = ALIGN(((gen9_hcpd_context->picture_width_in_pixels >> 1) + 6 * gen9_hcpd_context->picture_width_in_ctbs), 16) >> 3;
+    size = ALIGN(((gen9_hcpd_context->picture_width_in_pixels >> 1) + 6 * gen9_hcpd_context->picture_width_in_ctbs), 16) >> size_shift;
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->sao_tile_line_buffer), "sao tile line buffer", size);
 
-    size = ALIGN(((gen9_hcpd_context->picture_height_in_pixels >> 1) + 6 * gen9_hcpd_context->picture_height_in_ctbs), 16) >> 3;
+    size = ALIGN(((gen9_hcpd_context->picture_height_in_pixels >> 1) + 6 * gen9_hcpd_context->picture_height_in_ctbs), 16) >> size_shift;
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->sao_tile_column_buffer), "sao tile column buffer", size);
 
@@ -208,9 +213,11 @@ gen9_hcpd_surface_state(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     struct object_surface *obj_surface = decode_state->render_object;
     unsigned int y_cb_offset;
+    VAPictureParameterBufferHEVC *pic_param;
 
     assert(obj_surface);
 
+    pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
     y_cb_offset = obj_surface->y_cb_offset;
 
     BEGIN_BCS_BATCH(batch, 3);
@@ -219,9 +226,19 @@ gen9_hcpd_surface_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   (0 << 28) |                   /* surface id */
                   (obj_surface->width - 1));    /* pitch - 1 */
-    OUT_BCS_BATCH(batch,
+    if((pic_param->bit_depth_luma_minus8 > 0)
+        || (pic_param->bit_depth_chroma_minus8 > 0))
+    {
+        OUT_BCS_BATCH(batch,
+                  (SURFACE_FORMAT_P010 << 28) |
+                  y_cb_offset);
+    }
+    else
+    {
+        OUT_BCS_BATCH(batch,
                   (SURFACE_FORMAT_PLANAR_420_8 << 28) |
                   y_cb_offset);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -466,6 +483,8 @@ gen9_hcpd_pic_state(VADriverContextP ctx,
                   pic_param->slice_parsing_fields.bits.sample_adaptive_offset_enabled_flag << 3 |
                   0);
     OUT_BCS_BATCH(batch,
+                  pic_param->bit_depth_luma_minus8 << 27 |
+                  pic_param->bit_depth_chroma_minus8 << 24 |
                   pcm_sample_bit_depth_luma_minus1 << 20 |
                   pcm_sample_bit_depth_chroma_minus1 << 16 |
                   pic_param->max_transform_hierarchy_depth_inter << 13 |
@@ -760,6 +779,7 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     int slice_hor_pos, slice_ver_pos, next_slice_hor_pos, next_slice_ver_pos;
     unsigned short collocated_ref_idx, collocated_from_l0_flag;
+    int sliceqp_sign_flag = 0, sliceqp = 0;
 
     slice_hor_pos = slice_param->slice_segment_address % gen9_hcpd_context->picture_width_in_ctbs;
     slice_ver_pos = slice_param->slice_segment_address / gen9_hcpd_context->picture_width_in_ctbs;
@@ -791,6 +811,17 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
         collocated_from_l0_flag = gen9_hcpd_context->first_inter_slice_collocated_from_l0_flag;
     }
 
+    sliceqp = pic_param->init_qp_minus26 + 26 + slice_param->slice_qp_delta;
+    if((pic_param->bit_depth_luma_minus8 > 0)
+        || (pic_param->bit_depth_chroma_minus8 > 0))
+    {
+        if(sliceqp < 0)
+        {
+            sliceqp_sign_flag = 1;
+            sliceqp = -sliceqp;
+        }
+    }
+
     BEGIN_BCS_BATCH(batch, 9);
 
     OUT_BCS_BATCH(batch, HCP_SLICE_STATE | (9 - 2));
@@ -804,9 +835,10 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   (slice_param->slice_cr_qp_offset & 0x1f) << 17 |
                   (slice_param->slice_cb_qp_offset & 0x1f) << 12 |
-                  (pic_param->init_qp_minus26 + 26 + slice_param->slice_qp_delta) << 6 |
+                  sliceqp << 6 |
                   slice_param->LongSliceFlags.fields.slice_temporal_mvp_enabled_flag << 5 |
                   slice_param->LongSliceFlags.fields.dependent_slice_segment_flag << 4 |
+                  sliceqp_sign_flag << 3 |
                   !next_slice_param << 2 |
                   slice_param->LongSliceFlags.fields.slice_type);
     OUT_BCS_BATCH(batch,

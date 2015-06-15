@@ -1121,9 +1121,26 @@ hevc_ensure_surface_bo(
 )
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
+    int update = 0;
+    unsigned int fourcc = VA_FOURCC_NV12;
+
+    if((pic_param->bit_depth_luma_minus8 > 0)
+        || (pic_param->bit_depth_chroma_minus8 > 0))
+    {
+        if(obj_surface->fourcc != VA_FOURCC_P010)
+        {
+            update = 1;
+            fourcc = VA_FOURCC_P010;
+        }
+    }
+    else if(obj_surface->fourcc != VA_FOURCC_NV12)
+    {
+        update = 1;
+        fourcc = VA_FOURCC_NV12;
+    }
 
     /* (Re-)allocate the underlying surface buffer store, if necessary */
-    if (!obj_surface->bo || obj_surface->fourcc != VA_FOURCC_NV12) {
+    if (!obj_surface->bo || update) {
         struct i965_driver_data * const i965 = i965_driver_data(ctx);
 
         i965_destroy_surface_storage(obj_surface);
@@ -1131,7 +1148,7 @@ hevc_ensure_surface_bo(
         va_status = i965_check_alloc_surface_bo(ctx,
                                                 obj_surface,
                                                 i965->codec_info->has_tiled_surface,
-                                                VA_FOURCC_NV12,
+                                                fourcc,
                                                 SUBSAMPLE_YUV420);
     }
 

@@ -365,6 +365,7 @@ struct hw_codec_info
     unsigned int h264_dec_chroma_formats;
     unsigned int jpeg_dec_chroma_formats;
     unsigned int jpeg_enc_chroma_formats;
+    unsigned int hevc_dec_chroma_formats;
 
     unsigned int has_mpeg2_decoding:1;
     unsigned int has_mpeg2_encoding:1;
@@ -385,6 +386,7 @@ struct hw_codec_info
     unsigned int has_h264_mvc_encoding:1;
     unsigned int has_hevc_decoding:1;
     unsigned int has_hevc_encoding:1;
+    unsigned int has_hevc10_decoding:1;
 
     unsigned int num_filters;
     struct i965_filter filters[VAProcFilterCount];

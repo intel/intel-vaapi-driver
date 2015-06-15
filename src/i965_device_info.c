@@ -44,7 +44,10 @@
 /* Extra set of chroma formats supported for JPEG encoding (beyond YUV 4:2:0) */
 #define EXTRA_JPEG_ENC_CHROMA_FORMATS \
     (VA_RT_FORMAT_YUV400| VA_RT_FORMAT_YUV422 | VA_RT_FORMAT_YUV444 | VA_RT_FORMAT_RGB32)
-     
+
+#define EXTRA_HEVC_DEC_CHROMA_FORMATS \
+    (VA_RT_FORMAT_YUV420_10BPP)
+
 /* Defines VA profile as a 32-bit unsigned integer mask */
 #define VA_PROFILE_MASK(PROFILE) \
     (1U << VAProfile##PROFILE)
@@ -377,6 +380,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
     .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
+    .hevc_dec_chroma_formats = EXTRA_HEVC_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
     .has_h264_decoding = 1,
@@ -395,6 +399,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .has_h264_mvc_encoding = 1,
     .has_hevc_decoding = 1,
     .has_hevc_encoding = 1,
+    .has_hevc10_decoding = 1,
 
     .num_filters = 5,
     .filters = {

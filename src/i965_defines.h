@@ -797,6 +797,8 @@
 #define SURFACE_FORMAT_R8B8_UNORM       10
 #define SURFACE_FORMAT_R8_UNORM         11
 #define SURFACE_FORMAT_Y8_UNORM         12
+#define SURFACE_FORMAT_P010             13
+#define SURFACE_FORMAT_P016             14
 
 #define AVS_FILTER_ADAPTIVE_8_TAP       0
 #define AVS_FILTER_NEAREST              1
