@@ -106,6 +106,9 @@
 #define HAS_HEVC_ENCODING(ctx)          ((ctx)->codec_info->has_hevc_encoding && \
                                          (ctx)->intel.has_bsd)
 
+#define HAS_HEVC10_DECODING(ctx)        ((ctx)->codec_info->has_hevc10_decoding && \
+                                         (ctx)->intel.has_bsd)
+
 static int get_sampling_from_fourcc(unsigned int fourcc);
 
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */
@@ -140,6 +143,8 @@ static int get_sampling_from_fourcc(unsigned int fourcc);
 #define I_IMC3  I_I420
 #define I_YV12  2, 2, 3, {I965_8BITS, I965_2BITS, I965_2BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_2, OFFSET_0}, {PLANE_1, OFFSET_0} }
 #define I_IMC1  I_YV12
+
+#define I_P010  2, 2, 2, {I965_16BITS, I965_8BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_1, OFFSET_16} }
 
 #define I_422H  2, 1, 3, {I965_8BITS, I965_4BITS, I965_4BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_2, OFFSET_0} }
 #define I_422V  1, 2, 3, {I965_8BITS, I965_4BITS, I965_4BITS}, 3, { {PLANE_0, OFFSET_0}, {PLANE_1, OFFSET_0}, {PLANE_2, OFFSET_0} }
@@ -184,6 +189,8 @@ static const i965_fourcc_info i965_fourcc_infos[] = {
     DEF_YUV(IMC3, YUV420, I_S),
     DEF_YUV(YV12, YUV420, I_SI),
     DEF_YUV(IMC1, YUV420, I_S),
+
+    DEF_YUV(P010, YUV420, I_SI),
 
     DEF_YUV(422H, YUV422H, I_SI),
     DEF_YUV(422V, YUV422V, I_S),
@@ -580,6 +587,10 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileHEVCMain;
     }
 
+    if (HAS_HEVC10_DECODING(i965)) {
+        profile_list[i++] = VAProfileHEVCMain10;
+    }
+
     if (i965->wrapper_pdrvctx) {
         VAProfile wrapper_list[4];
         int wrapper_num;
@@ -680,6 +691,12 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
 
         if (HAS_HEVC_ENCODING(i965))
             entrypoint_list[n++] = VAEntrypointEncSlice;
+
+        break;
+
+    case VAProfileHEVCMain10:
+        if (HAS_HEVC10_DECODING(i965))
+            entrypoint_list[n++] = VAEntrypointVLD;
 
         break;
 
@@ -794,6 +811,14 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
 
         break;
 
+    case VAProfileHEVCMain10:
+        if (HAS_HEVC10_DECODING(i965) && (entrypoint == VAEntrypointVLD))
+            va_status = VA_STATUS_SUCCESS;
+        else
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+
+        break;
+
     case VAProfileVP9Profile0:
         if (i965->wrapper_pdrvctx)
             va_status = VA_STATUS_SUCCESS;
@@ -834,9 +859,13 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
             chroma_formats |= i965->codec_info->jpeg_dec_chroma_formats;
         if (HAS_JPEG_ENCODING(i965) && entrypoint == VAEntrypointEncPicture)
             chroma_formats |= i965->codec_info->jpeg_enc_chroma_formats;
-        
         break;
 
+    case VAProfileHEVCMain10:
+        chroma_formats = 0; // clear YUV420 8bits format support
+        if (HAS_HEVC10_DECODING(i965) && entrypoint == VAEntrypointVLD)
+            chroma_formats |= i965->codec_info->hevc_dec_chroma_formats;
+        break;
     default:
         break;
     }
@@ -1197,6 +1226,7 @@ i965_suface_external_memory(VADriverContextP ctx,
 
     switch (obj_surface->fourcc) {
     case VA_FOURCC_NV12:
+    case VA_FOURCC_P010:
         ASSERT_RET(memory_attibute->num_planes == 2, VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(memory_attibute->pitches[0] == memory_attibute->pitches[1], VA_STATUS_ERROR_INVALID_PARAMETER);
 
@@ -1424,6 +1454,7 @@ i965_CreateSurfaces2(
     /* support 420 & 422 & RGB32 format, 422 and RGB32 are only used
      * for post-processing (including color conversion) */
     if (VA_RT_FORMAT_YUV420 != format &&
+        VA_RT_FORMAT_YUV420_10BPP != format &&
         VA_RT_FORMAT_YUV422 != format &&
         VA_RT_FORMAT_YUV444 != format &&
         VA_RT_FORMAT_YUV411 != format &&
@@ -1488,10 +1519,10 @@ i965_CreateSurfaces2(
                 if (memory_attibute->pitches[0]) {
                     int bpp_1stplane = bpp_1stplane_by_fourcc(expected_fourcc);
                     ASSERT_RET(bpp_1stplane, VA_STATUS_ERROR_INVALID_PARAMETER);
-                    obj_surface->width = memory_attibute->pitches[0]/bpp_1stplane;
+                    obj_surface->width = memory_attibute->pitches[0];
                     obj_surface->user_h_stride_set = true;
                     ASSERT_RET(IS_ALIGNED(obj_surface->width, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
-                    ASSERT_RET(obj_surface->width >= width, VA_STATUS_ERROR_INVALID_PARAMETER);
+                    ASSERT_RET(obj_surface->width >= width * bpp_1stplane, VA_STATUS_ERROR_INVALID_PARAMETER);
 
                     if (memory_attibute->offsets[1]) {
                         ASSERT_RET(!memory_attibute->offsets[0], VA_STATUS_ERROR_INVALID_PARAMETER);
@@ -3086,7 +3117,7 @@ i965_encoder_render_picture(VADriverContextP ctx,
             if ((param->type == VAEncPackedHeaderRawData) ||
                 (param->type == VAEncPackedHeaderSlice)) {
                 vaStatus = I965_RENDER_ENCODE_BUFFER(packed_header_params_ext);
-            } else if((obj_config->profile == VAProfileHEVCMain)&&
+            } else if((obj_config->profile == VAProfileHEVCMain) &&
                 (encode->last_packed_header_type == VAEncPackedHeaderSequence)) {
                 vaStatus = i965_encoder_render_packed_header_parameter_buffer(ctx,
                                                                           obj_context,
@@ -3180,7 +3211,7 @@ i965_encoder_render_picture(VADriverContextP ctx,
                     ((encode->last_packed_header_type & (~VAEncPackedHeaderMiscMask)) != 0)),
                     VA_STATUS_ERROR_ENCODING_ERROR);
 
-                if((obj_config->profile == VAProfileHEVCMain)&&
+                if((obj_config->profile == VAProfileHEVCMain) &&
                     (encode->last_packed_header_type == VAEncPackedHeaderSequence)) {
 
                         vaStatus = i965_encoder_render_packed_header_data_buffer(ctx,
@@ -3774,25 +3805,29 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
     obj_surface->x_cb_offset = 0; /* X offset is always 0 */
     obj_surface->x_cr_offset = 0;
 
+    int bpp_1stplane = bpp_1stplane_by_fourcc(fourcc);
+
+    if (obj_surface->user_h_stride_set) {
+        ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
+    } else
+        obj_surface->width = ALIGN(obj_surface->orig_width * bpp_1stplane, 128);
+
+    if (obj_surface->user_v_stride_set) {
+        ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
+    } else
+        obj_surface->height = ALIGN(obj_surface->orig_height, 32);
+
     if ((tiled && !obj_surface->user_disable_tiling)) {
         ASSERT_RET(fourcc != VA_FOURCC_I420 &&
                fourcc != VA_FOURCC_IYUV &&
                fourcc != VA_FOURCC_YV12,
                VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT);
-        if (obj_surface->user_h_stride_set) {
-            ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
-        } else
-            obj_surface->width = ALIGN(obj_surface->orig_width, 128);
-
-        if (obj_surface->user_v_stride_set) {
-            ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
-        } else
-            obj_surface->height = ALIGN(obj_surface->orig_height, 32);
 
         region_height = obj_surface->height;
 
         switch (fourcc) {
         case VA_FOURCC_NV12:
+        case VA_FOURCC_P010:
             assert(subsampling == SUBSAMPLE_YUV420);
             obj_surface->cb_cr_pitch = obj_surface->width;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -3929,6 +3964,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         switch (fourcc) {
         case VA_FOURCC_NV12:
+        case VA_FOURCC_P010:
             obj_surface->y_cb_offset = obj_surface->height;
             obj_surface->y_cr_offset = obj_surface->height;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
@@ -4103,6 +4139,7 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         break;
 
     case VA_FOURCC_NV12:
+    case VA_FOURCC_P010:
         image->num_planes = 2;
         image->pitches[0] = w_pitch; /* Y */
         image->offsets[0] = 0;
@@ -5439,7 +5476,13 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
                 attribs[i].value.value.i = VA_FOURCC_444P;
                 i++;
-            } else {
+            } else if (obj_config->profile == VAProfileHEVCMain10) {
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC_P010;
+                i++;
+             } else {
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
@@ -5565,29 +5608,37 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
         } else if (obj_config->entrypoint == VAEntrypointEncSlice ||  /* encode */
                    obj_config->entrypoint == VAEntrypointVideoProc) { /* vpp */
 
-            attribs[i].type = VASurfaceAttribPixelFormat;
-            attribs[i].value.type = VAGenericValueTypeInteger;
-            attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC_NV12;
-            i++;
+            if (obj_config->profile == VAProfileHEVCMain10) {
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC_P010;
+                i++;
+            } else {
+              attribs[i].type = VASurfaceAttribPixelFormat;
+              attribs[i].value.type = VAGenericValueTypeInteger;
+              attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+              attribs[i].value.value.i = VA_FOURCC_NV12;
+              i++;
 
-            attribs[i].type = VASurfaceAttribPixelFormat;
-            attribs[i].value.type = VAGenericValueTypeInteger;
-            attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC_I420;
-            i++;
+              attribs[i].type = VASurfaceAttribPixelFormat;
+              attribs[i].value.type = VAGenericValueTypeInteger;
+              attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+              attribs[i].value.value.i = VA_FOURCC_I420;
+              i++;
 
-            attribs[i].type = VASurfaceAttribPixelFormat;
-            attribs[i].value.type = VAGenericValueTypeInteger;
-            attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC_YV12;
-            i++;
+              attribs[i].type = VASurfaceAttribPixelFormat;
+              attribs[i].value.type = VAGenericValueTypeInteger;
+              attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+              attribs[i].value.value.i = VA_FOURCC_YV12;
+              i++;
 
-            attribs[i].type = VASurfaceAttribPixelFormat;
-            attribs[i].value.type = VAGenericValueTypeInteger;
-            attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-            attribs[i].value.value.i = VA_FOURCC_IMC3;
-            i++;
+              attribs[i].type = VASurfaceAttribPixelFormat;
+              attribs[i].value.type = VAGenericValueTypeInteger;
+              attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+              attribs[i].value.value.i = VA_FOURCC_IMC3;
+              i++;
+            }
 
             if (obj_config->entrypoint == VAEntrypointVideoProc) {
                 attribs[i].type = VASurfaceAttribPixelFormat;
