@@ -1307,9 +1307,11 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
     int cu_size = 1;
     int tu_size = 0x55;
     int tu_count = 4;
+    int inter_mode = 0;
 
     unsigned int *mv_ptr;
     {
+        inter_mode = (msg[0] & AVC_INTER_MODE_MASK);
         submb_pre_mode = (msg[1] & AVC_INTER_SUBMB_PRE_MODE_MASK) >> 16;
 #define MSG_MV_OFFSET   4
         mv_ptr = msg + MSG_MV_OFFSET;
@@ -1319,7 +1321,7 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
         */
         /* 0/2/4/6/8... ： l0, 1/3/5/7...: l1 ; now it only support 16x16,16x8,8x16,8x8*/
 
-        if ((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_16X16) {
+        if (inter_mode == AVC_INTER_16X16) {
             mv_ptr[4] = mv_ptr[0];
             mv_ptr[5] = mv_ptr[1];
             mv_ptr[2] = mv_ptr[0];
@@ -1330,7 +1332,7 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
             cu_size = 1;
             tu_size = 0x55;
             tu_count = 4;
-        } else if ((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_8X16) {
+        } else if (inter_mode == AVC_INTER_8X16) {
             mv_ptr[4] = mv_ptr[0];
             mv_ptr[5] = mv_ptr[1];
             mv_ptr[2] = mv_ptr[8];
@@ -1341,7 +1343,7 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
             cu_size = 1;
             tu_size = 0x55;
             tu_count = 4;
-        } else if ((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_16X8) {
+        } else if (inter_mode == AVC_INTER_16X8) {
             mv_ptr[2] = mv_ptr[0];
             mv_ptr[3] = mv_ptr[1];
             mv_ptr[4] = mv_ptr[16];
@@ -1352,7 +1354,7 @@ gen9_hcpe_hevc_fill_indirect_cu_inter(VADriverContextP ctx,
             cu_size = 1;
             tu_size = 0x55;
             tu_count = 4;
-        }else if((msg[0] & AVC_INTER_MODE_MASK) == AVC_INTER_8X8) {
+        }else if(inter_mode == AVC_INTER_8X8) {
             mv_ptr[0] = mv_ptr[index * 8 + 0 ];
             mv_ptr[1] = mv_ptr[index * 8 + 1 ];
             mv_ptr[2] = mv_ptr[index * 8 + 0 ];
@@ -1592,8 +1594,9 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
     int num_mb_in_ctb = ctb_width_in_mb * ctb_width_in_mb;
     int i_ctb, ctb_x, ctb_y;
     unsigned int split_coding_unit_flag = 0;
-    int width_in_mbs = (mfc_context->surface_state.width + 15) / 16;
+    int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + 15) / 16;
     int row_pad_flag = (pSequenceParameter->pic_height_in_luma_samples % ctb_size)> 0 ? 1:0;
+    int col_pad_flag = (pSequenceParameter->pic_width_in_luma_samples % ctb_size)> 0 ? 1:0;
 
     int is_intra = (slice_type == HEVC_SLICE_I);
     unsigned int *msg = NULL;
@@ -1655,25 +1658,26 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
 
     for (i_ctb = pSliceParameter->slice_segment_address;i_ctb < pSliceParameter->slice_segment_address + pSliceParameter->num_ctu_in_slice; i_ctb++) {
         int last_ctb = (i_ctb == (pSliceParameter->slice_segment_address + pSliceParameter->num_ctu_in_slice - 1));
-        int ctb_height_in_mb = ctb_width_in_mb;
+        int ctb_height_in_mb_internal = ctb_width_in_mb;
+        int ctb_width_in_mb_internal = ctb_width_in_mb;
         ctb_x = i_ctb % width_in_ctb;
         ctb_y = i_ctb / width_in_ctb;
-        if(ctb_y == (height_in_ctb - 1) && row_pad_flag)  ctb_height_in_mb = 1;
+        if(ctb_y == (height_in_ctb - 1) && row_pad_flag)  ctb_height_in_mb_internal = 1;
+        if(ctb_x == (width_in_ctb - 1) && col_pad_flag)  ctb_width_in_mb_internal = 1;
 
         mb_x = 0;
         mb_y = 0;
-        macroblock_address = (i_ctb - ctb_x) * num_mb_in_ctb + ctb_x * ctb_width_in_mb;
+        macroblock_address = ctb_y * width_in_mbs * ctb_width_in_mb + ctb_x * ctb_width_in_mb;
         split_coding_unit_flag = ((ctb_width_in_mb == 2) ? HEVC_SPLIT_CU_FLAG_32_32 : HEVC_SPLIT_CU_FLAG_16_16);
         cu_count = 1;
         cu_index = 0;
         mb_addr = 0;
         msg = NULL;
-        for (mb_y = 0; mb_y < ctb_height_in_mb; mb_y++)
+        for (mb_y = 0; mb_y < ctb_height_in_mb_internal; mb_y++)
         {
             mb_addr = macroblock_address + mb_y * width_in_mbs ;
-            for (mb_x = 0; mb_x < ctb_width_in_mb; mb_x++)
+            for (mb_x = 0; mb_x < ctb_width_in_mb_internal; mb_x++)
             {
-                split_coding_unit_flag = ((ctb_width_in_mb == 2) ? HEVC_SPLIT_CU_FLAG_32_32 : HEVC_SPLIT_CU_FLAG_16_16);
                 /* get the mb info from the vme out */
                 msg = (unsigned int *)(msg_ptr + mb_addr * vme_context->vme_output.size_block);
 
