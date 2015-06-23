@@ -2051,26 +2051,26 @@ pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_processin
     /* Y surface */
     i965_pp_set_surface_state(ctx, pp_context,
                               bo, offset[Y],
-                              width[Y] *scale_factor_of_1st_plane_width_in_byte / 4, height[Y], pitch[Y], I965_SURFACEFORMAT_R8_UNORM,
+                              ALIGN(width[Y] *scale_factor_of_1st_plane_width_in_byte, 4) / 4, height[Y], pitch[Y], I965_SURFACEFORMAT_R8_UNORM,
                               base_index, is_target);
 
     if (!packed_yuv && !full_packed_format) {
         if (interleaved_uv) {
             i965_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[UV],
-                                      width[UV] / 4, height[UV], pitch[UV], I965_SURFACEFORMAT_R8_UNORM,
+                                      ALIGN(width[UV], 4) / 4, height[UV], pitch[UV], I965_SURFACEFORMAT_R8_UNORM,
                                       base_index + 1, is_target);
         } else {
             /* U surface */
             i965_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[U],
-                                      width[U] / 4, height[U], pitch[U], I965_SURFACEFORMAT_R8_UNORM,
+                                      ALIGN(width[U], 4) / 4, height[U], pitch[U], I965_SURFACEFORMAT_R8_UNORM,
                                       base_index + 1, is_target);
 
             /* V surface */
             i965_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[V],
-                                      width[V] / 4, height[V], pitch[V], I965_SURFACEFORMAT_R8_UNORM,
+                                      ALIGN(width[V], 4) / 4, height[V], pitch[V], I965_SURFACEFORMAT_R8_UNORM,
                                       base_index + 2, is_target);
         }
     }
@@ -2153,25 +2153,25 @@ gen7_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     if (is_target) {
         gen7_pp_set_surface_state(ctx, pp_context,
                                   bo, 0,
-                                  width[0] / 4, height[0], pitch[0],
+                                  ALIGN(width[0], 4) / 4, height[0], pitch[0],
                                   I965_SURFACEFORMAT_R8_UINT,
                                   base_index, 1);
 
         if (fourcc_info->num_planes == 2) {
             gen7_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[1],
-                                      width[1] / 2, height[1], pitch[1],
+                                      ALIGN(width[1], 2) / 2, height[1], pitch[1],
                                       I965_SURFACEFORMAT_R8G8_SINT,
                                       base_index + 1, 1);
         } else if (fourcc_info->num_planes == 3) {
             gen7_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[1],
-                                      width[1] / 4, height[1], pitch[1],
+                                      ALIGN(width[1], 4) / 4, height[1], pitch[1],
                                       I965_SURFACEFORMAT_R8_SINT,
                                       base_index + 1, 1);
             gen7_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[2],
-                                      width[2] / 4, height[2], pitch[2],
+                                      ALIGN(width[2], 4) / 4, height[2], pitch[2],
                                       I965_SURFACEFORMAT_R8_SINT,
                                       base_index + 2, 1);
         }
@@ -2451,7 +2451,7 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     /* source UV surface index 2 */
     i965_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, in_wpitch * in_hpitch,
-                              in_w / 2, in_h / 2, in_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
+                              ALIGN(in_w, 2) / 2, in_h / 2, in_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
                               2, 0);
 
     /* destination surface */
@@ -2464,13 +2464,13 @@ pp_nv12_scaling_initialize(VADriverContextP ctx, struct i965_post_processing_con
     /* destination Y surface index 7 */
     i965_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, 0,
-                              out_w / 4, out_h, out_wpitch, I965_SURFACEFORMAT_R8_UNORM,
+                              ALIGN(out_w, 4) / 4, out_h, out_wpitch, I965_SURFACEFORMAT_R8_UNORM,
                               7, 1);
 
     /* destination UV surface index 8 */
     i965_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, out_wpitch * out_hpitch,
-                              out_w / 4, out_h / 2, out_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
+                              ALIGN(out_w, 4) / 4, out_h / 2, out_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
                               8, 1);
 
     /* sampler state */
@@ -2739,13 +2739,13 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     /* destination Y surface index 7 */
     i965_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, 0,
-                              out_w / 4, out_h, out_wpitch, I965_SURFACEFORMAT_R8_UNORM,
+                              ALIGN(out_w, 4) / 4, out_h, out_wpitch, I965_SURFACEFORMAT_R8_UNORM,
                               7, 1);
 
     /* destination UV surface index 8 */
     i965_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, out_wpitch * out_hpitch,
-                              out_w / 4, out_h / 2, out_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
+                              ALIGN(out_w, 4) / 4, out_h / 2, out_wpitch, I965_SURFACEFORMAT_R8G8_UNORM,
                               8, 1);
 
     /* sampler 8x8 state */
@@ -3401,9 +3401,9 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
     orig_h = obj_surface->orig_height;
 
     i965_pp_set_surface_state(ctx, pp_context, obj_surface->bo, 0,
-        orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM, 7, 1);
+        ALIGN(orig_w, 4) / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM, 7, 1);
     i965_pp_set_surface_state(ctx, pp_context, obj_surface->bo, w * h,
-        orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM, 8, 1);
+        ALIGN(orig_w, 4) / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM, 8, 1);
 
     /* Current output surfaces (index = { 10, 11 }) */
     obj_surface = dndi_ctx->frame_store[DNDI_FRAME_OUT_CURRENT].obj_surface;
@@ -3413,9 +3413,9 @@ pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_contex
     orig_h = obj_surface->orig_height;
 
     i965_pp_set_surface_state(ctx, pp_context, obj_surface->bo, 0,
-        orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM, 10, 1);
+        ALIGN(orig_w, 4) / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM, 10, 1);
     i965_pp_set_surface_state(ctx, pp_context, obj_surface->bo, w * h,
-        orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM, 11, 1);
+        ALIGN(orig_w, 4) / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM, 11, 1);
 
     /* STMM output surface (index = 20) */
     obj_surface = dndi_ctx->frame_store[DNDI_FRAME_OUT_STMM].obj_surface;
@@ -3596,7 +3596,7 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
     /* source UV surface index 2 */
     i965_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, w * h,
-                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              ALIGN(orig_w, 4) / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
                               2, 0);
 
     /* source YUV surface index 4 */
@@ -3623,13 +3623,13 @@ pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_context 
     /* destination Y surface index 7 */
     i965_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, 0,
-                              orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
+                              ALIGN(orig_w, 4) / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
                               7, 1);
 
     /* destination UV surface index 8 */
     i965_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, w * h,
-                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              ALIGN(orig_w, 4) / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
                               8, 1);
     /* sampler dn */
     dri_bo_map(pp_context->sampler_state_table.bo, True);
@@ -3807,9 +3807,9 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     orig_h = obj_surface->orig_height;
 
     gen7_pp_set_surface_state(ctx, pp_context, obj_surface->bo, 0,
-        orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM, 27, 1);
+        ALIGN(orig_w, 4) / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM, 27, 1);
     gen7_pp_set_surface_state(ctx, pp_context, obj_surface->bo, w * h,
-        orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM, 28, 1);
+        ALIGN(orig_w, 4) / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM, 28, 1);
 
     /* Current output surfaces (index = { 30, 31 }) */
     obj_surface = dndi_ctx->frame_store[DNDI_FRAME_OUT_CURRENT].obj_surface;
@@ -3819,9 +3819,9 @@ gen7_pp_nv12_dndi_initialize(VADriverContextP ctx, struct i965_post_processing_c
     orig_h = obj_surface->orig_height;
 
     gen7_pp_set_surface_state(ctx, pp_context, obj_surface->bo, 0,
-        orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM, 30, 1);
+        ALIGN(orig_w, 4) / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM, 30, 1);
     gen7_pp_set_surface_state(ctx, pp_context, obj_surface->bo, w * h,
-        orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM, 31, 1);
+        ALIGN(orig_w, 4) / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM, 31, 1);
 
     /* STMM output surface (index = 33) */
     obj_surface = dndi_ctx->frame_store[DNDI_FRAME_OUT_STMM].obj_surface;
@@ -4015,7 +4015,7 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     /* source UV surface index 1 */
     gen7_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, w * h,
-                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              ALIGN(orig_w, 4) / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
                               1, 0);
 
     /* source YUV surface index 3 */
@@ -4050,13 +4050,13 @@ gen7_pp_nv12_dn_initialize(VADriverContextP ctx, struct i965_post_processing_con
     /* destination Y surface index 24 */
     gen7_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, 0,
-                              orig_w / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
+                              ALIGN(orig_w, 4) / 4, orig_h, w, I965_SURFACEFORMAT_R8_UNORM,
                               24, 1);
 
     /* destination UV surface index 25 */
     gen7_pp_set_surface_state(ctx, pp_context,
                               obj_surface->bo, w * h,
-                              orig_w / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
+                              ALIGN(orig_w, 4) / 4, orig_h / 2, w, I965_SURFACEFORMAT_R8G8_UNORM,
                               25, 1);
 
     /* sampler dn */
