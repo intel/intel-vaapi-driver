@@ -529,25 +529,25 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
     if (is_target) {
         gen8_pp_set_surface_state(ctx, pp_context,
                                   bo, 0,
-                                  width[0] / 4, height[0], pitch[0],
+                                  ALIGN(width[0], 4) / 4, height[0], pitch[0],
                                   I965_SURFACEFORMAT_R8_UINT,
                                   base_index, 1);
 
         if (fourcc_info->num_planes == 2) {
             gen8_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[1],
-                                      width[1] / 2, height[1], pitch[1],
+                                      ALIGN(width[1], 2) / 2, height[1], pitch[1],
                                       I965_SURFACEFORMAT_R8G8_SINT,
                                       base_index + 1, 1);
         } else if (fourcc_info->num_planes == 3) {
             gen8_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[1],
-                                      width[1] / 4, height[1], pitch[1],
+                                      ALIGN(width[1], 4) / 4, height[1], pitch[1],
                                       I965_SURFACEFORMAT_R8_SINT,
                                       base_index + 1, 1);
             gen8_pp_set_surface_state(ctx, pp_context,
                                       bo, offset[2],
-                                      width[2] / 4, height[2], pitch[2],
+                                      ALIGN(width[2], 4) / 4, height[2], pitch[2],
                                       I965_SURFACEFORMAT_R8_SINT,
                                       base_index + 2, 1);
         }
