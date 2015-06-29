@@ -106,25 +106,8 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAPictureParameterBufferHEVC *pic_param;
-    VASliceParameterBufferHEVC *slice_param;
     struct object_surface *obj_surface;
     uint32_t size;
-    int i, j, has_inter = 0;
-
-    for (j = 0; j < decode_state->num_slice_params && !has_inter; j++) {
-        assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
-        slice_param = (VASliceParameterBufferHEVC *)decode_state->slice_params[j]->buffer;
-
-        for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
-            if (slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_B ||
-                slice_param->LongSliceFlags.fields.slice_type == HEVC_SLICE_P) {
-                has_inter = 1;
-                break;
-            }
-
-            slice_param++;
-        }
-    }
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferHEVC *)decode_state->pic_param->buffer;
@@ -159,31 +142,17 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_tile_column_buffer), "tile column buffer", size);
 
-    if (has_inter) {
-        size = (((gen9_hcpd_context->picture_width_in_pixels + 15) >> 4) * 188 + 9 * gen9_hcpd_context->picture_width_in_ctbs + 1023) >> 9;
-        size <<= 6;
-        ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_line_buffer), "metadata line buffer", size);
+    size = (((gen9_hcpd_context->picture_width_in_pixels + 15) >> 4) * 188 + 9 * gen9_hcpd_context->picture_width_in_ctbs + 1023) >> 9;
+    size <<= 6;
+    ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_line_buffer), "metadata line buffer", size);
 
-        size = (((gen9_hcpd_context->picture_width_in_pixels + 15) >> 4) * 172 + 9 * gen9_hcpd_context->picture_width_in_ctbs + 1023) >> 9;
-        size <<= 6;
-        ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_line_buffer), "metadata tile line buffer", size);
+    size = (((gen9_hcpd_context->picture_width_in_pixels + 15) >> 4) * 172 + 9 * gen9_hcpd_context->picture_width_in_ctbs + 1023) >> 9;
+    size <<= 6;
+    ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_line_buffer), "metadata tile line buffer", size);
 
-        size = (((gen9_hcpd_context->picture_height_in_pixels + 15) >> 4) * 176 + 89 * gen9_hcpd_context->picture_width_in_ctbs + 1023) >> 9;
-        size <<= 6;
-        ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_column_buffer), "metadata tile column buffer", size);
-    } else {
-        size = (gen9_hcpd_context->picture_width_in_pixels + 8 * gen9_hcpd_context->picture_width_in_ctbs + 1023) >> 9;
-        size <<= 6;
-        ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_line_buffer), "metadata line buffer", size);
-
-        size = (gen9_hcpd_context->picture_width_in_pixels + 16 * gen9_hcpd_context->picture_width_in_ctbs + 1023) >> 9;
-        size <<= 6;
-        ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_line_buffer), "metadata tile line buffer", size);
-
-        size = (gen9_hcpd_context->picture_height_in_pixels + 8 * gen9_hcpd_context->picture_height_in_ctbs + 1023) >> 9;
-        size <<= 6;
-        ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_column_buffer), "metadata tile column buffer", size);
-    }
+    size = (((gen9_hcpd_context->picture_height_in_pixels + 15) >> 4) * 176 + 89 * gen9_hcpd_context->picture_height_in_ctbs + 1023) >> 9;
+    size <<= 6;
+    ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_column_buffer), "metadata tile column buffer", size);
 
     size = ALIGN(((gen9_hcpd_context->picture_width_in_pixels >> 1) + 3 * gen9_hcpd_context->picture_width_in_ctbs), 16) >> 3;
     size <<= 6;
