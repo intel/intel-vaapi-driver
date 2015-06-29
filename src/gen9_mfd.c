@@ -150,7 +150,10 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_line_buffer), "metadata tile line buffer", size);
 
-    size = (((gen9_hcpd_context->picture_height_in_pixels + 15) >> 4) * 176 + 89 * gen9_hcpd_context->picture_height_in_ctbs + 1023) >> 9;
+    if (IS_CHERRYVIEW(i965->intel.device_info))
+        size = (((gen9_hcpd_context->picture_height_in_pixels + 15) >> 4) * 256 + 9 * gen9_hcpd_context->picture_height_in_ctbs + 1023) >> 9;
+    else
+        size = (((gen9_hcpd_context->picture_height_in_pixels + 15) >> 4) * 176 + 89 * gen9_hcpd_context->picture_height_in_ctbs + 1023) >> 9;
     size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_column_buffer), "metadata tile column buffer", size);
 
