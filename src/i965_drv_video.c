@@ -989,9 +989,7 @@ i965_surface_native_memory(VADriverContextP ctx,
         expected_fourcc == VA_FOURCC_YV16)
         tiling = 0;
 
-    i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, get_sampling_from_fourcc(expected_fourcc));
-
-    return VA_STATUS_SUCCESS;
+    return i965_check_alloc_surface_bo(ctx, obj_surface, tiling, expected_fourcc, get_sampling_from_fourcc(expected_fourcc));
 }
     
 static VAStatus
@@ -1327,19 +1325,23 @@ i965_CreateSurfaces2(
                     }
                 }
             }
-            i965_surface_native_memory(ctx,
-                                       obj_surface,
-                                       format,
-                                       expected_fourcc);
+            vaStatus = i965_surface_native_memory(ctx,
+                                                  obj_surface,
+                                                  format,
+                                                  expected_fourcc);
             break;
 
         case I965_SURFACE_MEM_GEM_FLINK:
         case I965_SURFACE_MEM_DRM_PRIME:
-            i965_suface_external_memory(ctx,
-                                        obj_surface,
-                                        memory_type,
-                                        memory_attibute,
-                                        i);
+            vaStatus = i965_suface_external_memory(ctx,
+                                                   obj_surface,
+                                                   memory_type,
+                                                   memory_attibute,
+                                                   i);
+            break;
+        }
+        if (VA_STATUS_SUCCESS != vaStatus) {
+            i965_destroy_surface(&i965->surface_heap, (struct object_base *)obj_surface);
             break;
         }
     }
