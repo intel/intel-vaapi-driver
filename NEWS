@@ -1,7 +1,7 @@
-libva-intel-driver NEWS -- summary of changes.  2015-06-xx
+libva-intel-driver NEWS -- summary of changes.  2015-07-01
 Copyright (C) 2009-2015 Intel Corporation
 
-Version 1.6.0 - DD.06.2015
+Version 1.6.0 - 01.Jul.2015
 * Add support for VP8 encoding (CQP, CBR) on BSW/SKL
 * Add support for HEVC decoding on BSW
 * Add support for HEVC encoding (CQP) on SKL
