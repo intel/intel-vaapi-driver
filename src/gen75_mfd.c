@@ -862,14 +862,20 @@ gen75_mfd_avc_slice_state(VADriverContextP ctx,
         num_ref_idx_l1 = slice_param->num_ref_idx_l1_active_minus1 + 1;
     }
 
-    first_mb_in_slice = slice_param->first_mb_in_slice << mbaff_picture;
+    first_mb_in_slice = slice_param->first_mb_in_slice;
     slice_hor_pos = first_mb_in_slice % width_in_mbs; 
     slice_ver_pos = first_mb_in_slice / width_in_mbs;
 
+    if (mbaff_picture)
+        slice_ver_pos = slice_ver_pos << 1;
+
     if (next_slice_param) {
-        first_mb_in_next_slice = next_slice_param->first_mb_in_slice << mbaff_picture;
+        first_mb_in_next_slice = next_slice_param->first_mb_in_slice;
         next_slice_hor_pos = first_mb_in_next_slice % width_in_mbs; 
         next_slice_ver_pos = first_mb_in_next_slice / width_in_mbs;
+
+        if (mbaff_picture)
+            next_slice_ver_pos = next_slice_ver_pos << 1;
     } else {
         next_slice_hor_pos = 0;
         next_slice_ver_pos = height_in_mbs / (1 + !!pic_param->pic_fields.bits.field_pic_flag);
