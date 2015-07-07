@@ -249,35 +249,48 @@ gen9_render_src_surfaces_state(
     rh = obj_surface->orig_height;
     region = obj_surface->bo;
 
-    gen9_render_src_surface_state(ctx, 1, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);     /* Y */
-    gen9_render_src_surface_state(ctx, 2, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);
-
-    if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+    if (obj_surface->fourcc == VA_FOURCC('P', '0', '1', '0')) {
+        gen9_render_src_surface_state(ctx, 1, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R16_UNORM, flags);     /* Y */
+        gen9_render_src_surface_state(ctx, 2, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R16_UNORM, flags);
         gen9_render_src_surface_state(ctx, 3, region,
                                       region_pitch * obj_surface->y_cb_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8G8_UNORM, flags); /* UV */
+                                      I965_SURFACEFORMAT_R16G16_UNORM, flags); /* UV */
         gen9_render_src_surface_state(ctx, 4, region,
                                       region_pitch * obj_surface->y_cb_offset,
                                       obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8G8_UNORM, flags);
+                                      I965_SURFACEFORMAT_R16G16_UNORM, flags);
     } else {
-        gen9_render_src_surface_state(ctx, 3, region,
-                                      region_pitch * obj_surface->y_cb_offset,
-                                      obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8_UNORM, flags); /* U */
-        gen9_render_src_surface_state(ctx, 4, region,
-                                      region_pitch * obj_surface->y_cb_offset,
-                                      obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8_UNORM, flags);
-        gen9_render_src_surface_state(ctx, 5, region,
-                                      region_pitch * obj_surface->y_cr_offset,
-                                      obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8_UNORM, flags); /* V */
-        gen9_render_src_surface_state(ctx, 6, region,
-                                      region_pitch * obj_surface->y_cr_offset,
-                                      obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
-                                      I965_SURFACEFORMAT_R8_UNORM, flags);
+        gen9_render_src_surface_state(ctx, 1, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);     /* Y */
+        gen9_render_src_surface_state(ctx, 2, region, 0, rw, rh, region_pitch, I965_SURFACEFORMAT_R8_UNORM, flags);
+
+        if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2')) {
+            gen9_render_src_surface_state(ctx, 3, region,
+                                          region_pitch * obj_surface->y_cb_offset,
+                                          obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
+                                          I965_SURFACEFORMAT_R8G8_UNORM, flags); /* UV */
+            gen9_render_src_surface_state(ctx, 4, region,
+                                          region_pitch * obj_surface->y_cb_offset,
+                                          obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
+                                          I965_SURFACEFORMAT_R8G8_UNORM, flags);
+        } else {
+            gen9_render_src_surface_state(ctx, 3, region,
+                                          region_pitch * obj_surface->y_cb_offset,
+                                          obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
+                                          I965_SURFACEFORMAT_R8_UNORM, flags); /* U */
+            gen9_render_src_surface_state(ctx, 4, region,
+                                          region_pitch * obj_surface->y_cb_offset,
+                                          obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
+                                          I965_SURFACEFORMAT_R8_UNORM, flags);
+            gen9_render_src_surface_state(ctx, 5, region,
+                                          region_pitch * obj_surface->y_cr_offset,
+                                          obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
+                                          I965_SURFACEFORMAT_R8_UNORM, flags); /* V */
+            gen9_render_src_surface_state(ctx, 6, region,
+                                          region_pitch * obj_surface->y_cr_offset,
+                                          obj_surface->cb_cr_width, obj_surface->cb_cr_height, obj_surface->cb_cr_pitch,
+                                          I965_SURFACEFORMAT_R8_UNORM, flags);
+        }
     }
 }
 
@@ -773,7 +786,8 @@ gen9_render_upload_constants(VADriverContextP ctx,
 
         *constant_buffer = 2;
     } else {
-        if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2'))
+        if (obj_surface->fourcc == VA_FOURCC('N', 'V', '1', '2') ||
+            obj_surface->fourcc == VA_FOURCC('P', '0', '1', '0'))
             *constant_buffer = 1;
         else
             *constant_buffer = 0;
