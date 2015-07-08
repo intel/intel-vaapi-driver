@@ -1,2 +1,2 @@
 #include "vme8.inc"
-#include "vp8_inter_frame_gen9.asm"
+#include "vp8_inter_frame_gen8.asm"
