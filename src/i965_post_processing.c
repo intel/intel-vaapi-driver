@@ -5947,6 +5947,33 @@ i965_proc_picture(VADriverContextP ctx,
         dst_rect.height = obj_surface->orig_height;
     }
 
+    if (IS_GEN7(i965->intel.device_info) ||
+        IS_GEN8(i965->intel.device_info) ||
+        IS_GEN9(i965->intel.device_info)) {
+        unsigned int saved_filter_flag;
+        struct i965_post_processing_context *i965pp_context = i965->pp_context;
+
+        i965_vpp_clear_surface(ctx, &proc_context->pp_context,
+                               obj_surface,
+                               pipeline_param->output_background_color);
+
+        saved_filter_flag = i965pp_context->filter_flags;
+        i965pp_context->filter_flags = VA_FILTER_SCALING_HQ;
+
+        dst_surface.base = (struct object_base *)obj_surface;
+        dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+        i965_image_processing(ctx, &src_surface, &src_rect, &dst_surface, &dst_rect);
+
+        i965pp_context->filter_flags = saved_filter_flag;
+
+        if (num_tmp_surfaces)
+            i965_DestroySurfaces(ctx,
+                             tmp_surfaces,
+                             num_tmp_surfaces);
+
+        return VA_STATUS_SUCCESS;
+    }
+
     int csc_needed = 0;
     if (obj_surface->fourcc && obj_surface->fourcc !=  VA_FOURCC_NV12){
         csc_needed = 1;
