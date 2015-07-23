@@ -1783,6 +1783,7 @@ gen9_hcpe_hevc_pipeline_programing(VADriverContextP ctx,
                                    struct encode_state *encode_state,
                                    struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     dri_bo *slice_batch_bo;
 
@@ -1793,7 +1794,10 @@ gen9_hcpe_hevc_pipeline_programing(VADriverContextP ctx,
 #endif
 
     // begin programing
-    intel_batchbuffer_start_atomic_bcs(batch, 0x4000);
+    if (i965->intel.has_bsd2)
+        intel_batchbuffer_start_atomic_bcs_override(batch, 0x4000, BSD_RING0);
+    else
+        intel_batchbuffer_start_atomic_bcs(batch, 0x4000);
     intel_batchbuffer_emit_mi_flush(batch);
 
     // picture level programing
