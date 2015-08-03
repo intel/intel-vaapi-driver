@@ -497,6 +497,7 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
     struct object_surface *obj_surface;	
     struct object_buffer *obj_buffer;
     VAEncPictureParameterBufferHEVC *pic_param = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferHEVC *slice_param;
     int i;
 
     assert(!(pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID));
@@ -539,7 +540,18 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
 
     for ( ; i < 15; i++)
         encode_state->reference_objects[i] = NULL;
-    
+
+    for (i = 0; i < encode_state->num_slice_params_ext; i++) {
+        slice_param = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[i]->buffer;
+
+        if (slice_param->slice_type != HEVC_SLICE_I &&
+            slice_param->slice_type != HEVC_SLICE_P &&
+            slice_param->slice_type != HEVC_SLICE_B)
+            goto error;
+
+        /* TODO: add more check here */
+    }
+
     return VA_STATUS_SUCCESS;
 
 error:
