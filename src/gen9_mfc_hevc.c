@@ -2529,7 +2529,7 @@ gen9_hcpe_context_destroy(void *context)
 
     /* mv temporal buffer */
     for (i = 0; i < NUM_HCP_CURRENT_COLLOCATED_MV_TEMPORAL_BUFFERS; i++) {
-        if (hcpe_context->reference_surfaces[i].bo != NULL)
+        if (hcpe_context->current_collocated_mv_temporal_buffer[i].bo != NULL)
             dri_bo_unreference(hcpe_context->current_collocated_mv_temporal_buffer[i].bo);
         hcpe_context->current_collocated_mv_temporal_buffer[i].bo = NULL;
     }
