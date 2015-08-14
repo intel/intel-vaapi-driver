@@ -5957,6 +5957,8 @@ i965_proc_picture(VADriverContextP ctx,
                                obj_surface,
                                pipeline_param->output_background_color);
 
+        intel_batchbuffer_flush(hw_context->batch);
+
         saved_filter_flag = i965pp_context->filter_flags;
         i965pp_context->filter_flags = VA_FILTER_SCALING_HQ;
 
