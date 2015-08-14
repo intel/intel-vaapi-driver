@@ -5953,6 +5953,12 @@ i965_proc_picture(VADriverContextP ctx,
         unsigned int saved_filter_flag;
         struct i965_post_processing_context *i965pp_context = i965->pp_context;
 
+        if (obj_surface->fourcc == 0) {
+            i965_check_alloc_surface_bo(ctx, obj_surface, 1,
+                                        VA_FOURCC_NV12,
+                                        SUBSAMPLE_YUV420);
+        }
+
         i965_vpp_clear_surface(ctx, &proc_context->pp_context,
                                obj_surface,
                                pipeline_param->output_background_color);
