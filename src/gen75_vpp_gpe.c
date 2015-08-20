@@ -871,6 +871,7 @@ vpp_gpe_context_init(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct vpp_gpe_context  *vpp_gpe_ctx = calloc(1, sizeof(struct vpp_gpe_context));
+    assert(vpp_gpe_ctx);
     struct i965_gpe_context *gpe_ctx = &(vpp_gpe_ctx->gpe_ctx);
 
     assert(IS_HASWELL(i965->intel.device_info) ||

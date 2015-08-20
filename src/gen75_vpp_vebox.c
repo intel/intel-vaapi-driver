@@ -1763,6 +1763,7 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
     struct intel_vebox_context *proc_context = calloc(1, sizeof(struct intel_vebox_context));
     int i;
 
+    assert(proc_context);
     proc_context->batch = intel_batchbuffer_new(intel, I915_EXEC_VEBOX, 0);
 
     for (i = 0; i < ARRAY_ELEMS(proc_context->frame_store); i++)

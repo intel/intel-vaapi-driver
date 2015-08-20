@@ -65,6 +65,7 @@ gen7_mfd_init_avc_surface(VADriverContextP ctx,
 
     if (!gen7_avc_surface) {
         gen7_avc_surface = calloc(sizeof(GenAvcSurface), 1);
+        assert(gen7_avc_surface);
         gen7_avc_surface->base.frame_store_id = -1;
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = gen7_avc_surface;
@@ -1246,6 +1247,7 @@ gen7_mfd_init_vc1_surface(VADriverContextP ctx,
 
     if (!gen7_vc1_surface) {
         gen7_vc1_surface = calloc(sizeof(struct gen7_vc1_surface), 1);
+        assert(gen7_vc1_surface);
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = gen7_vc1_surface;
     }
@@ -2729,6 +2731,7 @@ gen7_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     struct gen7_mfd_context *gen7_mfd_context = calloc(1, sizeof(struct gen7_mfd_context));
     int i;
 
+    assert(gen7_mfd_context);
     gen7_mfd_context->base.destroy = gen7_mfd_context_destroy;
     gen7_mfd_context->base.run = gen7_mfd_decode_picture;
     gen7_mfd_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);

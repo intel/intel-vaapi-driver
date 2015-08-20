@@ -266,6 +266,7 @@ gen75_proc_context_init(VADriverContextP ctx,
    struct intel_video_process_context *proc_context 
            = calloc(1, sizeof(struct intel_video_process_context));
 
+    assert(proc_context);
     proc_context->base.destroy = gen75_proc_context_destroy;
     proc_context->base.run     = gen75_proc_picture;
 
