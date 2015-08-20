@@ -674,6 +674,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     struct intel_encoder_context *encoder_context = calloc(1, sizeof(struct intel_encoder_context));
     int i;
 
+    assert(encoder_context);
     encoder_context->base.destroy = intel_encoder_context_destroy;
     encoder_context->base.run = intel_encoder_end_picture;
     encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);

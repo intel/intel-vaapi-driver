@@ -1338,6 +1338,7 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     //If the codec is JPEG, bypass VME
     if(encoder_context->codec != CODEC_JPEG) {
         vme_context = calloc(1, sizeof(struct gen6_vme_context));
+        assert(vme_context);
         vme_context->vme_kernel_sum = i965_kernel_num;
         vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 

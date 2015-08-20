@@ -95,6 +95,7 @@ intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size
 	buffer_size = MAX_BATCH_SIZE;
    }
 
+    assert(batch);
     batch->intel = intel;
     batch->flag = flag;
     batch->run = drm_intel_bo_mrb_exec;

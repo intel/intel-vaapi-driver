@@ -1817,6 +1817,8 @@ Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
         break;
     }
+
+    assert(vme_context);
     vme_context->vme_kernel_sum = i965_kernel_num;
     vme_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 

@@ -1984,6 +1984,7 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
 
         hevc_encoder_surface = calloc(sizeof(GenHevcSurface), 1);
 
+        assert(hevc_encoder_surface);
         hevc_encoder_surface->motion_vector_temporal_bo =
             dri_bo_alloc(i965->intel.bufmgr,
                          "motion vector temporal buffer",
@@ -2583,6 +2584,7 @@ Bool gen9_hcpe_context_init(VADriverContextP ctx, struct intel_encoder_context *
 {
     struct gen9_hcpe_context *hcpe_context = calloc(1, sizeof(struct gen9_hcpe_context));
 
+    assert(hcpe_context);
     hcpe_context->pipe_mode_select = gen9_hcpe_pipe_mode_select;
     hcpe_context->set_surface_state = gen9_hcpe_surface_state;
     hcpe_context->ind_obj_base_addr_state = gen9_hcpe_ind_obj_base_addr_state;

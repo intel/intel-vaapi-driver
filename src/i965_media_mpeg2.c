@@ -979,6 +979,7 @@ i965_media_mpeg2_dec_context_init(VADriverContextP ctx, struct i965_media_contex
     int i;
 
     i965_mpeg2_context = calloc(1, sizeof(struct i965_mpeg2_context));
+    assert(i965_mpeg2_context);
     i965_mpeg2_context->wa_slice_vertical_position = -1;
 
     /* kernel */

@@ -61,6 +61,7 @@ gen6_mfd_init_avc_surface(VADriverContextP ctx,
 
     if (!gen6_avc_surface) {
         gen6_avc_surface = calloc(sizeof(GenAvcSurface), 1);
+        assert(gen6_avc_surface);
         gen6_avc_surface->base.frame_store_id = -1;
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = gen6_avc_surface;
