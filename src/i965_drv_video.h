@@ -268,6 +268,7 @@ struct object_surface
     int flags;
     unsigned int fourcc;    
     dri_bo *bo;
+    unsigned int expected_format;
     VAImageID locked_image_id;
     VAImageID derived_image_id;
     void (*free_private_data)(void **data);
