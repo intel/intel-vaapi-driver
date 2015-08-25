@@ -2302,7 +2302,7 @@ i965_BeginPicture(VADriverContextP ctx,
     struct object_context *obj_context = CONTEXT(context);
     struct object_surface *obj_surface = SURFACE(render_target);
     struct object_config *obj_config;
-    VAStatus vaStatus;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
 
     ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
@@ -2312,55 +2312,6 @@ i965_BeginPicture(VADriverContextP ctx,
 
     if (is_surface_busy(i965, obj_surface))
         return VA_STATUS_ERROR_SURFACE_BUSY;
-
-    switch (obj_config->profile) {
-    case VAProfileMPEG2Simple:
-    case VAProfileMPEG2Main:
-        vaStatus = VA_STATUS_SUCCESS;
-        break;
-
-    case VAProfileH264ConstrainedBaseline:
-    case VAProfileH264Main:
-    case VAProfileH264High:
-        vaStatus = VA_STATUS_SUCCESS;
-        break;
-
-    case VAProfileH264MultiviewHigh:
-    case VAProfileH264StereoHigh:
-        if (HAS_H264_MVC_DECODING_PROFILE(i965, obj_config->profile) ||
-            HAS_H264_MVC_ENCODING(i965)) {
-            vaStatus = VA_STATUS_SUCCESS;
-        } else {
-            ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
-        }
-        break;
-
-    case VAProfileVC1Simple:
-    case VAProfileVC1Main:
-    case VAProfileVC1Advanced:
-        vaStatus = VA_STATUS_SUCCESS;
-        break;
-
-    case VAProfileJPEGBaseline:
-        vaStatus = VA_STATUS_SUCCESS;
-        break;
-
-    case VAProfileNone:
-        vaStatus = VA_STATUS_SUCCESS;
-        break;
-
-    case VAProfileVP8Version0_3:
-        vaStatus = VA_STATUS_SUCCESS;
-        break;
-
-    case VAProfileHEVCMain:
-        vaStatus = VA_STATUS_SUCCESS;
-        break;
-
-    default:
-        ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
-        break;
-    }
 
     if (obj_context->codec_type == CODEC_PROC) {
         obj_context->codec_state.proc.current_render_target = render_target;
