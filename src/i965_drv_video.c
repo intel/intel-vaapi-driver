@@ -786,6 +786,10 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             }
             break;
 
+        case VAConfigAttribDecSliceMode:
+            attrib_list[i].value = VA_DEC_SLICE_MODE_NORMAL;
+            break;
+
         default:
             /* Do nothing */
             attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
