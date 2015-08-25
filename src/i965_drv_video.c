@@ -1288,6 +1288,7 @@ i965_CreateSurfaces2(
         obj_surface->height = ALIGN(height, i965->codec_info->min_linear_hpitch);
         obj_surface->flags = SURFACE_REFERENCED;
         obj_surface->fourcc = 0;
+        obj_surface->expected_format = format;
         obj_surface->bo = NULL;
         obj_surface->locked_image_id = VA_INVALID_ID;
         obj_surface->derived_image_id = VA_INVALID_ID;
