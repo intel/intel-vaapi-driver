@@ -706,7 +706,6 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                          int num_attribs)
 {
     VAStatus va_status;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
 
     va_status = i965_validate_config(ctx, profile, entrypoint);

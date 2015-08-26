@@ -4743,7 +4743,6 @@ i965_post_processing_internal(
 )
 {
     VAStatus va_status;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
 
     if (pp_context && pp_context->intel_post_processing) {
         va_status = (pp_context->intel_post_processing)(ctx, pp_context,

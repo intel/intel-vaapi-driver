@@ -1249,7 +1249,6 @@ gen75_mfc_avc_software_batchbuffer(VADriverContextP ctx,
                                    struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch;
     dri_bo *batch_bo;
     int i;

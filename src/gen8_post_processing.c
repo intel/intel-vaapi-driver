@@ -1254,7 +1254,6 @@ gen8_pp_curbe_load(VADriverContextP ctx,
                    struct i965_post_processing_context *pp_context)
 {
     struct intel_batchbuffer *batch = pp_context->batch;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int param_size = 64;
 
     param_size = sizeof(struct gen7_pp_static_parameter);

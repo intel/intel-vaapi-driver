@@ -1191,7 +1191,6 @@ gen8_mfc_avc_software_batchbuffer(VADriverContextP ctx,
                                   struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch;
     dri_bo *batch_bo;
     int i;
@@ -2259,7 +2258,6 @@ gen8_mfc_mpeg2_software_slice_batchbuffer(VADriverContextP ctx,
                                           struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch;
     VAEncSliceParameterBufferMPEG2 *next_slice_group_param = NULL;
     dri_bo *batch_bo;
@@ -4385,7 +4383,6 @@ static int gen8_mfc_calc_vp8_coded_buffer_size(VADriverContextP ctx,
                           struct encode_state *encode_state,
                           struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     unsigned char is_intra_frame = !pic_param->pic_flags.bits.frame_type;
