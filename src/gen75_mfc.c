@@ -458,8 +458,8 @@ static void gen75_mfc_init(VADriverContextP ctx,
     mfc_context->mfc_indirect_pak_bse_object.bo = NULL;
 
     for (i = 0; i < NUM_MFC_DMV_BUFFERS; i++){
-        if ( mfc_context->direct_mv_buffers[i].bo != NULL);
-        dri_bo_unreference(mfc_context->direct_mv_buffers[i].bo);
+        if (mfc_context->direct_mv_buffers[i].bo != NULL)
+            dri_bo_unreference(mfc_context->direct_mv_buffers[i].bo);
         mfc_context->direct_mv_buffers[i].bo = NULL;
     }
 
