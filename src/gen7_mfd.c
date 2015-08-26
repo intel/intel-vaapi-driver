@@ -1880,7 +1880,7 @@ gen7_mfd_jpeg_decode_init(VADriverContextP ctx,
                    v1 == 2 && v2 == 2 && v3 == 2) {
             subsampling = SUBSAMPLE_YUV422H;
             fourcc = VA_FOURCC_422H;
-        } else if (h2 == 2 && h2 == 2 && h3 == 2 &&
+        } else if (h1 == 2 && h2 == 2 && h3 == 2 &&
                    v1 == 2 && v2 == 1 && v3 == 1) {
             subsampling = SUBSAMPLE_YUV422V;
             fourcc = VA_FOURCC_422V;
