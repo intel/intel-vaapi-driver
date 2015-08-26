@@ -131,8 +131,11 @@ fi
 AM_CONDITIONAL(USE_X11, test "$USE_X11" = "yes")
 
 dnl Check for VA-API drivers path
-AC_MSG_CHECKING([for VA drivers path])
-LIBVA_DRIVERS_PATH=`$PKG_CONFIG libva --variable driverdir`
+AC_ARG_VAR(LIBVA_DRIVERS_PATH, [drivers install path])
+if test -z "$LIBVA_DRIVERS_PATH"; then
+    AC_MSG_CHECKING([for VA drivers path])
+    LIBVA_DRIVERS_PATH=`$PKG_CONFIG libva --variable driverdir`
+fi
 if test -z "$LIBVA_DRIVERS_PATH"; then
     LIBVA_DRIVERS_PATH="${libdir}/xorg/modules/drivers"
 fi
