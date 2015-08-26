@@ -2880,8 +2880,8 @@ generate_ordered_codes_table(uint8_t *huff_vals, uint8_t *huff_size_table, uint1
     uint8_t huff_si_table[huff_val_size]; 
     uint16_t huff_co_table[huff_val_size];
     
-    memset(huff_si_table, 0, huff_val_size);
-    memset(huff_co_table, 0, huff_val_size);
+    memset(huff_si_table, 0, sizeof(huff_si_table));
+    memset(huff_co_table, 0, sizeof(huff_co_table));
     
     do {
         i = map_huffval_to_index(huff_vals[k]);
