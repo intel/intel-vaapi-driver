@@ -2908,8 +2908,8 @@ convert_hufftable_to_codes(VAHuffmanTableBufferJPEGBaseline *huff_buffer, uint32
     uint8_t huff_size_table[huff_val_size+1]; //The +1 for adding 0 at the end of huff_val_size
     uint16_t huff_code_table[huff_val_size];
 
-    memset(huff_size_table, 0, huff_val_size);
-    memset(huff_code_table, 0, huff_val_size);
+    memset(huff_size_table, 0, sizeof(huff_size_table));
+    memset(huff_code_table, 0, sizeof(huff_code_table));
 
     huff_bits = (type == 0) ? (huff_buffer->huffman_table[index].num_dc_codes) : (huff_buffer->huffman_table[index].num_ac_codes);
     huff_vals = (type == 0) ? (huff_buffer->huffman_table[index].dc_values) : (huff_buffer->huffman_table[index].ac_values);
