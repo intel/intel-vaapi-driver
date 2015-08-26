@@ -1654,9 +1654,6 @@ gen7_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
-
-    assert(decode_state->pic_param && decode_state->pic_param->buffer);
-    pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
     intensitycomp_single = (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation);
 
     BEGIN_BCS_BATCH(batch, 6);
