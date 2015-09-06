@@ -2161,6 +2161,8 @@ i965_create_buffer_internal(VADriverContextP ctx,
     struct buffer_store *buffer_store = NULL;
     int bufferID;
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
+    struct object_context *obj_context = CONTEXT(context);
+    int wrapper_flag = 0;
 
     /* Validate type */
     switch (type) {
@@ -2217,22 +2219,54 @@ i965_create_buffer_internal(VADriverContextP ctx,
     assert(buffer_store);
     buffer_store->ref_count = 1;
 
+    if (obj_context &&
+        (obj_context->wrapper_context != VA_INVALID_ID) &&
+        i965->wrapper_pdrvctx) {
+        VAGenericID wrapper_buffer;
+        VADriverContextP pdrvctx = i965->wrapper_pdrvctx;
+
+        CALL_VTABLE(pdrvctx, vaStatus,
+                    vaCreateBuffer(pdrvctx, obj_context->wrapper_context, type, size, num_elements,
+                                   data, &wrapper_buffer));
+        if (vaStatus == VA_STATUS_SUCCESS) {
+            obj_buffer->wrapper_buffer = wrapper_buffer;
+        } else {
+            free(buffer_store);
+            return vaStatus;
+        }
+        wrapper_flag = 1;
+    }
+
     if (store_bo != NULL) {
         buffer_store->bo = store_bo;
         dri_bo_reference(buffer_store->bo);
-        
-        if (data)
+
+        /* If the buffer is wrapped, the buffer_store is bogus. Unnecessary to copy it */
+        if (data && !wrapper_flag)
             dri_bo_subdata(buffer_store->bo, 0, size * num_elements, data);
     } else if (type == VASliceDataBufferType || 
                type == VAImageBufferType || 
                type == VAEncCodedBufferType ||
                type == VAProbabilityBufferType) {
-        buffer_store->bo = dri_bo_alloc(i965->intel.bufmgr, 
-                                        "Buffer", 
-                                        size * num_elements, 64);
+
+        /* If the buffer is wrapped, the bo/buffer of buffer_store is bogus.
+         * So it is enough to allocate one 64 byte bo
+         */
+        if (wrapper_flag)
+            buffer_store->bo = dri_bo_alloc(i965->intel.bufmgr, "Bogus buffer",
+                                            64, 64);
+        else
+            buffer_store->bo = dri_bo_alloc(i965->intel.bufmgr,
+                                            "Buffer",
+                                            size * num_elements, 64);
         assert(buffer_store->bo);
 
-        if (type == VAEncCodedBufferType) {
+        /* If the buffer is wrapped, the bo/buffer of buffer_store is bogus.
+         * In fact it can be skipped. But it is still allocated and it is
+         * only to follow the normal flowchart of buffer_allocation/release.
+         */
+        if (!wrapper_flag) {
+          if (type == VAEncCodedBufferType) {
             struct i965_coded_buffer_segment *coded_buffer_segment;
 
             dri_bo_map(buffer_store->bo, 1);
@@ -2245,9 +2279,10 @@ i965_create_buffer_internal(VADriverContextP ctx,
             coded_buffer_segment->mapped = 0;
             coded_buffer_segment->codec = 0;
             dri_bo_unmap(buffer_store->bo);
-        } else if (data) {
-            dri_bo_subdata(buffer_store->bo, 0, size * num_elements, data);
-        }
+          } else if (data) {
+              dri_bo_subdata(buffer_store->bo, 0, size * num_elements, data);
+          }
+       }
 
     } else {
         int msize = size;
@@ -2256,10 +2291,14 @@ i965_create_buffer_internal(VADriverContextP ctx,
             msize = ALIGN(size, 4);
         }
 
-        buffer_store->buffer = malloc(msize * num_elements);
+        /* If the buffer is wrapped, it is enough to allocate 4 bytes */
+        if (wrapper_flag)
+            buffer_store->buffer = malloc(4);
+        else
+            buffer_store->buffer = malloc(msize * num_elements);
         assert(buffer_store->buffer);
 
-        if (data)
+        if (data && (!wrapper_flag))
             memcpy(buffer_store->buffer, data, size * num_elements);
     }
 
@@ -2295,6 +2334,19 @@ i965_BufferSetNumElements(VADriverContextP ctx,
 
     ASSERT_RET(obj_buffer, VA_STATUS_ERROR_INVALID_BUFFER);
 
+    /* When the wrapper_buffer exists, it will wrapper to the
+     * buffer allocated from backend driver.
+     */
+    if ((obj_buffer->wrapper_buffer != VA_INVALID_ID) &&
+        i965->wrapper_pdrvctx) {
+        VADriverContextP pdrvctx = i965->wrapper_pdrvctx;
+
+        CALL_VTABLE(pdrvctx, vaStatus,
+                    vaBufferSetNumElements(pdrvctx, obj_buffer->wrapper_buffer,
+                                         num_elements));
+        return vaStatus;
+    }
+
     if ((num_elements < 0) || 
         (num_elements > obj_buffer->max_num_elements)) {
         vaStatus = VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
@@ -2318,6 +2370,19 @@ i965_MapBuffer(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
 
     ASSERT_RET(obj_buffer && obj_buffer->buffer_store, VA_STATUS_ERROR_INVALID_BUFFER);
+
+    /* When the wrapper_buffer exists, it will wrapper to the
+     * buffer allocated from backend driver.
+     */
+    if ((obj_buffer->wrapper_buffer != VA_INVALID_ID) &&
+        i965->wrapper_pdrvctx) {
+        VADriverContextP pdrvctx = i965->wrapper_pdrvctx;
+
+        CALL_VTABLE(pdrvctx, vaStatus,
+                    vaMapBuffer(pdrvctx, obj_buffer->wrapper_buffer, pbuf));
+        return vaStatus;
+    }
+
     ASSERT_RET(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_INVALID_BUFFER);
     ASSERT_RET(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer), VA_STATUS_ERROR_INVALID_BUFFER);
 
@@ -2430,6 +2495,18 @@ i965_UnmapBuffer(VADriverContextP ctx, VABufferID buf_id)
         return VA_STATUS_ERROR_INVALID_BUFFER;
 
     ASSERT_RET(obj_buffer && obj_buffer->buffer_store, VA_STATUS_ERROR_INVALID_BUFFER);
+    /* When the wrapper_buffer exists, it will wrapper to the
+     * buffer allocated from backend driver.
+     */
+    if ((obj_buffer->wrapper_buffer != VA_INVALID_ID) &&
+        i965->wrapper_pdrvctx) {
+        VADriverContextP pdrvctx = i965->wrapper_pdrvctx;
+
+        CALL_VTABLE(pdrvctx, vaStatus,
+                    vaUnmapBuffer(pdrvctx, obj_buffer->wrapper_buffer));
+        return vaStatus;
+    }
+
     ASSERT_RET(obj_buffer->buffer_store->bo || obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_OPERATION_FAILED);
     ASSERT_RET(!(obj_buffer->buffer_store->bo && obj_buffer->buffer_store->buffer), VA_STATUS_ERROR_OPERATION_FAILED);
 
@@ -5448,6 +5525,16 @@ i965_AcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id,
     if (obj_buffer->type != VAImageBufferType)
         return VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
 
+    /*
+     * As the allocated buffer by calling vaCreateBuffer is related with
+     * the specific context, it is unnecessary to export it.
+     * So it is not supported when the buffer is allocated from wrapped
+     * backend dirver.
+     */
+    if (obj_buffer->wrapper_buffer != VA_INVALID_ID) {
+        return VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
+    }
+
     if (!buf_info)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
@@ -5476,6 +5563,10 @@ i965_ReleaseBufferHandle(VADriverContextP ctx, VABufferID buf_id)
 
     if (!obj_buffer)
         return VA_STATUS_ERROR_INVALID_BUFFER;
+
+    if (obj_buffer->wrapper_buffer != VA_INVALID_ID) {
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+    }
 
     return i965_release_buffer_handle(obj_buffer);
 }
