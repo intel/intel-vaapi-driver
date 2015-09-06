@@ -421,6 +421,8 @@ va_enc_packed_type_to_idx(int packed_type)
     return idx;
 }
 
+#define CALL_VTABLE(vawr, status, param) status = (vawr->vtable->param)
+
 VAStatus 
 i965_QueryConfigProfiles(VADriverContextP ctx,
                          VAProfile *profile_list,       /* out */
@@ -901,6 +903,22 @@ i965_CreateConfig(VADriverContextP ctx,
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
     }
 
+    if ((vaStatus == VA_STATUS_SUCCESS) &&
+        (profile == VAProfileVP9Profile0)) {
+
+        if (i965->wrapper_pdrvctx) {
+            VAGenericID wrapper_config;
+
+            CALL_VTABLE(i965->wrapper_pdrvctx, vaStatus,
+                        vaCreateConfig(i965->wrapper_pdrvctx, profile,
+                                       entrypoint, attrib_list,
+                                       num_attribs, &wrapper_config));
+
+            if (vaStatus == VA_STATUS_SUCCESS)
+                obj_config->wrapper_config = wrapper_config;
+        }
+    }
+
     /* Error recovery */
     if (VA_STATUS_SUCCESS != vaStatus) {
         i965_destroy_config(&i965->config_heap, (struct object_base *)obj_config);
@@ -921,6 +939,14 @@ i965_DestroyConfig(VADriverContextP ctx, VAConfigID config_id)
     if (NULL == obj_config) {
         vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
         return vaStatus;
+    }
+
+    if ((obj_config->wrapper_config != VA_INVALID_ID) &&
+        i965->wrapper_pdrvctx) {
+        CALL_VTABLE(i965->wrapper_pdrvctx, vaStatus,
+                    vaDestroyConfig(i965->wrapper_pdrvctx,
+                                    obj_config->wrapper_config));
+        obj_config->wrapper_config = VA_INVALID_ID;
     }
 
     i965_destroy_config(&i965->config_heap, (struct object_base *)obj_config);
@@ -1948,6 +1974,30 @@ i965_CreateContext(VADriverContextP ctx,
         return VA_STATUS_ERROR_INVALID_CONFIG;
     obj_context->codec_state.base.chroma_formats = attrib->value;
 
+    if (obj_config->wrapper_config != VA_INVALID_ID) {
+        /* The wrapper_pdrvctx should exist when wrapper_config is valid.
+         * So it won't check i965->wrapper_pdrvctx again.
+         * Fixme if it is incorrect.
+         */
+        VAGenericID wrapper_context;
+
+        /*
+         * The render_surface is not passed when calling
+         * vaCreateContext.
+         * If it is needed, we must get the wrapped surface
+         * for the corresponding Surface_list.
+         * So the wrapped surface conversion is deferred.
+         */
+        CALL_VTABLE(i965->wrapper_pdrvctx, vaStatus,
+                    vaCreateContext(i965->wrapper_pdrvctx,
+                                    obj_config->wrapper_config,
+                                    picture_width, picture_height,
+                                    flag, NULL, 0,
+                                    &wrapper_context));
+
+        if (vaStatus == VA_STATUS_SUCCESS)
+            obj_context->wrapper_context = wrapper_context;
+    }
     /* Error recovery */
     if (VA_STATUS_SUCCESS != vaStatus) {
         i965_destroy_context(&i965->context_heap, (struct object_base *)obj_context);
@@ -1963,15 +2013,25 @@ i965_DestroyContext(VADriverContextP ctx, VAContextID context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_context *obj_context = CONTEXT(context);
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
 
     if (i965->current_context_id == context)
         i965->current_context_id = VA_INVALID_ID;
 
+    if ((obj_context->wrapper_context != VA_INVALID_ID) &&
+        i965->wrapper_pdrvctx) {
+        CALL_VTABLE(i965->wrapper_pdrvctx, va_status,
+                    vaDestroyContext(i965->wrapper_pdrvctx,
+                                     obj_context->wrapper_context));
+
+        obj_context->wrapper_context = VA_INVALID_ID;
+    }
+
     i965_destroy_context(&i965->context_heap, (struct object_base *)obj_context);
 
-    return VA_STATUS_SUCCESS;
+    return va_status;
 }
 
 static void 
