@@ -424,6 +424,8 @@ struct i965_driver_data
 
     /* VA/Wayland specific data */
     struct va_wl_output *wl_output;
+
+    VADriverContextP wrapper_pdrvctx;
 };
 
 #define NEW_CONFIG_ID() object_heap_allocate(&i965->config_heap);
