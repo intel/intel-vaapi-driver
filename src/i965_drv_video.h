@@ -105,6 +105,8 @@ struct object_config
     VAEntrypoint entrypoint;
     VAConfigAttrib attrib_list[I965_MAX_CONFIG_ATTRIBUTES];
     int num_attribs;
+
+    VAGenericID wrapper_config;
 };
 
 #define NUM_SLICES     10
@@ -245,6 +247,8 @@ struct object_context
     int codec_type;
     union codec_state codec_state;
     struct hw_context *hw_context;
+
+    VAGenericID       wrapper_context;
 };
 
 #define SURFACE_REFERENCED      (1 << 0)
@@ -285,6 +289,8 @@ struct object_surface
     uint32_t user_disable_tiling : 1;
     uint32_t user_h_stride_set   : 1;
     uint32_t user_v_stride_set   : 1;
+
+    VAGenericID wrapper_surface;
 };
 
 struct object_buffer 
@@ -299,6 +305,8 @@ struct object_buffer
     /* Export state */
     unsigned int export_refcount;
     VABufferInfo export_state;
+
+    VAGenericID wrapper_buffer;
 };
 
 struct object_image 
