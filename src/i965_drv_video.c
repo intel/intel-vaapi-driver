@@ -29,6 +29,7 @@
 
 #include "sysdeps.h"
 #include <unistd.h>
+#include <dlfcn.h>
 
 #ifdef HAVE_VA_X11
 # include "i965_output_dri.h"
@@ -5731,6 +5732,133 @@ error:
     return false;
 }
 
+/* Only when the option of "enable-wrapper" is passed, it is possible
+ * to initialize/load the wrapper context of backend driver.
+ * Otherwise it is not loaded.
+ */
+#if HAVE_USE_WRAPPER
+
+static VAStatus
+i965_initialize_wrapper(VADriverContextP ctx, const char *driver_name)
+{
+#define DRIVER_EXTENSION	"_drv_video.so"
+
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    VADriverContextP wrapper_pdrvctx;
+    struct VADriverVTable *vtable;
+    char *search_path, *driver_dir;
+    char *saveptr;
+    char driver_path[256];
+    void *handle = NULL;
+    VAStatus va_status = VA_STATUS_SUCCESS;
+    bool driver_loaded = false;
+
+    if (!(IS_HASWELL(i965->intel.device_info) ||
+          IS_GEN8(i965->intel.device_info) ||
+          IS_GEN9(i965->intel.device_info))) {
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    }
+
+    wrapper_pdrvctx = calloc(1, sizeof(*wrapper_pdrvctx));
+    vtable = calloc(1, sizeof(*vtable));
+
+    if (!wrapper_pdrvctx || !vtable) {
+        fprintf(stderr, "Failed to allocate memory for wrapper \n");
+        free(wrapper_pdrvctx);
+        free(vtable);
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
+    /* use the same drm_state with CTX */
+    wrapper_pdrvctx->drm_state = ctx->drm_state;
+    wrapper_pdrvctx->display_type = ctx->display_type;
+    wrapper_pdrvctx->vtable = vtable;
+
+    search_path = VA_DRIVERS_PATH;
+    search_path = strdup((const char *)search_path);
+
+    driver_dir = strtok_r(search_path, ":", &saveptr);
+    while (driver_dir && !driver_loaded) {
+        memset(driver_path, 0, sizeof(driver_path));
+        sprintf(driver_path, "%s/%s%s", driver_dir, driver_name, DRIVER_EXTENSION);
+
+        if (access(driver_path, F_OK)) {
+            driver_dir = strtok_r(NULL, ":", &saveptr);
+            continue;
+        }
+
+        handle = dlopen(driver_path, RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE);
+        if (!handle) {
+            fprintf(stderr, "failed to open %s\n", driver_path);
+            driver_dir = strtok_r(NULL, ":", &saveptr);
+            continue;
+        }
+        {
+            VADriverInit init_func = NULL;
+            char init_func_s[256];
+            int i;
+
+            static const struct {
+                int major;
+                int minor;
+            } compatible_versions[] = {
+                { VA_MAJOR_VERSION, VA_MINOR_VERSION },
+                { 0, 37 },
+                { 0, 36 },
+                { 0, 35 },
+                { 0, 34 },
+                { 0, 33 },
+                { 0, 32 },
+                { -1, }
+            };
+            for (i = 0; compatible_versions[i].major >= 0; i++) {
+                snprintf(init_func_s, sizeof(init_func_s),
+                     "__vaDriverInit_%d_%d",
+                     compatible_versions[i].major,
+                     compatible_versions[i].minor);
+                init_func = (VADriverInit)dlsym(handle, init_func_s);
+                if (init_func) {
+                    break;
+                }
+            }
+            if (compatible_versions[i].major < 0) {
+                dlclose(handle);
+                fprintf(stderr, "%s has no function %s\n",
+                            driver_path, init_func_s);
+                driver_dir = strtok_r(NULL, ":", &saveptr);
+                continue;
+            }
+
+            if (init_func)
+                va_status = (*init_func)(wrapper_pdrvctx);
+
+            if (va_status != VA_STATUS_SUCCESS) {
+                dlclose(handle);
+                fprintf(stderr, "%s init failed\n", driver_path);
+                driver_dir = strtok_r(NULL, ":", &saveptr);
+                continue;
+            }
+
+            wrapper_pdrvctx->handle = handle;
+            driver_loaded = true;
+        }
+    }
+
+    free(search_path);
+
+    if (driver_loaded) {
+        i965->wrapper_pdrvctx = wrapper_pdrvctx;
+        return VA_STATUS_SUCCESS;
+    } else {
+        fprintf(stderr, "Failed to wrapper %s%s\n", driver_name, DRIVER_EXTENSION);
+        free(vtable);
+        free(wrapper_pdrvctx);
+        return VA_STATUS_ERROR_OPERATION_FAILED;
+    }
+}
+#endif
+
 static VAStatus 
 i965_Init(VADriverContextP ctx)
 {
@@ -5763,6 +5891,10 @@ i965_Init(VADriverContextP ctx)
         if (i965->codec_info && i965->codec_info->preinit_hw_codec)
             i965->codec_info->preinit_hw_codec(ctx, i965->codec_info);
 
+#if HAVE_USE_WRAPPER
+        i965_initialize_wrapper(ctx, "hybrid");
+#endif
+
         return VA_STATUS_SUCCESS;
     } else {
         i--;
@@ -5783,6 +5915,19 @@ i965_Terminate(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
+
+    if (i965->wrapper_pdrvctx) {
+       VADriverContextP pdrvctx;
+       pdrvctx = i965->wrapper_pdrvctx;
+       if (pdrvctx->handle) {
+           pdrvctx->vtable->vaTerminate(pdrvctx);
+           dlclose(pdrvctx->handle);
+           pdrvctx->handle = NULL;
+       }
+       free(pdrvctx->vtable);
+       free(pdrvctx);
+       i965->wrapper_pdrvctx = NULL;
+    }
 
     if (i965) {
         for (i = ARRAY_ELEMS(i965_sub_ops); i > 0; i--)
@@ -5882,6 +6027,7 @@ VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
     }
 
+    i965->wrapper_pdrvctx = NULL;
     ctx->pDriverData = (void *)i965;
     ret = i965_Init(ctx);
 

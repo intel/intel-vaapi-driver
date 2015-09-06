@@ -29,6 +29,7 @@ AM_CPPFLAGS = \
 	-DPTHREADS		\
 	$(DRM_CFLAGS)		\
 	$(LIBVA_DEPS_CFLAGS)	\
+	-DVA_DRIVERS_PATH="\"$(LIBVA_DRIVERS_PATH)\"" \
 	$(NULL)
 
 driver_cflags = \
