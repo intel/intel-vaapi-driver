@@ -564,6 +564,25 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileHEVCMain;
     }
 
+    if (i965->wrapper_pdrvctx) {
+        VAProfile wrapper_list[4];
+        int wrapper_num;
+        VADriverContextP pdrvctx;
+        VAStatus va_status;
+
+        pdrvctx = i965->wrapper_pdrvctx;
+        CALL_VTABLE(pdrvctx, va_status,
+                    vaQueryConfigProfiles(pdrvctx,
+                                          wrapper_list, &wrapper_num));
+
+        if (va_status == VA_STATUS_SUCCESS) {
+            int j;
+            for (j = 0; j < wrapper_num; j++)
+                if (wrapper_list[j] != VAProfileNone)
+                    profile_list[i++] = wrapper_list[j];
+        }
+    }
+
     /* If the assert fails then I965_MAX_PROFILES needs to be bigger */
     ASSERT_RET(i <= I965_MAX_PROFILES, VA_STATUS_ERROR_OPERATION_FAILED);
     *num_profiles = i;
@@ -645,6 +664,20 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
 
         if (HAS_HEVC_ENCODING(i965))
             entrypoint_list[n++] = VAEntrypointEncSlice;
+
+        break;
+
+    case VAProfileVP9Profile0:
+        if (i965->wrapper_pdrvctx) {
+            VAStatus va_status = VA_STATUS_SUCCESS;
+            VADriverContextP pdrvctx = i965->wrapper_pdrvctx;
+
+            CALL_VTABLE(pdrvctx, va_status,
+                        vaQueryConfigEntrypoints(pdrvctx, profile,
+                                                 entrypoint_list,
+                                                 num_entrypoints));
+            return va_status;
+        }
 
         break;
 
@@ -743,6 +776,13 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         else
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
 
+        break;
+
+    case VAProfileVP9Profile0:
+        if (i965->wrapper_pdrvctx)
+            va_status = VA_STATUS_SUCCESS;
+        else
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         break;
 
     default:
