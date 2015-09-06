@@ -2626,6 +2626,20 @@ i965_BeginPicture(VADriverContextP ctx,
 
         obj_context->codec_state.decode.num_slice_params = 0;
         obj_context->codec_state.decode.num_slice_datas = 0;
+
+        if ((obj_context->wrapper_context != VA_INVALID_ID) &&
+            i965->wrapper_pdrvctx) {
+            if (obj_surface->wrapper_surface == VA_INVALID_ID)
+                vaStatus = i965_surface_wrapper(ctx, render_target);
+
+            if (vaStatus != VA_STATUS_SUCCESS)
+                return vaStatus;
+
+            CALL_VTABLE(i965->wrapper_pdrvctx, vaStatus,
+                        vaBeginPicture(i965->wrapper_pdrvctx,
+                                       obj_context->wrapper_context,
+                                       obj_surface->wrapper_surface));
+        }
     }
 
     return vaStatus;
@@ -2675,6 +2689,117 @@ DEF_RENDER_DECODE_SINGLE_BUFFER_FUNC(probability_data, probability_data)
 #define DEF_RENDER_DECODE_MULTI_BUFFER_FUNC(name, member) DEF_RENDER_MULTI_BUFFER_FUNC(decode, name, member)
 DEF_RENDER_DECODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
 DEF_RENDER_DECODE_MULTI_BUFFER_FUNC(slice_data, slice_datas)
+
+
+static VAStatus
+i965_decoder_vp9_wrapper_picture(VADriverContextP ctx,
+                             VABufferID *buffers,
+                             int num_buffers)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    int i;
+    VADecPictureParameterBufferVP9 *pVp9PicParams;
+    VADriverContextP pdrvctx;
+    struct object_buffer *obj_buffer;
+
+    pdrvctx = i965->wrapper_pdrvctx;
+    /* do the conversion of VADecPictureParameterBufferVP9 */
+    for (i = 0; i < num_buffers; i++) {
+        obj_buffer = BUFFER(buffers[i]);
+
+        if (!obj_buffer)
+            continue;
+
+        if (obj_buffer->wrapper_buffer == VA_INVALID_ID)
+            continue;
+
+        if (obj_buffer->type == VAPictureParameterBufferType) {
+            int j;
+            VASurfaceID surface_id;
+            struct object_surface *obj_surface;
+
+            pdrvctx = i965->wrapper_pdrvctx;
+
+            CALL_VTABLE(pdrvctx, vaStatus,
+                        vaMapBuffer(pdrvctx, obj_buffer->wrapper_buffer,
+                                    (void **)(&pVp9PicParams)));
+
+            if (vaStatus != VA_STATUS_SUCCESS)
+                return vaStatus;
+
+            for (j = 0; j < 8; j++) {
+                surface_id = pVp9PicParams->reference_frames[j];
+                obj_surface = SURFACE(surface_id);
+
+                if (!obj_surface)
+                    continue;
+
+                if (obj_surface->wrapper_surface == VA_INVALID_ID) {
+                    vaStatus = i965_surface_wrapper(ctx, surface_id);
+                    if (vaStatus != VA_STATUS_SUCCESS) {
+                        pdrvctx->vtable->vaUnmapBuffer(pdrvctx,
+                                    obj_buffer->wrapper_buffer);
+                        goto fail_out;
+                    }
+                }
+
+                pVp9PicParams->reference_frames[j] = obj_surface->wrapper_surface;
+            }
+            CALL_VTABLE(pdrvctx, vaStatus,
+                        vaUnmapBuffer(pdrvctx, obj_buffer->wrapper_buffer));
+            break;
+        }
+    }
+
+    return VA_STATUS_SUCCESS;
+
+fail_out:
+    return vaStatus;
+}
+
+static VAStatus
+i965_decoder_wrapper_picture(VADriverContextP ctx,
+                             VAContextID context,
+                             VABufferID *buffers,
+                             int num_buffers)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_context *obj_context = CONTEXT(context);
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    int i;
+    VADriverContextP pdrvctx;
+    struct object_buffer *obj_buffer;
+
+    /* When it is not wrapped context, continue the normal flowchart */
+    if (obj_context->wrapper_context == VA_INVALID_ID)
+        return vaStatus;
+
+    if (obj_context->obj_config &&
+        (obj_context->obj_config->profile == VAProfileVP9Profile0)) {
+        vaStatus = i965_decoder_vp9_wrapper_picture(ctx, buffers, num_buffers);
+    } else
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    pdrvctx = i965->wrapper_pdrvctx;
+
+    for (i = 0; i < num_buffers && vaStatus == VA_STATUS_SUCCESS; i++) {
+        obj_buffer = BUFFER(buffers[i]);
+
+        if (!obj_buffer)
+            continue;
+
+        if (obj_buffer->wrapper_buffer == VA_INVALID_ID) {
+            vaStatus = VA_STATUS_ERROR_INVALID_BUFFER;
+            break;
+        }
+
+        CALL_VTABLE(pdrvctx, vaStatus,
+                    vaRenderPicture(pdrvctx, obj_context->wrapper_context,
+                                    &(obj_buffer->wrapper_buffer), 1));
+    }
+    return vaStatus;
+}
 
 static VAStatus 
 i965_decoder_render_picture(VADriverContextP ctx,
@@ -2729,6 +2854,10 @@ i965_decoder_render_picture(VADriverContextP ctx,
             break;
         }
     }
+
+    if ((vaStatus == VA_STATUS_SUCCESS) &&
+        (obj_context->wrapper_context != VA_INVALID_ID))
+        vaStatus = i965_decoder_wrapper_picture(ctx, context, buffers, num_buffers);
 
     return vaStatus;
 }
@@ -3152,6 +3281,18 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
         if (obj_context->codec_state.decode.num_slice_params !=
                 obj_context->codec_state.decode.num_slice_datas) {
             return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+
+        if (obj_context->wrapper_context != VA_INVALID_ID) {
+            /* call the vaEndPicture of wrapped driver */
+            VADriverContextP pdrvctx;
+            VAStatus va_status;
+
+            pdrvctx = i965->wrapper_pdrvctx;
+            CALL_VTABLE(pdrvctx, va_status,
+                        vaEndPicture(pdrvctx, obj_context->wrapper_context));
+
+            return va_status;
         }
     }
 
