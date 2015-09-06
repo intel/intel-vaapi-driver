@@ -1420,15 +1420,25 @@ i965_DestroySurfaces(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     for (i = num_surfaces; i--; ) {
         struct object_surface *obj_surface = SURFACE(surface_list[i]);
 
         ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
+
+        if ((obj_surface->wrapper_surface != VA_INVALID_ID) &&
+            i965->wrapper_pdrvctx) {
+            CALL_VTABLE(i965->wrapper_pdrvctx, va_status,
+                        vaDestroySurfaces(i965->wrapper_pdrvctx,
+                                          &(obj_surface->wrapper_surface),
+                                          1));
+            obj_surface->wrapper_surface = VA_INVALID_ID;
+        }
         i965_destroy_surface(&i965->surface_heap, (struct object_base *)obj_surface);
     }
 
-    return VA_STATUS_SUCCESS;
+    return va_status;
 }
 
 VAStatus 
@@ -2355,12 +2365,21 @@ i965_DestroyBuffer(VADriverContextP ctx, VABufferID buffer_id)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_buffer *obj_buffer = BUFFER(buffer_id);
+    VAStatus va_status = VA_STATUS_SUCCESS;
 
     ASSERT_RET(obj_buffer, VA_STATUS_ERROR_INVALID_BUFFER);
 
+    if ((obj_buffer->wrapper_buffer != VA_INVALID_ID) &&
+        i965->wrapper_pdrvctx) {
+        CALL_VTABLE(i965->wrapper_pdrvctx, va_status,
+                    vaDestroyBuffer(i965->wrapper_pdrvctx,
+                                    obj_buffer->wrapper_buffer));
+        obj_buffer->wrapper_buffer = VA_INVALID_ID;
+    }
+
     i965_destroy_buffer(&i965->buffer_heap, (struct object_base *)obj_buffer);
 
-    return VA_STATUS_SUCCESS;
+    return va_status;
 }
 
 VAStatus 
