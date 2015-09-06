@@ -881,6 +881,7 @@ i965_CreateConfig(VADriverContextP ctx,
     obj_config->profile = profile;
     obj_config->entrypoint = entrypoint;
     obj_config->num_attribs = 0;
+    obj_config->wrapper_config = VA_INVALID_ID;
 
     for (i = 0; i < num_attribs; i++) {
         vaStatus = i965_ensure_config_attribute(obj_config, &attrib_list[i]);
@@ -1298,6 +1299,8 @@ i965_CreateSurfaces2(
         obj_surface->private_data = NULL;
         obj_surface->free_private_data = NULL;
         obj_surface->subsampling = SUBSAMPLE_YUV420;
+
+        obj_surface->wrapper_surface = VA_INVALID_ID;
 
         switch (memory_type) {
         case I965_SURFACE_MEM_NATIVE:
@@ -1860,6 +1863,7 @@ i965_CreateContext(VADriverContextP ctx,
     obj_context->render_targets = 
         (VASurfaceID *)calloc(num_render_targets, sizeof(VASurfaceID));
     obj_context->hw_context = NULL;
+    obj_context->wrapper_context = VA_INVALID_ID;
 
     for(i = 0; i < num_render_targets; i++) {
         if (NULL == SURFACE(render_targets[i])) {
@@ -2044,6 +2048,8 @@ i965_create_buffer_internal(VADriverContextP ctx,
     obj_buffer->type = type;
     obj_buffer->export_refcount = 0;
     obj_buffer->buffer_store = NULL;
+    obj_buffer->wrapper_buffer = VA_INVALID_ID;
+
     buffer_store = calloc(1, sizeof(struct buffer_store));
     assert(buffer_store);
     buffer_store->ref_count = 1;
