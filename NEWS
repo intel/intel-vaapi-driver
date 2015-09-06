@@ -1,5 +1,14 @@
-libva-intel-driver NEWS -- summary of changes.  2015-07-01
+libva-intel-driver NEWS -- summary of changes.  2015-09-xx
 Copyright (C) 2009-2015 Intel Corporation
+
+Version 1.6.1 - DD.Sep.2015
+* Wrapper other backend driver to support VP9 decoding on HSW/BDW/BSW/SKL
+* Fix HEVC decoding issue on BSW/SKL
+* Fix HEVC encoding on SKL GT3
+* Fix GPU hang issue when decoding H.264 MBAFF clips
+  (https://bugs.freedesktop.org/show_bug.cgi?id=91207)
+* Fix issues detected by klockwork scan
+* Combine csc/scaling together to optimize the performance
 
 Version 1.6.0 - 01.Jul.2015
 * Add support for VP8 encoding (CQP, CBR) on BSW/SKL
