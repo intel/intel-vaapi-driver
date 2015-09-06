@@ -291,6 +291,8 @@ struct object_surface
     uint32_t user_v_stride_set   : 1;
 
     VAGenericID wrapper_surface;
+
+    int exported_primefd;
 };
 
 struct object_buffer 
