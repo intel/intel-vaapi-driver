@@ -6226,11 +6226,6 @@ i965_initialize_wrapper(VADriverContextP ctx, const char *driver_name)
         memset(driver_path, 0, sizeof(driver_path));
         sprintf(driver_path, "%s/%s%s", driver_dir, driver_name, DRIVER_EXTENSION);
 
-        if (access(driver_path, F_OK)) {
-            driver_dir = strtok_r(NULL, ":", &saveptr);
-            continue;
-        }
-
         handle = dlopen(driver_path, RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE);
         if (!handle) {
             fprintf(stderr, "failed to open %s\n", driver_path);
