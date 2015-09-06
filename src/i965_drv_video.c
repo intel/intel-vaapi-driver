@@ -423,6 +423,92 @@ va_enc_packed_type_to_idx(int packed_type)
 
 #define CALL_VTABLE(vawr, status, param) status = (vawr->vtable->param)
 
+static VAStatus
+i965_surface_wrapper(VADriverContextP ctx, VASurfaceID surface)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface = SURFACE(surface);
+    VAStatus va_status = VA_STATUS_SUCCESS;
+
+    if (!obj_surface) {
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+    }
+
+    if (obj_surface->wrapper_surface != VA_INVALID_ID) {
+        /* the wrapped surface already exists. just return it */
+       return va_status;
+    }
+
+    if (obj_surface->fourcc == 0)
+        i965_check_alloc_surface_bo(ctx, obj_surface,
+                                    1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+
+    /*
+     * TBD: Support more surface formats.
+     * Currently only NV12 is support as NV12 is used by decoding.
+     */
+    if (obj_surface->fourcc != VA_FOURCC_NV12 )
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if ((i965->wrapper_pdrvctx == NULL) ||
+        (obj_surface->bo == NULL))
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    {
+        int fd_handle;
+        VASurfaceAttrib attrib_list[2];
+        VASurfaceAttribExternalBuffers buffer_descriptor;
+        VAGenericID wrapper_surface;
+
+        if (drm_intel_bo_gem_export_to_prime(obj_surface->bo, &fd_handle) != 0)
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+
+        obj_surface->exported_primefd = fd_handle;
+
+        memset(&attrib_list, 0, sizeof(attrib_list));
+        memset(&buffer_descriptor, 0, sizeof(buffer_descriptor));
+
+        attrib_list[0].type = VASurfaceAttribExternalBufferDescriptor;
+        attrib_list[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
+        attrib_list[0].value.value.p = &buffer_descriptor;
+        attrib_list[0].value.type = VAGenericValueTypePointer;
+
+        attrib_list[1].type = VASurfaceAttribMemoryType;
+        attrib_list[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
+        attrib_list[1].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME;
+        attrib_list[1].value.type = VAGenericValueTypeInteger;
+
+        buffer_descriptor.num_buffers = 1;
+        buffer_descriptor.num_planes = 2;
+        buffer_descriptor.width = obj_surface->orig_width;
+        buffer_descriptor.height = obj_surface->orig_height;
+        buffer_descriptor.pixel_format = obj_surface->fourcc;
+        buffer_descriptor.data_size = obj_surface->size;
+        buffer_descriptor.pitches[0] = obj_surface->width;
+        buffer_descriptor.pitches[1] = obj_surface->cb_cr_pitch;
+        buffer_descriptor.offsets[0] = 0;
+        buffer_descriptor.offsets[1] = obj_surface->width * obj_surface->height;
+        buffer_descriptor.buffers = (void *)&fd_handle;
+
+        CALL_VTABLE(i965->wrapper_pdrvctx, va_status,
+                    vaCreateSurfaces2(i965->wrapper_pdrvctx,
+                                      VA_RT_FORMAT_YUV420,
+                                      obj_surface->orig_width,
+                                      obj_surface->orig_height,
+                                      &wrapper_surface, 1,
+                                      attrib_list, 2));
+
+        if (va_status == VA_STATUS_SUCCESS) {
+            obj_surface->wrapper_surface = wrapper_surface;
+        } else {
+            /* This needs to be checked */
+            va_status = VA_STATUS_ERROR_OPERATION_FAILED;
+        }
+        return va_status;
+    }
+
+}
+
 VAStatus 
 i965_QueryConfigProfiles(VADriverContextP ctx,
                          VAProfile *profile_list,       /* out */
@@ -1328,6 +1414,7 @@ i965_CreateSurfaces2(
         obj_surface->subsampling = SUBSAMPLE_YUV420;
 
         obj_surface->wrapper_surface = VA_INVALID_ID;
+        obj_surface->exported_primefd = -1;
 
         switch (memory_type) {
         case I965_SURFACE_MEM_NATIVE:
@@ -1435,6 +1522,11 @@ i965_DestroySurfaces(VADriverContextP ctx,
                                           1));
             obj_surface->wrapper_surface = VA_INVALID_ID;
         }
+        if (obj_surface->exported_primefd >= 0) {
+           close(obj_surface->exported_primefd);
+           obj_surface->exported_primefd = -1;
+        }
+
         i965_destroy_surface(&i965->surface_heap, (struct object_base *)obj_surface);
     }
 
