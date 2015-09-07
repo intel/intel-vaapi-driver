@@ -6075,6 +6075,9 @@ i965_proc_context_init(VADriverContextP ctx, struct object_config *obj_config)
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct i965_proc_context *proc_context = calloc(1, sizeof(struct i965_proc_context));
 
+    if (!proc_context)
+        return NULL;
+
     proc_context->base.destroy = i965_proc_context_destroy;
     proc_context->base.run = i965_proc_picture;
     proc_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);

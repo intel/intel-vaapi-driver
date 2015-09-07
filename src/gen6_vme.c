@@ -636,6 +636,10 @@ Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     }
 
     vme_context = calloc(1, sizeof(struct gen6_vme_context));
+
+    if (!vme_context)
+        return False;
+
     vme_context->gpe_context.surface_state_binding_table.length =
         (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 

@@ -587,6 +587,9 @@ intel_update_codec_frame_store_index(
     uint64_t age;
     int i, n, num_free_refs;
 
+    if (!free_refs)
+        return;
+
     /* Detect changes of access unit */
     if (fs_ctx->age == 0 || fs_ctx->prev_poc != poc)
         fs_ctx->age++;

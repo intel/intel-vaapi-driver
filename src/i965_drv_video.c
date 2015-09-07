@@ -2034,6 +2034,9 @@ i965_CreateContext(VADriverContextP ctx,
     obj_context->hw_context = NULL;
     obj_context->wrapper_context = VA_INVALID_ID;
 
+    if (!obj_context->render_targets)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
     for(i = 0; i < num_render_targets; i++) {
         if (NULL == SURFACE(render_targets[i])) {
             vaStatus = VA_STATUS_ERROR_INVALID_SURFACE;

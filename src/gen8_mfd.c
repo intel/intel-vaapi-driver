@@ -74,6 +74,10 @@ gen8_mfd_init_avc_surface(VADriverContextP ctx,
 
     if (!gen7_avc_surface) {
         gen7_avc_surface = calloc(sizeof(GenAvcSurface), 1);
+
+        if (!gen7_avc_surface)
+            return;
+
         gen7_avc_surface->base.frame_store_id = -1;
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = gen7_avc_surface;
@@ -1273,6 +1277,10 @@ gen8_mfd_init_vc1_surface(VADriverContextP ctx,
 
     if (!gen7_vc1_surface) {
         gen7_vc1_surface = calloc(sizeof(struct gen7_vc1_surface), 1);
+
+        if (!gen7_vc1_surface)
+            return;
+
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = gen7_vc1_surface;
     }
@@ -3172,6 +3180,9 @@ gen8_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct gen7_mfd_context *gen7_mfd_context = calloc(1, sizeof(struct gen7_mfd_context));
     int i;
+
+    if (!gen7_mfd_context)
+        return NULL;
 
     gen7_mfd_context->base.destroy = gen8_mfd_context_destroy;
     gen7_mfd_context->base.run = gen8_mfd_decode_picture;

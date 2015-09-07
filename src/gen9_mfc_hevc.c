@@ -2028,12 +2028,14 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
 
                 hevc_encoder_surface = calloc(sizeof(GenHevcSurface), 1);
 
-                hevc_encoder_surface->motion_vector_temporal_bo =
-                    dri_bo_alloc(i965->intel.bufmgr,
-                                 "motion vector temporal buffer",
-                                 size,
-                                 0x1000);
-                assert(hevc_encoder_surface->motion_vector_temporal_bo);
+                if (hevc_encoder_surface) {
+                    hevc_encoder_surface->motion_vector_temporal_bo =
+                        dri_bo_alloc(i965->intel.bufmgr,
+                                     "motion vector temporal buffer",
+                                     size,
+                                     0x1000);
+                    assert(hevc_encoder_surface->motion_vector_temporal_bo);
+                }
 
                 obj_surface->private_data = (void *)hevc_encoder_surface;
                 obj_surface->free_private_data = (void *)gen_free_hevc_surface;

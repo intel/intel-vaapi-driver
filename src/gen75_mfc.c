@@ -2541,6 +2541,9 @@ Bool gen75_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *
 {
     struct gen6_mfc_context *mfc_context = calloc(1, sizeof(struct gen6_mfc_context));
 
+    if (!mfc_context)
+        return False;
+
     mfc_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
 
     mfc_context->gpe_context.idrt.max_entries = MAX_GPE_KERNELS;

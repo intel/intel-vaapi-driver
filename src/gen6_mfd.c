@@ -1184,6 +1184,10 @@ gen6_mfd_init_vc1_surface(VADriverContextP ctx,
 
     if (!gen6_vc1_surface) {
         gen6_vc1_surface = calloc(sizeof(struct gen6_vc1_surface), 1);
+
+        if (!gen6_vc1_surface)
+            return;
+
         assert((obj_surface->size & 0x3f) == 0);
         obj_surface->private_data = gen6_vc1_surface;
     }
@@ -1853,6 +1857,9 @@ gen6_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct gen6_mfd_context *gen6_mfd_context = calloc(1, sizeof(struct gen6_mfd_context));
     int i;
+
+    if (!gen6_mfd_context)
+        return NULL;
 
     gen6_mfd_context->base.destroy = gen6_mfd_context_destroy;
     gen6_mfd_context->base.run = gen6_mfd_decode_picture;
