@@ -6348,20 +6348,20 @@ i965_Terminate(VADriverContextP ctx)
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
 
-    if (i965->wrapper_pdrvctx) {
-       VADriverContextP pdrvctx;
-       pdrvctx = i965->wrapper_pdrvctx;
-       if (pdrvctx->handle) {
-           pdrvctx->vtable->vaTerminate(pdrvctx);
-           dlclose(pdrvctx->handle);
-           pdrvctx->handle = NULL;
-       }
-       free(pdrvctx->vtable);
-       free(pdrvctx);
-       i965->wrapper_pdrvctx = NULL;
-    }
-
     if (i965) {
+        if (i965->wrapper_pdrvctx) {
+            VADriverContextP pdrvctx;
+            pdrvctx = i965->wrapper_pdrvctx;
+            if (pdrvctx->handle) {
+                pdrvctx->vtable->vaTerminate(pdrvctx);
+                dlclose(pdrvctx->handle);
+                pdrvctx->handle = NULL;
+            }
+            free(pdrvctx->vtable);
+            free(pdrvctx);
+            i965->wrapper_pdrvctx = NULL;
+        }
+
         for (i = ARRAY_ELEMS(i965_sub_ops); i > 0; i--)
             if (i965_sub_ops[i - 1].display_type == 0 ||
                 i965_sub_ops[i - 1].display_type == (ctx->display_type & VA_DISPLAY_MAJOR_MASK)) {
