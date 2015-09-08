@@ -379,8 +379,8 @@ static VAStatus gen7_vme_avc_state_setup(VADriverContextP ctx,
     vme_state_message = (unsigned int *)vme_context->vme_state.bo->virtual;
 
     if (((slice_param->slice_type == SLICE_TYPE_P) ||
-        (slice_param->slice_type == SLICE_TYPE_SP) &&
-        !is_low_quality)) {
+         (slice_param->slice_type == SLICE_TYPE_SP)) &&
+        !is_low_quality) {
         vme_state_message[0] = 0x01010101;
         vme_state_message[1] = 0x10010101;
         vme_state_message[2] = 0x0F0F0F0F;

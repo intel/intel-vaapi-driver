@@ -4942,8 +4942,6 @@ i965_post_processing(
         pp_context->filter_flags = va_flags;
         if (avs_is_needed(va_flags)) {
             VARectangle tmp_dst_rect;
-            struct i965_render_state *render_state = &i965->render_state;
-            struct intel_region *dest_region = render_state->draw_region;
 
             if (out_surface_id != VA_INVALID_ID)
                 tmp_id = out_surface_id;

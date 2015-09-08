@@ -719,9 +719,6 @@ gen9_hcpe_hevc_slice_state(VADriverContextP ctx,
                            struct intel_encoder_context *encoder_context,
                            struct intel_batchbuffer *batch)
 {
-    /* to do */
-    struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
-
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     int slice_type = slice_param->slice_type;
 
@@ -1591,7 +1588,6 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
     int height_in_ctb = (pSequenceParameter->pic_height_in_luma_samples + ctb_size - 1) / ctb_size;
     int last_slice = (pSliceParameter->slice_segment_address + pSliceParameter->num_ctu_in_slice) == (width_in_ctb * height_in_ctb);
     int ctb_width_in_mb = (ctb_size + 15) / 16;
-    int num_mb_in_ctb = ctb_width_in_mb * ctb_width_in_mb;
     int i_ctb, ctb_x, ctb_y;
     unsigned int split_coding_unit_flag = 0;
     int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + 15) / 16;

@@ -208,20 +208,6 @@ gen75_gpe_process_interface_setup(VADriverContextP ctx,
 }
 
 static VAStatus 
-gen75_gpe_process_constant_fill(VADriverContextP ctx,
-                   struct vpp_gpe_context *vpp_gpe_ctx)
-{
-    dri_bo_map(vpp_gpe_ctx->gpe_ctx.curbe.bo, 1);
-    assert(vpp_gpe_ctx->gpe_ctx.curbe.bo->virtual);
-    unsigned char* constant_buffer = vpp_gpe_ctx->gpe_ctx.curbe.bo->virtual;	
-    memcpy(constant_buffer, vpp_gpe_ctx->kernel_param, 
-                            vpp_gpe_ctx->kernel_param_size);
-    dri_bo_unmap(vpp_gpe_ctx->gpe_ctx.curbe.bo);
-
-    return VA_STATUS_SUCCESS;
-}
-
-static VAStatus 
 gen75_gpe_process_parameters_fill(VADriverContextP ctx,
                            struct vpp_gpe_context *vpp_gpe_ctx)
 {
@@ -444,20 +430,6 @@ gen8_gpe_process_interface_setup(VADriverContextP ctx,
 }
 
 static VAStatus
-gen8_gpe_process_constant_fill(VADriverContextP ctx,
-                   struct vpp_gpe_context *vpp_gpe_ctx)
-{
-    dri_bo_map(vpp_gpe_ctx->gpe_ctx.dynamic_state.bo, 1);
-    assert(vpp_gpe_ctx->gpe_ctx.dynamic_state.bo->virtual);
-    unsigned char* constant_buffer = vpp_gpe_ctx->gpe_ctx.dynamic_state.bo->virtual;
-    memcpy(constant_buffer, vpp_gpe_ctx->kernel_param,
-                            vpp_gpe_ctx->kernel_param_size);
-    dri_bo_unmap(vpp_gpe_ctx->gpe_ctx.dynamic_state.bo);
-
-    return VA_STATUS_SUCCESS;
-}
-
-static VAStatus
 gen8_gpe_process_parameters_fill(VADriverContextP ctx,
                            struct vpp_gpe_context *vpp_gpe_ctx)
 {
@@ -651,6 +623,8 @@ vpp_gpe_process_sharpening(VADriverContextP ctx,
          else if (IS_GEN8(i965->intel.device_info) ||
                   IS_GEN9(i965->intel.device_info)) // TODO: build the sharpening kernel for GEN9
              vpp_kernels = gen8_vpp_sharpening_kernels;
+         else
+             return VA_STATUS_ERROR_UNIMPLEMENTED;
 
          vpp_gpe_ctx->gpe_load_kernels(ctx,
                                &vpp_gpe_ctx->gpe_ctx,

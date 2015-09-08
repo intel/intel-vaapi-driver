@@ -1993,7 +1993,6 @@ i965_CreateContext(VADriverContextP ctx,
                    VAContextID *context)                /* out */
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct i965_render_state *render_state = &i965->render_state;
     struct object_config *obj_config = CONFIG(config_id);
     struct object_context *obj_context = NULL;
     VAConfigAttrib *attrib;
@@ -4413,8 +4412,6 @@ i965_sw_getimage(VADriverContextP ctx,
     struct object_surface *obj_surface, struct object_image *obj_image,
     const VARectangle *rect)
 {
-    struct i965_driver_data * const i965 = i965_driver_data(ctx);
-    struct i965_render_state *render_state = &i965->render_state;
     void *image_data = NULL;
     VAStatus va_status;
 
@@ -4438,7 +4435,6 @@ i965_sw_getimage(VADriverContextP ctx,
         get_image_yuy2(obj_image, image_data, obj_surface, rect);
         break;
     default:
-    operation_failed:
         va_status = VA_STATUS_ERROR_OPERATION_FAILED;
         break;
     }

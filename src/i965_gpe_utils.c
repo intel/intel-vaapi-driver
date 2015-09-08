@@ -808,13 +808,12 @@ gen8_gpe_set_media_chroma_surface_state(VADriverContextP ctx,
                                     struct object_surface *obj_surface,
                                     struct gen8_surface_state *ss)
 {
-    int w, h, w_pitch;
+    int w, w_pitch;
     unsigned int tiling, swizzle;
     int cbcr_offset;
 
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
     w = obj_surface->orig_width;
-    h = obj_surface->orig_height;
     w_pitch = obj_surface->width;
 
     cbcr_offset = obj_surface->height * obj_surface->width;
@@ -1131,8 +1130,6 @@ gen8_gpe_context_init(VADriverContextP ctx,
 void
 gen8_gpe_context_destroy(struct i965_gpe_context *gpe_context)
 {
-    int i;
-
     dri_bo_unreference(gpe_context->surface_state_binding_table.bo);
     gpe_context->surface_state_binding_table.bo = NULL;
 
