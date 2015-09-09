@@ -666,7 +666,7 @@ static void gen8_vme_pipeline_programing(VADriverContextP ctx,
     }
 
     if ((pSliceParameter->slice_type == SLICE_TYPE_I) ||
-  	(pSliceParameter->slice_type == SLICE_TYPE_I)) {
+	(pSliceParameter->slice_type == SLICE_TYPE_SI)) {
  	kernel_shader = VME_INTRA_SHADER;
     } else if ((pSliceParameter->slice_type == SLICE_TYPE_P) ||
                (pSliceParameter->slice_type == SLICE_TYPE_SP)) {
