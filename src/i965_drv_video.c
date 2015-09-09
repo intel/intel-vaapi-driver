@@ -6179,7 +6179,7 @@ error:
  * to initialize/load the wrapper context of backend driver.
  * Otherwise it is not loaded.
  */
-#if HAVE_USE_WRAPPER
+#if HAVE_HYBRID_CODEC
 
 static VAStatus
 i965_initialize_wrapper(VADriverContextP ctx, const char *driver_name)
@@ -6329,7 +6329,7 @@ i965_Init(VADriverContextP ctx)
         if (i965->codec_info && i965->codec_info->preinit_hw_codec)
             i965->codec_info->preinit_hw_codec(ctx, i965->codec_info);
 
-#if HAVE_USE_WRAPPER
+#if HAVE_HYBRID_CODEC
         i965_initialize_wrapper(ctx, "hybrid");
 #endif
 
