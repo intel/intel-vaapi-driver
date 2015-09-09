@@ -56,10 +56,10 @@ AC_ARG_ENABLE([wayland],
                     [build with VA/Wayland API support @<:@default=yes@:>@])],
     [], [enable_wayland="yes"])
 
-AC_ARG_ENABLE([wrapper],
-    [AC_HELP_STRING([--enable-wrapper],
-                    [build with hybrid_wrapper support @<:@default=no@:>@])],
-    [], [enable_wrapper="no"])
+AC_ARG_ENABLE([hybrid-codec],
+    [AC_HELP_STRING([--enable-hybrid-codec],
+                    [build with hybrid codec support @<:@default=no@:>@])],
+    [], [enable_hybrid_codec="no"])
 
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
@@ -112,10 +112,8 @@ if test "$USE_DRM" = "yes"; then
 fi
 AM_CONDITIONAL(USE_DRM, test "$USE_DRM" = "yes")
 
-USE_WRAPPER="no"
-if test "$enable_wrapper" = "yes"; then
-    USE_WRAPPER="yes"
-    AC_DEFINE([HAVE_USE_WRAPPER], [1], [Defined to 1 if hybrid_wrapper is needed])
+if test "$enable_hybrid_codec" = "yes"; then
+    AC_DEFINE([HAVE_HYBRID_CODEC], [1], [Defined to 1 if hybrid codec is needed])
 fi
 
 VA_VERSION=`$PKG_CONFIG --modversion libva`
