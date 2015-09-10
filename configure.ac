@@ -2,7 +2,7 @@
 m4_define([intel_driver_major_version], [1])
 m4_define([intel_driver_minor_version], [6])
 m4_define([intel_driver_micro_version], [1])
-m4_define([intel_driver_pre_version],   [1])
+m4_define([intel_driver_pre_version],   [0])
 m4_define([intel_driver_version],
           [intel_driver_major_version.intel_driver_minor_version.intel_driver_micro_version])
 m4_if(intel_driver_pre_version, [0], [], [
