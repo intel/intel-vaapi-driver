@@ -6197,12 +6197,6 @@ i965_initialize_wrapper(VADriverContextP ctx, const char *driver_name)
     VAStatus va_status = VA_STATUS_SUCCESS;
     bool driver_loaded = false;
 
-    if (!(IS_HASWELL(i965->intel.device_info) ||
-          IS_GEN8(i965->intel.device_info) ||
-          IS_GEN9(i965->intel.device_info))) {
-        return VA_STATUS_ERROR_UNIMPLEMENTED;
-    }
-
     wrapper_pdrvctx = calloc(1, sizeof(*wrapper_pdrvctx));
     vtable = calloc(1, sizeof(*vtable));
 
