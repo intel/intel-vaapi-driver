@@ -2,7 +2,7 @@ libva-intel-driver NEWS -- summary of changes.  2015-09-09
 Copyright (C) 2009-2015 Intel Corporation
 
 Version 1.6.1 - 09.Sep.2015
-* Wrapper other backend driver to support VP9 hybrid decoding on HSW/BDW/BSW/SKL (--enable-hybrid-codec)
+* Wrapper other backend driver to support VP9 hybrid decoding on BDW/BSW/SKL (--enable-hybrid-codec)
 * Fix HEVC decoding issue on BSW/SKL
 * Fix HEVC encoding on SKL GT3
 * Fix GPU hang issue when decoding H.264 MBAFF clips
