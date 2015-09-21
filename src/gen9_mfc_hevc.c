@@ -1992,10 +1992,13 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
         obj_surface->free_private_data = (void *)gen_free_hevc_surface;
     }
     hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
-    hevc_encoder_surface->base.frame_store_id = -1;
-    mfc_context->current_collocated_mv_temporal_buffer[NUM_HCP_CURRENT_COLLOCATED_MV_TEMPORAL_BUFFERS - 1].bo = hevc_encoder_surface->motion_vector_temporal_bo;
 
-    dri_bo_reference(hevc_encoder_surface->motion_vector_temporal_bo);
+    if (hevc_encoder_surface) {
+        hevc_encoder_surface->base.frame_store_id = -1;
+        mfc_context->current_collocated_mv_temporal_buffer[NUM_HCP_CURRENT_COLLOCATED_MV_TEMPORAL_BUFFERS - 1].bo = hevc_encoder_surface->motion_vector_temporal_bo;
+
+        dri_bo_reference(hevc_encoder_surface->motion_vector_temporal_bo);
+    }
 
     mfc_context->surface_state.width = obj_surface->orig_width;
     mfc_context->surface_state.height = obj_surface->orig_height;
@@ -2038,10 +2041,13 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
             }
 
             hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
-            hevc_encoder_surface->base.frame_store_id = -1;
-            /* Setup MV temporal buffer */
-            mfc_context->current_collocated_mv_temporal_buffer[i].bo = hevc_encoder_surface->motion_vector_temporal_bo;
-            dri_bo_reference(hevc_encoder_surface->motion_vector_temporal_bo);
+
+            if (hevc_encoder_surface) {
+                hevc_encoder_surface->base.frame_store_id = -1;
+                /* Setup MV temporal buffer */
+                mfc_context->current_collocated_mv_temporal_buffer[i].bo = hevc_encoder_surface->motion_vector_temporal_bo;
+                dri_bo_reference(hevc_encoder_surface->motion_vector_temporal_bo);
+            }
         } else {
             break;
         }
