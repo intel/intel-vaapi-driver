@@ -107,7 +107,7 @@ mov  (8) mbb_result.0<1>:ud	0x0:ud		{align1};
 mov  (8) mbc_result.0<1>:ud	0x0:ud		{align1};
 mba_start:
 mov  (8) mb_msg0.0<1>:ud	0:ud		{align1};
-and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_AE:uw   {align1};
+and.z.f0.0 (2)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_AE:uw   {align1};
 /* MB A doesn't exist. Zero MV. mba_flag is zero and ref ID = -1 */
 (f0.0)  mov  (2)    	mba_result.20<1>:w	-1:w	{align1};
 (f0.0)  jmpi (1)	mbb_start;
@@ -137,7 +137,7 @@ send (16)
         {align1};
 
 /* TODO: RefID is required after multi-references are added */
-cmp.l.f0.0 (1)		null:w	mb_intra_wb.16<0,1,0>:uw	mb_inter_wb.8<0,1,0>:uw {align1};
+cmp.l.f0.0 (2)		null:w	mb_intra_wb.16<0,1,0>:uw	mb_inter_wb.8<0,1,0>:uw {align1};
 (f0.0)   mov (2)	mba_result.20<1>:w			-1:w	{align1};
 (f0.0)   jmpi	(1)	mbb_start;
 
@@ -184,7 +184,7 @@ mov   (2)	mba_result.20<1>:w		0:w		{align1};
 
 mbb_start:
 mov  (8) mb_msg0.0<1>:ud	0:ud		{align1};
-and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
+and.z.f0.0 (2)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_B:uw   {align1};
 /* MB B doesn't exist. Zero MV. mba_flag is zero */
 /* If MB B doesn't exist, neither MB C nor D exists */
 (f0.0)  mov  (2)    	mbb_result.20<1>:w	-1:w		{align1};
@@ -216,7 +216,7 @@ send (16)
         {align1};
 
 /* TODO: RefID is required after multi-references are added */
-cmp.l.f0.0 (1)		null:w	mb_intra_wb.16<0,1,0>:uw	mb_inter_wb.8<0,1,0>:uw {align1};
+cmp.l.f0.0 (2)		null:w	mb_intra_wb.16<0,1,0>:uw	mb_inter_wb.8<0,1,0>:uw {align1};
 (f0.0)   mov (2)	mbb_result.20<1>:w			-1:w	{align1};
 (f0.0)   jmpi	(1)	mbc_start;
 add   (1) mb_msg0.8<1>:UD	mb_msg0.8<0,1,0>:ud	3:ud {align1};
@@ -292,7 +292,7 @@ send (16)
         {align1};
 
 /* TODO: RefID is required after multi-references are added */
-cmp.l.f0.0 (1)		null:w	mb_intra_wb.16<0,1,0>:uw	mb_inter_wb.8<0,1,0>:uw {align1};
+cmp.l.f0.0 (2)		null:w	mb_intra_wb.16<0,1,0>:uw	mb_inter_wb.8<0,1,0>:uw {align1};
 (f0.0)   mov (2)	mbc_result.20<1>:w			-1:w	{align1};
 (f0.0)   jmpi	(1)	mb_mvp_start;
 add   (1) mb_msg0.8<1>:UD	mb_msg0.8<0,1,0>:ud	3:ud {align1};
@@ -339,7 +339,7 @@ mov	   (2)		mbc_result.4<1>:ud		mb_mv2.16<2,2,1>:ud	{align1};
 jmpi   (1)    mb_mvp_start;
 mbd_start:
 mov  (8) mb_msg0.0<1>:ud	0:ud		{align1};
-and.z.f0.0 (1)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_D:uw   {align1};
+and.z.f0.0 (2)		null:uw	input_mb_intra_ub<0,1,0>:ub	INTRA_PRED_AVAIL_FLAG_D:uw   {align1};
 (f0.0)  mov  (2)	mbc_result.20<1>:w		-1:w	{align1};
 (f0.0)  jmpi (1)	mb_mvp_start;
 mov  (1) mbc_result.0<1>:d	MB_AVAIL		{align1};	
@@ -367,7 +367,7 @@ send (16)
         rlen 2
         {align1};
 
-cmp.l.f0.0 (1)		null:w	mb_intra_wb.16<0,1,0>:uw	mb_inter_wb.8<0,1,0>:uw {align1};
+cmp.l.f0.0 (2)		null:w	mb_intra_wb.16<0,1,0>:uw	mb_inter_wb.8<0,1,0>:uw {align1};
 (f0.0)   mov (2)	mbc_result.20<1>:w			-1:w	{align1};
 (f0.0)   jmpi	(1)	mb_mvp_start;
 
@@ -420,7 +420,7 @@ mb_mvp_start:
 add	(1)	tmp_reg0.0<1>:d		mbb_result.0<0,1,0>:d	mbc_result.0<0,1,0>:d	{align1};
 cmp.z.f0.0 (1)	null:d			tmp_reg0.0<0,1,0>:d	0:d	{align1};
 (-f0.0)	jmpi (1)	mb_median_start;
-cmp.nz.f0.0 (1)	null:d	mba_result.0<0,1,0>:d		0:d		{align1};
+cmp.nz.f0.0 (2)	null:d	mba_result.0<0,1,0>:d		0:d		{align1};
 (f0.0)	mov	(2)	mbb_result.4<1>:ud		mba_result.4<2,2,1>:ud	{align1};	
 (f0.0)	mov	(2)	mbc_result.4<1>:ud		mba_result.4<2,2,1>:ud	{align1};	
 (f0.0)	mov	(2)	mbb_result.20<1>:uw		mba_result.20<2,2,1>:uw	{align1};	
