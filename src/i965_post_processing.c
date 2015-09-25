@@ -6061,7 +6061,7 @@ i965_proc_context_destroy(void *hw_context)
     struct i965_proc_context * const proc_context = hw_context;
     VADriverContextP const ctx = proc_context->driver_context;
 
-    i965_post_processing_context_finalize(ctx, &proc_context->pp_context);
+    proc_context->pp_context.finalize(ctx, &proc_context->pp_context);
     intel_batchbuffer_free(proc_context->base.batch);
     free(proc_context);
 }
