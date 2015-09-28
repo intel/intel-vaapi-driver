@@ -32,7 +32,7 @@
 #include <stdbool.h>
 
 /** Maximum number of phases for the sharp filter */
-#define AVS_MAX_PHASES 16
+#define AVS_MAX_PHASES 32
 
 /** Maximum number of coefficients for luma samples */
 #define AVS_MAX_LUMA_COEFFS 8

@@ -295,6 +295,29 @@ static struct pp_module pp_modules_gen9[] = {
     },
 };
 
+static const AVSConfig gen9_avs_config = {
+    .coeff_frac_bits = 6,
+    .coeff_epsilon = 1.0f / (1U << 6),
+    .num_phases = 31,
+    .num_luma_coeffs = 8,
+    .num_chroma_coeffs = 4,
+
+    .coeff_range = {
+        .lower_bound = {
+            .y_k_h = { -2, -2, -2, -2, -2, -2, -2, -2 },
+            .y_k_v = { -2, -2, -2, -2, -2, -2, -2, -2 },
+            .uv_k_h = { -2, -2, -2, -2 },
+            .uv_k_v = { -2, -2, -2, -2 },
+        },
+        .upper_bound = {
+            .y_k_h = { 2, 2, 2, 2, 2, 2, 2, 2 },
+            .y_k_v = { 2, 2, 2, 2, 2, 2, 2, 2 },
+            .uv_k_h = { 2, 2, 2, 2 },
+            .uv_k_v = { 2, 2, 2, 2 },
+        },
+    },
+};
+
 static void
 gen9_pp_pipeline_select(VADriverContextP ctx,
                         struct i965_post_processing_context *pp_context)
@@ -426,6 +449,7 @@ gen9_post_processing_context_init(VADriverContextP ctx,
     struct i965_post_processing_context *pp_context = data;
 
     gen8_post_processing_context_common_init(ctx, data, pp_modules_gen9, ARRAY_ELEMS(pp_modules_gen9), batch);
+    avs_init_state(&pp_context->pp_avs_context.state, &gen9_avs_config);
 
     pp_context->intel_post_processing = gen9_post_processing;
 }

@@ -2195,8 +2195,10 @@ struct gen8_sampler_8x8_avs {
         unsigned int pad1:9;
     } dw153;
 
-    /* Reserved to 256DW */
-    unsigned int reserved[102];
+    unsigned int reserved[6];
+
+    /* DW160-DW279 */
+    struct gen8_sampler_8x8_avs_coefficients coefficients1[15];
 };
 
 #define SURFACE_STATE_PADDED_SIZE_0_GEN7        ALIGN(sizeof(struct gen7_surface_state), 32)

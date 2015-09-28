@@ -897,7 +897,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     sy = (float)dst_rect->height / src_rect->height;
     avs_update_coefficients(avs, sx, sy, pp_context->filter_flags);
 
-    assert(avs->config->num_phases == 16);
+    assert(avs->config->num_phases >= 16);
     for (i = 0; i <= 16; i++) {
         struct gen8_sampler_8x8_avs_coefficients * const sampler_8x8_state =
             &sampler_8x8->coefficients[i];
@@ -968,6 +968,70 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     sampler_8x8->dw153.bypass_y_adaptive_filtering = 1;
     sampler_8x8->dw153.bypass_x_adaptive_filtering = 1;
 
+    for ( ; i <= avs->config->num_phases; i++) {
+        struct gen8_sampler_8x8_avs_coefficients * const sampler_8x8_state =
+            &sampler_8x8->coefficients1[i - 17];
+        const AVSCoeffs * const coeffs = &avs->coeffs[i];
+
+        sampler_8x8_state->dw0.table_0x_filter_c0 =
+            intel_format_convert(coeffs->y_k_h[0], 1, 6, 1);
+        sampler_8x8_state->dw0.table_0y_filter_c0 =
+            intel_format_convert(coeffs->y_k_v[0], 1, 6, 1);
+        sampler_8x8_state->dw0.table_0x_filter_c1 =
+            intel_format_convert(coeffs->y_k_h[1], 1, 6, 1);
+        sampler_8x8_state->dw0.table_0y_filter_c1 =
+            intel_format_convert(coeffs->y_k_v[1], 1, 6, 1);
+
+        sampler_8x8_state->dw1.table_0x_filter_c2 =
+            intel_format_convert(coeffs->y_k_h[2], 1, 6, 1);
+        sampler_8x8_state->dw1.table_0y_filter_c2 =
+            intel_format_convert(coeffs->y_k_v[2], 1, 6, 1);
+        sampler_8x8_state->dw1.table_0x_filter_c3 =
+            intel_format_convert(coeffs->y_k_h[3], 1, 6, 1);
+        sampler_8x8_state->dw1.table_0y_filter_c3 =
+            intel_format_convert(coeffs->y_k_v[3], 1, 6, 1);
+
+        sampler_8x8_state->dw2.table_0x_filter_c4 =
+            intel_format_convert(coeffs->y_k_h[4], 1, 6, 1);
+        sampler_8x8_state->dw2.table_0y_filter_c4 =
+            intel_format_convert(coeffs->y_k_v[4], 1, 6, 1);
+        sampler_8x8_state->dw2.table_0x_filter_c5 =
+            intel_format_convert(coeffs->y_k_h[5], 1, 6, 1);
+        sampler_8x8_state->dw2.table_0y_filter_c5 =
+            intel_format_convert(coeffs->y_k_v[5], 1, 6, 1);
+
+        sampler_8x8_state->dw3.table_0x_filter_c6 =
+            intel_format_convert(coeffs->y_k_h[6], 1, 6, 1);
+        sampler_8x8_state->dw3.table_0y_filter_c6 =
+            intel_format_convert(coeffs->y_k_v[6], 1, 6, 1);
+        sampler_8x8_state->dw3.table_0x_filter_c7 =
+            intel_format_convert(coeffs->y_k_h[7], 1, 6, 1);
+        sampler_8x8_state->dw3.table_0y_filter_c7 =
+            intel_format_convert(coeffs->y_k_v[7], 1, 6, 1);
+
+        sampler_8x8_state->dw4.pad0 = 0;
+        sampler_8x8_state->dw5.pad0 = 0;
+        sampler_8x8_state->dw4.table_1x_filter_c2 =
+            intel_format_convert(coeffs->uv_k_h[0], 1, 6, 1);
+        sampler_8x8_state->dw4.table_1x_filter_c3 =
+            intel_format_convert(coeffs->uv_k_h[1], 1, 6, 1);
+        sampler_8x8_state->dw5.table_1x_filter_c4 =
+            intel_format_convert(coeffs->uv_k_h[2], 1, 6, 1);
+        sampler_8x8_state->dw5.table_1x_filter_c5 =
+            intel_format_convert(coeffs->uv_k_h[3], 1, 6, 1);
+
+        sampler_8x8_state->dw6.pad0 =
+        sampler_8x8_state->dw7.pad0 =
+        sampler_8x8_state->dw6.table_1y_filter_c2 =
+            intel_format_convert(coeffs->uv_k_v[0], 1, 6, 1);
+        sampler_8x8_state->dw6.table_1y_filter_c3 =
+            intel_format_convert(coeffs->uv_k_v[1], 1, 6, 1);
+        sampler_8x8_state->dw7.table_1y_filter_c4 =
+            intel_format_convert(coeffs->uv_k_v[2], 1, 6, 1);
+        sampler_8x8_state->dw7.table_1y_filter_c5 =
+            intel_format_convert(coeffs->uv_k_v[3], 1, 6, 1);
+    }
+
     dri_bo_unmap(pp_context->dynamic_state.bo);
 
 
@@ -1036,7 +1100,7 @@ gen8_pp_initialize(
 
     pp_context->idrt.num_interface_descriptors = 0;
 
-    pp_context->sampler_size = 2 * 4096;
+    pp_context->sampler_size = 4 * 4096;
 
     bo_size = 4096 + pp_context->curbe_size + pp_context->sampler_size
 		+ pp_context->idrt_size;
@@ -1499,7 +1563,6 @@ gen8_post_processing_context_common_init(VADriverContextP ctx,
     pp_context->idrt_size = 5 * sizeof(struct gen8_interface_descriptor_data);
     pp_context->curbe_size = 256;
 
-    avs_init_state(&pp_context->pp_avs_context.state, &gen8_avs_config);
 }
 
 void
@@ -1507,5 +1570,8 @@ gen8_post_processing_context_init(VADriverContextP ctx,
                                   void *data,
                                   struct intel_batchbuffer *batch)
 {
+    struct i965_post_processing_context *pp_context = data;
+
     gen8_post_processing_context_common_init(ctx, data, pp_modules_gen8, ARRAY_ELEMS(pp_modules_gen8), batch);
+    avs_init_state(&pp_context->pp_avs_context.state, &gen8_avs_config);
 }
