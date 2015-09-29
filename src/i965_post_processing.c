@@ -5964,7 +5964,7 @@ i965_proc_picture(VADriverContextP ctx,
         intel_batchbuffer_flush(hw_context->batch);
 
         saved_filter_flag = i965pp_context->filter_flags;
-        i965pp_context->filter_flags = VA_FILTER_SCALING_HQ;
+        i965pp_context->filter_flags = (pipeline_param->filter_flags & VA_FILTER_SCALING_MASK);
 
         dst_surface.base = (struct object_base *)obj_surface;
         dst_surface.type = I965_SURFACE_TYPE_SURFACE;
