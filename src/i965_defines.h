@@ -918,4 +918,62 @@
 #define HCP_CODEC_SELECT_DECODE                 0
 #define HCP_CODEC_SELECT_ENCODE                 1
 
+/* VDEnc/HuC */
+/* HuC commands */
+#define HUC(command)                            \
+    (3 << 29 |                                  \
+     2 << 27 |                                  \
+     11 << 23 |                                 \
+     (command << 16))
+
+#define HUC_PIPE_MODE_SELECT            HUC(0)
+#define HUC_IMEM_STATE                  HUC(1)
+#define HUC_DMEM_STATE                  HUC(2)
+#define HUC_CFG_STATE                   HUC(3)
+#define HUC_VIRTUAL_ADDR_STATE          HUC(4)
+#define HUC_IND_OBJ_BASE_ADDR_STATE     HUC(5)
+#define HUC_STREAM_OBJECT               HUC(32)
+#define HUC_START                       HUC(33)
+
+/* HuC registers */
+#define VCS0_HUC_STATUS                 0xD000
+#define VCS0_HUC_STATUS2                0xD3B0
+
+/* VDEnc commands */
+#define VDENC(opcode, sub_opcode_a, sub_opcode_b)       \
+    (3 << 29 |                                          \
+     2 << 27 |                                          \
+     opcode << 23 |                                     \
+     sub_opcode_a << 21 |                               \
+     sub_opcode_b << 16)
+
+#define VD_PIPELINE_FLUSH               VDENC(15, 0, 0)
+
+#define VDENC_PIPE_MODE_SELECT          VDENC(1, 0, 0)
+#define VDENC_SRC_SURFACE_STATE         VDENC(1, 0, 1)
+#define VDENC_REF_SURFACE_STATE         VDENC(1, 0, 2)
+#define VDENC_DS_REF_SURFACE_STATE      VDENC(1, 0, 3)
+#define VDENC_PIPE_BUF_ADDR_STATE       VDENC(1, 0, 4)
+#define VDENC_IMG_STATE                 VDENC(1, 0, 5)
+#define VDENC_CONST_QPT_STATE           VDENC(1, 0, 6)
+#define VDENC_WALKER_STATE              VDENC(1, 0, 7)
+
+#define VDENC_CODEC_AVC                 2
+
+#define VDENC_SURFACE_YUV422            0
+#define VDENC_SURFACE_RGBA444           1
+#define VDENC_SURFACE_YUV444            2
+#define VDENC_SURFACE_Y8_UNORM          3
+#define VDENC_SURFACE_PLANAR_420_8      4
+#define VDENC_SURFACE_YCBCR_SWAP_Y      5
+#define VDENC_SURFACE_YCBCR_SWAP_UV     6
+#define VDENC_SURFACE_YCBCR_SWAP_UVY    7
+#define VDENC_SURFACE_P010              8
+#define VDENC_SURFACE_RGBA10            9
+#define VDENC_SURFACE_Y410              10
+#define VDENC_SURFACE_NV21              11
+
+#define MFC_BITSTREAM_BYTECOUNT_FRAME_REG       0x128A0
+#define MFC_IMAGE_STATUS_CTRL_REG               0x128B8
+
 #endif /* _I965_DEFINES_H_ */

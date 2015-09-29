@@ -68,8 +68,18 @@ struct gen_vp9_surface
     dri_bo *motion_vector_temporal_bo;
 };
 
+typedef struct vdenc_avc_surface VDEncAvcSurface;
+struct vdenc_avc_surface
+{
+    VADriverContextP ctx;
+    VASurfaceID scaled_4x_surface_id;
+    struct object_surface *scaled_4x_surface_obj;
+};
+
 extern void gen_free_hevc_surface(void **data);
 
 extern void gen_free_vp9_surface(void **data);
+
+extern void vdenc_free_avc_surface(void **data);
 
 #endif /* INTEL_MEDIA_H */

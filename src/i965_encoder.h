@@ -36,6 +36,21 @@
 #include "i965_structs.h"
 #include "i965_drv_video.h"
 
+#define I965_BRC_NONE	                0
+#define I965_BRC_CBR	                1
+#define I965_BRC_VBR	                2
+#define I965_BRC_CQP	                3
+
+struct intel_roi
+{
+    short left;
+    short right;
+    short top;
+    short bottom;
+
+    char  value;
+};
+
 struct intel_encoder_context
 {
     struct hw_context base;

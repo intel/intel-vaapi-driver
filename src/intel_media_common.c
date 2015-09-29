@@ -128,3 +128,36 @@ void gen_free_vp9_surface(void **data)
 
     pthread_mutex_unlock(&free_vp9_surface_lock);
 }
+
+extern VAStatus
+i965_DestroySurfaces(VADriverContextP ctx,
+                     VASurfaceID *surface_list,
+                     int num_surfaces);
+
+static pthread_mutex_t free_vdenc_avc_surface_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void
+vdenc_free_avc_surface(void **data)
+{
+    VDEncAvcSurface *avc_surface;
+
+    pthread_mutex_lock(&free_vdenc_avc_surface_lock);
+
+    avc_surface = *data;
+
+    if (!avc_surface) {
+        pthread_mutex_unlock(&free_vdenc_avc_surface_lock);
+        return;
+    }
+
+    if (avc_surface->scaled_4x_surface_obj) {
+        i965_DestroySurfaces(avc_surface->ctx, &avc_surface->scaled_4x_surface_id, 1);
+        avc_surface->scaled_4x_surface_id = VA_INVALID_SURFACE;
+        avc_surface->scaled_4x_surface_obj = NULL;
+    }
+
+    free(avc_surface);
+    *data = NULL;
+
+    pthread_mutex_unlock(&free_vdenc_avc_surface_lock);
+}

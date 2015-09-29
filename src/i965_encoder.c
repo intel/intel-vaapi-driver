@@ -40,6 +40,7 @@
 #include "gen6_vme.h"
 #include "gen6_mfc.h"
 #include "gen9_mfc.h"
+#include "gen9_vdenc.h"
 
 extern Bool gen6_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 extern Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
@@ -801,10 +802,14 @@ gen8_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 struct hw_context *
 gen9_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
-    if (obj_config->profile == VAProfileHEVCMain) {
-        return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_hcpe_context_init);
-    } else if (obj_config->profile == VAProfileJPEGBaseline)
-        return intel_enc_hw_context_init(ctx, obj_config, gen8_vme_context_init, gen8_mfc_context_init);
-    else
-        return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
+    if (obj_config->entrypoint == VAEntrypointEncSliceLP) {
+        return intel_enc_hw_context_init(ctx, obj_config, NULL, gen9_vdenc_context_init);
+    } else {
+        if (obj_config->profile == VAProfileHEVCMain) {
+            return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_hcpe_context_init);
+        } else if (obj_config->profile == VAProfileJPEGBaseline)
+            return intel_enc_hw_context_init(ctx, obj_config, gen8_vme_context_init, gen8_mfc_context_init);
+        else
+            return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
+    }
 }

@@ -66,6 +66,7 @@ source_c = \
 	gen9_mfc.c		\
 	gen9_mfc_hevc.c		\
 	gen9_mfd.c		\
+	gen9_vdenc.c		\
 	gen75_picture_process.c	\
 	gen75_vme.c		\
 	gen75_vpp_gpe.c  	\
@@ -110,6 +111,7 @@ source_h = \
 	gen8_post_processing.h	\
 	gen9_mfd.h		\
 	gen9_mfc.h		\
+	gen9_vdenc.h		\
 	i965_avc_bsd.h		\
 	i965_avc_hw_scoreboard.h\
 	i965_avc_ildb.h		\
