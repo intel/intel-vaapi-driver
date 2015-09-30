@@ -2813,6 +2813,9 @@ i965_decoder_wrapper_picture(VADriverContextP ctx,
     VADriverContextP pdrvctx;
     struct object_buffer *obj_buffer;
 
+    if (obj_context == NULL)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+
     /* When it is not wrapped context, continue the normal flowchart */
     if (obj_context->wrapper_context == VA_INVALID_ID)
         return vaStatus;
