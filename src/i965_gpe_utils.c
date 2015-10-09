@@ -1308,3 +1308,119 @@ gen9_gpe_pipeline_end(VADriverContextP ctx,
               GEN9_FORCE_MEDIA_AWAKE_MASK);
     ADVANCE_BATCH(batch);
 }
+
+Bool
+i965_allocate_gpe_resource(dri_bufmgr *bufmgr,
+                           struct i965_gpe_resource *res,
+                           const char *name)
+{
+    res->bo = dri_bo_alloc(bufmgr, name, res->size, 4096);
+    res->map = NULL;
+
+    return (res->bo != NULL);
+}
+
+void
+i965_object_surface_to_2d_gpe_resource(struct i965_gpe_resource *res,
+                                       struct object_surface *obj_surface)
+{
+    unsigned int swizzle;
+
+    res->type = I965_GPE_RESOURCE_2D;
+    res->width = obj_surface->orig_width;
+    res->height = obj_surface->orig_height;
+    res->pitch = obj_surface->width;
+    res->size = obj_surface->size;
+    res->cb_cr_pitch = obj_surface->cb_cr_pitch;
+    res->x_cb_offset = obj_surface->x_cb_offset;
+    res->y_cb_offset = obj_surface->y_cb_offset;
+    res->bo = obj_surface->bo;
+    res->map = NULL;
+
+    dri_bo_reference(res->bo);
+    dri_bo_get_tiling(obj_surface->bo, &res->tiling, &swizzle);
+}
+
+void
+i965_dri_object_to_buffer_gpe_resource(struct i965_gpe_resource *res,
+                                       dri_bo *bo)
+{
+    unsigned int swizzle;
+
+    res->type = I965_GPE_RESOURCE_BUFFER;
+    res->width = bo->size;
+    res->height = 1;
+    res->pitch = res->width;
+    res->size = res->pitch * res->width;
+    res->bo = bo;
+    res->map = NULL;
+
+    dri_bo_reference(res->bo);
+    dri_bo_get_tiling(res->bo, &res->tiling, &swizzle);
+}
+
+void
+i965_gpe_dri_object_to_2d_gpe_resource(struct i965_gpe_resource *res,
+                                       dri_bo *bo,
+                                       unsigned int width,
+                                       unsigned int height,
+                                       unsigned int pitch)
+{
+    unsigned int swizzle;
+
+    res->type = I965_GPE_RESOURCE_2D;
+    res->width = width;
+    res->height = height;
+    res->pitch = pitch;
+    res->size = res->pitch * res->width;
+    res->bo = bo;
+    res->map = NULL;
+
+    dri_bo_reference(res->bo);
+    dri_bo_get_tiling(res->bo, &res->tiling, &swizzle);
+}
+
+void
+i965_zero_gpe_resource(struct i965_gpe_resource *res)
+{
+    if (res->bo) {
+        dri_bo_map(res->bo, 1);
+        memset(res->bo->virtual, 0, res->size);
+        dri_bo_unmap(res->bo);
+    }
+}
+
+void
+i965_free_gpe_resource(struct i965_gpe_resource *res)
+{
+    dri_bo_unreference(res->bo);
+    res->bo = NULL;
+    res->map = NULL;
+}
+
+void *
+i965_map_gpe_resource(struct i965_gpe_resource *res)
+{
+    int ret;
+
+    if (res->bo) {
+        ret = dri_bo_map(res->bo, 1);
+
+        if (ret == 0)
+            res->map = res->bo->virtual;
+        else
+            res->map = NULL;
+    } else
+        res->map = NULL;
+
+    return res->map;
+}
+
+void
+i965_unmap_gpe_resource(struct i965_gpe_resource *res)
+{
+    if (res->bo && res->map)
+        dri_bo_unmap(res->bo);
+
+    res->map = NULL;
+}

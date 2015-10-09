@@ -44,6 +44,26 @@ struct i965_buffer_surface
     unsigned int pitch;
 };
 
+enum {
+    I965_GPE_RESOURCE_BUFFER = 0,
+    I965_GPE_RESOURCE_2D
+};
+
+struct i965_gpe_resource
+{
+    dri_bo *bo;
+    char *map;
+    uint32_t type;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pitch;
+    uint32_t size;
+    uint32_t tiling;
+    uint32_t cb_cr_pitch;
+    uint32_t x_cb_offset;
+    uint32_t y_cb_offset;
+};
+
 struct i965_gpe_context
 {
     struct {
@@ -227,5 +247,29 @@ void gen9_gpe_pipeline_setup(VADriverContextP ctx,
 void gen9_gpe_pipeline_end(VADriverContextP ctx,
                              struct i965_gpe_context *gpe_context,
                              struct intel_batchbuffer *batch);
+
+Bool i965_allocate_gpe_resource(dri_bufmgr *bufmgr,
+                                struct i965_gpe_resource *res,
+                                const char *name);
+
+void i965_object_surface_to_2d_gpe_resource(struct i965_gpe_resource *res,
+                                            struct object_surface *obj_surface);
+
+void i965_dri_object_to_buffer_gpe_resource(struct i965_gpe_resource *res,
+                                            dri_bo *bo);
+
+void i965_gpe_dri_object_to_2d_gpe_resource(struct i965_gpe_resource *res,
+                                            dri_bo *bo,
+                                            unsigned int width,
+                                            unsigned int height,
+                                            unsigned int pitch);
+
+void i965_zero_gpe_resource(struct i965_gpe_resource *res);
+
+void i965_free_gpe_resource(struct i965_gpe_resource *res);
+
+void *i965_map_gpe_resource(struct i965_gpe_resource *res);
+
+void i965_unmap_gpe_resource(struct i965_gpe_resource *res);
 
 #endif /* _I965_GPE_UTILS_H_ */
