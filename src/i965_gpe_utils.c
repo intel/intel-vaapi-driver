@@ -1424,3 +1424,150 @@ i965_unmap_gpe_resource(struct i965_gpe_resource *res)
 
     res->map = NULL;
 }
+
+void
+gen9_gpe_mi_flush_dw(VADriverContextP ctx,
+                     struct intel_batchbuffer *batch,
+                     struct gpe_mi_flush_dw_parameter *params)
+{
+    int video_pipeline_cache_invalidate = 0;
+    int post_sync_operation = MI_FLUSH_DW_NOWRITE;
+
+    if (params->video_pipeline_cache_invalidate)
+        video_pipeline_cache_invalidate = MI_FLUSH_DW_VIDEO_PIPELINE_CACHE_INVALIDATE;
+
+    if (params->bo)
+        post_sync_operation = MI_FLUSH_DW_WRITE_QWORD;
+
+    __OUT_BATCH(batch, (MI_FLUSH_DW2 |
+                        video_pipeline_cache_invalidate |
+                        post_sync_operation |
+                        (5 - 2))); /* Always use PPGTT */
+
+    if (params->bo) {
+        __OUT_RELOC64(batch,
+                      params->bo,
+                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                      params->offset);
+    } else {
+        __OUT_BATCH(batch, 0);
+        __OUT_BATCH(batch, 0);
+    }
+
+    __OUT_BATCH(batch, params->dw0);
+    __OUT_BATCH(batch, params->dw1);
+}
+
+void
+gen9_gpe_mi_store_data_imm(VADriverContextP ctx,
+                           struct intel_batchbuffer *batch,
+                           struct gpe_mi_store_data_imm_parameter *params)
+{
+    if (params->is_qword) {
+        __OUT_BATCH(batch, MI_STORE_DATA_IMM |
+                    (1 << 21) |
+                    (5 - 2)); /* Always use PPGTT */
+    } else {
+        __OUT_BATCH(batch, MI_STORE_DATA_IMM | (4 - 2)); /* Always use PPGTT */
+    }
+
+    __OUT_RELOC64(batch,
+                  params->bo,
+                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                  params->offset);
+    __OUT_BATCH(batch, params->dw0);
+
+    if (params->is_qword)
+        __OUT_BATCH(batch, params->dw1);
+}
+
+void
+gen9_gpe_mi_store_register_mem(VADriverContextP ctx,
+                               struct intel_batchbuffer *batch,
+                               struct gpe_mi_store_register_mem_parameter *params)
+{
+    __OUT_BATCH(batch, (MI_STORE_REGISTER_MEM | (4 - 2))); /* Always use PPGTT */
+    __OUT_BATCH(batch, params->mmio_offset);
+    __OUT_RELOC64(batch,
+                  params->bo,
+                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                  params->offset);
+}
+
+void
+gen9_gpe_mi_load_register_mem(VADriverContextP ctx,
+                              struct intel_batchbuffer *batch,
+                              struct gpe_mi_load_register_mem_parameter *params)
+{
+    __OUT_BATCH(batch, (MI_LOAD_REGISTER_MEM | (4 - 2))); /* Always use PPGTT */
+    __OUT_BATCH(batch, params->mmio_offset);
+    __OUT_RELOC64(batch,
+                  params->bo,
+                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                  params->offset);
+}
+
+void
+gen9_gpe_mi_load_register_imm(VADriverContextP ctx,
+                              struct intel_batchbuffer *batch,
+                              struct gpe_mi_load_register_imm_parameter *params)
+{
+    __OUT_BATCH(batch, (MI_LOAD_REGISTER_IMM | (3 - 2)));
+    __OUT_BATCH(batch, params->mmio_offset);
+    __OUT_BATCH(batch, params->data);
+}
+
+void
+gen9_gpe_mi_load_register_reg(VADriverContextP ctx,
+                              struct intel_batchbuffer *batch,
+                              struct gpe_mi_load_register_reg_parameter *params)
+{
+    __OUT_BATCH(batch, (MI_LOAD_REGISTER_REG | (3 - 2)));
+    __OUT_BATCH(batch, params->src_mmio_offset);
+    __OUT_BATCH(batch, params->dst_mmio_offset);
+}
+
+void
+gen9_gpe_mi_math(VADriverContextP ctx,
+                 struct intel_batchbuffer *batch,
+                 struct gpe_mi_math_parameter *params)
+{
+    __OUT_BATCH(batch, (MI_MATH | (params->num_instructions - 1)));
+    intel_batchbuffer_data(batch, params->instruction_list, params->num_instructions * 4);
+}
+
+void
+gen9_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
+                                         struct intel_batchbuffer *batch,
+                                         struct gpe_mi_conditional_batch_buffer_end_parameter *params)
+{
+    int compare_mask_mode_enabled = MI_COMPARE_MASK_MODE_ENANBLED;
+
+    if (params->compare_mask_mode_disabled)
+        compare_mask_mode_enabled = 0;
+
+    __OUT_BATCH(batch, (MI_CONDITIONAL_BATCH_BUFFER_END |
+                        (1 << 21) |
+                        compare_mask_mode_enabled |
+                        (4 - 2))); /* Always use PPGTT */
+    __OUT_BATCH(batch, params->compare_data);
+    __OUT_RELOC64(batch,
+                  params->bo,
+                  I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_INSTRUCTION, 0,
+                  params->offset);
+}
+
+void
+gen9_gpe_mi_batch_buffer_start(VADriverContextP ctx,
+                               struct intel_batchbuffer *batch,
+                               struct gpe_mi_batch_buffer_start_parameter *params)
+{
+    __OUT_BATCH(batch, (MI_BATCH_BUFFER_START |
+                        (!!params->is_second_level << 22) |
+                        (!params->use_global_gtt << 8) |
+                        (1 << 0)));
+    __OUT_RELOC64(batch,
+                params->bo,
+                I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_INSTRUCTION, 0,
+                params->offset);
+}

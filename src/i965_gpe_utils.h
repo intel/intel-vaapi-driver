@@ -159,6 +159,72 @@ struct i965_gpe_context
     int curbe_size;
 };
 
+struct gpe_mi_flush_dw_parameter
+{
+    dri_bo *bo;
+    unsigned int offset;
+    unsigned int video_pipeline_cache_invalidate;
+    unsigned int dw0;
+    unsigned int dw1;
+};
+
+struct gpe_mi_store_data_imm_parameter
+{
+    dri_bo *bo;
+    unsigned int is_qword;
+    unsigned int offset;
+    unsigned int dw0;
+    unsigned int dw1;
+};
+
+struct gpe_mi_store_register_mem_parameter
+{
+    dri_bo *bo;
+    unsigned int offset;
+    unsigned int mmio_offset;
+};
+
+struct gpe_mi_load_register_mem_parameter
+{
+    dri_bo *bo;
+    unsigned int offset;
+    unsigned int mmio_offset;
+};
+
+struct gpe_mi_load_register_imm_parameter
+{
+    unsigned int data;
+    unsigned int mmio_offset;
+};
+
+struct gpe_mi_load_register_reg_parameter
+{
+    unsigned int src_mmio_offset;
+    unsigned int dst_mmio_offset;
+};
+
+struct gpe_mi_math_parameter
+{
+    unsigned int num_instructions;
+    unsigned int *instruction_list;
+};
+
+struct gpe_mi_conditional_batch_buffer_end_parameter
+{
+    dri_bo *bo;
+    unsigned int offset;
+    unsigned int compare_mask_mode_disabled;
+    unsigned int compare_data;
+};
+
+struct gpe_mi_batch_buffer_start_parameter
+{
+    dri_bo *bo;
+    unsigned int offset;
+    unsigned int is_second_level;
+    unsigned int use_global_gtt;
+};
+
 void i965_gpe_context_destroy(struct i965_gpe_context *gpe_context);
 void i965_gpe_context_init(VADriverContextP ctx,
                            struct i965_gpe_context *gpe_context);
@@ -271,5 +337,41 @@ void i965_free_gpe_resource(struct i965_gpe_resource *res);
 void *i965_map_gpe_resource(struct i965_gpe_resource *res);
 
 void i965_unmap_gpe_resource(struct i965_gpe_resource *res);
+
+void gen9_gpe_mi_flush_dw(VADriverContextP ctx,
+                          struct intel_batchbuffer *batch,
+                          struct gpe_mi_flush_dw_parameter *params);
+
+void gen9_gpe_mi_store_data_imm(VADriverContextP ctx,
+                                struct intel_batchbuffer *batch,
+                                struct gpe_mi_store_data_imm_parameter *params);
+
+void gen9_gpe_mi_store_register_mem(VADriverContextP ctx,
+                                    struct intel_batchbuffer *batch,
+                                    struct gpe_mi_store_register_mem_parameter *params);
+
+void gen9_gpe_mi_load_register_mem(VADriverContextP ctx,
+                                   struct intel_batchbuffer *batch,
+                                   struct gpe_mi_load_register_mem_parameter *params);
+
+void gen9_gpe_mi_load_register_imm(VADriverContextP ctx,
+                                   struct intel_batchbuffer *batch,
+                                   struct gpe_mi_load_register_imm_parameter *params);
+
+void gen9_gpe_mi_load_register_reg(VADriverContextP ctx,
+                                   struct intel_batchbuffer *batch,
+                                   struct gpe_mi_load_register_reg_parameter *params);
+
+void gen9_gpe_mi_math(VADriverContextP ctx,
+                      struct intel_batchbuffer *batch,
+                      struct gpe_mi_math_parameter *params);
+
+void gen9_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
+                                              struct intel_batchbuffer *batch,
+                                              struct gpe_mi_conditional_batch_buffer_end_parameter *params);
+
+void gen9_gpe_mi_batch_buffer_start(VADriverContextP ctx,
+                                    struct intel_batchbuffer *batch,
+                                    struct gpe_mi_batch_buffer_start_parameter *params);
 
 #endif /* _I965_GPE_UTILS_H_ */

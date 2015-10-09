@@ -31,7 +31,26 @@
 #define   MI_FLUSH_STATE_INSTRUCTION_CACHE_INVALIDATE   (0x1 << 0)
 
 #define MI_FLUSH_DW                             (CMD_MI | (0x26 << 23) | 0x2)
+#define MI_FLUSH_DW2                            (CMD_MI | (0x26 << 23) | 0x3)
 #define   MI_FLUSH_DW_VIDEO_PIPELINE_CACHE_INVALIDATE   (0x1 << 7)
+#define   MI_FLUSH_DW_NOWRITE                           (0 << 14)
+#define   MI_FLUSH_DW_WRITE_QWORD                       (1 << 14)
+#define   MI_FLUSH_DW_WRITE_TIME                        (3 << 14)
+
+#define MI_STORE_DATA_IMM                       (CMD_MI | (0x20 << 23))
+
+#define MI_STORE_REGISTER_MEM                   (CMD_MI | (0x24 << 23))
+
+#define MI_LOAD_REGISTER_IMM                    (CMD_MI | (0x22 << 23))
+
+#define MI_LOAD_REGISTER_MEM                    (CMD_MI | (0x29 << 23))
+
+#define MI_LOAD_REGISTER_REG                    (CMD_MI | (0x2A << 23))
+
+#define MI_MATH                                 (CMD_MI | (0x1A << 23))
+
+#define MI_CONDITIONAL_BATCH_BUFFER_END         (CMD_MI | (0x36 << 23))
+#define   MI_COMPARE_MASK_MODE_ENANBLED                 (1 << 19)
 
 #define XY_COLOR_BLT_CMD                        (CMD_2D | (0x50 << 22) | 0x04)
 #define XY_COLOR_BLT_WRITE_ALPHA                (1 << 21)
