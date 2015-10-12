@@ -348,21 +348,18 @@ gen9_pp_state_base_address(VADriverContextP ctx,
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
-    /* DW4. Surface state address */
-    OUT_RELOC(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
-    OUT_BATCH(batch, 0);
-    /* DW6. Dynamic state address */
-    OUT_RELOC(batch, pp_context->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
+    /* DW4-5 Surface state address */
+    OUT_RELOC64(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
+    /* DW6-7 Dynamic state address */
+    OUT_RELOC64(batch, pp_context->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
               0, 0 | BASE_ADDRESS_MODIFY);
-    OUT_BATCH(batch, 0);
 
     /* DW8. Indirect object address */
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0);
 
-    /* DW10. Instruction base address */
-    OUT_RELOC(batch, pp_context->instruction_state.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY);
-    OUT_BATCH(batch, 0);
+    /* DW10-11 Instruction base address */
+    OUT_RELOC64(batch, pp_context->instruction_state.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY);
 
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
