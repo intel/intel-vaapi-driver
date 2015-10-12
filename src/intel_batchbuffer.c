@@ -168,6 +168,24 @@ intel_batchbuffer_emit_reloc(struct intel_batchbuffer *batch, dri_bo *bo,
 }
 
 void 
+intel_batchbuffer_emit_reloc64(struct intel_batchbuffer *batch, dri_bo *bo,
+                                uint32_t read_domains, uint32_t write_domains,
+                                uint32_t delta)
+{
+    assert(batch->ptr - batch->map < batch->size);
+    dri_bo_emit_reloc(batch->buffer, read_domains, write_domains,
+                      delta, batch->ptr - batch->map, bo);
+
+   /* Using the old buffer offset, write in what the right data would be, in
+    * case the buffer doesn't move and we can short-circuit the relocation
+    * processing in the kernel.
+    */
+   uint64_t offset = bo->offset64 + delta;
+   intel_batchbuffer_emit_dword(batch, offset);
+   intel_batchbuffer_emit_dword(batch, offset >> 32);
+}
+
+void
 intel_batchbuffer_require_space(struct intel_batchbuffer *batch,
                                    unsigned int size)
 {

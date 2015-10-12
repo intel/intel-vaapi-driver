@@ -40,6 +40,9 @@ void intel_batchbuffer_emit_dword(struct intel_batchbuffer *batch, unsigned int 
 void intel_batchbuffer_emit_reloc(struct intel_batchbuffer *batch, dri_bo *bo, 
                                   uint32_t read_domains, uint32_t write_domains, 
                                   uint32_t delta);
+void intel_batchbuffer_emit_reloc64(struct intel_batchbuffer *batch, dri_bo *bo,
+                                  uint32_t read_domains, uint32_t write_domains,
+                                  uint32_t delta);
 void intel_batchbuffer_require_space(struct intel_batchbuffer *batch, unsigned int size);
 void intel_batchbuffer_data(struct intel_batchbuffer *batch, void *data, unsigned int size);
 void intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch);
@@ -78,6 +81,13 @@ void intel_batchbuffer_start_atomic_bcs_override(struct intel_batchbuffer *batch
                                      delta);                            \
     } while (0)
 
+/* Handle 48-bit address relocations for Gen8+ */
+#define __OUT_RELOC64(batch, bo, read_domains, write_domain, delta) do { \
+         intel_batchbuffer_emit_reloc64(batch, bo,                       \
+         read_domains, write_domain,                                     \
+         delta);                                                         \
+    } while (0)
+
 #define __ADVANCE_BATCH(batch) do {             \
         intel_batchbuffer_advance_batch(batch); \
     } while (0)
@@ -98,6 +108,8 @@ void intel_batchbuffer_start_atomic_bcs_override(struct intel_batchbuffer *batch
     __OUT_RELOC(batch, bo, read_domains, write_domain, delta)
 #define OUT_BCS_RELOC(batch, bo, read_domains, write_domain, delta)     \
     __OUT_RELOC(batch, bo, read_domains, write_domain, delta)
+#define OUT_RELOC64(batch, bo, read_domains, write_domain, delta)       \
+    __OUT_RELOC64(batch, bo, read_domains, write_domain, delta)
 
 #define ADVANCE_BATCH(batch)            __ADVANCE_BATCH(batch)
 #define ADVANCE_BLT_BATCH(batch)        __ADVANCE_BATCH(batch)
