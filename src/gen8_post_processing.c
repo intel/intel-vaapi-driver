@@ -175,7 +175,7 @@ static struct pp_module pp_modules_gen8[] = {
     {
         {
             "PL3_PL3",
-            PP_PL3_LOAD_SAVE_N12,
+            PP_PL3_LOAD_SAVE_PL3,
             pp_pl3_load_save_pl3_gen8,
             sizeof(pp_pl3_load_save_pl3_gen8),
             NULL,
