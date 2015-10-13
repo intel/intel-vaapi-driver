@@ -227,6 +227,22 @@ get_fourcc_info(unsigned int fourcc)
     return NULL;
 }
 
+static int
+get_bpp_from_fourcc(unsigned int fourcc)
+{
+    const i965_fourcc_info *info = get_fourcc_info(fourcc);
+    unsigned int i = 0;
+    unsigned int bpp = 0;
+
+    if (!info)
+        return 0;
+
+    for (i = 0; i < info->num_planes; i++)
+        bpp += info->bpp[i];
+
+    return bpp;
+}
+
 enum {
     I965_SURFACETYPE_RGBA = 1,
     I965_SURFACETYPE_YUV,
@@ -4060,7 +4076,10 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
 
     image->format.fourcc = obj_surface->fourcc;
     image->format.byte_order = VA_LSB_FIRST;
-    image->format.bits_per_pixel = 12;
+    image->format.bits_per_pixel = get_bpp_from_fourcc(obj_surface->fourcc);
+
+    if (!image->format.bits_per_pixel)
+        goto error;
 
     switch (image->format.fourcc) {
     case VA_FOURCC_YV12:
@@ -4119,6 +4138,39 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
     case VA_FOURCC_BGRX:
         image->num_planes = 1;
         image->pitches[0] = obj_surface->width;
+
+        switch (image->format.fourcc) {
+        case VA_FOURCC_RGBA:
+        case VA_FOURCC_RGBX:
+            image->format.red_mask = 0x000000ff;
+            image->format.green_mask = 0x0000ff00;
+            image->format.blue_mask = 0x00ff0000;
+            image->format.alpha_mask = 0x00000000;
+            break;
+        case VA_FOURCC_BGRA:
+        case VA_FOURCC_BGRX:
+            image->format.red_mask = 0x00ff0000;
+            image->format.green_mask = 0x0000ff00;
+            image->format.blue_mask = 0x000000ff;
+            image->format.alpha_mask = 0x00000000;
+            break;
+        default:
+            goto error;
+        }
+
+        switch (image->format.fourcc) {
+        case VA_FOURCC_RGBA:
+        case VA_FOURCC_BGRA:
+            image->format.depth = 32;
+            break;
+        case VA_FOURCC_RGBX:
+        case VA_FOURCC_BGRX:
+            image->format.depth = 24;
+            break;
+        default:
+            goto error;
+        }
+
         break;
     default:
         goto error;
