@@ -42,7 +42,7 @@
 
 typedef struct {
     uint8_t plane;                      /* the plane which the pixel belongs to */
-    uint8_t offset;                     /* bits offset within a pixel in the plane */
+    uint8_t offset;                     /* bits offset within a macro-pixel for packed YUV formats or pixel for other formats in the plane */
 } i965_component_info;
 
 typedef struct {
