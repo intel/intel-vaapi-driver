@@ -880,6 +880,66 @@ intel_update_vp8_frame_store_index(VADriverContextP ctx,
 
 }
 
+//Obtain the reference frames from the decode state and store them in frame store.
+void
+intel_update_vp9_frame_store_index(VADriverContextP ctx,
+                                   struct decode_state *decode_state,
+                                   VADecPictureParameterBufferVP9 *pic_param,
+                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES])
+{
+    struct object_surface *obj_surface;
+    int i=0, index=0;
+
+    //Check for the validity of the last reference frame
+    obj_surface = decode_state->reference_objects[0];
+
+    index = pic_param->pic_fields.bits.last_ref_frame;
+    if (pic_param->reference_frames[index] == VA_INVALID_ID ||
+        !obj_surface ||
+        !obj_surface->bo) {
+        frame_store[0].surface_id = VA_INVALID_ID;
+        frame_store[0].obj_surface = NULL;
+    } else {
+        frame_store[0].surface_id = pic_param->reference_frames[index];
+        frame_store[0].obj_surface = obj_surface;
+    }
+
+    //Check for the validity of the golden reference frame
+    obj_surface = decode_state->reference_objects[1];
+
+    index = pic_param->pic_fields.bits.golden_ref_frame;
+    if (pic_param->reference_frames[index] == VA_INVALID_ID ||
+        !obj_surface ||
+        !obj_surface->bo) {
+        frame_store[1].surface_id = frame_store[0].surface_id;
+        frame_store[1].obj_surface = frame_store[0].obj_surface;
+    } else {
+        frame_store[1].surface_id = pic_param->reference_frames[index];
+        frame_store[1].obj_surface = obj_surface;
+    }
+
+    //Check for the validity of the altref reference frame
+    obj_surface = decode_state->reference_objects[2];
+
+    index = pic_param->pic_fields.bits.alt_ref_frame;
+    if (pic_param->reference_frames[index] == VA_INVALID_ID ||
+        !obj_surface ||
+        !obj_surface->bo) {
+        frame_store[2].surface_id = frame_store[0].surface_id;
+        frame_store[2].obj_surface = frame_store[0].obj_surface;
+    } else {
+        frame_store[2].surface_id = pic_param->reference_frames[index];
+        frame_store[2].obj_surface = obj_surface;
+    }
+
+    //Set the remaining framestores to either last/golden/altref
+    for (i = 3; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        frame_store[i].surface_id = frame_store[i % 2].surface_id;
+        frame_store[i].obj_surface = frame_store[i % 2].obj_surface;
+    }
+
+}
+
 static VAStatus
 intel_decoder_check_avc_parameter(VADriverContextP ctx,
                                   VAProfile h264_profile,
@@ -1155,6 +1215,33 @@ hevc_ensure_surface_bo(
     return va_status;
 }
 
+//Ensure there is a tiled render surface in NV12 format. If not, create one.
+VAStatus
+vp9_ensure_surface_bo(
+    VADriverContextP                    ctx,
+    struct decode_state                *decode_state,
+    struct object_surface              *obj_surface,
+    const VADecPictureParameterBufferVP9 *pic_param
+)
+{
+    VAStatus va_status = VA_STATUS_SUCCESS;
+
+    /* (Re-)allocate the underlying surface buffer store, if necessary */
+    if (!obj_surface->bo || obj_surface->fourcc != VA_FOURCC_NV12) {
+        struct i965_driver_data * const i965 = i965_driver_data(ctx);
+
+        i965_destroy_surface_storage(obj_surface);
+
+        va_status = i965_check_alloc_surface_bo(ctx,
+                                                obj_surface,
+                                                i965->codec_info->has_tiled_surface,
+                                                VA_FOURCC_NV12,
+                                                SUBSAMPLE_YUV420);
+    }
+
+    return va_status;
+}
+
 static VAStatus
 intel_decoder_check_hevc_parameter(VADriverContextP ctx,
                                    struct decode_state *decode_state)
@@ -1222,6 +1309,64 @@ error:
     return va_status;
 }
 
+//Obtains reference frames from the picture parameter and
+//then sets the reference frames in the decode_state
+static VAStatus
+intel_decoder_check_vp9_parameter(VADriverContextP ctx,
+                                   struct decode_state *decode_state)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VADecPictureParameterBufferVP9 *pic_param = (VADecPictureParameterBufferVP9 *)decode_state->pic_param->buffer;
+    VAStatus va_status = VA_STATUS_ERROR_INVALID_PARAMETER;
+    struct object_surface *obj_surface;
+    int i=0, index=0;
+
+    //Max support upto 4k for BXT
+    if ((pic_param->frame_width-1 < 7) || (pic_param->frame_width-1 > 4095))
+        return va_status;
+
+    if ((pic_param->frame_height-1 < 7) || (pic_param->frame_height-1 > 4095))
+        return va_status;
+
+    //Set the reference object in decode state for last reference
+    index = pic_param->pic_fields.bits.last_ref_frame;
+    if (pic_param->reference_frames[index] != VA_INVALID_SURFACE) {
+        obj_surface = SURFACE(pic_param->reference_frames[index]);
+
+        if (obj_surface && obj_surface->bo)
+            decode_state->reference_objects[i++] = obj_surface;
+        else
+            decode_state->reference_objects[i++] = NULL;
+    }
+
+    //Set the reference object in decode state for golden reference
+    index = pic_param->pic_fields.bits.golden_ref_frame;
+    if (pic_param->reference_frames[index] != VA_INVALID_SURFACE) {
+        obj_surface = SURFACE(pic_param->reference_frames[index]);
+
+        if (obj_surface && obj_surface->bo)
+            decode_state->reference_objects[i++] = obj_surface;
+        else
+            decode_state->reference_objects[i++] = NULL;
+    }
+
+    //Set the reference object in decode state for altref reference
+    index = pic_param->pic_fields.bits.alt_ref_frame;
+    if (pic_param->reference_frames[index] != VA_INVALID_SURFACE) {
+        obj_surface = SURFACE(pic_param->reference_frames[index]);
+
+        if (obj_surface && obj_surface->bo)
+            decode_state->reference_objects[i++] = obj_surface;
+        else
+            decode_state->reference_objects[i++] = NULL;
+    }
+
+    for ( ; i < 16; i++)
+        decode_state->reference_objects[i] = NULL;
+
+    return VA_STATUS_SUCCESS;
+}
+
 VAStatus
 intel_decoder_sanity_check_input(VADriverContextP ctx,
                                  VAProfile profile,
@@ -1272,6 +1417,10 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
     case VAProfileHEVCMain:
     case VAProfileHEVCMain10:
         vaStatus = intel_decoder_check_hevc_parameter(ctx, decode_state);
+        break;
+
+    case VAProfileVP9Profile0:
+        vaStatus = intel_decoder_check_vp9_parameter(ctx, decode_state);
         break;
 
     default:

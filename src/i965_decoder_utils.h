@@ -159,6 +159,12 @@ intel_update_vp8_frame_store_index(VADriverContextP ctx,
                                    VAPictureParameterBufferVP8 *pic_param,
                                    GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES]);
 
+void
+intel_update_vp9_frame_store_index(VADriverContextP ctx,
+                                   struct decode_state *decode_state,
+                                   VADecPictureParameterBufferVP9 *pic_param,
+                                   GenFrameStore frame_store[MAX_GEN_REFERENCE_FRAMES]);
+
 bool
 intel_ensure_vp8_segmentation_buffer(VADriverContextP ctx, GenBuffer *buf,
     unsigned int mb_width, unsigned int mb_height);
@@ -174,4 +180,11 @@ hevc_ensure_surface_bo(
     const VAPictureParameterBufferHEVC *pic_param
 );
 
+VAStatus
+vp9_ensure_surface_bo(
+    VADriverContextP                    ctx,
+    struct decode_state                *decode_state,
+    struct object_surface              *obj_surface,
+    const VADecPictureParameterBufferVP9 *pic_param
+);
 #endif /* I965_DECODER_UTILS_H */
