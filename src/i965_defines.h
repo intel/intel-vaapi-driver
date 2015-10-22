@@ -437,6 +437,9 @@
 #define HCP_PAK_OBJECT                          HCP(0x21)
 #define HCP_INSERT_PAK_OBJECT                   HCP(0x22)
 
+#define HCP_VP9_SEGMENT_STATE                   HCP(0x32)
+#define HCP_VP9_PIC_STATE                       HCP(0x30)
+
 #define I965_DEPTHFORMAT_D32_FLOAT              1
 
 #define BASE_ADDRESS_MODIFY             (1 << 0)
@@ -905,6 +908,12 @@
 #define HEVC_SLICE_I                            2
 
 #define HCP_CODEC_HEVC                          0
+
+#define HCP_CODEC_VP9                           1
+#define HCP_VP9_KEY_FRAME                       0
+#define HCP_VP9_INTER_FRAME                     1
+#define HCP_VP9_PROFILE0                        0     /* 8 bit 420 only */
+#define HCP_VP9_PROFILE2                        2     /* 10 bits 420 only */
 
 #define HCP_CODEC_SELECT_DECODE                 0
 #define HCP_CODEC_SELECT_ENCODE                 1

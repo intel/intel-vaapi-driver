@@ -107,3 +107,27 @@ gen_free_hevc_surface(void **data)
 
     pthread_mutex_unlock(&free_hevc_surface_lock);
 }
+
+static pthread_mutex_t free_vp9_surface_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void gen_free_vp9_surface(void **data)
+{
+    GenVP9Surface *vp9_surface;
+
+    pthread_mutex_lock(&free_vp9_surface_lock);
+
+    vp9_surface = *data;
+
+    if (!vp9_surface) {
+        pthread_mutex_unlock(&free_vp9_surface_lock);
+        return;
+    }
+
+    dri_bo_unreference(vp9_surface->motion_vector_temporal_bo);
+    vp9_surface->motion_vector_temporal_bo = NULL;
+
+    free(vp9_surface);
+    *data = NULL;
+
+    pthread_mutex_unlock(&free_vp9_surface_lock);
+}
