@@ -59,6 +59,17 @@ struct gen_hevc_surface
     dri_bo *motion_vector_temporal_bo;
 };
 
+typedef struct gen_vp9_surface GenVP9Surface;
+struct gen_vp9_surface
+{
+    GenCodecSurface base;
+    uint16_t frame_width;
+    uint16_t frame_height;
+    dri_bo *motion_vector_temporal_bo;
+};
+
 extern void gen_free_hevc_surface(void **data);
+
+extern void gen_free_vp9_surface(void **data);
 
 #endif /* INTEL_MEDIA_H */
