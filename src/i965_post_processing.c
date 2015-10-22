@@ -38,6 +38,7 @@
 #include "i965_drv_video.h"
 #include "i965_post_processing.h"
 #include "i965_render.h"
+#include "i965_yuv_coefs.h"
 #include "intel_media.h"
 
 extern VAStatus
@@ -3073,6 +3074,8 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     int src_width, src_height;
     AVSState * const avs = &pp_avs_context->state;
     float sx, sy;
+    const float * yuv_to_rgb_coefs;
+    size_t yuv_to_rgb_coefs_size;
 
     /* source surface */
     gen7_pp_set_media_rw_message_surface(ctx, pp_context, src_surface, 0, 0,
@@ -3304,6 +3307,11 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
         (float) pp_avs_context->dest_x * pp_avs_context->horiz_range / dw;
 
     gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
+
+    yuv_to_rgb_coefs = i915_color_standard_to_coefs (i915_filter_to_color_standard (src_surface->flags &
+                                                                                    VA_SRC_COLOR_MASK),
+                                                     &yuv_to_rgb_coefs_size);
+    memcpy(&pp_static_parameter->grf7, yuv_to_rgb_coefs, yuv_to_rgb_coefs_size);
 
     dst_surface->flags = src_surface->flags;
 
