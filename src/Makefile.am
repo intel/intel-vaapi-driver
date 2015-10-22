@@ -139,6 +139,7 @@ source_h = \
 	intel_version.h		\
 	object_heap.h           \
 	vp8_probs.h             \
+	vp9_probs.h             \
 	sysdeps.h		\
 	va_backend_compat.h	\
 	i965_fourcc.h           \
