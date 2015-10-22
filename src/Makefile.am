@@ -84,6 +84,7 @@ source_c = \
 	i965_media_mpeg2.c	\
 	i965_gpe_utils.c	\
 	i965_post_processing.c	\
+	i965_yuv_coefs.c	\
 	gen8_post_processing.c	\
 	i965_render.c		\
 	i965_vpp_avs.c		\
@@ -128,6 +129,7 @@ source_h = \
 	i965_render.h           \
 	i965_structs.h		\
 	i965_vpp_avs.h		\
+	i965_yuv_coefs.h	\
 	intel_batchbuffer.h     \
 	intel_batchbuffer_dump.h\
 	intel_compiler.h	\

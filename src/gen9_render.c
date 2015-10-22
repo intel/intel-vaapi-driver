@@ -45,6 +45,7 @@
 #include "i965_defines.h"
 #include "i965_drv_video.h"
 #include "i965_structs.h"
+#include "i965_yuv_coefs.h"
 
 #include "i965_render.h"
 
@@ -117,25 +118,6 @@ static struct i965_kernel render_kernels_gen9[] = {
 
 #define URB_CS_ENTRIES	      4
 #define URB_CS_ENTRY_SIZE     4
-
-static float yuv_to_rgb_bt601[3][4] = {
-{1.164,		0,	1.596,		-0.06275,},
-{1.164,		-0.392,	-0.813,		-0.50196,},
-{1.164,		2.017,	0,		-0.50196,},
-};
-
-static float yuv_to_rgb_bt709[3][4] = {
-{1.164,		0,	1.793,		-0.06275,},
-{1.164,		-0.213,	-0.533,		-0.50196,},
-{1.164,		2.112,	0,		-0.50196,},
-};
-
-static float yuv_to_rgb_smpte_240[3][4] = {
-{1.164,		0,	1.794,		-0.06275,},
-{1.164,		-0.258,	-0.5425,	-0.50196,},
-{1.164,		2.078,	0,		-0.50196,},
-};
-
 
 static void
 gen9_render_set_surface_tiling(struct gen8_surface_state *ss, uint32_t tiling)
@@ -775,6 +757,8 @@ gen9_render_upload_constants(VADriverContextP ctx,
     float saturation = (float)i965->saturation_attrib->value / DEFAULT_SATURATION;
     float *yuv_to_rgb;
     unsigned int color_flag;
+    const float* yuv_coefs;
+    size_t coefs_length;
 
     dri_bo_map(render_state->dynamic_state.bo, 1);
     assert(render_state->dynamic_state.bo->virtual);
@@ -811,12 +795,10 @@ gen9_render_upload_constants(VADriverContextP ctx,
 
     color_flag = flags & VA_SRC_COLOR_MASK;
     yuv_to_rgb = (float *)constant_buffer + 8;
-    if (color_flag == VA_SRC_BT709)
-        memcpy(yuv_to_rgb, yuv_to_rgb_bt709, sizeof(yuv_to_rgb_bt709));
-    else if (color_flag == VA_SRC_SMPTE_240)
-        memcpy(yuv_to_rgb, yuv_to_rgb_smpte_240, sizeof(yuv_to_rgb_smpte_240));
-    else
-        memcpy(yuv_to_rgb, yuv_to_rgb_bt601, sizeof(yuv_to_rgb_bt601));
+
+    yuv_coefs = i915_color_standard_to_coefs(i915_filter_to_color_standard(color_flag),
+                                             &coefs_length);
+    memcpy(yuv_to_rgb, yuv_coefs, coefs_length);
 
     dri_bo_unmap(render_state->dynamic_state.bo);
 }
