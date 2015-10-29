@@ -400,6 +400,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .has_hevc_decoding = 1,
     .has_hevc_encoding = 1,
     .has_hevc10_decoding = 1,
+    .has_vp9_decoding = 1,
 
     .num_filters = 5,
     .filters = {
