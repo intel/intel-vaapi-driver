@@ -2,7 +2,7 @@
   libva-intel-driver
   VA driver for Intel G45 & HD Graphics family
 
-  Copyright (C) 2009-2011 Intel Corporation
+  Copyright (C) 2009-2015 Intel Corporation
 
 
 License
@@ -22,6 +22,10 @@ CTG: Cantiga, Intel GMA 4500MHD (GM45)
 ILK: Ironlake, Intel HD Graphics for 2010 Intel Core processor family
 SNB: Sandybridge, Intel HD Graphics for 2011 Intel Core processor family
 IVB: Ivybridge
+HSW: Haswell
+BDW: Broadwell
+CHV/BSW: Cherryview/Braswell
+SKL: Skylake
 
 
 Codecs
@@ -31,9 +35,15 @@ H.264   D   ILK+
 H.264   E   SNB+
 MPEG-2  D   CTG+
 VC-1    D   SNB+
+JPEG    D   IVB+
+JPEG    E   CHV+/BSW+
+VP8     D   BDW+
+VP8     E   CHV+/BSW+
+HEVC    D   CHV+/BSW+
+HEVC    E   SKL+
 
 
 Requirements
 ------------
 
-libva >= 1.0.16
+libva >= 1.6.0
