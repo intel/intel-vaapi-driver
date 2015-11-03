@@ -159,7 +159,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -168,15 +168,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -443,8 +443,8 @@
 
 
 	//For layer 0, use f0.1 directly
-	cmp.ne.f0.1  			(1)  null<1>:d    r7.2:uw 		0:uw
-	(f0.1)cmp.ne.f0.1	(1)  null<1>:d		 r7.3:uw		0:uw
+	cmp.ne.f0.1  			(1)  null<1>:d    r9.2:uw 		0:uw
+	(f0.1)cmp.ne.f0.1	(1)  null<1>:d		 r9.3:uw		0:uw
 	(-f0.1)  jmpi  (1)  SKIP_LAYER_L0
 
 
@@ -453,7 +453,7 @@
 
 	//Copy all AVS Payload data
 	// Setup Message Payload Header for 1st block of Media Sampler 8x8 (16x4 for IVB+)
-	mov (1) r25.6:f        r7.5:f		{ NoDDClr }		//NLAS dx
+	mov (1) r25.6:f        r9.5:f		{ NoDDClr }		//NLAS dx
 	mov (1) r25.4:f        r3.0:f				{ NoDDClr, NoDDChk } 	//Step X
 	mov (1) r25.5:f        r4.0:f				{ NoDDClr, NoDDChk }	//Step Y
 
@@ -470,14 +470,14 @@
     // Calculating X(8)
     mov (1)   acc0.2:f           		r6.0:f
     mac (1)   acc0.2:f           		r3.0:f          	8.0:f
-    mac (1)   r23.2:f    	r7.5:f     28.0:f		{ NoDDClr }
+    mac (1)   r23.2:f    	r9.5:f     28.0:f		{ NoDDClr }
 
     // Calculating Y(4)
     mul (1)   r23.1<1>:f   	r4.0:f       4.0:f   	{ NoDDClr, NoDDChk }  //dY*4
 
     // Calculating dx(8)
     mov (1)   acc0.4:f           r3.0:f
-    mac (1)   r23.4:f     r7.5:f		8.0:f		{ NoDDClr, NoDDChk }
+    mac (1)   r23.4:f     r9.5:f		8.0:f		{ NoDDClr, NoDDChk }
 
 	// Binding Index
 	mov (1)	r23.5:ud		0:ud							{ NoDDChk }

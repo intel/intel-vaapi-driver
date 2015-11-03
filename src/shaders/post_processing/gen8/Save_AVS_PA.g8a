@@ -138,7 +138,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -147,15 +147,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -392,8 +392,8 @@
 	add	(4)		a0.4<1>:w			r2.28<4;4,1>:ub    928:uw
 
 	/* X block origin. YUY2 or UYUV */
-    shl (1) r27.0<1>:d      r7.0<0;1,0>:w            1:w  			 { NoDDClr }            // H. block origin need to be 2 times
-    mov (1) r27.1<1>:d      r7.1<0;1,0>:w                 			 { NoDDClr, NoDDChk }   // Block origin (1st quadrant)
+    shl (1) r27.0<1>:d      r9.0<0;1,0>:w            1:w  			 { NoDDClr }            // H. block origin need to be 2 times
+    mov (1) r27.1<1>:d      r9.1<0;1,0>:w                 			 { NoDDClr, NoDDChk }   // Block origin (1st quadrant)
     mov (1) r27.2<1>:ud     0x1001F:ud  	 { NoDDChk }            // Block width and height (32x2)
 
 // Rounding

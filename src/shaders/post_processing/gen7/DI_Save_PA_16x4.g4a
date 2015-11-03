@@ -155,7 +155,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -264,8 +264,8 @@
 add (4) a0.4<1>:uw   r2.28<4;4,1>:ub   608:w               // Initial Y,U,V offset in YUV422 block; it starts at m20
 
 mov (8) r27.0<1>:ud     r0.0<8;8,1>:ud
-shl (1) r27.0<1>:d      r7.0<0;1,0>:w            1:w  { NoDDClr }          // H. block origin need to be doubled
-mov (1) r27.1<1>:d      r7.1<0;1,0>:w                 { NoDDClr, NoDDChk }       // Block origin
+shl (1) r27.0<1>:d      r9.0<0;1,0>:w            1:w  { NoDDClr }          // H. block origin need to be doubled
+mov (1) r27.1<1>:d      r9.1<0;1,0>:w                 { NoDDClr, NoDDChk }       // Block origin
 mov (1) r27.2<1>:ud     0x3001F:ud          { NoDDChk }          // Block width and height (32x8)
 
 //prepare the message headers

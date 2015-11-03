@@ -169,7 +169,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -178,15 +178,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -293,14 +293,14 @@
 
 // Prepare the DNDI send command
 mov (8)		mudMSGHDR_DNDI(0)<1>			r0.0<8;8,1>:ud					// message header
-mov (1)		mwMSGHDR_DNDI(1,4)<1>			r7.0<0;1,0>:w		{ NoDDClr }		// horizontal origin	// Do we need to add offset here? -vK
-mov (1)		mwMSGHDR_DNDI(1,12)<1>			r7.1<0;1,0>:w		{ NoDDChk }		// vertical origin		// Can these 2 be combined? - vK
+mov (1)		mwMSGHDR_DNDI(1,4)<1>			r9.0<0;1,0>:w		{ NoDDClr }		// horizontal origin	// Do we need to add offset here? -vK
+mov (1)		mwMSGHDR_DNDI(1,12)<1>			r9.1<0;1,0>:w		{ NoDDChk }		// vertical origin		// Can these 2 be combined? - vK
 
 send (8)	udDNDI_RESP(0)<1>	r18	0x2	0x4AE8003:ud
 
 // On Gen6, with VDI walker, use the XY pair returned rather than programmed above
 // VDI_RETURNED_XY is ordered XY in case of walker enables and the same as programmed in case of walker disabled
-mov (2) 	r7.0<1>:w     uwDNDI_RESP(9,14)<2;2,1>	// horizontal/Vertial origin in W.14 and W.15    
+mov (2) 	r9.0<1>:w     uwDNDI_RESP(9,14)<2;2,1>	// horizontal/Vertial origin in W.14 and W.15
 
 
 
@@ -312,8 +312,8 @@ mov (2) 	r7.0<1>:w     uwDNDI_RESP(9,14)<2;2,1>	// horizontal/Vertial origin in 
 mov (8)     mudMSGHDR_STMM(0)<1>	r0.0<8;8,1>:ud               							// message header   
 mov (8)     mudMSGHDR_STMM(1)<1>   	udDNDI_RESP(8,0)         					// Move STMM to MRF 
 
-shr (1)     mudMSGHDR_STMM(0,0)<1>	r7.0<0;1,0>:w            1:w     { NoDDClr } 		// X origin / 2
-mov (1)     mudMSGHDR_STMM(0,1)<1>	r7.1<0;1,0>:w                    { NoDDClr, NoDDChk }  	// Y origin
+shr (1)     mudMSGHDR_STMM(0,0)<1>	r9.0<0;1,0>:w            1:w     { NoDDClr } 		// X origin / 2
+mov (1)     mudMSGHDR_STMM(0,1)<1>	r9.1<0;1,0>:w                    { NoDDClr, NoDDChk }  	// Y origin
 mov (1)     mudMSGHDR_STMM(0,2)<1>	0x30007:ud           { NoDDChk } 		// block width and height (8x4)
 
 send (8)	null<1>:d	r20	0x5		0x40A8021:ud      
@@ -329,8 +329,8 @@ send (8)	null<1>:d	r20	0x5		0x40A8021:ud
 mov (8)		mudMSGHDR_ENC_STATS(1)<1>	0x0:ud						// Init payload MRF
 mov (8)		mudMSGHDR_ENC_STATS(0)<1>	r0.0<8;8,1>:ud				// message header
 
-shr (1)		mudMSGHDR_ENC_STATS(0,0)<1>		r7.0<0;1,0>:w            	1:w  	{ NoDDClr }			//enable the flag after testing on si           			{ NoDDClr }	// X origin / 2
-mul (1)		acc0.1<1>:ud					r7.1<0;1,0>:w				3:w																							// Y origin * 3
+shr (1)		mudMSGHDR_ENC_STATS(0,0)<1>		r9.0<0;1,0>:w            	1:w  	{ NoDDClr }			//enable the flag after testing on si           			{ NoDDClr }	// X origin / 2
+mul (1)		acc0.1<1>:ud					r9.1<0;1,0>:w				3:w																							// Y origin * 3
 shr (1)		mudMSGHDR_ENC_STATS(0,1)<1>		acc0.1<0;1,0>:ud			2:w		{ NoDDClr, NoDDChk }		//enable the flag after testing on si			   { NoDDClr, NoDDChk } // Y origin * 3/4
 mov (1)		mudMSGHDR_ENC_STATS(0,2)<1>		0x20007:ud				{ NoDDChk }			//enable the flag after testing on si						{ NoDDChk } // block width and height (8x3)
 add (2)		mudMSGHDR_ENC_STATS(0,0)<1>		mudMSGHDR_ENC_STATS(0,0)<2;2,1>       	r1.12<2;2,1>:uw					// Add pitch to X,Y origin
@@ -373,13 +373,13 @@ send (8)   null<1>:d    r24    0x5    0x40A8021:ud
 
 
 mov (8) r27.0<1>:ud     r0.0<8;8,1>:ud
-shl (1) r27.0<1>:ud     r7.0<0;1,0>:w            1:w  { NoDDClr }          // H. block origin need to be doubled
-mov (1) r27.1<1>:ud     r7.1<0;1,0>:w                 { NoDDClr, NoDDChk }       // Block origin
+shl (1) r27.0<1>:ud     r9.0<0;1,0>:w            1:w  { NoDDClr }          // H. block origin need to be doubled
+mov (1) r27.1<1>:ud     r9.1<0;1,0>:w                 { NoDDClr, NoDDChk }       // Block origin
 mov (1) r27.2<1>:ud     0x3000F:ud        { NoDDClr, NoDDChk }       // Block width and height (16x8)
 
 //M0.3  - 0 - CP Enable, 1 - Area of Interest, 3:2 Message Format(TBD), 4:3 - Ignored, 31:5 CP state pointer
 //Compose area-of-interest bit + color pipe state pointer
-or (1)  r27.3<1>:ud     r2.4<0;1,0>:ud     r7.26<0;1,0>:b     { NoDDChk }
+or (1)  r27.3<1>:ud     r2.4<0;1,0>:ud     r9.26<0;1,0>:b     { NoDDChk }
 
 //prepare the message headers
 mov (8) r18.0<1>:ud       r27<8;8,1>:ud

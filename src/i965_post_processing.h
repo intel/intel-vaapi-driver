@@ -422,33 +422,58 @@ struct gen7_pp_static_parameter
         float sampler_load_horizontal_frame_origin;
         unsigned int padx[7];
     } grf6;
+
+    struct {
+        /* r7.0 -> r7.3 */
+        float coef_ry;
+        float coef_ru;
+        float coef_rv;
+        float coef_yd;
+
+        /* r7.4 -> r7.7 */
+        float coef_gy;
+        float coef_gu;
+        float coef_gv;
+        float coef_ud;
+    } grf7;
+
+    struct {
+        /* r8.0 -> r8.3 */
+        float coef_by;
+        float coef_bu;
+        float coef_bv;
+        float coef_vd;
+
+        /* r8.4 -> r8.7 */
+        unsigned int padx[4];
+    } grf8;
 };
 
 struct gen7_pp_inline_parameter
 {
     struct {
-        /* r7.0 */
+        /* r9.0 */
         unsigned int destination_block_horizontal_origin:16;
         unsigned int destination_block_vertical_origin:16;
-        /* r7.1: 0xffffffff */
+        /* r9.1: 0xffffffff */
         unsigned int constant_0;
-        /* r7.2 */
+        /* r9.2 */
         unsigned int pad0;
-        /* r7.3 */
+        /* r9.3 */
         unsigned int pad1;
-        /* r7.4 */
+        /* r9.4 */
         float sampler_load_main_video_x_scaling_step;
-        /* r7.5 */
+        /* r9.5 */
         unsigned int pad2;
-        /* r7.6: must be zero */
+        /* r9.6: must be zero */
         unsigned int avs_vertical_block_number;
-        /* r7.7: 0 */
+        /* r9.7: 0 */
         unsigned int group_id_number;
-    } grf7;
+    } grf9;
 
     struct {
         unsigned int padx[8];
-    } grf8;
+    } grf10;
 };
 
 struct i965_post_processing_context

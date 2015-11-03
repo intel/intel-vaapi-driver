@@ -154,7 +154,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -163,15 +163,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -368,13 +368,13 @@ mov (8) r25<1>:ud 	r0.0<8;8,1>:ud
 mov (8) r26<1>:ud 	r0.0<8;8,1>:ud
 
 // Calculate StepX for all layers and overwrite it on the ratio
-	mul	(8)		r3.0<1>:f   r3.0<8;8,1>:f 	r7.4<0;1,0>:f				//StepX_ratio = StepX / VideoStepX
+	mul	(8)		r3.0<1>:f   r3.0<8;8,1>:f 	r9.4<0;1,0>:f				//StepX_ratio = StepX / VideoStepX
 
 	//Normalised Ratio of Horizontal step size with main video for all layers now becomes
 	//Normalised Horizontal step size for all layers
 
 // Calculate block origin for all layers and overwrite it on the frame origin
-	mov (2)	r8.5<1>:f						r7.0<2;2,1>:w		//Convert origin from word to float
+	mov (2)	r10.5<1>:f						r9.0<2;2,1>:w		//Convert origin from word to float
 
 	cmp.e.f0.0 	(1)	null<1>:d				r2.26<0;1,0>:ub 		1:uw
 
@@ -391,19 +391,19 @@ mov (8) r26<1>:ud 	r0.0<8;8,1>:ud
   // rotate 0 degree
 ROTATE_0_L0:  
     (-f0.0)mov	(1)	acc0.0<1>:f					   r6.0<0;1,0>:f
-    (-f0.0)mac	(1)	r6.0<1>:f    r3.0<0;1,0>:f		r8.5<0;1,0>:f
+    (-f0.0)mac	(1)	r6.0<1>:f    r3.0<0;1,0>:f		r10.5<0;1,0>:f
 
     mov	(1)	acc0.0<1>:f            r5.0<0;1,0>:f
-    mac	(1)	r5.0<1>:f    r4.0<0;1,0>:f		    r8.6<0;1,0>:f
+    mac	(1)	r5.0<1>:f    r4.0<0;1,0>:f		    r10.6<0;1,0>:f
     jmpi (1) END_SRC_BLOCK_ORIG_COMP_L0
 
   // rotate 90 degree
 ROTATE_90_L0:  
     (-f0.0)mov	(1)	acc0.0<1>:f            r6.0<0;1,0>:f
-    (-f0.0)mac	(1)	r6.0<1>:f    r3.0<0;1,0>:f		r8.6<0;1,0>:f
+    (-f0.0)mac	(1)	r6.0<1>:f    r3.0<0;1,0>:f		r10.6<0;1,0>:f
 
     mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
-    add (1) r17.0<1>:f    -r8.5<0;1,0>:f               r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    -r10.5<0;1,0>:f               r16.0<0;1,0>:f
     add (1) r17.0<1>:f    r17.0<0;1,0>:f        -16.0:f  	
 
     mov	(1)	acc0.0<1>:f							r5.0<0;1,0>:f
@@ -413,13 +413,13 @@ ROTATE_90_L0:
   // rotate 180 degree
 ROTATE_180_L0:  
     (-f0.0)mov (1) r16.0<1>:f    r2.0<0;1,0>:uw
-    (-f0.0)add (1) r17.0<1>:f    -r8.5<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    -r10.5<0;1,0>:f              r16.0<0;1,0>:f
     (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
     (-f0.0)mov (1) acc0.0<1>:f             r6.0<0;1,0>:f
     (-f0.0)mac (1) r6.0<1>:f     r3.0<0;1,0>:f          r17.0<0;1,0>:f
 
     mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
-    add (1) r17.0<1>:f    -r8.6<0;1,0>:f                     r16.0<0;1,0>:f
+    add (1) r17.0<1>:f    -r10.6<0;1,0>:f                     r16.0<0;1,0>:f
     add (1) r17.0<1>:f    r17.0<0;1,0>:f              -16.0:f  	
     mov	(1)	acc0.0<1>:f             r5.0<0;1,0>:f
     mac	(1)	r5.0<1>:f     r4.0<0;1,0>:f                 r17.0<0;1,0>:f
@@ -428,13 +428,13 @@ ROTATE_180_L0:
   // rotate 270 degree
 ROTATE_270_L0:    
     (-f0.0)mov (1) r16.0<1>:f    r2.1<0;1,0>:uw	
-    (-f0.0)add (1) r17.0<1>:f    -r8.6<0;1,0>:f              r16.0<0;1,0>:f
+    (-f0.0)add (1) r17.0<1>:f    -r10.6<0;1,0>:f              r16.0<0;1,0>:f
     (-f0.0)add (1) r17.0<1>:f    r17.0<0;1,0>:f       -16.0:f  	
     (-f0.0)mov (1) acc0.0<1>:f             r6.0<0;1,0>:f
     (-f0.0)mac (1) r6.0<1>:f     r3.0<0;1,0>:f          r17.0<0;1,0>:f
 
     mov	(1)	acc0.0<1>:f                    r5.0<0;1,0>:f
-    mac	(1)	r5.0<1>:f            r4.0<0;1,0>:f          r8.5<0;1,0>:f
+    mac	(1)	r5.0<1>:f            r4.0<0;1,0>:f          r10.5<0;1,0>:f
 
 END_SRC_BLOCK_ORIG_COMP_L0:		
     nop	

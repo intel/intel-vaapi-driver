@@ -175,7 +175,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -184,15 +184,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -299,14 +299,14 @@
 
 // Prepare the DNDI send command
 mov (8)		mudMSGHDR_DNDI(0)<1>			r0.0<8;8,1>:ud					// message header
-mov (1)		mwMSGHDR_DNDI(1,4)<1>			r7.0<0;1,0>:w		{ NoDDClr }		// horizontal origin	// Do we need to add offset here? -vK
-mov (1)		mwMSGHDR_DNDI(1,12)<1>			r7.1<0;1,0>:w		{ NoDDChk }		// vertical origin		// Can these 2 be combined? - vK
+mov (1)		mwMSGHDR_DNDI(1,4)<1>			r9.0<0;1,0>:w		{ NoDDClr }		// horizontal origin	// Do we need to add offset here? -vK
+mov (1)		mwMSGHDR_DNDI(1,12)<1>			r9.1<0;1,0>:w		{ NoDDChk }		// vertical origin		// Can these 2 be combined? - vK
 
 send (8)	udDNDI_RESP(0)<1>	r18	0x2	0x45E8003:ud
 
 // On Gen6, with VDI walker, use the XY pair returned rather than programmed above
 // VDI_RETURNED_XY is ordered XY in case of walker enables and the same as programmed in case of walker disabled
-mov (2) 	r7.0<1>:w     uwDNDI_RESP(4,14)<2;2,1>	// horizontal/Vertial origin in W.14 and W.15    
+mov (2) 	r9.0<1>:w     uwDNDI_RESP(4,14)<2;2,1>	// horizontal/Vertial origin in W.14 and W.15
 
 
 
@@ -321,7 +321,7 @@ mov (8)    r27<1>:ud				r0.0<8;8,1>:ud                   			// message header
 	mov (2)    mudMSGHDR_HIST(1)<1>    	udDNDI_RESP(4,0)<2;2,1>    	// Move denoise history to MRF (4x2)
 
 
-shr (2)    r27.0<1>:ud		r7.0<2;2,1>:w				2:w                                 	// X,Y origin / 4
+shr (2)    r27.0<1>:ud		r9.0<2;2,1>:w				2:w                                 	// X,Y origin / 4
 add (1)    r27.0<1>:ud		r27.0<0;1,0>:ud			r1.12<0;1,0>:uw		{ NoDDClr }  	// Add pitch to X origin
 mov (1)    r27.2<1>:ud		0x10003:ud									{ NoDDChk }  	// block width and height
 
@@ -339,8 +339,8 @@ send (8)	null<1>:d	r22	0x5		0x40A8021:ud
 mov (8)		mudMSGHDR_ENC_STATS(1)<1>	0x0:ud						// Init payload MRF
 mov (8)		mudMSGHDR_ENC_STATS(0)<1>	r0.0<8;8,1>:ud				// message header
 
-shr (1)		mudMSGHDR_ENC_STATS(0,0)<1>		r7.0<0;1,0>:w            	1:w  	{ NoDDClr }			//enable the flag after testing on si           			{ NoDDClr }	// X origin / 2
-mul (1)		acc0.1<1>:ud					r7.1<0;1,0>:w				3:w																							// Y origin * 3
+shr (1)		mudMSGHDR_ENC_STATS(0,0)<1>		r9.0<0;1,0>:w            	1:w  	{ NoDDClr }			//enable the flag after testing on si           			{ NoDDClr }	// X origin / 2
+mul (1)		acc0.1<1>:ud					r9.1<0;1,0>:w				3:w																							// Y origin * 3
 shr (1)		mudMSGHDR_ENC_STATS(0,1)<1>		acc0.1<0;1,0>:ud			2:w		{ NoDDClr, NoDDChk }		//enable the flag after testing on si			   { NoDDClr, NoDDChk } // Y origin * 3/4
 mov (1)		mudMSGHDR_ENC_STATS(0,2)<1>		0x50003:ud				{ NoDDChk }			//enable the flag after testing on si						{ NoDDChk } // block width and height (8x3)
 add (2)		mudMSGHDR_ENC_STATS(0,0)<1>		mudMSGHDR_ENC_STATS(0,0)<2;2,1>       	r1.12<2;2,1>:uw					// Add pitch to X,Y origin
@@ -387,7 +387,7 @@ send (8)   null<1>:d    r24    0x5    0x40A8021:ud
 //we are reading extra data in ALL cases irrespective of whether upsampling is reqd or not later on, to keep things simple.
 
 
-	add (2)		r27.0<1>:d				r7.0<2;2,1>:w				r4.4<2;2,1>:w				// Source Y Block origin
+	add (2)		r27.0<1>:d				r9.0<2;2,1>:w				r4.4<2;2,1>:w				// Source Y Block origin
 	asr (2)  	r27.0<1>:d     			r27.0<2;2,1>:d       	1:w   						{ NoDDClr }	// U/V block origin should be half of Y's
 	mov (1)		r27.2<1>:ud				0x40007:ud  					 	{ NoDDChk }	// U/V block width and height (8x5)
     mov (8)     r36<1>:ud    		r27.0<8;8,1>:ud
@@ -407,7 +407,7 @@ send (8)   null<1>:d    r24    0x5    0x40A8021:ud
 
 
 mov (8)     mudDN_Y_OUT(0,0)<1>     r0<8;8,1>:ud                                // message header
-mov (2)     mudDN_Y_OUT(0,0)<1>     r7.0<2;2,1>:w                  { NoDDClr }     // X origin
+mov (2)     mudDN_Y_OUT(0,0)<1>     r9.0<2;2,1>:w                  { NoDDClr }     // X origin
 mov (1)     mudDN_Y_OUT(0,2)<1>     0x7000F:ud    { NoDDChk }     // block width and height (16x8)
 
 //send out data through data port
@@ -477,13 +477,13 @@ send (8)    null<1>:d    mudDN_Y_OUT      0x5    0xA0A8018:ud
 
 
 mov (8)		mudMSGHDR_DN_OUT(0)<1>		r0<8;8,1>:ud            			// message header
-shl (1)     mdMSGHDR_DN_OUT(0,0)<1>		r7.0<0;1,0>:w     1:w  		{ NoDDClr }            // X origin * 2 (422 output)
-mov (1)     mdMSGHDR_DN_OUT(0,1)<1>		r7.1<0;1,0>:w          		{ NoDDClr, NoDDChk }   // Y origin
+shl (1)     mdMSGHDR_DN_OUT(0,0)<1>		r9.0<0;1,0>:w     1:w  		{ NoDDClr }            // X origin * 2 (422 output)
+mov (1)     mdMSGHDR_DN_OUT(0,1)<1>		r9.1<0;1,0>:w          		{ NoDDClr, NoDDChk }   // Y origin
 mov (1)     mudMSGHDR_DN_OUT(0,2)<1>	0x7000F:ud	{ NoDDClr, NoDDChk }            // block width and height (16x8)
 
 //M0.3	- 0 - CP Enable, 1 - Area of Interest, 3:2 Message Format(TBD), 4:3 - Ignored, 31:5 CP state pointer
 //Compose area-of-interest bit + color pipe state pointer
-or (1)		mudMSGHDR_DN_OUT(0,3)<1>		r2.4<0;1,0>:ud 	r7.26<0;1,0>:b		{ NoDDChk }
+or (1)		mudMSGHDR_DN_OUT(0,3)<1>		r2.4<0;1,0>:ud 	r9.26<0;1,0>:b		{ NoDDChk }
 
 // First 8 x 8 Block
 	mov (8)		mubMSGHDR_DN_OUT(1)<2>			ubDNDI_RESP(0,0)<8;8,1>				{ NoDDClr } 	// copy line of Y directly to memory as optimization

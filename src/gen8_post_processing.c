@@ -713,10 +713,10 @@ gen7_pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context,
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)pp_context->private_context;
     struct gen7_pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
 
-    pp_inline_parameter->grf7.destination_block_horizontal_origin = x * 16 + pp_avs_context->dest_x;
-    pp_inline_parameter->grf7.destination_block_vertical_origin = y * 16 + pp_avs_context->dest_y;
-    pp_inline_parameter->grf7.constant_0 = 0xffffffff;
-    pp_inline_parameter->grf7.sampler_load_main_video_x_scaling_step = pp_avs_context->horiz_range / pp_avs_context->src_w;
+    pp_inline_parameter->grf9.destination_block_horizontal_origin = x * 16 + pp_avs_context->dest_x;
+    pp_inline_parameter->grf9.destination_block_vertical_origin = y * 16 + pp_avs_context->dest_y;
+    pp_inline_parameter->grf9.constant_0 = 0xffffffff;
+    pp_inline_parameter->grf9.sampler_load_main_video_x_scaling_step = pp_avs_context->horiz_range / pp_avs_context->src_w;
 
     return 0;
 }
@@ -1187,7 +1187,7 @@ gen8_pp_interface_descriptor_table(VADriverContextP   ctx,
     desc->desc4.binding_table_pointer = (BINDING_TABLE_OFFSET >> 5);
     desc->desc5.constant_urb_entry_read_offset = 0;
 
-    desc->desc5.constant_urb_entry_read_length = 6; /* grf 1-6 */
+    desc->desc5.constant_urb_entry_read_length = 8; /* grf 1-8 */
 
     dri_bo_unmap(bo);
     pp_context->idrt.num_interface_descriptors++;
@@ -1201,7 +1201,7 @@ gen8_pp_upload_constants(VADriverContextP ctx,
     unsigned char *constant_buffer;
     int param_size;
 
-    assert(sizeof(struct gen7_pp_static_parameter) == 192);
+    assert(sizeof(struct gen7_pp_static_parameter) == 256);
 
     param_size = sizeof(struct gen7_pp_static_parameter);
 

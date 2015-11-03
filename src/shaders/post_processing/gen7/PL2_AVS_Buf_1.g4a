@@ -159,7 +159,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -168,15 +168,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -434,13 +434,13 @@
     .declare mubCALING_0X_34X_PAYLOAD	Base=r14.0	ElementSize=1		SrcRegion=<32;32,1>		DstRegion=<1>		Type=ub
 
 
-	.declare fSCALING_0X_34X_TEMP		Base=r9.0	ElementSize=4		SrcRegion=<8;8,1>		DstRegion=<1>		Type=f
-	.declare udSCALING_0X_34X_TEMP		Base=r9.0	ElementSize=4		SrcRegion=<8;8,1>		DstRegion=<1>		Type=ud
-	.declare ub4SCALING_0X_34X_TEMP		Base=r9.0	ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<1>		Type=ub
-	.declare uwSCALING_0X_34X_TEMP		Base=r9.0	ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+	.declare fSCALING_0X_34X_TEMP		Base=r11.0	ElementSize=4		SrcRegion=<8;8,1>		DstRegion=<1>		Type=f
+	.declare udSCALING_0X_34X_TEMP		Base=r11.0	ElementSize=4		SrcRegion=<8;8,1>		DstRegion=<1>		Type=ud
+	.declare ub4SCALING_0X_34X_TEMP		Base=r11.0	ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<1>		Type=ub
+	.declare uwSCALING_0X_34X_TEMP		Base=r11.0	ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
 	// Sampler ramp is used for Scaling 0X_0.34X
-	.declare	fSAMPLER_RAMP  		Base=r9.0 ElementSize=4 SrcRegion=<8;8,1> Type=f		// 1 GRFs, 8 elements
+	.declare	fSAMPLER_RAMP  		Base=r11.0 ElementSize=4 SrcRegion=<8;8,1> Type=f		// 1 GRFs, 8 elements
 
 
 	//#define rMSGDSC_UV    		r23.0
@@ -464,7 +464,7 @@
 
     // set the vertical block number
 
-       add (1)   r25.1<1>:ud    r7.12:uw  1:ud
+       add (1)   r25.1<1>:ud    r9.12:uw  1:ud
 
 
     mov (8)     r17.0:ud      r25.0<8;8,1>:ud                                     // Copy msg payload mirrors to MRFs

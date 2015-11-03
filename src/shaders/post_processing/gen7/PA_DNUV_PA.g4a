@@ -176,7 +176,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -185,15 +185,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -480,11 +480,11 @@
 // Cordinates: (x, y), (x, y+8), (x+32, y), (x+32, y+8), (x-4, y-2), (x+64, y-2),(x, y-2), (x+32, y-2), (x, y+16), (x+32, y+16)
 
 	//UV surface origin: (2xORIX, ORIY)
-	add  (2)	r7.4<1>:w		r7.0<2;2,1>:w	 	r4.4<2;2,1>:w	 { AccWrEn } // Source Block origin
-	shl  (1)	r7.4<1>:w		acc0.4<0;1,0>:w		1:w
+	add  (2)	r9.4<1>:w		r9.0<2;2,1>:w	 	r4.4<2;2,1>:w	 { AccWrEn } // Source Block origin
+	shl  (1)	r9.4<1>:w		acc0.4<0;1,0>:w		1:w
 
 	//A1
-	mov  (2)	r92.0<1>:d		r7.4<2;2,1>:w	 	{ AccWrEn }		// Source Block origin
+	mov  (2)	r92.0<1>:d		r9.4<2;2,1>:w	 	{ AccWrEn }		// Source Block origin
  	mov  (1)   	r92.2<1>:ud		0x7001F:ud		
  	send (8)	udCURR_Y0(0)<1>			r92			0x4	0x2890003:ud
 
@@ -543,10 +543,10 @@
 	//History Origin, Current Y origin and BNE surface origin - all are in inline GRF. Use , . -rT.
 
  	//Calculate Origin For History Surface: (ORIX/4, ORIY/4)
-	shr  (2)	r7.2<1>:w		r7.0<2;2,1>:w		2:w			
+	shr  (2)	r9.2<1>:w		r9.0<2;2,1>:w		2:w
 
 	//Calculate Origin For BNE Surface: (ORIX/8, ORIY/8)
-	shr  (2)	r7.6<1>:w		r7.0<2;2,1>:w		3:w			
+	shr  (2)	r9.6<1>:w		r9.0<2;2,1>:w		3:w
 
 
 
@@ -563,7 +563,7 @@
 
 
 
-	mov  (2)	r50.0<1>:d	r7.4<2;2,1>:w	 	{ AccWrEn } 	// Source lock origin
+	mov  (2)	r50.0<1>:d	r9.4<2;2,1>:w	 	{ AccWrEn } 	// Source lock origin
 	mov  (1)	r50.2<1>:ud	0x7001F:ud  					// U/V block width and height (16x16)
 	send (8)	udPREV_UV(0)<1>			r50		0x4	0x2890000:ud
 
@@ -588,7 +588,7 @@
 
 
 
-	mov  (2)	r50.0<1>:d	r7.2<2;2,1>:w			
+	mov  (2)	r50.0<1>:d	r9.2<2;2,1>:w
 	mov  (1)	r50.2<1>:ud	0x30007:ud  		
 	send (8)	udHIST_UV(0)<1>			r50		0x4	0x2190022:ud
 
@@ -851,8 +851,8 @@
 	mov (4) r61.28<1>:ub		r1.12<4;4,1>:ub		
 
 	//Move Inline Data to another space - so that it can be used as Temp Space --> r7
-	mov (4) r62.10<1>:w				r7.0<4;4,1>:w
-	mov (4) r63.10<1>:w		r7.4<4;4,1>:w
+	mov (4) r62.10<1>:w				r9.0<4;4,1>:w
+	mov (4) r63.10<1>:w		r9.4<4;4,1>:w
 
 
 
@@ -869,7 +869,7 @@
 
 
 
-add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
+add (1) r9.7<1>:d ip:ud 32:d { NoCompact }
  jmpi (1) DN_UV_NOISE_DETECTION_UV { NoCompact }
 
 
@@ -888,7 +888,7 @@ add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
 
 
 
-add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
+add (1) r9.7<1>:d ip:ud 32:d { NoCompact }
  jmpi (1) DN_UV_NOISE_DETECTION_UV { NoCompact }
 
 
@@ -907,7 +907,7 @@ add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
 
 
 
-add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
+add (1) r9.7<1>:d ip:ud 32:d { NoCompact }
  jmpi (1) DN_UV_NOISE_DETECTION_UV { NoCompact }
 
 
@@ -926,7 +926,7 @@ add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
 
 
 
-add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
+add (1) r9.7<1>:d ip:ud 32:d { NoCompact }
  jmpi (1) DN_UV_NOISE_DETECTION_UV { NoCompact }
 
 
@@ -944,7 +944,7 @@ add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
 
 
 
-add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
+add (1) r9.7<1>:d ip:ud 32:d { NoCompact }
  jmpi (1) DN_UV_NOISE_DETECTION_UV { NoCompact }
 
 
@@ -963,7 +963,7 @@ add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
 
 
 
-add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
+add (1) r9.7<1>:d ip:ud 32:d { NoCompact }
  jmpi (1) DN_UV_NOISE_DETECTION_UV { NoCompact }
 
 
@@ -982,7 +982,7 @@ add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
 
 
 
-add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
+add (1) r9.7<1>:d ip:ud 32:d { NoCompact }
  jmpi (1) DN_UV_NOISE_DETECTION_UV { NoCompact }
 
 
@@ -1001,7 +1001,7 @@ add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
 
 
 
-add (1) r7.7<1>:d ip:ud 32:d { NoCompact }
+add (1) r9.7<1>:d ip:ud 32:d { NoCompact }
  jmpi (1) DN_UV_NOISE_DETECTION_UV { NoCompact }
 
 
@@ -2719,7 +2719,7 @@ cmp.g.f0.0 (16) null:uw      			uwCURBE_TEMP(0)<16;16,1>   (abs)wDIFF(17)<16;16,
 
 // End of common.inc
 
-mov (1) ip:ud r7.7<0;1,0>:d
+mov (1) ip:ud r9.7<0;1,0>:d
 
 
 .end_code

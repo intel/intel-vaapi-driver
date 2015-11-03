@@ -175,7 +175,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -184,15 +184,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -388,13 +388,13 @@ mov (8) r25:ud 	r0.0<8;8,1>:ud
 mov (8) r26:ud 	r0.0<8;8,1>:ud
 
 // Calculate StepX for all layers and overwrite it on the ratio
-	mul	(8)		r3.0<1>:f   r3.0<8;8,1>:f 	r7.4<0;1,0>:f				//StepX_ratio = StepX / VideoStepX
+	mul	(8)		r3.0<1>:f   r3.0<8;8,1>:f 	r9.4<0;1,0>:f				//StepX_ratio = StepX / VideoStepX
 
 	//Normalised Ratio of Horizontal step size with main video for all layers now becomes
 	//Normalised Horizontal step size for all layers
 
 // Calculate block origin for all layers and overwrite it on the frame origin
-	mov (2)	r8.5<1>:f						r7.0<2;2,1>:w		//Convert origin from word to float
+	mov (2)	r8.5<1>:f						r9.0<2;2,1>:w		//Convert origin from word to float
 
 	cmp.e.f0.0 	(8)	null<1>:d				r2.26:ub 		1:uw
 

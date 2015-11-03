@@ -159,7 +159,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -168,15 +168,15 @@
 
 // temp space for rotation
 
-.declare fROBUF		  Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
+.declare fROBUF		  Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=f
 
-.declare udROBUF		Base=r9.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
+.declare udROBUF		Base=r11.0		ElementSize=4		SrcRegion=<8;8,1>		  DstRegion=<1>		Type=ud
 
-.declare uwROBUF		Base=r9.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
+.declare uwROBUF		Base=r11.0		ElementSize=2		SrcRegion=<16;16,1>		DstRegion=<1>		Type=uw
 
-.declare ubROBUF		Base=r9.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
+.declare ubROBUF		Base=r11.0		ElementSize=1		SrcRegion=<16;16,1>		DstRegion=<1>		Type=ub
 
-.declare ub4ROBUF 	Base=r9.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
+.declare ub4ROBUF 	Base=r11.0		ElementSize=1		SrcRegion=<32;8,4>		DstRegion=<4>		Type=ub
 
 
 // End of common.inc
@@ -433,11 +433,11 @@
 	mov  (8) r37<1>:ud      r27<8;8,1>:ud
 	mov  (8) r46<1>:ud      r27<8;8,1>:ud
 
-	mov  (2) r28.0<1>:d     r7.0<2;2,1>:w                   		{ NoDDClr }  //ORI Y (LUMA) = ORI
-	shr  (2) r37.0<1>:d     r7.0<2;2,1>:w            1:w  		{ NoDDClr }  //H/V ORI U 	= H/V ORI/2
-	shr  (2) r46.0<1>:d     r7.0<2;2,1>:w            1:w  		{ NoDDClr }  //H/V ORI V 	= H/V ORI/2
+	mov  (2) r28.0<1>:d     r9.0<2;2,1>:w                   		{ NoDDClr }  //ORI Y (LUMA) = ORI
+	shr  (2) r37.0<1>:d     r9.0<2;2,1>:w            1:w  		{ NoDDClr }  //H/V ORI U 	= H/V ORI/2
+	shr  (2) r46.0<1>:d     r9.0<2;2,1>:w            1:w  		{ NoDDClr }  //H/V ORI V 	= H/V ORI/2
 
-  	mov  (1) r28.2<1>:ud    0xF000F:ud	{ NoDDChk }  // Y Block width and height (16x16)
+	mov  (1) r28.2<1>:ud    0xF000F:ud	{ NoDDChk }  // Y Block width and height (16x16)
 	mov  (1)r37.2<1>:ud     0x70007:ud  	{ NoDDChk }  // U Block width and height (8x8)
 	mov  (1)r46.2<1>:ud     0x70007:ud  	{ NoDDChk }  // V Block width and height (8x8)
 

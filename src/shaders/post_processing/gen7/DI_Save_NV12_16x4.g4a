@@ -155,7 +155,7 @@
 //=======================================================================
 
 
-//r9-r17
+//r11-r17
 // Define temp space for any usages
 
 
@@ -261,7 +261,7 @@
 // Defines for DI disabled
 
 
-mov (2) r27.0<1>:d		r7.0<2;2,1>:w                        { NoDDClr }
+mov (2) r27.0<1>:d		r9.0<2;2,1>:w                        { NoDDClr }
 mov (1) r27.2<1>:ud     0x3000F:ud		          { NoDDChk }		// Block width and height (16x4)
 
 //Bottom field Y
