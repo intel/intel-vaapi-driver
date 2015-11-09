@@ -41,6 +41,7 @@
 #include "i965_encoder_utils.h"
 #include "gen6_mfc.h"
 #include "gen6_vme.h"
+#include "gen9_mfc.h"
 #include "intel_media.h"
 
 #ifndef HAVE_LOG2F
@@ -1227,6 +1228,9 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
             fref_entry &= ~(0xFF << ref_idx_l0_shift);
             fref_entry += (intel_get_ref_idx_state_1(vme_context->used_references[0], frame_index) << ref_idx_l0_shift);
         }
+        if(frame_index == 1){
+            WARN_ONCE("Input ref list is Wrong !\n");
+        }
     }
 
     if (slice_type == SLICE_TYPE_B) {
@@ -1797,10 +1801,11 @@ void intel_vme_hevc_update_mbmv_cost(VADriverContextP ctx,
                                      struct encode_state *encode_state,
                                      struct intel_encoder_context *encoder_context)
 {
-    //struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     VAEncPictureParameterBufferHEVC *pic_param = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferHEVC *slice_param = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     int qp, m_cost, j, mv_count;
     uint8_t *vme_state_message = (uint8_t *)(vme_context->vme_state_message);
     float   lambda, m_costf;
@@ -1809,11 +1814,24 @@ void intel_vme_hevc_update_mbmv_cost(VADriverContextP ctx,
     int slice_type = slice_param->slice_type;
 
 
-    /* to do for CBR*/
-    //if (encoder_context->rate_control_mode == VA_RC_CQP)
     qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
-    //else
-    //qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
+
+    if(encoder_context->rate_control_mode == VA_RC_CBR)
+    {
+        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
+        if(slice_type == HEVC_SLICE_B) {
+            if(pSequenceParameter->ip_period == 1)
+            {
+                slice_type = HEVC_SLICE_P;
+                qp = mfc_context->bit_rate_control_context[HEVC_SLICE_P].QpPrimeY;
+
+            }else if(mfc_context->vui_hrd.i_frame_number % pSequenceParameter->ip_period == 1){
+                slice_type = HEVC_SLICE_P;
+                qp = mfc_context->bit_rate_control_context[HEVC_SLICE_P].QpPrimeY;
+            }
+        }
+
+    }
 
     if (vme_state_message == NULL)
         return;

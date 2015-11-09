@@ -481,7 +481,7 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
     int ctb_size = 1 << log2_ctb_size;
     double rawctubits = 8 * 3 * ctb_size * ctb_size / 2.0;
     int maxctubits = (int)(5 * rawctubits / 3) ;
-    double bitrate = seq_param->bits_per_second * 1000.0;
+    double bitrate = seq_param->bits_per_second * 1.0;
     double framebitrate = bitrate / 32 / 8; //32 byte unit
     int minframebitrate = 0;//(int) (framebitrate * 3 / 10);
     int maxframebitrate = (int)(framebitrate * 10 / 10);
@@ -661,6 +661,10 @@ gen9_hcpe_ref_idx_state_1(struct intel_batchbuffer *batch,
     }
     if (frame_index == -1) {
         WARN_ONCE("RefPicList 0 or 1 is not found in DPB!\n");
+    }
+
+    if(num_ref_minus1 == 0 && frame_index == 1 && list == 0){
+        WARN_ONCE("Input ref list is Wrong !\n");
     }
 
     BEGIN_BCS_BATCH(batch, 18);
@@ -1574,7 +1578,7 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     VAEncPictureParameterBufferHEVC *pPicParameter = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[slice_index]->buffer;
-    int qp = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
+    int qp_slice = pPicParameter->pic_init_qp + pSliceParameter->slice_qp_delta;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
     //unsigned char *slice_header = NULL;	  // for future use
     //int slice_header_length_in_bits = 0;
@@ -1605,13 +1609,27 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
     int mb_addr = 0;
     int cu_index = 0;
     int inter_rdo, intra_rdo;
+    int qp;
 
     if (log2_ctb_size == 5) num_cu_record = 16;
     else if (log2_ctb_size == 4) num_cu_record = 4;
     else if (log2_ctb_size == 6) num_cu_record = 64;
+
+    qp = qp_slice;
     if (rate_control_mode == VA_RC_CBR) {
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
-        pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
+        if(slice_type == HEVC_SLICE_B) {
+            if(pSequenceParameter->ip_period == 1)
+            {
+                qp = mfc_context->bit_rate_control_context[HEVC_SLICE_P].QpPrimeY;
+
+            }else if(mfc_context->vui_hrd.i_frame_number % pSequenceParameter->ip_period == 1){
+                qp = mfc_context->bit_rate_control_context[HEVC_SLICE_P].QpPrimeY;
+            }
+        }
+        if (encode_state->slice_header_index[slice_index] == 0) {
+            pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
+        }
     }
 
     /* only support for 8-bit pixel bit-depth */
@@ -1821,7 +1839,6 @@ void intel_hcpe_hevc_pipeline_header_programing(VADriverContextP ctx,
 {
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderHEVC_VPS);
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     unsigned int skip_emul_byte_cnt;
 
     if (encode_state->packed_header_data[idx]) {
@@ -1917,32 +1934,6 @@ void intel_hcpe_hevc_pipeline_header_programing(VADriverContextP ctx,
                                    0,
                                    !param->has_emulation_bytes,
                                    slice_batch);
-    } else if (rate_control_mode == VA_RC_CBR) {
-        // this is frist AU
-        struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
-
-        unsigned char *sei_data = NULL;
-
-        int length_in_bits = build_hevc_idr_sei_buffer_timing(
-                                 mfc_context->vui_hrd.i_initial_cpb_removal_delay_length,
-                                 mfc_context->vui_hrd.i_initial_cpb_removal_delay,
-                                 0,
-                                 mfc_context->vui_hrd.i_cpb_removal_delay_length,
-                                 mfc_context->vui_hrd.i_cpb_removal_delay * mfc_context->vui_hrd.i_frame_number,
-                                 mfc_context->vui_hrd.i_dpb_output_delay_length,
-                                 0,
-                                 &sei_data);
-        mfc_context->insert_object(ctx,
-                                   encoder_context,
-                                   (unsigned int *)sei_data,
-                                   ALIGN(length_in_bits, 32) >> 5,
-                                   length_in_bits & 0x1f,
-                                   4, /* to do  as NALU header is 2 bytes ,it seems here just offset to start code and keep nalu header*/
-                                   0,
-                                   0,
-                                   1,
-                                   slice_batch);
-        free(sei_data);
     }
 }
 
@@ -2079,14 +2070,13 @@ intel_hcpe_bit_rate_control_context_init(struct encode_state *encode_state,
         struct gen9_hcpe_context *mfc_context)
 {
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
-    int log2_cu_size = pSequenceParameter->log2_min_luma_coding_block_size_minus3 + 3;
-    int log2_ctb_size = pSequenceParameter->log2_diff_max_min_luma_coding_block_size + log2_cu_size;
-    int ctb_size = 1 << log2_ctb_size;
+    int ctb_size = 16;
     int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + ctb_size - 1) / ctb_size;
     int height_in_mbs = (pSequenceParameter->pic_height_in_luma_samples + ctb_size - 1) / ctb_size;
 
     float fps =  pSequenceParameter->vui_time_scale * 0.5 / pSequenceParameter->vui_num_units_in_tick ;
-    int inter_mb_size = pSequenceParameter->bits_per_second * 1.0 / (fps + 4.0) / width_in_mbs / height_in_mbs;
+    double bitrate = pSequenceParameter->bits_per_second * 1.0;
+    int inter_mb_size = bitrate * 1.0 / (fps + 4.0) / width_in_mbs / height_in_mbs;
     int intra_mb_size = inter_mb_size * 5.0;
     int i;
 
@@ -2128,24 +2118,27 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
 {
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
-    VAEncMiscParameterBuffer* pMiscParamHRD = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer;
-    VAEncMiscParameterHRD* pParameterHRD = (VAEncMiscParameterHRD*)pMiscParamHRD->data;
+    VAEncMiscParameterHRD* pParameterHRD = NULL;
+    VAEncMiscParameterBuffer* pMiscParamHRD = NULL;
 
-    int log2_cu_size = pSequenceParameter->log2_min_luma_coding_block_size_minus3 + 3;
-    int log2_ctb_size = pSequenceParameter->log2_diff_max_min_luma_coding_block_size + log2_cu_size;
-    int ctb_size = 1 << log2_ctb_size;
-    int width_in_ctb = (pSequenceParameter->pic_width_in_luma_samples + ctb_size - 1) / ctb_size;
-    int height_in_ctb = (pSequenceParameter->pic_height_in_luma_samples + ctb_size - 1) / ctb_size;
-
-
-    double bitrate = pSequenceParameter->bits_per_second;
+    double bitrate = pSequenceParameter->bits_per_second * 1.0;
     double framerate = (double)pSequenceParameter->vui_time_scale / (2 * (double)pSequenceParameter->vui_num_units_in_tick);
     int inum = 1, pnum = 0, bnum = 0; /* Gop structure: number of I, P, B frames in the Gop. */
     int intra_period = pSequenceParameter->intra_period;
     int ip_period = pSequenceParameter->ip_period;
-    double qp1_size = 0.1 * 8 * 3 * (width_in_ctb << 4) * (height_in_ctb << 4) / 2;
-    double qp51_size = 0.001 * 8 * 3 * (width_in_ctb << 4) * (height_in_ctb << 4) / 2;
+    double qp1_size = 0.1 * 8 * 3 * pSequenceParameter->pic_width_in_luma_samples * pSequenceParameter->pic_height_in_luma_samples / 2;
+    double qp51_size = 0.001 * 8 * 3 * pSequenceParameter->pic_width_in_luma_samples * pSequenceParameter->pic_height_in_luma_samples / 2;
     double bpf;
+    int ratio_min = 1;
+    int ratio_max = 32;
+    int ratio = 8;
+    double buffer_size = 0;
+
+    if (!encode_state->misc_param[VAEncMiscParameterTypeHRD] || !encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer)
+        return;
+
+    pMiscParamHRD = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer;
+    pParameterHRD = (VAEncMiscParameterHRD*)pMiscParamHRD->data;
 
     if (pSequenceParameter->ip_period) {
         pnum = (intra_period + ip_period - 1) / ip_period - 1;
@@ -2165,10 +2158,35 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
 
     bpf = mfc_context->brc.bits_per_frame = bitrate / framerate;
 
-    mfc_context->hrd.buffer_size = (double)pParameterHRD->buffer_size;
-    mfc_context->hrd.current_buffer_fullness =
-        (double)(pParameterHRD->initial_buffer_fullness < mfc_context->hrd.buffer_size) ?
-        pParameterHRD->initial_buffer_fullness : mfc_context->hrd.buffer_size / 2.;
+    if (!pParameterHRD || pParameterHRD->buffer_size <= 0)
+    {
+        mfc_context->hrd.buffer_size = bitrate * ratio;
+        mfc_context->hrd.current_buffer_fullness =
+            (double)(bitrate * ratio/2 < mfc_context->hrd.buffer_size) ?
+            bitrate * ratio/2 : mfc_context->hrd.buffer_size / 2.;
+    }else
+    {
+        buffer_size = (double)pParameterHRD->buffer_size ;
+        if(buffer_size < bitrate * ratio_min)
+        {
+            buffer_size = bitrate * ratio_min;
+        }else if (buffer_size > bitrate * ratio_max)
+        {
+            buffer_size = bitrate * ratio_max ;
+        }
+        mfc_context->hrd.buffer_size =buffer_size;
+        if(pParameterHRD->initial_buffer_fullness > 0)
+        {
+            mfc_context->hrd.current_buffer_fullness =
+                (double)(pParameterHRD->initial_buffer_fullness < mfc_context->hrd.buffer_size) ?
+                pParameterHRD->initial_buffer_fullness : mfc_context->hrd.buffer_size / 2.;
+        }else
+        {
+            mfc_context->hrd.current_buffer_fullness = mfc_context->hrd.buffer_size / 2.;
+
+        }
+    }
+
     mfc_context->hrd.target_buffer_fullness = (double)mfc_context->hrd.buffer_size / 2.;
     mfc_context->hrd.buffer_capacity = (double)mfc_context->hrd.buffer_size / qp1_size;
     mfc_context->hrd.violation_noted = 0;
@@ -2218,6 +2236,7 @@ int intel_hcpe_brc_postpack(struct encode_state *encode_state,
                             int frame_bits)
 {
     gen6_brc_status sts = BRC_NO_HRD_VIOLATION;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     VAEncSliceParameterBufferHEVC *pSliceParameter = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
     int slicetype = pSliceParameter->slice_type;
     int qpi = mfc_context->bit_rate_control_context[HEVC_SLICE_I].QpPrimeY;
@@ -2234,6 +2253,15 @@ int intel_hcpe_brc_postpack(struct encode_state *encode_state,
      */
     double x, y;
     double frame_size_alpha;
+
+    if(slicetype == HEVC_SLICE_B) {
+        if(pSequenceParameter->ip_period == 1)
+        {
+            slicetype = HEVC_SLICE_P;
+        }else if(mfc_context->vui_hrd.i_frame_number % pSequenceParameter->ip_period == 1){
+            slicetype = HEVC_SLICE_P;
+        }
+    }
 
     qp = mfc_context->bit_rate_control_context[slicetype].QpPrimeY;
 
