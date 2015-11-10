@@ -2345,6 +2345,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     obj_buffer->export_refcount = 0;
     obj_buffer->buffer_store = NULL;
     obj_buffer->wrapper_buffer = VA_INVALID_ID;
+    obj_buffer->context_id = context;
 
     buffer_store = calloc(1, sizeof(struct buffer_store));
     assert(buffer_store);
@@ -2409,6 +2410,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
             coded_buffer_segment->base.next = NULL;
             coded_buffer_segment->mapped = 0;
             coded_buffer_segment->codec = 0;
+            coded_buffer_segment->status_support = 0;
             dri_bo_unmap(buffer_store->bo);
           } else if (data) {
               dri_bo_subdata(buffer_store->bo, 0, size * num_elements, data);
@@ -2499,6 +2501,7 @@ i965_MapBuffer(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_buffer *obj_buffer = BUFFER(buf_id);
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
+    struct object_context *obj_context = CONTEXT(obj_buffer->context_id);
 
     ASSERT_RET(obj_buffer && obj_buffer->buffer_store, VA_STATUS_ERROR_INVALID_BUFFER);
 
@@ -2532,6 +2535,7 @@ i965_MapBuffer(VADriverContextP ctx,
 
         ASSERT_RET(obj_buffer->buffer_store->bo->virtual, VA_STATUS_ERROR_OPERATION_FAILED);
         *pbuf = obj_buffer->buffer_store->bo->virtual;
+        vaStatus = VA_STATUS_SUCCESS;
 
         if (obj_buffer->type == VAEncCodedBufferType) {
             int i;
@@ -2544,69 +2548,77 @@ i965_MapBuffer(VADriverContextP ctx,
 
                 coded_buffer_segment->base.buf = buffer = (unsigned char *)(obj_buffer->buffer_store->bo->virtual) + I965_CODEDBUFFER_HEADER_SIZE;
 
-                if (coded_buffer_segment->codec == CODEC_H264 ||
-                    coded_buffer_segment->codec == CODEC_H264_MVC) {
-                    delimiter0 = H264_DELIMITER0;
-                    delimiter1 = H264_DELIMITER1;
-                    delimiter2 = H264_DELIMITER2;
-                    delimiter3 = H264_DELIMITER3;
-                    delimiter4 = H264_DELIMITER4;
-                } else if (coded_buffer_segment->codec == CODEC_MPEG2) {
-                    delimiter0 = MPEG2_DELIMITER0;
-                    delimiter1 = MPEG2_DELIMITER1;
-                    delimiter2 = MPEG2_DELIMITER2;
-                    delimiter3 = MPEG2_DELIMITER3;
-                    delimiter4 = MPEG2_DELIMITER4;
-                } else if(coded_buffer_segment->codec == CODEC_JPEG) {
-                    //In JPEG End of Image (EOI = 0xDDF9) marker can be used for delimiter.
-                    delimiter0 = 0xFF;
-                    delimiter1 = 0xD9;
-                } else if (coded_buffer_segment->codec == CODEC_HEVC) {
-                    delimiter0 = HEVC_DELIMITER0;
-                    delimiter1 = HEVC_DELIMITER1;
-                    delimiter2 = HEVC_DELIMITER2;
-                    delimiter3 = HEVC_DELIMITER3;
-                    delimiter4 = HEVC_DELIMITER4;
-                } else if (coded_buffer_segment->codec != CODEC_VP8) {
-                    ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
-                }
-
-                if(coded_buffer_segment->codec == CODEC_JPEG) {
-                    for(i = 0; i <  obj_buffer->size_element - header_offset - 1 - 0x1000; i++) {
-                        if( (buffer[i] == 0xFF) && (buffer[i + 1] == 0xD9)) {
-                            break;
-                        }
-                   }
-                   coded_buffer_segment->base.size = i + 2;
-                } else if (coded_buffer_segment->codec != CODEC_VP8) {
-                    /* vp8 coded buffer size can be told by vp8 internal statistics buffer,
-                       so it don't need to traversal the coded buffer */
-                    for (i = 0; i < obj_buffer->size_element - header_offset - 3 - 0x1000; i++) {
-                        if ((buffer[i] == delimiter0) &&
-                            (buffer[i + 1] == delimiter1) &&
-                            (buffer[i + 2] == delimiter2) &&
-                            (buffer[i + 3] == delimiter3) &&
-                            (buffer[i + 4] == delimiter4))
-                            break;
+                if (obj_context &&
+                    obj_context->hw_context &&
+                    obj_context->hw_context->get_status &&
+                    coded_buffer_segment->status_support) {
+                    vaStatus = obj_context->hw_context->get_status(ctx, obj_context->hw_context, coded_buffer_segment);
+                } else {
+                    if (coded_buffer_segment->codec == CODEC_H264 ||
+                        coded_buffer_segment->codec == CODEC_H264_MVC) {
+                        delimiter0 = H264_DELIMITER0;
+                        delimiter1 = H264_DELIMITER1;
+                        delimiter2 = H264_DELIMITER2;
+                        delimiter3 = H264_DELIMITER3;
+                        delimiter4 = H264_DELIMITER4;
+                    } else if (coded_buffer_segment->codec == CODEC_MPEG2) {
+                        delimiter0 = MPEG2_DELIMITER0;
+                        delimiter1 = MPEG2_DELIMITER1;
+                        delimiter2 = MPEG2_DELIMITER2;
+                        delimiter3 = MPEG2_DELIMITER3;
+                        delimiter4 = MPEG2_DELIMITER4;
+                    } else if(coded_buffer_segment->codec == CODEC_JPEG) {
+                        //In JPEG End of Image (EOI = 0xDDF9) marker can be used for delimiter.
+                        delimiter0 = 0xFF;
+                        delimiter1 = 0xD9;
+                    } else if (coded_buffer_segment->codec == CODEC_HEVC) {
+                        delimiter0 = HEVC_DELIMITER0;
+                        delimiter1 = HEVC_DELIMITER1;
+                        delimiter2 = HEVC_DELIMITER2;
+                        delimiter3 = HEVC_DELIMITER3;
+                        delimiter4 = HEVC_DELIMITER4;
+                    } else if (coded_buffer_segment->codec != CODEC_VP8) {
+                        ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
                     }
 
-                    if (i == obj_buffer->size_element - header_offset - 3 - 0x1000) {
+                    if(coded_buffer_segment->codec == CODEC_JPEG) {
+                        for(i = 0; i <  obj_buffer->size_element - header_offset - 1 - 0x1000; i++) {
+                            if( (buffer[i] == 0xFF) && (buffer[i + 1] == 0xD9)) {
+                                break;
+                            }
+                        }
+                        coded_buffer_segment->base.size = i + 2;
+                    } else if (coded_buffer_segment->codec != CODEC_VP8) {
+                        /* vp8 coded buffer size can be told by vp8 internal statistics buffer,
+                           so it don't need to traversal the coded buffer */
+                        for (i = 0; i < obj_buffer->size_element - header_offset - 3 - 0x1000; i++) {
+                            if ((buffer[i] == delimiter0) &&
+                                (buffer[i + 1] == delimiter1) &&
+                                (buffer[i + 2] == delimiter2) &&
+                                (buffer[i + 3] == delimiter3) &&
+                                (buffer[i + 4] == delimiter4))
+                                break;
+                        }
+
+                        if (i == obj_buffer->size_element - header_offset - 3 - 0x1000) {
+                            coded_buffer_segment->base.status |= VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
+                        }
+                        coded_buffer_segment->base.size = i;
+                    }
+
+                    if (coded_buffer_segment->base.size >= obj_buffer->size_element - header_offset - 0x1000) {
                         coded_buffer_segment->base.status |= VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
                     }
-                    coded_buffer_segment->base.size = i;
-                }
 
-                if (coded_buffer_segment->base.size >= obj_buffer->size_element - header_offset - 0x1000) {
-                    coded_buffer_segment->base.status |= VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
+                    vaStatus = VA_STATUS_SUCCESS;
                 }
 
                 coded_buffer_segment->mapped = 1;
             } else {
                 assert(coded_buffer_segment->base.buf);
+                vaStatus = VA_STATUS_SUCCESS;
             }
         }
-
-        vaStatus = VA_STATUS_SUCCESS;
     } else if (NULL != obj_buffer->buffer_store->buffer) {
         *pbuf = obj_buffer->buffer_store->buffer;
         vaStatus = VA_STATUS_SUCCESS;

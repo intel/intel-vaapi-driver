@@ -59,6 +59,10 @@ struct intel_encoder_context
                              struct intel_encoder_context *encoder_context);
     void (*mfc_brc_prepare)(struct encode_state *encode_state,
                             struct intel_encoder_context *encoder_context);
+
+    VAStatus (*get_status)(VADriverContextP ctx,
+                           struct intel_encoder_context *encoder_context,
+                           struct i965_coded_buffer_segment *coded_buffer_segment);
 };
 
 extern struct hw_context *

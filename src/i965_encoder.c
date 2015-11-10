@@ -662,6 +662,19 @@ intel_encoder_context_destroy(void *hw_context)
     free(encoder_context);
 }
 
+
+static VAStatus
+intel_encoder_get_status(VADriverContextP ctx, struct hw_context *hw_context, void *buffer)
+{
+    struct intel_encoder_context *encoder_context = (struct intel_encoder_context *)hw_context;
+    struct i965_coded_buffer_segment *coded_buffer_segment = (struct i965_coded_buffer_segment *)buffer;
+
+    if (encoder_context->get_status)
+        return encoder_context->get_status(ctx, encoder_context, coded_buffer_segment);
+
+    return VA_STATUS_ERROR_UNIMPLEMENTED;
+}
+
 typedef Bool (* hw_init_func)(VADriverContextP, struct intel_encoder_context *);
 
 static struct hw_context *
@@ -677,6 +690,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     assert(encoder_context);
     encoder_context->base.destroy = intel_encoder_context_destroy;
     encoder_context->base.run = intel_encoder_end_picture;
+    encoder_context->base.get_status = intel_encoder_get_status;
     encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
     encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
     encoder_context->is_tmp_id = 0;

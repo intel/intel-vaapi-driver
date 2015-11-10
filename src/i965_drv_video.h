@@ -231,6 +231,9 @@ struct hw_context
                     union codec_state *codec_state,
                     struct hw_context *hw_context);
     void (*destroy)(void *);
+    VAStatus (*get_status)(VADriverContextP ctx,
+                           struct hw_context *hw_context,
+                           void *buffer);
     struct intel_batchbuffer *batch;
 };
 
@@ -309,6 +312,7 @@ struct object_buffer
     VABufferInfo export_state;
 
     VAGenericID wrapper_buffer;
+    VAContextID context_id;
 };
 
 struct object_image 
@@ -501,9 +505,17 @@ va_enc_packed_type_to_idx(int packed_type);
 
 struct i965_coded_buffer_segment
 {
-    VACodedBufferSegment base;
-    unsigned char mapped;
-    unsigned char codec;
+    union {
+        VACodedBufferSegment base;
+        unsigned char pad0[64];                 /* change the size if sizeof(VACodedBufferSegment) > 64 */
+    };
+
+    unsigned int mapped;
+    unsigned int codec;
+    unsigned int status_support;
+    unsigned int pad1;
+
+    unsigned int codec_private_data[512];       /* Store codec private data, must be 16-bytes aligned */
 };
 
 #define I965_CODEDBUFFER_HEADER_SIZE   ALIGN(sizeof(struct i965_coded_buffer_segment), 0x1000)
