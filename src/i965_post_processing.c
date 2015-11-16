@@ -3268,16 +3268,17 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_context->private_context = &pp_context->pp_avs_context;
     pp_context->pp_set_block_parameter = gen7_pp_avs_set_block_parameter;
 
-    pp_avs_context->dest_x = dst_rect->x;
+    int dst_left_edge_extend = dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;
+    pp_avs_context->dest_x = dst_rect->x - dst_left_edge_extend;
     pp_avs_context->dest_y = dst_rect->y;
-    pp_avs_context->dest_w = ALIGN(dst_rect->width, 16);
+    pp_avs_context->dest_w = ALIGN(dst_rect->width + dst_left_edge_extend, 16);
     pp_avs_context->dest_h = ALIGN(dst_rect->height, 16);
     pp_avs_context->src_w = src_rect->width;
     pp_avs_context->src_h = src_rect->height;
     pp_avs_context->horiz_range = (float)src_rect->width / src_width;
 
     int dw = (pp_avs_context->src_w - 1) / 16 + 1;
-    dw = MAX(dw, dst_rect->width);
+    dw = MAX(dw, dst_rect->width + dst_left_edge_extend);
 
     pp_static_parameter->grf1.pointer_to_inline_parameter = 7;
     pp_static_parameter->grf2.avs_wa_enable = 1; /* must be set for GEN7 */
