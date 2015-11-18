@@ -5724,7 +5724,7 @@ i965_proc_picture_fast(VADriverContextP ctx,
         return VA_STATUS_ERROR_INVALID_SURFACE;
 
     if (!dst_obj_surface->bo)
-        return VA_STATUS_ERROR_UNIMPLEMENTED;
+        return VA_STATUS_ERROR_INVALID_SURFACE;
 
     if (dst_obj_surface->fourcc &&
         dst_obj_surface->fourcc != src_obj_surface->fourcc)
