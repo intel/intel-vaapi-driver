@@ -357,6 +357,9 @@ static struct hw_codec_info skl_hw_codec_info = {
     .has_h264_mvc_encoding = 1,
     .has_hevc_decoding = 1,
     .has_hevc_encoding = 1,
+    .has_lp_h264_encoding = 1,
+
+    .lp_h264_brc_mode = VA_RC_CQP,
 
     .num_filters = 5,
     .filters = {
