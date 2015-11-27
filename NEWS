@@ -1,5 +1,18 @@
-libva-intel-driver NEWS -- summary of changes.  2015-09-09
+libva-intel-driver NEWS -- summary of changes.  2015-12-xx
 Copyright (C) 2009-2015 Intel Corporation
+
+Version 1.6.2 - DD.Dec.2015
+* Add support for HEVC CBR on SKL
+* Fix the broken VA_FILTER_SCALING_HQ on SKL
+* Fix the incorrect loading of GPU shaders on GEN8/GEN9
+* Fix the wrong address relocation in VPP on GEN8/GEN9
+* Fix the wrong VAImage foramt
+  (https://bugs.freedesktop.org/show_bug.cgi?id=92088)
+* Fix YUV to RGB conversion on GEN7/GEN8/GEN9
+* Fix the segmentation fault causing by NULL buffer object on SNB
+  (The issue mentioned in https://bugs.freedesktop.org/show_bug.cgi?id=92811)
+* Fix the wrong coordinate used in VPP
+  (The issue mentioned in https://bugs.freedesktop.org/show_bug.cgi?id=92811)
 
 Version 1.6.1 - 09.Sep.2015
 * Wrapper other backend driver to support VP9 hybrid decoding on BDW/BSW/SKL (--enable-hybrid-codec)
