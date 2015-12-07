@@ -2,6 +2,10 @@ libva-intel-driver NEWS -- summary of changes.  2015-12-xx
 Copyright (C) 2009-2015 Intel Corporation
 
 Version 1.6.2 - DD.Dec.2015
+* Add support for Broxton
+  - Decoding: H.264/MPEG-2/VC-1/JPEG/VP8/HEVC/HEVC 10-bit/VP9
+  - Encoding: H.264/JPEG/VP8/HEVC
+  - VPP: CSC/scaling/NoiseReduction/Deinterlacing{Bob, MotionAdaptive, MotionCompensated}/ColorBalance/STD
 * Add support for HEVC CBR on SKL
 * Fix the broken VA_FILTER_SCALING_HQ on SKL
 * Fix the incorrect loading of GPU shaders on GEN8/GEN9

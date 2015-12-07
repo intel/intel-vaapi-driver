@@ -26,6 +26,7 @@ HSW: Haswell
 BDW: Broadwell
 CHV/BSW: Cherryview/Braswell
 SKL: Skylake
+BXT: Broxton
 
 
 Codecs
@@ -41,6 +42,8 @@ VP8     D   BDW+
 VP8     E   CHV+/BSW+
 HEVC    D   CHV+/BSW+
 HEVC    E   SKL+
+VP9     D   BXT+
+HEVC 10bit     D       BXT+
 
 
 Requirements
