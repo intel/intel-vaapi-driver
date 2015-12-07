@@ -50,4 +50,12 @@
 # define VAProfileH264StereoHigh        16
 #endif
 
+#if !VA_CHECK_VERSION(0,38,1)
+
+# define VA_RT_FORMAT_YUV420_10BPP      0x00000100
+# define VA_FOURCC_P010                 0x30313050
+# define VA_FOURCC_P016                 0x36313050
+
+#endif
+
 #endif /* VA_BACKEND_COMPAT_H */
