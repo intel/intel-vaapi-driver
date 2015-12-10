@@ -1277,6 +1277,7 @@ gen9_hcpd_init_vp9_surface(VADriverContextP ctx,
 
     if (!gen9_vp9_surface) {
         gen9_vp9_surface = calloc(sizeof(GenVP9Surface), 1);
+        assert(gen9_vp9_surface);
         gen9_vp9_surface->base.frame_store_id = -1;
         obj_surface->private_data = gen9_vp9_surface;
     }
