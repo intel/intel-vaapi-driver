@@ -123,9 +123,6 @@ void gen_free_vp9_surface(void **data)
         return;
     }
 
-    dri_bo_unreference(vp9_surface->motion_vector_temporal_bo);
-    vp9_surface->motion_vector_temporal_bo = NULL;
-
     free(vp9_surface);
     *data = NULL;
 
