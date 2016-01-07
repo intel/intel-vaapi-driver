@@ -3819,21 +3819,21 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
     int bpp_1stplane = bpp_1stplane_by_fourcc(fourcc);
 
-    if (obj_surface->user_h_stride_set) {
-        ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
-    } else
-        obj_surface->width = ALIGN(obj_surface->orig_width * bpp_1stplane, 128);
-
-    if (obj_surface->user_v_stride_set) {
-        ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
-    } else
-        obj_surface->height = ALIGN(obj_surface->orig_height, 32);
-
     if ((tiled && !obj_surface->user_disable_tiling)) {
         ASSERT_RET(fourcc != VA_FOURCC_I420 &&
                fourcc != VA_FOURCC_IYUV &&
                fourcc != VA_FOURCC_YV12,
                VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT);
+
+        if (obj_surface->user_h_stride_set) {
+           ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
+        } else
+          obj_surface->width = ALIGN(obj_surface->orig_width * bpp_1stplane, 128);
+
+        if (obj_surface->user_v_stride_set) {
+          ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
+        }else
+          obj_surface->height = ALIGN(obj_surface->orig_height, 32);
 
         region_height = obj_surface->height;
 
