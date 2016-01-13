@@ -42,6 +42,8 @@
 #include "i965_yuv_coefs.h"
 #include "intel_media.h"
 
+#include "gen75_picture_process.h"
+
 #define SURFACE_STATE_PADDED_SIZE               SURFACE_STATE_PADDED_SIZE_GEN8
 
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
@@ -1460,6 +1462,11 @@ static void
 gen8_post_processing_context_finalize(VADriverContextP ctx,
     struct i965_post_processing_context *pp_context)
 {
+    if(pp_context->vebox_proc_ctx){
+       gen75_vebox_context_destroy(ctx,pp_context->vebox_proc_ctx);
+       pp_context->vebox_proc_ctx = NULL;
+    }
+
     dri_bo_unreference(pp_context->surface_state_binding_table.bo);
     pp_context->surface_state_binding_table.bo = NULL;
 

@@ -319,6 +319,8 @@ i965_image_formats_map[I965_MAX_IMAGE_FORMATS + 1] = {
       { VA_FOURCC_RGBX, VA_LSB_FIRST, 32, 24, 0x000000ff, 0x0000ff00, 0x00ff0000 } },
     { I965_SURFACETYPE_RGBA,
       { VA_FOURCC_BGRX, VA_LSB_FIRST, 32, 24, 0x00ff0000, 0x0000ff00, 0x000000ff } },
+    { I965_SURFACETYPE_YUV,
+      { VA_FOURCC_P010, VA_LSB_FIRST, 24, } },
 };
 
 /* List of supported subpicture formats */
@@ -3767,6 +3769,14 @@ i965_CreateImage(VADriverContextP ctx,
         image->pitches[0] = awidth * 2;
         image->offsets[0] = 0;
         image->data_size  = size * 2;
+        break;
+    case VA_FOURCC_P010:
+        image->num_planes = 2;
+        image->pitches[0] = awidth * 2;
+        image->offsets[0] = 0;
+        image->pitches[1] = awidth * 2;
+        image->offsets[1] = size * 2;
+        image->data_size  = size * 2 + 2 * size2 * 2;
         break;
     default:
         goto error;

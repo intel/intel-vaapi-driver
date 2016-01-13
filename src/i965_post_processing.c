@@ -41,6 +41,8 @@
 #include "i965_yuv_coefs.h"
 #include "intel_media.h"
 
+#include "gen75_picture_process.h"
+
 extern VAStatus
 vpp_surface_convert(VADriverContextP ctx,
                     struct object_surface *src_obj_surf,
@@ -5296,6 +5298,183 @@ i965_image_pl1_processing(VADriverContextP ctx,
     return vaStatus;
 }
 
+// it only support NV12 and P010 for vebox proc ctx
+static struct object_surface *derive_surface(VADriverContextP ctx,
+                                             struct object_image *obj_image,
+                                             struct object_surface *obj_surface)
+{
+    VAImage * const image = &obj_image->image;
+
+    memset((void *)obj_surface, 0, sizeof(*obj_surface));
+    obj_surface->fourcc = image->format.fourcc;
+    obj_surface->orig_width = image->width;
+    obj_surface->orig_height = image->height;
+    obj_surface->width = image->pitches[0];
+    obj_surface->height = image->height;
+    obj_surface->y_cb_offset = image->offsets[1] / obj_surface->width;
+    obj_surface->y_cr_offset = obj_surface->y_cb_offset;
+    obj_surface->bo = obj_image->bo;
+    obj_surface->subsampling = SUBSAMPLE_YUV420;
+
+    return obj_surface;
+}
+
+static VAStatus
+vebox_processing_simple(VADriverContextP ctx,
+                        struct i965_post_processing_context *pp_context,
+                        struct object_surface *src_obj_surface,
+                        struct object_surface *dst_obj_surface,
+                        const VARectangle *rect)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAProcPipelineParameterBuffer pipeline_param;
+    VAStatus status = VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    if(pp_context->vebox_proc_ctx == NULL) {
+        pp_context->vebox_proc_ctx = gen75_vebox_context_init(ctx);
+    }
+
+    memset((void *)&pipeline_param, 0, sizeof(pipeline_param));
+    pipeline_param.surface_region = rect;
+    pipeline_param.output_region = rect;
+    pipeline_param.filter_flags = 0;
+    pipeline_param.num_filters  = 0;
+
+    pp_context->vebox_proc_ctx->pipeline_param = &pipeline_param;
+    pp_context->vebox_proc_ctx->surface_input_object = src_obj_surface;
+    pp_context->vebox_proc_ctx->surface_output_object = dst_obj_surface;
+
+    if (IS_GEN9(i965->intel.device_info))
+        status = gen9_vebox_process_picture(ctx, pp_context->vebox_proc_ctx);
+
+    return status;
+}
+
+static VAStatus
+i965_image_p010_processing(VADriverContextP ctx,
+                          const struct i965_surface *src_surface,
+                          const VARectangle *src_rect,
+                          struct i965_surface *dst_surface,
+                          const VARectangle *dst_rect)
+{
+#define HAS_VPP_P010(ctx)        ((ctx)->codec_info->has_vpp_p010 && \
+                                     (ctx)->intel.has_bsd)
+
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_post_processing_context *pp_context = i965->pp_context;
+    struct object_surface *src_obj_surface = NULL, *dst_obj_surface = NULL;
+    struct object_surface tmp_src_obj_surface, tmp_dst_obj_surface;
+    struct object_surface *tmp_surface = NULL;
+    VASurfaceID tmp_surface_id[3], out_surface_id = VA_INVALID_ID;
+    int num_tmp_surfaces = 0;
+    int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+    VAStatus vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
+    int vpp_post = 0;
+
+    if(HAS_VPP_P010(i965)) {
+        vpp_post = 0;
+        switch(fourcc) {
+        case VA_FOURCC_NV12:
+            if(src_rect->x != dst_rect->x ||
+                src_rect->y != dst_rect->y ||
+                src_rect->width != dst_rect->width ||
+                src_rect->height != dst_rect->height) {
+                vpp_post = 1;
+            }
+            break;
+        case VA_FOURCC_P010:
+            // don't support scaling while the fourcc of dst_surface is P010
+            if(src_rect->x != dst_rect->x ||
+                src_rect->y != dst_rect->y ||
+                src_rect->width != dst_rect->width ||
+                src_rect->height != dst_rect->height) {
+                vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
+                goto EXIT;
+            }
+            break;
+        default:
+            vpp_post = 1;
+            break;
+        }
+
+        if(src_surface->type == I965_SURFACE_TYPE_IMAGE) {
+            src_obj_surface = derive_surface(ctx, (struct object_image *)src_surface->base,
+                                             &tmp_src_obj_surface);
+        }
+        else
+            src_obj_surface = (struct object_surface *)src_surface->base;
+
+        if(src_obj_surface == NULL) {
+            vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
+            goto EXIT;
+        }
+
+        if(vpp_post == 1) {
+            vaStatus = i965_CreateSurfaces(ctx,
+                                         src_obj_surface->orig_width,
+                                         src_obj_surface->orig_height,
+                                         VA_RT_FORMAT_YUV420,
+                                         1,
+                                         &out_surface_id);
+            assert(vaStatus == VA_STATUS_SUCCESS);
+            tmp_surface_id[num_tmp_surfaces++] = out_surface_id;
+            tmp_surface = SURFACE(out_surface_id);
+            assert(tmp_surface);
+            i965_check_alloc_surface_bo(ctx, tmp_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+        }
+
+        if(tmp_surface != NULL)
+            dst_obj_surface = tmp_surface;
+        else {
+            if(dst_surface->type == I965_SURFACE_TYPE_IMAGE) {
+                dst_obj_surface = derive_surface(ctx, (struct object_image *)dst_surface->base,
+                                                 &tmp_dst_obj_surface);
+            }
+            else
+                dst_obj_surface = (struct object_surface *)dst_surface->base;
+        }
+
+        if(dst_obj_surface == NULL) {
+            vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
+            goto EXIT;
+        }
+
+        vaStatus = vebox_processing_simple(ctx,
+                                         pp_context,
+                                         src_obj_surface,
+                                         dst_obj_surface,
+                                         src_rect);
+        if(vaStatus != VA_STATUS_SUCCESS)
+            goto EXIT;
+
+        if(vpp_post == 1) {
+            struct i965_surface src_surface_new;
+
+            if(tmp_surface != NULL){
+                src_surface_new.base = (struct object_base *)tmp_surface;
+                src_surface_new.type = I965_SURFACE_TYPE_SURFACE;
+                src_surface_new.flags = I965_SURFACE_FLAG_FRAME;
+            }
+            else
+                memcpy((void *)&src_surface_new, (void *)src_surface, sizeof(src_surface_new));
+
+            vaStatus = i965_image_pl2_processing(ctx,
+                                               &src_surface_new,
+                                               src_rect,
+                                               dst_surface,
+                                               dst_rect);
+        }
+    }
+
+EXIT:
+    if(num_tmp_surfaces)
+        i965_DestroySurfaces(ctx,
+                             tmp_surface_id,
+                             num_tmp_surfaces);
+
+    return vaStatus;
+}
+
 VAStatus
 i965_image_processing(VADriverContextP ctx,
                       const struct i965_surface *src_surface,
@@ -5348,6 +5527,13 @@ i965_image_processing(VADriverContextP ctx,
         case VA_FOURCC_RGBA:
         case VA_FOURCC_RGBX:
             status = i965_image_pl1_rgbx_processing(ctx,
+                                               src_surface,
+                                               src_rect,
+                                               dst_surface,
+                                               dst_rect);
+            break;
+        case VA_FOURCC_P010:
+            status = i965_image_p010_processing(ctx,
                                                src_surface,
                                                src_rect,
                                                dst_surface,
