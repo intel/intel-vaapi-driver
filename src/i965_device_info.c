@@ -401,6 +401,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .has_hevc_encoding = 1,
     .has_hevc10_decoding = 1,
     .has_vp9_decoding = 1,
+    .has_vpp_p010 = 1,
 
     .num_filters = 5,
     .filters = {
@@ -411,7 +412,6 @@ static struct hw_codec_info bxt_hw_codec_info = {
         { VAProcFilterSkinToneEnhancement, I965_RING_VEBOX},
     },
 };
-
 
 struct hw_codec_info *
 i965_get_codec_info(int devid)

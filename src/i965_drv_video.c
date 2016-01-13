@@ -112,6 +112,9 @@
 #define HAS_HEVC10_DECODING(ctx)        ((ctx)->codec_info->has_hevc10_decoding && \
                                          (ctx)->intel.has_bsd)
 
+#define HAS_VPP_P010(ctx)        ((ctx)->codec_info->has_vpp_p010 && \
+                                         (ctx)->intel.has_bsd)
+
 static int get_sampling_from_fourcc(unsigned int fourcc);
 
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */
@@ -878,6 +881,12 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
         if (HAS_HEVC10_DECODING(i965) && entrypoint == VAEntrypointVLD)
             chroma_formats |= i965->codec_info->hevc_dec_chroma_formats;
         break;
+
+    case VAProfileNone:
+	if(HAS_VPP_P010(i965))
+            chroma_formats |= VA_RT_FORMAT_YUV420_10BPP;
+        break;
+
     default:
         break;
     }
@@ -5688,6 +5697,14 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
                 attribs[i].value.value.i = VA_FOURCC_YV16;
                 i++;
+
+                if(HAS_VPP_P010(i965)) {
+                  attribs[i].type = VASurfaceAttribPixelFormat;
+                  attribs[i].value.type = VAGenericValueTypeInteger;
+                  attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                  attribs[i].value.value.i = VA_FOURCC_P010;
+                  i++;
+                }
             }
         }
     }
