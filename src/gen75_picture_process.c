@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
@@ -123,6 +124,15 @@ gen75_proc_picture(VADriverContextP ctx,
              (VAProcPipelineParameterBuffer *)proc_st->pipeline_param->buffer;
     struct object_surface *obj_dst_surf = NULL;
     struct object_surface *obj_src_surf = NULL;
+
+    VAProcPipelineParameterBuffer pipeline_param2;
+    struct object_surface *stage1_dst_surf = NULL;
+    struct object_surface *stage2_dst_surf = NULL;
+    VARectangle src_rect, dst_rect;
+    VASurfaceID tmp_surfaces[2];
+    VASurfaceID out_surface_id1 = VA_INVALID_ID, out_surface_id2 = VA_INVALID_ID;
+    int num_tmp_surfaces = 0;
+
     VAStatus status;
 
     proc_ctx->pipeline_param = pipeline_param;
@@ -168,69 +178,221 @@ gen75_proc_picture(VADriverContextP ctx,
     proc_ctx->surface_pipeline_input_object = obj_src_surf;
     assert(pipeline_param->num_filters <= 4);
 
+    int vpp_stage1 = 0, vpp_stage2 = 1, vpp_stage3 = 0;
+
+    if (pipeline_param->surface_region) {
+        src_rect.x = pipeline_param->surface_region->x;
+        src_rect.y = pipeline_param->surface_region->y;
+        src_rect.width = pipeline_param->surface_region->width;
+        src_rect.height = pipeline_param->surface_region->height;
+    } else {
+        src_rect.x = 0;
+        src_rect.y = 0;
+        src_rect.width = obj_src_surf->orig_width;
+        src_rect.height = obj_src_surf->orig_height;
+    }
+
+    if (pipeline_param->output_region) {
+        dst_rect.x = pipeline_param->output_region->x;
+        dst_rect.y = pipeline_param->output_region->y;
+        dst_rect.width = pipeline_param->output_region->width;
+        dst_rect.height = pipeline_param->output_region->height;
+    } else {
+        dst_rect.x = 0;
+        dst_rect.y = 0;
+        dst_rect.width = obj_dst_surf->orig_width;
+        dst_rect.height = obj_dst_surf->orig_height;
+    }
+
+    if(obj_src_surf->fourcc == VA_FOURCC_P010) {
+        vpp_stage1 = 1;
+        vpp_stage2 = 0;
+        vpp_stage3 = 0;
+        if(pipeline_param->num_filters == 0 || pipeline_param->filters == NULL) {
+            if(src_rect.x != dst_rect.x ||
+                src_rect.y != dst_rect.y ||
+                src_rect.width != dst_rect.width ||
+                src_rect.height != dst_rect.height)
+              vpp_stage2 = 1;
+
+            if(obj_dst_surf->fourcc != VA_FOURCC_NV12 &&
+                obj_dst_surf->fourcc != VA_FOURCC_P010)
+              vpp_stage2 = 1;
+        }
+        else
+          vpp_stage2 = 1;
+
+        if(vpp_stage2 == 1) {
+          if(obj_dst_surf->fourcc == VA_FOURCC_P010)
+            vpp_stage3 = 1;
+        }
+    }
+    else if(obj_dst_surf->fourcc == VA_FOURCC_P010) {
+        vpp_stage2 = 1;
+        vpp_stage3 = 1;
+
+        if((obj_src_surf->fourcc == VA_FOURCC_NV12) &&
+            (pipeline_param->num_filters == 0 || pipeline_param->filters == NULL)) {
+            if((src_rect.x == dst_rect.x) &&
+                (src_rect.y == dst_rect.y) &&
+                (src_rect.width == dst_rect.width) &&
+                (src_rect.height == dst_rect.height))
+                vpp_stage2 = 0;
+        }
+    }
+
+    if(vpp_stage1 == 1){
+        memset((void *)&pipeline_param2, 0, sizeof(pipeline_param2));
+        pipeline_param2.surface = pipeline_param->surface;
+        pipeline_param2.surface_region = &src_rect;
+        pipeline_param2.output_region = &src_rect;
+        pipeline_param2.filter_flags = 0;
+        pipeline_param2.num_filters  = 0;
+
+        proc_ctx->pipeline_param = &pipeline_param2;
+
+        if(vpp_stage2 == 1) {
+            status = i965_CreateSurfaces(ctx,
+                                         obj_src_surf->orig_width,
+                                         obj_src_surf->orig_height,
+                                         VA_RT_FORMAT_YUV420,
+                                         1,
+                                         &out_surface_id1);
+            assert(status == VA_STATUS_SUCCESS);
+            tmp_surfaces[num_tmp_surfaces++] = out_surface_id1;
+            stage1_dst_surf = SURFACE(out_surface_id1);
+            assert(stage1_dst_surf);
+            i965_check_alloc_surface_bo(ctx, stage1_dst_surf, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+
+            proc_ctx->surface_render_output_object = stage1_dst_surf;
+        }
+
+        gen75_vpp_vebox(ctx, proc_ctx);
+    }
+
+    if((vpp_stage3 == 1) && (vpp_stage2 == 1)) {
+        status = i965_CreateSurfaces(ctx,
+                                     obj_dst_surf->orig_width,
+                                     obj_dst_surf->orig_height,
+                                     VA_RT_FORMAT_YUV420,
+                                     1,
+                                     &out_surface_id2);
+        assert(status == VA_STATUS_SUCCESS);
+        tmp_surfaces[num_tmp_surfaces++] = out_surface_id2;
+        stage2_dst_surf = SURFACE(out_surface_id2);
+        assert(stage2_dst_surf);
+        i965_check_alloc_surface_bo(ctx, stage2_dst_surf, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+    }
+
     VABufferID *filter_id = (VABufferID*) pipeline_param->filters;
- 
-    if(pipeline_param->num_filters == 0 || pipeline_param->filters == NULL ){
-        /* implicity surface format coversion and scaling */
-        gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
-    }else if(pipeline_param->num_filters == 1) {
-       struct object_buffer * obj_buf = BUFFER((*filter_id) + 0);
 
-       assert(obj_buf && obj_buf->buffer_store && obj_buf->buffer_store->buffer);
-       
-       if (!obj_buf ||
-           !obj_buf->buffer_store ||
-           !obj_buf->buffer_store->buffer) {
-           status = VA_STATUS_ERROR_INVALID_FILTER_CHAIN;
-           goto error;
-       }
+    if(vpp_stage2 == 1) {
+        if(stage1_dst_surf != NULL) {
+            proc_ctx->surface_pipeline_input_object = stage1_dst_surf;
+            proc_ctx->surface_render_output_object = obj_dst_surf;
 
-       VAProcFilterParameterBuffer* filter =
-           (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+            pipeline_param->surface = out_surface_id1;
+        }
 
-       if (filter->type == VAProcFilterNoiseReduction         ||
-           filter->type == VAProcFilterDeinterlacing          ||
-           filter->type == VAProcFilterSkinToneEnhancement    ||
-           filter->type == VAProcFilterColorBalance){
-           gen75_vpp_vebox(ctx, proc_ctx);
-       }else if(filter->type == VAProcFilterSharpening){
-           if (obj_src_surf->fourcc != VA_FOURCC_NV12 ||
-               obj_dst_surf->fourcc != VA_FOURCC_NV12) {
-               status = VA_STATUS_ERROR_UNIMPLEMENTED;
+        if(stage2_dst_surf != NULL) {
+            proc_ctx->surface_render_output_object = stage2_dst_surf;
+
+            proc_st->current_render_target = out_surface_id2;
+        }
+
+        proc_ctx->pipeline_param = pipeline_param;
+
+        if(pipeline_param->num_filters == 0 || pipeline_param->filters == NULL ){
+            /* implicity surface format coversion and scaling */
+
+            gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
+        }else if(pipeline_param->num_filters == 1) {
+           struct object_buffer * obj_buf = BUFFER((*filter_id) + 0);
+
+           assert(obj_buf && obj_buf->buffer_store && obj_buf->buffer_store->buffer);
+
+           if (!obj_buf ||
+               !obj_buf->buffer_store ||
+               !obj_buf->buffer_store->buffer) {
+               status = VA_STATUS_ERROR_INVALID_FILTER_CHAIN;
                goto error;
            }
 
-           gen75_vpp_gpe(ctx, proc_ctx);
-       } 
-    }else if (pipeline_param->num_filters >= 2) {
-         unsigned int i = 0;
-         for (i = 0; i < pipeline_param->num_filters; i++){
-             struct object_buffer * obj_buf = BUFFER(pipeline_param->filters[i]);
+           VAProcFilterParameterBuffer* filter =
+               (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
 
-             if (!obj_buf ||
-                 !obj_buf->buffer_store ||
-                 !obj_buf->buffer_store->buffer) {
-                 status = VA_STATUS_ERROR_INVALID_FILTER_CHAIN;
-                 goto error;
+           if (filter->type == VAProcFilterNoiseReduction         ||
+               filter->type == VAProcFilterDeinterlacing          ||
+               filter->type == VAProcFilterSkinToneEnhancement    ||
+               filter->type == VAProcFilterColorBalance){
+               gen75_vpp_vebox(ctx, proc_ctx);
+           }else if(filter->type == VAProcFilterSharpening){
+               if (proc_ctx->surface_pipeline_input_object->fourcc != VA_FOURCC_NV12 ||
+                   proc_ctx->surface_render_output_object->fourcc != VA_FOURCC_NV12) {
+                   status = VA_STATUS_ERROR_UNIMPLEMENTED;
+                   goto error;
+               }
+
+               gen75_vpp_gpe(ctx, proc_ctx);
+           }
+        }else if (pipeline_param->num_filters >= 2) {
+             unsigned int i = 0;
+             for (i = 0; i < pipeline_param->num_filters; i++){
+                 struct object_buffer * obj_buf = BUFFER(pipeline_param->filters[i]);
+
+                 if (!obj_buf ||
+                     !obj_buf->buffer_store ||
+                     !obj_buf->buffer_store->buffer) {
+                     status = VA_STATUS_ERROR_INVALID_FILTER_CHAIN;
+                     goto error;
+                 }
+
+                 VAProcFilterParameterBuffer* filter =
+                     (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+
+                 if (filter->type != VAProcFilterNoiseReduction       &&
+                     filter->type != VAProcFilterDeinterlacing        &&
+                     filter->type != VAProcFilterSkinToneEnhancement  &&
+                     filter->type != VAProcFilterColorBalance) {
+                     fprintf(stderr, "Do not support multiply filters outside vebox pipeline \n");
+                     assert(0);
+                 }
              }
+             gen75_vpp_vebox(ctx, proc_ctx);
+        }
+    }
 
-             VAProcFilterParameterBuffer* filter =
-                 (VAProcFilterParameterBuffer*)obj_buf-> buffer_store->buffer;
+    if(vpp_stage3 == 1)
+    {
+        if(vpp_stage2 == 1) {
+            memset(&pipeline_param2, 0, sizeof(pipeline_param2));
+            pipeline_param2.surface = out_surface_id2;
+            pipeline_param2.surface_region = &dst_rect;
+            pipeline_param2.output_region = &dst_rect;
+            pipeline_param2.filter_flags = 0;
+            pipeline_param2.num_filters  = 0;
 
-             if (filter->type != VAProcFilterNoiseReduction       &&
-                 filter->type != VAProcFilterDeinterlacing        &&
-                 filter->type != VAProcFilterSkinToneEnhancement  &&
-                 filter->type != VAProcFilterColorBalance) {
-                 fprintf(stderr, "Do not support multiply filters outside vebox pipeline \n");
-                 assert(0);
-             }
-         }
-         gen75_vpp_vebox(ctx, proc_ctx);
-    }     
+            proc_ctx->pipeline_param = &pipeline_param2;
+            proc_ctx->surface_pipeline_input_object = proc_ctx->surface_render_output_object;
+            proc_ctx->surface_render_output_object = obj_dst_surf;
+        }
+
+        gen75_vpp_vebox(ctx, proc_ctx);
+    }
+
+    if (num_tmp_surfaces)
+        i965_DestroySurfaces(ctx,
+                             tmp_surfaces,
+                             num_tmp_surfaces);
 
     return VA_STATUS_SUCCESS;
 
 error:
+    if (num_tmp_surfaces)
+        i965_DestroySurfaces(ctx,
+                             tmp_surfaces,
+                             num_tmp_surfaces);
+
     return status;
 }
 

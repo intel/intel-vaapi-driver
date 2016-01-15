@@ -528,6 +528,8 @@ struct i965_post_processing_context
         unsigned int curbe_allocation_size : 16;
     } vfe_gpu_state;
 
+    struct intel_vebox_context *vebox_proc_ctx;
+
     struct pp_load_save_context pp_load_save_context;
     struct pp_scaling_context pp_scaling_context;
     struct pp_avs_context pp_avs_context;

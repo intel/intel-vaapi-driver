@@ -49,8 +49,14 @@ typedef struct vp9_frame_status
     uint8_t intra_only;
     uint8_t prob_buffer_saved_flag;
     uint8_t prob_buffer_restored_flag;
-    dri_bo * mv_temporal_buffer_bo;
 }vp9_last_frame_status;
+
+typedef struct vp9_mv_temporal_buffer
+{
+    dri_bo *bo;
+    uint16_t frame_width;
+    uint16_t frame_height;
+}VP9_MV_BUFFER;
 
 struct gen9_hcpd_context
 {
@@ -84,6 +90,8 @@ struct gen9_hcpd_context
     GenBuffer hvd_tile_rowstore_buffer;
     GenBuffer vp9_probability_buffer;
     GenBuffer vp9_segment_id_buffer;
+    VP9_MV_BUFFER vp9_mv_temporal_buffer_curr;
+    VP9_MV_BUFFER vp9_mv_temporal_buffer_last;
 
     unsigned short first_inter_slice_collocated_ref_idx;
     unsigned short first_inter_slice_collocated_from_l0_flag;

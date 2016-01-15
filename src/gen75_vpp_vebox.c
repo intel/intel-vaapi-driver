@@ -1408,7 +1408,9 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
 
       } else if(obj_surf_input->fourcc ==  VA_FOURCC_AYUV ||
                 obj_surf_input->fourcc ==  VA_FOURCC_YUY2 ||
-                obj_surf_input->fourcc ==  VA_FOURCC_NV12){
+                obj_surf_input->fourcc ==  VA_FOURCC_NV12 ||
+                obj_surf_input->fourcc ==  VA_FOURCC_P010){
+
                 // nothing to do here
      } else {
            /* not support other format as input */ 
@@ -1447,7 +1449,9 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
         proc_ctx->format_convert_flags |= POST_FORMAT_CONVERT;
     } else if(obj_surf_output->fourcc ==  VA_FOURCC_AYUV ||
               obj_surf_output->fourcc ==  VA_FOURCC_YUY2 ||
-              obj_surf_output->fourcc ==  VA_FOURCC_NV12){
+                obj_surf_input->fourcc ==  VA_FOURCC_NV12 ||
+                obj_surf_input->fourcc ==  VA_FOURCC_P010){
+
               /* Nothing to do here */
      } else {
            /* not support other format as input */ 
@@ -1601,6 +1605,11 @@ gen75_vebox_init_filter_params(VADriverContextP ctx,
     proc_ctx->is_di_adv_enabled = 0;
     proc_ctx->is_first_frame = 0;
     proc_ctx->is_second_field = 0;
+
+    if(!proc_ctx->is_di_enabled && !proc_ctx->is_dn_enabled) {
+        // MUST enable IECP if all DI&DN are disabled
+        proc_ctx->is_iecp_enabled = 1;
+    }
 
     /* Check whether we are deinterlacing the second field */
     if (proc_ctx->is_di_enabled) {
@@ -2290,7 +2299,8 @@ void skl_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *pro
     assert(obj_surf->fourcc == VA_FOURCC_NV12 ||
            obj_surf->fourcc == VA_FOURCC_YUY2 ||
            obj_surf->fourcc == VA_FOURCC_AYUV ||
-           obj_surf->fourcc == VA_FOURCC_RGBA);
+           obj_surf->fourcc == VA_FOURCC_RGBA ||
+           obj_surf->fourcc == VA_FOURCC_P010);
 
     if (obj_surf->fourcc == VA_FOURCC_NV12) {
         surface_format = PLANAR_420_8;
@@ -2311,6 +2321,11 @@ void skl_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *pro
         surface_format = R8G8B8A8_UNORM_SRGB;
         surface_pitch = obj_surf->width * 4;
         is_uv_interleaved = 0;
+        half_pitch_chroma = 0;
+    } else if (obj_surf->fourcc == VA_FOURCC_P010) {
+        surface_format = PLANAR_420_16;
+        surface_pitch = obj_surf->width;
+        is_uv_interleaved = 1;
         half_pitch_chroma = 0;
     }
 

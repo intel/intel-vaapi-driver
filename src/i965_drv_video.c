@@ -112,6 +112,9 @@
 #define HAS_HEVC10_DECODING(ctx)        ((ctx)->codec_info->has_hevc10_decoding && \
                                          (ctx)->intel.has_bsd)
 
+#define HAS_VPP_P010(ctx)        ((ctx)->codec_info->has_vpp_p010 && \
+                                         (ctx)->intel.has_bsd)
+
 static int get_sampling_from_fourcc(unsigned int fourcc);
 
 /* Check whether we are rendering to X11 (VA/X11 or VA/GLX API) */
@@ -316,6 +319,8 @@ i965_image_formats_map[I965_MAX_IMAGE_FORMATS + 1] = {
       { VA_FOURCC_RGBX, VA_LSB_FIRST, 32, 24, 0x000000ff, 0x0000ff00, 0x00ff0000 } },
     { I965_SURFACETYPE_RGBA,
       { VA_FOURCC_BGRX, VA_LSB_FIRST, 32, 24, 0x00ff0000, 0x0000ff00, 0x000000ff } },
+    { I965_SURFACETYPE_YUV,
+      { VA_FOURCC_P010, VA_LSB_FIRST, 24, } },
 };
 
 /* List of supported subpicture formats */
@@ -878,6 +883,12 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
         if (HAS_HEVC10_DECODING(i965) && entrypoint == VAEntrypointVLD)
             chroma_formats |= i965->codec_info->hevc_dec_chroma_formats;
         break;
+
+    case VAProfileNone:
+	if(HAS_VPP_P010(i965))
+            chroma_formats |= VA_RT_FORMAT_YUV420_10BPP;
+        break;
+
     default:
         break;
     }
@@ -3759,6 +3770,14 @@ i965_CreateImage(VADriverContextP ctx,
         image->offsets[0] = 0;
         image->data_size  = size * 2;
         break;
+    case VA_FOURCC_P010:
+        image->num_planes = 2;
+        image->pitches[0] = awidth * 2;
+        image->offsets[0] = 0;
+        image->pitches[1] = awidth * 2;
+        image->offsets[1] = size * 2;
+        image->data_size  = size * 2 + 2 * size2 * 2;
+        break;
     default:
         goto error;
     }
@@ -3819,21 +3838,21 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
     int bpp_1stplane = bpp_1stplane_by_fourcc(fourcc);
 
-    if (obj_surface->user_h_stride_set) {
-        ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
-    } else
-        obj_surface->width = ALIGN(obj_surface->orig_width * bpp_1stplane, 128);
-
-    if (obj_surface->user_v_stride_set) {
-        ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
-    } else
-        obj_surface->height = ALIGN(obj_surface->orig_height, 32);
-
     if ((tiled && !obj_surface->user_disable_tiling)) {
         ASSERT_RET(fourcc != VA_FOURCC_I420 &&
                fourcc != VA_FOURCC_IYUV &&
                fourcc != VA_FOURCC_YV12,
                VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT);
+
+        if (obj_surface->user_h_stride_set) {
+           ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
+        } else
+          obj_surface->width = ALIGN(obj_surface->orig_width * bpp_1stplane, 128);
+
+        if (obj_surface->user_v_stride_set) {
+          ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
+        }else
+          obj_surface->height = ALIGN(obj_surface->orig_height, 32);
 
         region_height = obj_surface->height;
 
@@ -5688,6 +5707,14 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
                 attribs[i].value.value.i = VA_FOURCC_YV16;
                 i++;
+
+                if(HAS_VPP_P010(i965)) {
+                  attribs[i].type = VASurfaceAttribPixelFormat;
+                  attribs[i].value.type = VAGenericValueTypeInteger;
+                  attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                  attribs[i].value.value.i = VA_FOURCC_P010;
+                  i++;
+                }
             }
         }
     }
