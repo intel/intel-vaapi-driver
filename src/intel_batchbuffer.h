@@ -110,6 +110,8 @@ void intel_batchbuffer_start_atomic_bcs_override(struct intel_batchbuffer *batch
     __OUT_RELOC(batch, bo, read_domains, write_domain, delta)
 #define OUT_RELOC64(batch, bo, read_domains, write_domain, delta)       \
     __OUT_RELOC64(batch, bo, read_domains, write_domain, delta)
+#define OUT_BCS_RELOC64(batch, bo, read_domains, write_domain, delta)   \
+    __OUT_RELOC64(batch, bo, read_domains, write_domain, delta)
 
 #define ADVANCE_BATCH(batch)            __ADVANCE_BATCH(batch)
 #define ADVANCE_BLT_BATCH(batch)        __ADVANCE_BATCH(batch)
