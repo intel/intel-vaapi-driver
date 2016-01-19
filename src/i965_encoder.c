@@ -694,6 +694,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->base.batch = intel_batchbuffer_new(intel, I915_EXEC_RENDER, 0);
     encoder_context->input_yuv_surface = VA_INVALID_SURFACE;
     encoder_context->is_tmp_id = 0;
+    encoder_context->low_power_mode = 0;
     encoder_context->rate_control_mode = VA_RC_NONE;
     encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
     encoder_context->quality_range = 1;
@@ -708,7 +709,11 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     case VAProfileH264Main:
     case VAProfileH264High:
         encoder_context->codec = CODEC_H264;
-        encoder_context->quality_range = ENCODER_QUALITY_RANGE;
+
+        if (obj_config->entrypoint == VAEntrypointEncSliceLP)
+            encoder_context->quality_range = ENCODER_LP_QUALITY_RANGE;
+        else
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE;
         break;
 
     case VAProfileH264StereoHigh:
@@ -748,11 +753,16 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         }
     }
 
-    vme_context_init(ctx, encoder_context);
-    if(obj_config->profile != VAProfileJPEGBaseline) {
-        assert(encoder_context->vme_context);
-        assert(encoder_context->vme_context_destroy);
-        assert(encoder_context->vme_pipeline);
+    if (vme_context_init) {
+        vme_context_init(ctx, encoder_context);
+
+        if (obj_config->profile != VAProfileJPEGBaseline) {
+            assert(encoder_context->vme_context);
+            assert(encoder_context->vme_context_destroy);
+            assert(encoder_context->vme_pipeline);
+        }
+    } else {
+        encoder_context->low_power_mode = 1;
     }
 
     mfc_context_init(ctx, encoder_context);

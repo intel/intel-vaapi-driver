@@ -67,6 +67,9 @@
 #define HAS_H264_ENCODING(ctx)  ((ctx)->codec_info->has_h264_encoding && \
                                  (ctx)->intel.has_bsd)
 
+#define HAS_LP_H264_ENCODING(ctx)  ((ctx)->codec_info->has_lp_h264_encoding && \
+                                    (ctx)->intel.has_bsd)
+
 #define HAS_VC1_DECODING(ctx)   ((ctx)->codec_info->has_vc1_decoding && \
                                  (ctx)->intel.has_bsd)
 
@@ -559,7 +562,8 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
     }
 
     if (HAS_H264_DECODING(i965) ||
-        HAS_H264_ENCODING(i965)) {
+        HAS_H264_ENCODING(i965) ||
+        HAS_LP_H264_ENCODING(i965)) {
         profile_list[i++] = VAProfileH264ConstrainedBaseline;
         profile_list[i++] = VAProfileH264Main;
         profile_list[i++] = VAProfileH264High;
@@ -662,6 +666,9 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
 
         if (HAS_H264_ENCODING(i965))
             entrypoint_list[n++] = VAEntrypointEncSlice;
+
+        if (HAS_LP_H264_ENCODING(i965))
+            entrypoint_list[n++] = VAEntrypointEncSliceLP;
 
         break;
    case VAProfileH264MultiviewHigh:
@@ -770,7 +777,8 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
     case VAProfileH264Main:
     case VAProfileH264High:
         if ((HAS_H264_DECODING(i965) && entrypoint == VAEntrypointVLD) ||
-            (HAS_H264_ENCODING(i965) && entrypoint == VAEntrypointEncSlice)) {
+            (HAS_H264_ENCODING(i965) && entrypoint == VAEntrypointEncSlice) ||
+            (HAS_LP_H264_ENCODING(i965) && entrypoint == VAEntrypointEncSliceLP)) {
             va_status = VA_STATUS_SUCCESS;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -941,11 +949,24 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     profile != VAProfileMPEG2Simple)
                     attrib_list[i].value |= VA_RC_CBR;
                 break;
-            }
+            } else if (entrypoint == VAEntrypointEncSliceLP) {
+                struct i965_driver_data * const i965 = i965_driver_data(ctx);
+
+                /* Support low power encoding for H.264 only by now */
+                if (profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High)
+                    attrib_list[i].value = i965->codec_info->lp_h264_brc_mode;
+                else
+                    attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
+            } else
+                attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
+
             break;
 
         case VAConfigAttribEncPackedHeaders:
-            if (entrypoint == VAEntrypointEncSlice) {
+            if (entrypoint == VAEntrypointEncSlice ||
+                entrypoint == VAEntrypointEncSliceLP) {
                 attrib_list[i].value = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
                 if (profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
@@ -965,14 +986,23 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribEncMaxRefFrames:
-            if (entrypoint == VAEntrypointEncSlice) {
+            if (entrypoint == VAEntrypointEncSlice)
                 attrib_list[i].value = (1 << 16) | (1 << 0);
-                break;
+            else if (entrypoint == VAEntrypointEncSliceLP) {
+                /* Don't support B frame for low power mode */
+                if (profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High)
+                    attrib_list[i].value = (1 << 0);
+                else
+                    attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
             }
+
             break;
 
         case VAConfigAttribEncQualityRange:
-            if (entrypoint == VAEntrypointEncSlice) {
+            if (entrypoint == VAEntrypointEncSlice ||
+                entrypoint == VAEntrypointEncSliceLP) {
                 attrib_list[i].value = 1;
                 if (profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
@@ -998,6 +1028,17 @@ i965_GetConfigAttributes(VADriverContextP ctx,
 
         case VAConfigAttribDecSliceMode:
             attrib_list[i].value = VA_DEC_SLICE_MODE_NORMAL;
+            break;
+
+        case VAConfigAttribEncROI:
+            if ((entrypoint == VAEntrypointEncSliceLP) &&
+                (profile == VAProfileH264ConstrainedBaseline ||
+                 profile == VAProfileH264Main ||
+                 profile == VAProfileH264High))
+                attrib_list[i].value = 3;
+            else
+                attrib_list[i].value = 0;
+
             break;
 
         default:
@@ -2142,7 +2183,8 @@ i965_CreateContext(VADriverContextP ctx,
             assert(i965->codec_info->proc_hw_context_init);
             obj_context->hw_context = i965->codec_info->proc_hw_context_init(ctx, obj_config);
          } else if ((VAEntrypointEncSlice == obj_config->entrypoint) || 
-                   (VAEntrypointEncPicture == obj_config->entrypoint)) { /*encode routine only*/
+                    (VAEntrypointEncPicture == obj_config->entrypoint) ||
+                    (VAEntrypointEncSliceLP == obj_config->entrypoint)) {
             VAConfigAttrib *packed_attrib;
             obj_context->codec_type = CODEC_ENC;
             memset(&obj_context->codec_state.encode, 0, sizeof(obj_context->codec_state.encode));
@@ -3361,7 +3403,8 @@ i965_RenderPicture(VADriverContextP ctx,
     if (VAEntrypointVideoProc == obj_config->entrypoint) {
         vaStatus = i965_proc_render_picture(ctx, context, buffers, num_buffers);
     } else if ((VAEntrypointEncSlice == obj_config->entrypoint ) || 
-               (VAEntrypointEncPicture == obj_config->entrypoint)) {
+               (VAEntrypointEncPicture == obj_config->entrypoint) ||
+               (VAEntrypointEncSliceLP == obj_config->entrypoint)) {
         vaStatus = i965_encoder_render_picture(ctx, context, buffers, num_buffers);
     } else {
         vaStatus = i965_decoder_render_picture(ctx, context, buffers, num_buffers);
@@ -3384,7 +3427,10 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
     if (obj_context->codec_type == CODEC_PROC) {
         ASSERT_RET(VAEntrypointVideoProc == obj_config->entrypoint, VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT);
     } else if (obj_context->codec_type == CODEC_ENC) {
-        ASSERT_RET(((VAEntrypointEncSlice == obj_config->entrypoint) || (VAEntrypointEncPicture == obj_config->entrypoint)), VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT);
+        ASSERT_RET(((VAEntrypointEncSlice == obj_config->entrypoint) ||
+                    (VAEntrypointEncPicture == obj_config->entrypoint) ||
+                    (VAEntrypointEncSliceLP == obj_config->entrypoint)),
+                   VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT);
 
         if (obj_context->codec_state.encode.num_packed_header_params_ext !=
                obj_context->codec_state.encode.num_packed_header_data_ext) {
@@ -5318,7 +5364,8 @@ i965_GetSurfaceAttributes(
                            IS_GEN8(i965->intel.device_info) ||
                            IS_GEN9(i965->intel.device_info)) {
                     if (obj_config->entrypoint == VAEntrypointEncSlice ||
-                        obj_config->entrypoint == VAEntrypointVideoProc) {
+                        obj_config->entrypoint == VAEntrypointVideoProc ||
+                        obj_config->entrypoint == VAEntrypointEncSliceLP) {
                         switch (attrib_list[i].value.value.i) {
                         case VA_FOURCC_NV12:
                         case VA_FOURCC_I420:
@@ -5668,7 +5715,8 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 i++;
             }
         } else if (obj_config->entrypoint == VAEntrypointEncSlice ||  /* encode */
-                   obj_config->entrypoint == VAEntrypointVideoProc) { /* vpp */
+                   obj_config->entrypoint == VAEntrypointVideoProc ||
+                   obj_config->entrypoint == VAEntrypointEncSliceLP) {
 
             if (obj_config->profile == VAProfileHEVCMain10) {
                 attribs[i].type = VASurfaceAttribPixelFormat;

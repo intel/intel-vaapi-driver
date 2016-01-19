@@ -41,12 +41,15 @@ struct intel_encoder_context
     struct hw_context base;
     int codec;
     VASurfaceID input_yuv_surface;
-    int is_tmp_id;
     unsigned int rate_control_mode;
     unsigned int quality_level;
     unsigned int quality_range;
     void *vme_context;
     void *mfc_context;
+
+    unsigned int is_tmp_id:1;
+    unsigned int low_power_mode:1;
+
     void (*vme_context_destroy)(void *vme_context);
     VAStatus (*vme_pipeline)(VADriverContextP ctx,
                              VAProfile profile,

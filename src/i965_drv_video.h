@@ -73,6 +73,8 @@
 #define ENCODER_HIGH_QUALITY      ENCODER_DEFAULT_QUALITY
 #define ENCODER_LOW_QUALITY       2
 
+#define ENCODER_LP_QUALITY_RANGE  8
+
 struct i965_surface
 {
     struct object_base *base;
@@ -396,6 +398,9 @@ struct hw_codec_info
     unsigned int has_hevc10_decoding:1;
     unsigned int has_vp9_decoding:1;
     unsigned int has_vpp_p010:1;
+    unsigned int has_lp_h264_encoding:1;
+
+    unsigned int lp_h264_brc_mode;
 
     unsigned int num_filters;
     struct i965_filter filters[VAProcFilterCount];
