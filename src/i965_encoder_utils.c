@@ -1134,3 +1134,56 @@ int build_hevc_slice_header(VAEncSequenceParameterBufferHEVC *seq_param,
     *header_buffer = (unsigned char *)bs.buffer;
     return bs.bit_offset;
 }
+
+int
+intel_avc_find_skipemulcnt(unsigned char *buf, int bits_length)
+{
+    int i, found;
+    int leading_zero_cnt, byte_length, zero_byte;
+    int nal_unit_type;
+    int skip_cnt = 0;
+
+#define NAL_UNIT_TYPE_MASK 0x1f
+#define HW_MAX_SKIP_LENGTH 15
+
+    byte_length = ALIGN(bits_length, 32) >> 3;
+
+
+    leading_zero_cnt = 0;
+    found = 0;
+    for(i = 0; i < byte_length - 4; i++) {
+        if (((buf[i] == 0) && (buf[i + 1] == 0) && (buf[i + 2] == 1)) ||
+            ((buf[i] == 0) && (buf[i + 1] == 0) && (buf[i + 2] == 0) && (buf[i + 3] == 1))) {
+                found = 1;
+                break;
+            }
+        leading_zero_cnt++;
+    }
+    if (!found) {
+        /* warning message is complained. But anyway it will be inserted. */
+        WARN_ONCE("Invalid packed header data. "
+                   "Can't find the 000001 start_prefix code\n");
+        return 0;
+    }
+    i = leading_zero_cnt;
+
+    zero_byte = 0;
+    if (!((buf[i] == 0) && (buf[i + 1] == 0) && (buf[i + 2] == 1)))
+        zero_byte = 1;
+
+    skip_cnt = leading_zero_cnt + zero_byte + 3;
+
+    /* the unit header byte is accounted */
+    nal_unit_type = (buf[skip_cnt]) & NAL_UNIT_TYPE_MASK;
+    skip_cnt += 1;
+
+    if (nal_unit_type == 14 || nal_unit_type == 20 || nal_unit_type == 21) {
+        /* more unit header bytes are accounted for MVC/SVC */
+        skip_cnt += 3;
+    }
+    if (skip_cnt > HW_MAX_SKIP_LENGTH) {
+        WARN_ONCE("Too many leading zeros are padded for packed data. "
+                   "It is beyond the HW range.!!!\n");
+    }
+    return skip_cnt;
+}
