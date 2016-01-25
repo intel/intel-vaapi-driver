@@ -1322,10 +1322,10 @@ intel_decoder_check_vp9_parameter(VADriverContextP ctx,
     int i=0, index=0;
 
     //Max support upto 4k for BXT
-    if ((pic_param->frame_width-1 < 7) || (pic_param->frame_width-1 > 4095))
+    if ((pic_param->frame_width-1 < 0) || (pic_param->frame_width-1 > 4095))
         return va_status;
 
-    if ((pic_param->frame_height-1 < 7) || (pic_param->frame_height-1 > 4095))
+    if ((pic_param->frame_height-1 < 0) || (pic_param->frame_height-1 > 4095))
         return va_status;
 
     //Set the reference object in decode state for last reference
