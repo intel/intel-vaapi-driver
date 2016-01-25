@@ -879,7 +879,6 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
         break;
 
     case VAProfileHEVCMain10:
-        chroma_formats = 0; // clear YUV420 8bits format support
         if (HAS_HEVC10_DECODING(i965) && entrypoint == VAEntrypointVLD)
             chroma_formats |= i965->codec_info->hevc_dec_chroma_formats;
         break;
