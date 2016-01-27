@@ -137,6 +137,7 @@ struct intel_device_info
     unsigned int is_haswell     : 1; /* gen7 */
     unsigned int is_cherryview  : 1; /* gen8 */
     unsigned int is_broxton     : 1; /* gen9 */
+    unsigned int is_kabylake    : 1; /* gen9p5 */
 };
 
 struct intel_driver_data 
@@ -197,5 +198,7 @@ struct intel_region
 #define IS_GEN8(device_info)            (device_info->gen == 8)
 
 #define IS_GEN9(device_info)            (device_info->gen == 9)
+
+#define IS_KBL(device_info)             (device_info->is_kabylake)
 
 #endif /* _INTEL_DRIVER_H_ */
