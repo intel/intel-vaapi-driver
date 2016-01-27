@@ -362,10 +362,13 @@ struct hw_codec_info
     int min_linear_hpitch;
 
     unsigned int h264_mvc_dec_profiles;
+    unsigned int vp9_dec_profiles;
+
     unsigned int h264_dec_chroma_formats;
     unsigned int jpeg_dec_chroma_formats;
     unsigned int jpeg_enc_chroma_formats;
     unsigned int hevc_dec_chroma_formats;
+    unsigned int vp9_dec_chroma_formats;
 
     unsigned int has_mpeg2_decoding:1;
     unsigned int has_mpeg2_encoding:1;
