@@ -152,19 +152,36 @@ gen9_hcpe_pipe_mode_select(VADriverContextP ctx,
                            int standard_select,
                            struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
     assert(standard_select == HCP_CODEC_HEVC);
 
-    BEGIN_BCS_BATCH(batch, 4);
+    if(IS_KBL(i965->intel.device_info))
+    {
+        BEGIN_BCS_BATCH(batch, 6);
 
-    OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (4 - 2));
+        OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (6 - 2));
+    }
+    else
+    {
+        BEGIN_BCS_BATCH(batch, 4);
+
+        OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (4 - 2));
+    }
+
     OUT_BCS_BATCH(batch,
                   (standard_select << 5) |
                   (0 << 3) | /* disable Pic Status / Error Report */
                   HCP_CODEC_SELECT_ENCODE);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
+
+    if(IS_KBL(i965->intel.device_info))
+    {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -209,6 +226,7 @@ static void
 gen9_hcpe_pipe_buf_addr_state(VADriverContextP ctx, struct encode_state *encode_state,
                               struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     struct object_surface *obj_surface;
@@ -216,9 +234,18 @@ gen9_hcpe_pipe_buf_addr_state(VADriverContextP ctx, struct encode_state *encode_
     dri_bo *bo;
     unsigned int i;
 
-    BEGIN_BCS_BATCH(batch, 95);
+    if(IS_KBL(i965->intel.device_info))
+    {
+        BEGIN_BCS_BATCH(batch, 104);
 
-    OUT_BCS_BATCH(batch, HCP_PIPE_BUF_ADDR_STATE | (95 - 2));
+        OUT_BCS_BATCH(batch, HCP_PIPE_BUF_ADDR_STATE | (104 - 2));
+    }
+    else
+    {
+        BEGIN_BCS_BATCH(batch, 95);
+
+        OUT_BCS_BATCH(batch, HCP_PIPE_BUF_ADDR_STATE | (95 - 2));
+    }
 
     obj_surface = encode_state->reconstructed_object;
     assert(obj_surface && obj_surface->bo);
@@ -268,6 +295,12 @@ gen9_hcpe_pipe_buf_addr_state(VADriverContextP ctx, struct encode_state *encode_
     OUT_BUFFER_MA_TARGET(NULL);    /* DW 86..88, ignore for HEVC */
     OUT_BUFFER_MA_TARGET(NULL);    /* DW 89..91, ignore for HEVC */
     OUT_BUFFER_MA_TARGET(NULL);    /* DW 92..94, ignore for HEVC */
+
+    if(IS_KBL(i965->intel.device_info))
+    {
+        for(i = 0;i < 9;i++)
+            OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -459,6 +492,7 @@ static void
 gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state,
                          struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     VAEncPictureParameterBufferHEVC *pic_param ;
@@ -504,9 +538,18 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
     /* set zero for encoder */
     loop_filter_across_tiles_enabled_flag = 0;
 
-    BEGIN_BCS_BATCH(batch, 19);
+    if(IS_KBL(i965->intel.device_info))
+    {
+        BEGIN_BCS_BATCH(batch, 31);
 
-    OUT_BCS_BATCH(batch, HCP_PIC_STATE | (19 - 2));
+        OUT_BCS_BATCH(batch, HCP_PIC_STATE | (31 - 2));
+    }
+    else
+    {
+        BEGIN_BCS_BATCH(batch, 19);
+
+        OUT_BCS_BATCH(batch, HCP_PIC_STATE | (19 - 2));
+    }
 
     OUT_BCS_BATCH(batch,
                   mfc_context->pic_size.picture_height_in_min_cb_minus1 << 16 |
@@ -523,7 +566,7 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
                   seq_param->log2_min_luma_coding_block_size_minus3);
     OUT_BCS_BATCH(batch, 0); /* DW 3, ignored */
     OUT_BCS_BATCH(batch,
-                  0 << 27 | /* CU packet structure is 0 for SKL */
+                  (IS_KBL(i965->intel.device_info)? 1 : 0) << 27 | /* CU packet structure is 0 for SKL */
                   seq_param->seq_fields.bits.strong_intra_smoothing_enabled_flag << 26 |
                   pic_param->pic_fields.bits.transquant_bypass_enabled_flag << 25 |
                   seq_param->seq_fields.bits.amp_enabled_flag << 23 |
@@ -576,6 +619,14 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
     OUT_BCS_BATCH(batch,
                   0 << 30 |
                   minframesize);    /* DW 18, min frame size units */
+
+    if(IS_KBL(i965->intel.device_info))
+    {
+        int i = 0;
+
+        for(i = 0;i < 12;i++)
+            OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -723,6 +774,7 @@ gen9_hcpe_hevc_slice_state(VADriverContextP ctx,
                            struct intel_encoder_context *encoder_context,
                            struct intel_batchbuffer *batch)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     int slice_type = slice_param->slice_type;
 
@@ -754,9 +806,18 @@ gen9_hcpe_hevc_slice_state(VADriverContextP ctx,
         }
     }
 
-    BEGIN_BCS_BATCH(batch, 9);
+    if(IS_KBL(i965->intel.device_info))
+    {
+        BEGIN_BCS_BATCH(batch, 11);
 
-    OUT_BCS_BATCH(batch, HCP_SLICE_STATE | (9 - 2));
+        OUT_BCS_BATCH(batch, HCP_SLICE_STATE | (11 - 2));
+    }
+    else
+    {
+        BEGIN_BCS_BATCH(batch, 9);
+
+        OUT_BCS_BATCH(batch, HCP_SLICE_STATE | (9 - 2));
+    }
 
     OUT_BCS_BATCH(batch,
                   slice_ver_pos << 16 |
@@ -800,6 +861,12 @@ gen9_hcpe_hevc_slice_state(VADriverContextP ctx,
                   1 << 1  |  /* cabacZeroWordInsertionEnable */
                   0);        /* Ignored for decoding */
     OUT_BCS_BATCH(batch, 0); /* PAK-BSE data start offset */
+
+    if(IS_KBL(i965->intel.device_info))
+    {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -1097,7 +1164,11 @@ gen9_hcpe_hevc_pak_object(VADriverContextP ctx, int lcu_x, int lcu_y, int isLast
                           int cu_count_in_lcu, unsigned int split_coding_unit_flag,
                           struct intel_batchbuffer *batch)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int len_in_dwords = 3;
+
+    if(IS_KBL(i965->intel.device_info))
+        len_in_dwords = 5;
 
     if (batch == NULL)
         batch = encoder_context->base.batch;
@@ -1111,6 +1182,12 @@ gen9_hcpe_hevc_pak_object(VADriverContextP ctx, int lcu_x, int lcu_y, int isLast
                   split_coding_unit_flag);
 
     OUT_BCS_BATCH(batch, (lcu_y << 16) | lcu_x);        /* LCU  for Y*/
+
+    if(IS_KBL(i965->intel.device_info))
+    {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 
