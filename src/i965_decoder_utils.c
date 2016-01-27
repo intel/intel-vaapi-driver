@@ -1225,9 +1225,25 @@ vp9_ensure_surface_bo(
 )
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
+    int update = 0;
+    unsigned int fourcc = VA_FOURCC_NV12;
+
+    if(pic_param->profile >= 2)
+    {
+        if(obj_surface->fourcc != VA_FOURCC_P010)
+        {
+            update = 1;
+            fourcc = VA_FOURCC_P010;
+        }
+    }
+    else if(obj_surface->fourcc != VA_FOURCC_NV12)
+    {
+        update = 1;
+        fourcc = VA_FOURCC_NV12;
+    }
 
     /* (Re-)allocate the underlying surface buffer store, if necessary */
-    if (!obj_surface->bo || obj_surface->fourcc != VA_FOURCC_NV12) {
+    if (!obj_surface->bo || update) {
         struct i965_driver_data * const i965 = i965_driver_data(ctx);
 
         i965_destroy_surface_storage(obj_surface);
@@ -1235,7 +1251,7 @@ vp9_ensure_surface_bo(
         va_status = i965_check_alloc_surface_bo(ctx,
                                                 obj_surface,
                                                 i965->codec_info->has_tiled_surface,
-                                                VA_FOURCC_NV12,
+                                                fourcc,
                                                 SUBSAMPLE_YUV420);
     }
 
@@ -1313,6 +1329,7 @@ error:
 //then sets the reference frames in the decode_state
 static VAStatus
 intel_decoder_check_vp9_parameter(VADriverContextP ctx,
+                                   VAProfile profile,
                                    struct decode_state *decode_state)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -1320,6 +1337,9 @@ intel_decoder_check_vp9_parameter(VADriverContextP ctx,
     VAStatus va_status = VA_STATUS_ERROR_INVALID_PARAMETER;
     struct object_surface *obj_surface;
     int i=0, index=0;
+
+    if((profile - VAProfileVP9Profile0) < pic_param->profile)
+        return va_status;
 
     //Max support upto 4k for BXT
     if ((pic_param->frame_width-1 < 0) || (pic_param->frame_width-1 > 4095))
@@ -1420,7 +1440,8 @@ intel_decoder_sanity_check_input(VADriverContextP ctx,
         break;
 
     case VAProfileVP9Profile0:
-        vaStatus = intel_decoder_check_vp9_parameter(ctx, decode_state);
+    case VAProfileVP9Profile2:
+        vaStatus = intel_decoder_check_vp9_parameter(ctx, profile, decode_state);
         break;
 
     default:

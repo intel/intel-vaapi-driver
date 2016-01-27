@@ -109,6 +109,10 @@
 #define HAS_VP9_DECODING(ctx)          ((ctx)->codec_info->has_vp9_decoding && \
                                          (ctx)->intel.has_bsd)
 
+#define HAS_VP9_DECODING_PROFILE(ctx, profile)                     \
+    (HAS_VP9_DECODING(ctx) &&                                      \
+     ((ctx)->codec_info->vp9_dec_profiles & (1U << (profile - VAProfileVP9Profile0))))
+
 #define HAS_HEVC10_DECODING(ctx)        ((ctx)->codec_info->has_hevc10_decoding && \
                                          (ctx)->intel.has_bsd)
 
@@ -599,8 +603,12 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileHEVCMain10;
     }
 
-    if(HAS_VP9_DECODING(i965)) {
+    if(HAS_VP9_DECODING_PROFILE(i965, VAProfileVP9Profile0)) {
         profile_list[i++] = VAProfileVP9Profile0;
+    }
+
+    if(HAS_VP9_DECODING_PROFILE(i965, VAProfileVP9Profile2)) {
+        profile_list[i++] = VAProfileVP9Profile2;
     }
 
     if (i965->wrapper_pdrvctx) {
@@ -713,18 +721,21 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
         break;
 
     case VAProfileVP9Profile0:
-        if(HAS_VP9_DECODING(i965))
+    case VAProfileVP9Profile2:
+        if(HAS_VP9_DECODING_PROFILE(i965, profile))
             entrypoint_list[n++] = VAEntrypointVLD;
 
-        if (i965->wrapper_pdrvctx) {
-            VAStatus va_status = VA_STATUS_SUCCESS;
-            VADriverContextP pdrvctx = i965->wrapper_pdrvctx;
+        if(profile == VAProfileVP9Profile0) {
+          if (i965->wrapper_pdrvctx) {
+              VAStatus va_status = VA_STATUS_SUCCESS;
+              VADriverContextP pdrvctx = i965->wrapper_pdrvctx;
 
-            CALL_VTABLE(pdrvctx, va_status,
-                        vaQueryConfigEntrypoints(pdrvctx, profile,
-                                                 entrypoint_list,
-                                                 num_entrypoints));
-            return va_status;
+              CALL_VTABLE(pdrvctx, va_status,
+                          vaQueryConfigEntrypoints(pdrvctx, profile,
+                                                   entrypoint_list,
+                                                   num_entrypoints));
+              return va_status;
+          }
         }
 
         break;
@@ -835,9 +846,10 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         break;
 
     case VAProfileVP9Profile0:
-        if ((HAS_VP9_DECODING(i965)) && (entrypoint == VAEntrypointVLD))
+    case VAProfileVP9Profile2:
+        if ((HAS_VP9_DECODING_PROFILE(i965, profile)) && (entrypoint == VAEntrypointVLD))
             va_status = VA_STATUS_SUCCESS;
-        else if (i965->wrapper_pdrvctx)
+        else if ((profile == VAProfileVP9Profile0) && i965->wrapper_pdrvctx)
             va_status = VA_STATUS_SUCCESS;
         else
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -886,6 +898,12 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
     case VAProfileNone:
 	if(HAS_VPP_P010(i965))
             chroma_formats |= VA_RT_FORMAT_YUV420_10BPP;
+        break;
+
+    case VAProfileVP9Profile0:
+    case VAProfileVP9Profile2:
+        if (HAS_VP9_DECODING_PROFILE(i965, profile) && entrypoint == VAEntrypointVLD)
+            chroma_formats |= i965->codec_info->vp9_dec_chroma_formats;
         break;
 
     default:

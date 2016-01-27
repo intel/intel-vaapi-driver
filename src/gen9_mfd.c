@@ -1341,6 +1341,7 @@ gen9_hcpd_vp9_decode_init(VADriverContextP ctx,
     struct object_surface *obj_surface;
     uint32_t size;
     int width_in_mbs=0, height_in_mbs=0;
+    int bit_depth_minus8 = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VADecPictureParameterBufferVP9 *)decode_state->pic_param->buffer;
@@ -1351,6 +1352,23 @@ gen9_hcpd_vp9_decode_init(VADriverContextP ctx,
     //For BXT, we support only till 4K
     assert(width_in_mbs > 0 && width_in_mbs <= 256); /* 4K */
     assert(height_in_mbs > 0 && height_in_mbs <= 256);
+
+    if(!(i965->codec_info->vp9_dec_profiles & (1U<<pic_param->profile)))
+        return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+
+    if(pic_param->profile >= 2)
+    {
+        if(pic_param->bit_depth >= 8)
+            bit_depth_minus8 = pic_param->bit_depth - 8;
+
+        if(bit_depth_minus8 == 2)
+        {
+            if(!(i965->codec_info->vp9_dec_chroma_formats & VA_RT_FORMAT_YUV420_10BPP))
+                return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+        }
+        else if((bit_depth_minus8 > 2) || (bit_depth_minus8 == 1) || (bit_depth_minus8 < 0))
+            return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+    }
 
     //Update the frame store buffers with the reference frames information
     intel_update_vp9_frame_store_index(ctx,
@@ -1381,12 +1399,18 @@ gen9_hcpd_vp9_decode_init(VADriverContextP ctx,
 
     gen9_hcpd_init_vp9_surface(ctx, pic_param, obj_surface, gen9_hcpd_context);
 
-    size = gen9_hcpd_context->picture_width_in_ctbs*18; //num_width_in_SB * 18
+    if(pic_param->profile >= 2)
+        size = gen9_hcpd_context->picture_width_in_ctbs*36; //num_width_in_SB * 36
+    else
+        size = gen9_hcpd_context->picture_width_in_ctbs*18; //num_width_in_SB * 18
     size<<=6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_line_buffer), "line buffer", size);
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_tile_line_buffer), "tile line buffer", size);
 
-    size = gen9_hcpd_context->picture_height_in_ctbs*17; //num_height_in_SB * 17
+    if(pic_param->profile >= 2)
+        size = gen9_hcpd_context->picture_height_in_ctbs*34; //num_height_in_SB * 17
+    else
+        size = gen9_hcpd_context->picture_height_in_ctbs*17; //num_height_in_SB * 17
     size<<=6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_tile_column_buffer), "tile column buffer", size);
 
@@ -1437,7 +1461,7 @@ gen9_hcpd_vp9_surface_state(VADriverContextP ctx,
                   (0 << 28) |                   /* surface id */
                   (obj_surface->width - 1));    /* pitch - 1 */
     OUT_BCS_BATCH(batch,
-                  (SURFACE_FORMAT_PLANAR_420_8 << 28) |
+                  (((obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010: SURFACE_FORMAT_PLANAR_420_8) << 28) |
                   y_cb_offset);
     ADVANCE_BCS_BATCH(batch);
 
@@ -1455,7 +1479,7 @@ gen9_hcpd_vp9_surface_state(VADriverContextP ctx,
                 ((i + 2) << 28) |                   /* surface id */
                 (obj_surface->width - 1));    /* pitch - 1 */
             OUT_BCS_BATCH(batch,
-                (SURFACE_FORMAT_PLANAR_420_8 << 28) |
+                (((obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010: SURFACE_FORMAT_PLANAR_420_8) << 28) |
                 obj_surface->y_cb_offset);
             ADVANCE_BCS_BATCH(batch);
         }else
@@ -1467,7 +1491,7 @@ gen9_hcpd_vp9_surface_state(VADriverContextP ctx,
                 ((i + 2) << 28) |                   /* surface id */
                 (tmp_obj_surface->width - 1));    /* pitch - 1 */
             OUT_BCS_BATCH(batch,
-                (SURFACE_FORMAT_PLANAR_420_8 << 28) |
+                (((tmp_obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010: SURFACE_FORMAT_PLANAR_420_8) << 28) |
                 tmp_obj_surface->y_cb_offset);
             ADVANCE_BCS_BATCH(batch);
         }
@@ -1571,6 +1595,8 @@ gen9_hcpd_vp9_pic_state(VADriverContextP ctx,
     uint16_t fwidth = 64;
     uint16_t fheight = 64;
     int i;
+    int bit_depth_minus8 = 0;
+
 #define LEN_COMMAND_OWN 12
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VADecPictureParameterBufferVP9 *)decode_state->pic_param->buffer;
@@ -1628,6 +1654,12 @@ gen9_hcpd_vp9_pic_state(VADriverContextP ctx,
     fwidth = (fwidth > frame_width_in_pixel)?frame_width_in_pixel:fwidth;
     fheight = (fheight > frame_height_in_pixel)?frame_height_in_pixel:fheight;
 
+    if(pic_param->profile >= 2)
+    {
+        if(pic_param->bit_depth >= 8)
+            bit_depth_minus8 = pic_param->bit_depth - 8;
+    }
+
     BEGIN_BCS_BATCH(batch, LEN_COMMAND_OWN);
 
     OUT_BCS_BATCH(batch, HCP_VP9_PIC_STATE | (LEN_COMMAND_OWN - 2));
@@ -1660,7 +1692,9 @@ gen9_hcpd_vp9_pic_state(VADriverContextP ctx,
                   adapt_probabilities_flag << 1 |
                   pic_param->pic_fields.bits.frame_type <<0);               /* DW 2 */
     OUT_BCS_BATCH(batch,
-        HCP_VP9_PROFILE0 << 28 |  /* Profile 0 only supports 8 bit 420 only */
+        pic_param->profile << 28 |
+        bit_depth_minus8 << 24 |
+        0 << 22 | /* only support 4:2:0 */
         pic_param->log2_tile_rows << 8 |
         pic_param->log2_tile_columns <<0);                       /* DW 3 */
     // resolution change case
@@ -1933,6 +1967,7 @@ gen9_hcpd_decode_picture(VADriverContextP ctx,
         vaStatus = gen9_hcpd_hevc_decode_picture(ctx, decode_state, gen9_hcpd_context);
         break;
     case VAProfileVP9Profile0:
+    case VAProfileVP9Profile2:
         vaStatus = gen9_hcpd_vp9_decode_picture(ctx, decode_state, gen9_hcpd_context);
         break;
 
@@ -2025,6 +2060,7 @@ gen9_hcpd_context_init(VADriverContextP ctx, struct object_config *object_config
         gen9_hcpd_hevc_context_init(ctx, gen9_hcpd_context);
         break;
     case VAProfileVP9Profile0:
+    case VAProfileVP9Profile2:
         gen9_hcpd_vp9_context_init(ctx, gen9_hcpd_context);
         break;
 
@@ -2040,7 +2076,8 @@ gen9_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
     if (obj_config->profile == VAProfileHEVCMain ||
         obj_config->profile == VAProfileHEVCMain10 ||
-        obj_config->profile == VAProfileVP9Profile0) {
+        obj_config->profile == VAProfileVP9Profile0 ||
+        obj_config->profile == VAProfileVP9Profile2) {
         return gen9_hcpd_context_init(ctx, obj_config);
     } else {
         return gen8_dec_hw_context_init(ctx, obj_config);

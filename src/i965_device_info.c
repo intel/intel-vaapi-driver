@@ -48,9 +48,15 @@
 #define EXTRA_HEVC_DEC_CHROMA_FORMATS \
     (VA_RT_FORMAT_YUV420_10BPP)
 
+#define EXTRA_VP9_DEC_CHROMA_FORMATS \
+    (VA_RT_FORMAT_YUV420_10BPP)
+
 /* Defines VA profile as a 32-bit unsigned integer mask */
 #define VA_PROFILE_MASK(PROFILE) \
     (1U << VAProfile##PROFILE)
+
+#define VP9_PROFILE_MASK(PROFILE) \
+    (1U << PROFILE)
 
 extern struct hw_context *i965_proc_context_init(VADriverContextP, struct object_config *);
 extern struct hw_context *g4x_dec_hw_context_init(VADriverContextP, struct object_config *);
@@ -377,6 +383,8 @@ static struct hw_codec_info bxt_hw_codec_info = {
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
                               VA_PROFILE_MASK(H264MultiviewHigh)),
+    .vp9_dec_profiles = VP9_PROFILE_MASK(0),
+
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
     .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
@@ -427,10 +435,14 @@ static struct hw_codec_info kbl_hw_codec_info = {
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
                               VA_PROFILE_MASK(H264MultiviewHigh)),
+    .vp9_dec_profiles = VP9_PROFILE_MASK(0) |
+                        VP9_PROFILE_MASK(2),
+
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
     .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
     .hevc_dec_chroma_formats = EXTRA_HEVC_DEC_CHROMA_FORMATS,
+    .vp9_dec_chroma_formats = EXTRA_VP9_DEC_CHROMA_FORMATS,
 
     .has_mpeg2_decoding = 1,
     .has_mpeg2_encoding = 1,
