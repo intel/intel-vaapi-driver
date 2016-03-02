@@ -602,6 +602,8 @@ static const struct intel_device_info skl_device_info = {
 
     .urb_size = 4096,
     .max_wm_threads = 64,       /* per PSD */
+
+    .is_skylake = 1,
 };
 
 static const struct intel_device_info bxt_device_info = {
