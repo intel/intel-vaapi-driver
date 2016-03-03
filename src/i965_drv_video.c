@@ -564,9 +564,11 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileH264Main;
         profile_list[i++] = VAProfileH264High;
     }
-    if (HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264MultiviewHigh))
+    if (HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264MultiviewHigh) ||
+        HAS_H264_MVC_ENCODING(i965))
         profile_list[i++] = VAProfileH264MultiviewHigh;
-    if (HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264StereoHigh))
+    if (HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264StereoHigh) ||
+        HAS_H264_MVC_ENCODING(i965))
         profile_list[i++] = VAProfileH264StereoHigh;
 
     if (HAS_VC1_DECODING(i965)) {
@@ -587,11 +589,6 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
     if (HAS_VP8_DECODING(i965) ||
         HAS_VP8_ENCODING(i965)) {
         profile_list[i++] = VAProfileVP8Version0_3;
-    }
-
-    if (HAS_H264_MVC_ENCODING(i965)) {
-        profile_list[i++] = VAProfileH264MultiviewHigh;
-        profile_list[i++] = VAProfileH264StereoHigh;
     }
 
     if (HAS_HEVC_DECODING(i965)||
