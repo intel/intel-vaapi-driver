@@ -1,7 +1,7 @@
 # intel-driver package version number
 m4_define([intel_driver_major_version], [1])
-m4_define([intel_driver_minor_version], [6])
-m4_define([intel_driver_micro_version], [3])
+m4_define([intel_driver_minor_version], [7])
+m4_define([intel_driver_micro_version], [0])
 m4_define([intel_driver_pre_version],   [1])
 m4_define([intel_driver_version],
           [intel_driver_major_version.intel_driver_minor_version.intel_driver_micro_version])
@@ -10,8 +10,8 @@ m4_append([intel_driver_version], intel_driver_pre_version, [.pre])
 ])
 
 # libva minimum version requirement
-m4_define([va_api_version], [0.38])
-m4_define([libva_package_version], [1.6.0])
+m4_define([va_api_version], [0.39])
+m4_define([libva_package_version], [1.7.0])
 
 # libdrm minimum version requirement
 m4_define([libdrm_version], [2.4.45])
