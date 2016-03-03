@@ -234,7 +234,7 @@ get_fourcc_info(unsigned int fourcc)
 {
     unsigned int i;
 
-    for (i = 0; ARRAY_ELEMS(i965_fourcc_infos); i++) {
+    for (i = 0; i < ARRAY_ELEMS(i965_fourcc_infos); i++) {
         const i965_fourcc_info * const info = &i965_fourcc_infos[i];
 
         if (info->fourcc == fourcc)
