@@ -27,7 +27,7 @@ BDW: Broadwell
 CHV/BSW: Cherryview/Braswell
 SKL: Skylake
 BXT: Broxton
-
+KBL: Kabylake
 
 Codecs
 ------
@@ -44,9 +44,9 @@ HEVC    D   CHV+/BSW+
 HEVC    E   SKL+
 VP9     D   BXT+
 HEVC 10bit     D       BXT+
-
+VP9 10bit      D       KBL+
 
 Requirements
 ------------
 
-libva >= 1.6.0
+libva >= 1.7.0
