@@ -2000,6 +2000,9 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
         i965_release_buffer_store(&obj_context->codec_state.encode.seq_param);
 
+        i965_release_buffer_store(&obj_context->codec_state.encode.q_matrix);
+        i965_release_buffer_store(&obj_context->codec_state.encode.huffman_table);
+
         for (i = 0; i < obj_context->codec_state.encode.num_slice_params; i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.slice_params[i]);
 
