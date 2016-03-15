@@ -1771,13 +1771,19 @@ gen9_hcpd_vp9_segment_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
 
+    int segment_ref = seg_param->segment_flags.fields.segment_reference;
+
+    if((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME)
+            || (pic_param->pic_fields.bits.intra_only))
+        segment_ref = 0;
+
     BEGIN_BCS_BATCH(batch, 7);
 
     OUT_BCS_BATCH(batch, HCP_VP9_SEGMENT_STATE | (7 - 2));
     OUT_BCS_BATCH(batch, seg_id << 0); /* DW 1 - SegmentID */
     OUT_BCS_BATCH(batch,
                   seg_param->segment_flags.fields.segment_reference_enabled << 3 |
-                  seg_param->segment_flags.fields.segment_reference << 1 |
+                  segment_ref << 1 |
                   seg_param->segment_flags.fields.segment_reference_skipped <<0 ); /* DW 2 */
     if(pic_param->filter_level)
     {
