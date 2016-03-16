@@ -189,19 +189,39 @@ gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
                            int codec,
                            struct gen9_hcpd_context *gen9_hcpd_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
 
     assert((codec == HCP_CODEC_HEVC) || (codec == HCP_CODEC_VP9));
 
-    BEGIN_BCS_BATCH(batch, 4);
+    if(IS_KBL(i965->intel.device_info))
+    {
+        BEGIN_BCS_BATCH(batch, 6);
 
-    OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (4 - 2));
+        OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (6 - 2));
+    }
+    else
+    {
+        BEGIN_BCS_BATCH(batch, 4);
+
+        OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (4 - 2));
+    }
     OUT_BCS_BATCH(batch,
                   (codec << 5) |
                   (0 << 3) | /* disable Pic Status / Error Report */
                   HCP_CODEC_SELECT_DECODE);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
+
+    if(IS_KBL(i965->intel.device_info))
+    {
+        if(codec == HCP_CODEC_VP9)
+            OUT_BCS_BATCH(batch, 1<<6);
+        else
+            OUT_BCS_BATCH(batch, 0);
+
+        OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
