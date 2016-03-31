@@ -765,6 +765,19 @@ static const AVSConfig gen8_avs_config = {
     },
 };
 
+static int
+gen8_pp_get_8tap_filter_mode(VADriverContextP ctx,
+                             const struct i965_surface *surface)
+{
+    int fourcc = pp_get_surface_fourcc(ctx, surface);
+
+    if (fourcc == VA_FOURCC_YUY2 ||
+        fourcc == VA_FOURCC_UYVY)
+        return 1;
+    else
+        return 3;
+}
+
 VAStatus
 gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                            const struct i965_surface *src_surface,
@@ -841,7 +854,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
      * If the 8tap filter is disabled, the adaptive filter should be disabled.
      * Only when 8tap filter is enabled, it can be enabled or not.
      */
-    sampler_8x8->dw3.enable_8tap_filter = 3;
+    sampler_8x8->dw3.enable_8tap_filter = gen8_pp_get_8tap_filter_mode(ctx, src_surface);
     sampler_8x8->dw3.ief4_smooth_enable = 0;
 
     sampler_8x8->dw4.s3u = 0;
