@@ -101,8 +101,6 @@ struct gen9_hcpd_context
     FRAME_CONTEXT vp9_frame_ctx[FRAME_CONTEXTS];
     FRAME_CONTEXT vp9_fc_inter_default;
     FRAME_CONTEXT vp9_fc_key_default;
-    FRAME_CONTEXT vp9_fc;
-    FRAME_CONTEXT vp9_saved_fc;
 };
 
 #endif /* GEN9_MFD_H */

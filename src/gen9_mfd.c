@@ -1126,8 +1126,6 @@ vp9_gen_default_probabilities(VADriverContextP ctx, struct gen9_hcpd_context *ge
     {
         gen9_hcpd_context->vp9_frame_ctx[i] = gen9_hcpd_context->vp9_fc_inter_default;
     }
-    gen9_hcpd_context->vp9_fc = gen9_hcpd_context->vp9_fc_inter_default;
-
 }
 
 static void
@@ -1137,64 +1135,10 @@ vp9_update_probabilities(VADriverContextP ctx,
 {
     VADecPictureParameterBufferVP9 *pic_param;
     int i = 0;
-    uint8_t is_saved = VP9_PROB_BUFFER_SAVED_NO;
-    uint8_t is_restored = VP9_PROB_BUFFER_RESTORED_NO;
-
-    uint8_t last_frame_type = gen9_hcpd_context->last_frame.frame_type;
-    uint8_t temp_frame_ctx_id;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VADecPictureParameterBufferVP9 *)decode_state->pic_param->buffer;
-    temp_frame_ctx_id = pic_param->pic_fields.bits.frame_context_idx;
 
-    if(pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME)
-    {
-        gen9_hcpd_context->vp9_fc = gen9_hcpd_context->vp9_fc_key_default;
-        gen9_hcpd_context->last_frame.prob_buffer_saved_flag = VP9_PROB_BUFFER_SAVED_NO;
-        gen9_hcpd_context->last_frame.prob_buffer_restored_flag = VP9_PROB_BUFFER_RESTORED_NO;
-
-    }else
-    {
-        gen9_hcpd_context->vp9_fc = gen9_hcpd_context->vp9_fc_inter_default;
-    }
-
-    // restore?
-    if(gen9_hcpd_context->last_frame.prob_buffer_saved_flag == VP9_PROB_BUFFER_SAVED_SECNE_1)
-    {
-        if((pic_param->pic_fields.bits.frame_type == HCP_VP9_INTER_FRAME))
-        {
-            //save the inter frame values for the 343 bytes
-            //Update the 343 bytes of the buffer with Intra values
-            is_restored = VP9_PROB_BUFFER_RESTORED_SECNE_1;
-        }
-    }else if(gen9_hcpd_context->last_frame.prob_buffer_saved_flag == VP9_PROB_BUFFER_SAVED_SECNE_2)
-    {
-        if((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||pic_param->pic_fields.bits.intra_only||pic_param->pic_fields.bits.error_resilient_mode)
-        {
-            temp_frame_ctx_id = 0;
-        }
-
-        if((pic_param->pic_fields.bits.frame_type == HCP_VP9_INTER_FRAME) &&
-            (temp_frame_ctx_id == 0))
-        {
-
-            is_restored = VP9_PROB_BUFFER_RESTORED_SECNE_2;
-        }
-    }
-
-    if(is_restored > VP9_PROB_BUFFER_RESTORED_NO && is_restored < VP9_PROB_BUFFER_RESTORED_SECNE_MAX)
-    {
-        memcpy(gen9_hcpd_context->vp9_frame_ctx[gen9_hcpd_context->last_frame.frame_context_idx].inter_mode_probs,gen9_hcpd_context->vp9_saved_fc.inter_mode_probs,VP9_PROB_BUFFER_KEY_INTER_SIZE);
-    }
-
-    if((gen9_hcpd_context->last_frame.prob_buffer_restored_flag == VP9_PROB_BUFFER_RESTORED_SECNE_MAX) ||
-        (gen9_hcpd_context->last_frame.refresh_frame_context && last_frame_type == HCP_VP9_KEY_FRAME && (pic_param->pic_fields.bits.frame_type == HCP_VP9_INTER_FRAME)))
-    {
-        if(pic_param->pic_fields.bits.frame_type == HCP_VP9_INTER_FRAME)
-        {
-            memcpy(gen9_hcpd_context->vp9_frame_ctx[gen9_hcpd_context->last_frame.frame_context_idx].inter_mode_probs,gen9_hcpd_context->vp9_fc_inter_default.inter_mode_probs,VP9_PROB_BUFFER_KEY_INTER_SIZE);
-        }
-    }
     //first part buffer update: Case 1)Reset all 4 probablity buffers
    if((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||pic_param->pic_fields.bits.intra_only||pic_param->pic_fields.bits.error_resilient_mode)
     {
@@ -1206,6 +1150,9 @@ vp9_update_probabilities(VADriverContextP ctx,
             for(i = 0; i < FRAME_CONTEXTS; i++)
             {
                 memcpy(&gen9_hcpd_context->vp9_frame_ctx[i],&gen9_hcpd_context->vp9_fc_inter_default,VP9_PROB_BUFFER_FIRST_PART_SIZE);
+
+                vp9_copy(gen9_hcpd_context->vp9_frame_ctx[i].seg_tree_probs, default_seg_tree_probs);
+                vp9_copy(gen9_hcpd_context->vp9_frame_ctx[i].seg_pred_probs, default_seg_pred_probs);
             }
         }else if(pic_param->pic_fields.bits.reset_frame_context == 2&&pic_param->pic_fields.bits.intra_only)
         {
@@ -1214,46 +1161,6 @@ vp9_update_probabilities(VADriverContextP ctx,
         pic_param->pic_fields.bits.frame_context_idx = 0;
     }
 
-    //Full buffer update: Case 2.2)Reset only segmentation prob buffer
-    if(pic_param->pic_fields.bits.segmentation_enabled &&
-        pic_param->pic_fields.bits.segmentation_update_map)
-    {
-        for(i = 0; i < FRAME_CONTEXTS; i++)
-        {
-            //Reset only the segementation probability buffers
-            vp9_copy(gen9_hcpd_context->vp9_frame_ctx[i].seg_tree_probs, default_seg_tree_probs);
-            vp9_copy(gen9_hcpd_context->vp9_frame_ctx[i].seg_pred_probs, default_seg_pred_probs);
-        }
-    }
-
-    //update vp9_fc according to frame_context_id
-    {
-        gen9_hcpd_context->vp9_fc = gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx];
-    }
-    //Partial Buffer Update
-    //Case 1) Update top 3 probabilities only
-    if(pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME)
-    {
-        memcpy(gen9_hcpd_context->vp9_fc.inter_mode_probs,gen9_hcpd_context->vp9_fc_key_default.inter_mode_probs,VP9_PROB_BUFFER_KEY_INTER_SIZE);
-        if((!pic_param->pic_fields.bits.segmentation_enabled ||
-            !pic_param->pic_fields.bits.segmentation_update_map)) {
-            //Update with key frame default probability values for only
-            //tx_probs, coef_probs, and the next 343 bytes
-            memcpy(&gen9_hcpd_context->vp9_fc,&gen9_hcpd_context->vp9_fc_key_default,VP9_PROB_BUFFER_FIRST_PART_SIZE);
-        }
-    }
-    //Case 2) Update 343 bytes for first inter following key frame
-    if( last_frame_type == HCP_VP9_KEY_FRAME &&
-        (pic_param->pic_fields.bits.frame_type == HCP_VP9_INTER_FRAME)) {
-        //Update with inter frame default values for the 343 bytes
-        memcpy(gen9_hcpd_context->vp9_fc.inter_mode_probs,gen9_hcpd_context->vp9_fc_inter_default.inter_mode_probs,VP9_PROB_BUFFER_KEY_INTER_SIZE);
-    }
-    //Case 2.1) Update 343 bytes for first intra-inly frame following key frame
-    if( last_frame_type == HCP_VP9_KEY_FRAME &&
-        pic_param->pic_fields.bits.intra_only) {
-        //Update with inter frame default values for the 343 bytes
-        memcpy(gen9_hcpd_context->vp9_fc.inter_mode_probs,gen9_hcpd_context->vp9_fc_key_default.inter_mode_probs,VP9_PROB_BUFFER_KEY_INTER_SIZE);
-    }
     //Case 3) Update only segment probabilities
     if((pic_param->pic_fields.bits.segmentation_enabled &&
         pic_param->pic_fields.bits.segmentation_update_map))
@@ -1261,68 +1168,34 @@ vp9_update_probabilities(VADriverContextP ctx,
         //Update seg_tree_probs and seg_pred_probs accordingly
         for (i=0; i<SEG_TREE_PROBS; i++)
         {
-            gen9_hcpd_context->vp9_fc.seg_tree_probs[i] = pic_param->mb_segment_tree_probs[i];
+            gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx].seg_tree_probs[i] = pic_param->mb_segment_tree_probs[i];
         }
         for (i=0; i<PREDICTION_PROBS; i++)
         {
-            gen9_hcpd_context->vp9_fc.seg_pred_probs[i] = pic_param->segment_pred_probs[i];
+            gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx].seg_pred_probs[i] = pic_param->segment_pred_probs[i];
         }
     }
 
-    //Case 4) Considering Intra only frame in the middle of Inter frames
-    if((pic_param->pic_fields.bits.intra_only &&
-        (pic_param->pic_fields.bits.frame_type == HCP_VP9_INTER_FRAME)&&
-        (pic_param->pic_fields.bits.reset_frame_context==0  ||
-        pic_param->pic_fields.bits.reset_frame_context==1||
-        pic_param->pic_fields.bits.reset_frame_context==2||
-        pic_param->pic_fields.bits.reset_frame_context==3)) &&
-        (last_frame_type == HCP_VP9_INTER_FRAME))
+    //update vp9_fc according to frame_context_id
     {
-        //save the inter frame values for the 343 bytes
-        //Update the 343 bytes of the buffer with Intra values
-        is_saved = VP9_PROB_BUFFER_SAVED_SECNE_1;
-    }
-    //Case 5) Considering Intra only frame among 3 Inter frames
-    if((pic_param->pic_fields.bits.intra_only &&
-        (pic_param->pic_fields.bits.frame_type == HCP_VP9_INTER_FRAME)&&
-        (pic_param->pic_fields.bits.reset_frame_context==2 ||
-        pic_param->pic_fields.bits.frame_context_idx==1)) &&
-        ((last_frame_type == HCP_VP9_INTER_FRAME) &&
-        (gen9_hcpd_context->last_frame.frame_context_idx==0)))
-    {
-        //save the inter frame values for the 343 bytes
-        //Update the 343 bytes of the buffer with Intra values
-        is_saved = VP9_PROB_BUFFER_SAVED_SECNE_2;
-    }
+        void *pfc = (void *)&gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx];
+        void *pprob = NULL;
 
-    if(is_saved > VP9_PROB_BUFFER_SAVED_NO)
-    {
-        gen9_hcpd_context->vp9_saved_fc = gen9_hcpd_context->vp9_fc;
-        memcpy(gen9_hcpd_context->vp9_fc.inter_mode_probs,gen9_hcpd_context->vp9_fc_key_default.inter_mode_probs,VP9_PROB_BUFFER_KEY_INTER_SIZE);
-    }else if(pic_param->pic_fields.bits.intra_only)
-    {
-        is_restored = VP9_PROB_BUFFER_RESTORED_SECNE_MAX;
-
-    }
-
-    // update after the restored
-    if(gen9_hcpd_context->last_frame.prob_buffer_restored_flag == VP9_PROB_BUFFER_RESTORED_SECNE_2)
-    {
-        if((pic_param->pic_fields.bits.frame_type == HCP_VP9_INTER_FRAME) &&
-            pic_param->pic_fields.bits.frame_context_idx==1)
-        {
-            memcpy(&gen9_hcpd_context->vp9_fc,&gen9_hcpd_context->vp9_fc_inter_default,VP9_PROB_BUFFER_FIRST_PART_SIZE);
-        }
-    }
-
-    {
         dri_bo_map(gen9_hcpd_context->vp9_probability_buffer.bo,1);
-        memcpy((unsigned char *)gen9_hcpd_context->vp9_probability_buffer.bo->virtual,&gen9_hcpd_context->vp9_fc,2048);
+
+        pprob = (void *)gen9_hcpd_context->vp9_probability_buffer.bo->virtual;
+        memcpy(pprob,pfc,2048);
+        //only update 343bytes for key or intra_only frame
+        if(pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME ||
+            pic_param->pic_fields.bits.intra_only)
+        {
+            memcpy(pprob + VP9_PROB_BUFFER_FIRST_PART_SIZE - VP9_PROB_BUFFER_KEY_INTER_SIZE
+                    , gen9_hcpd_context->vp9_fc_key_default.inter_mode_probs
+                    , VP9_PROB_BUFFER_KEY_INTER_SIZE);
+        }
+
         dri_bo_unmap(gen9_hcpd_context->vp9_probability_buffer.bo);
     }
-    // save the flag in order to restore or update prob buffer
-    gen9_hcpd_context->last_frame.prob_buffer_saved_flag = is_saved;
-    gen9_hcpd_context->last_frame.prob_buffer_restored_flag = is_restored;
 }
 
 static void
@@ -1957,12 +1830,19 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
     //update vp9_frame_ctx according to frame_context_id
     if (pic_param->pic_fields.bits.refresh_frame_context)
     {
+        void *pfc = (void *)&gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx];
+        void *pprob = NULL;
+
         //update vp9_fc to frame_context
         dri_bo_map(gen9_hcpd_context->vp9_probability_buffer.bo,1);
-        memcpy(&gen9_hcpd_context->vp9_fc,(unsigned char *)gen9_hcpd_context->vp9_probability_buffer.bo->virtual,2048);
-        dri_bo_unmap(gen9_hcpd_context->vp9_probability_buffer.bo);
-        gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx] = gen9_hcpd_context->vp9_fc;
+        pprob = (void *)gen9_hcpd_context->vp9_probability_buffer.bo->virtual;
+        if(pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME||
+                pic_param->pic_fields.bits.intra_only)
+            memcpy(pfc, pprob, VP9_PROB_BUFFER_FIRST_PART_SIZE - VP9_PROB_BUFFER_KEY_INTER_SIZE);
+        else
+            memcpy(pfc, pprob, VP9_PROB_BUFFER_FIRST_PART_SIZE);
 
+        dri_bo_unmap(gen9_hcpd_context->vp9_probability_buffer.bo);
     }
 
 out:
