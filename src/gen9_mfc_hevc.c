@@ -2151,7 +2151,7 @@ intel_hcpe_bit_rate_control_context_init(struct encode_state *encode_state,
     int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + ctb_size - 1) / ctb_size;
     int height_in_mbs = (pSequenceParameter->pic_height_in_luma_samples + ctb_size - 1) / ctb_size;
 
-    float fps =  pSequenceParameter->vui_time_scale * 0.5 / pSequenceParameter->vui_num_units_in_tick ;
+    float fps =  pSequenceParameter->vui_time_scale / pSequenceParameter->vui_num_units_in_tick ;
     double bitrate = pSequenceParameter->bits_per_second * 1.0;
     int inter_mb_size = bitrate * 1.0 / (fps + 4.0) / width_in_mbs / height_in_mbs;
     int intra_mb_size = inter_mb_size * 5.0;
@@ -2199,7 +2199,7 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
     VAEncMiscParameterBuffer* pMiscParamHRD = NULL;
 
     double bitrate = pSequenceParameter->bits_per_second * 1.0;
-    double framerate = (double)pSequenceParameter->vui_time_scale / (2 * (double)pSequenceParameter->vui_num_units_in_tick);
+    double framerate = (double)pSequenceParameter->vui_time_scale / (double)pSequenceParameter->vui_num_units_in_tick;
     int inum = 1, pnum = 0, bnum = 0; /* Gop structure: number of I, P, B frames in the Gop. */
     int intra_period = pSequenceParameter->intra_period;
     int ip_period = pSequenceParameter->ip_period;
@@ -2518,7 +2518,7 @@ static bool intel_hcpe_brc_updated_check(struct encode_state *encode_state,
 
     cur_bitrate = pSequenceParameter->bits_per_second;
     cur_fps = (double)pSequenceParameter->vui_time_scale /
-              (2 * (double)pSequenceParameter->vui_num_units_in_tick);
+              (double)pSequenceParameter->vui_num_units_in_tick;
 
     if ((cur_bitrate == mfc_context->brc.saved_bps) &&
         (cur_fps == mfc_context->brc.saved_fps) &&
