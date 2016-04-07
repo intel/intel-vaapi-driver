@@ -460,28 +460,11 @@
 	add.sat (16) r[a0.1,96]<1>:uw		r[a0.1,96]<16;16,1>:uw		0x0080:uw		
 
 	// U Averaging and Rounding, 8x2 top part
-	shr   (8)	uwBUFFER_5(0,0)<2>			r[a0.2,0]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(1,0)<2>			r[a0.2,32]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(2,0)<2>			r[a0.2,64]<16;8,2>:uw			1:w
-	shr   (8)	uwBUFFER_5(3,0)<2>			r[a0.2,96]<16;8,2>:uw			1:w
-
-	add	  (8)	uwBUFFER_5(0,0)<2>			uwBUFFER_5(0,0)<16;8,2>				uwBUFFER_5(1,0)<16;8,2>
-	add.sat (8) r[a0.2,0]<2>:uw		uwBUFFER_5(0,0)<16;8,2>				0x0080:uw
-
-	add	  (8)	uwBUFFER_5(2,0)<2>			uwBUFFER_5(2,0)<16;8,2>				uwBUFFER_5(3,0)<16;8,2>
-	add.sat (8) r[a0.2,64]<2>:uw		uwBUFFER_5(2,0)<16;8,2>				0x0080:uw
-
+	add.sat (8) r[a0.2,0]<2>:uw		r[a0.2,0]<16;8,2>:uw		0x0080:uw
+	add.sat (8) r[a0.2,64]<2>:uw		r[a0.2,64]<16;8,2>:uw		0x0080:uw
 	// V Averaging and Rounding, 8x2 top part
-	shr   (8)	uwBUFFER_5(4,0)<2>			r[a0.0,0]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(5,0)<2>			r[a0.0,32]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(6,0)<2>			r[a0.0,64]<16;8,2>:uw			1:w
-	shr   (8)	uwBUFFER_5(7,0)<2>			r[a0.0,96]<16;8,2>:uw			1:w
-
-	add	  (8)	uwBUFFER_5(4,0)<2>			uwBUFFER_5(4,0)<16;8,2>				uwBUFFER_5(5,0)<16;8,2>
-	add.sat (8) r[a0.0,0]<2>:uw		uwBUFFER_5(4,0)<16;8,2>				0x0080:uw
-
-	add	  (8)	uwBUFFER_5(6,0)<2>			uwBUFFER_5(6,0)<16;8,2>				uwBUFFER_5(7,0)<16;8,2>
-	add.sat (8) r[a0.0,64]<2>:uw		uwBUFFER_5(6,0)<16;8,2>				0x0080:uw
+	add.sat (8) r[a0.0,0]<2>:uw		r[a0.0,0]<16;8,2>:uw		0x0080:uw
+	add.sat (8) r[a0.0,64]<2>:uw		r[a0.0,64]<16;8,2>:uw		0x0080:uw
 
 	add   (4) a0.0:uw   			r22.0<4;4,1>:w		1024:uw	//Update Buffer 2 pointers
 
@@ -492,30 +475,14 @@
 	add.sat (16) r[a0.5,96]<1>:uw		r[a0.5,96]<16;16,1>:uw		0x0080:uw		
 
 	// U Averaging and Rounding, 8x2 bottom part
-	shr   (8)	uwBUFFER_5(0,0)<2>			r[a0.6,0]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(1,0)<2>			r[a0.6,32]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(2,0)<2>			r[a0.6,64]<16;8,2>:uw			1:w
-	shr   (8)	uwBUFFER_5(3,0)<2>			r[a0.6,96]<16;8,2>:uw			1:w
-
-	add	  (8)	uwBUFFER_5(0,0)<2>			uwBUFFER_5(0,0)<16;8,2>				uwBUFFER_5(1,0)<16;8,2>
-	add.sat (8) r[a0.6,0]<2>:uw		uwBUFFER_5(0,0)<16;8,2>				0x0080:uw
-
-	add	  (8)	uwBUFFER_5(2,0)<2>			uwBUFFER_5(2,0)<16;8,2>				uwBUFFER_5(3,0)<16;8,2>
-	add.sat (8) r[a0.6,64]<2>:uw		uwBUFFER_5(2,0)<16;8,2>				0x0080:uw
-
+	add.sat (8) r[a0.6,0]<2>:uw		r[a0.6,0]<16;8,2>:uw		0x0080:uw
+	add.sat (8) r[a0.6,64]<2>:uw		r[a0.6,64]<16;8,2>:uw		0x0080:uw
 	// V Averaging and Rounding, 8x2 bottom part
-	shr   (8)	uwBUFFER_5(4,0)<2>			r[a0.4,0]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(5,0)<2>			r[a0.4,32]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(6,0)<2>			r[a0.4,64]<16;8,2>:uw			1:w
-	shr   (8)	uwBUFFER_5(7,0)<2>			r[a0.4,96]<16;8,2>:uw			1:w
-
-	add	  (8)	uwBUFFER_5(4,0)<2>			uwBUFFER_5(4,0)<16;8,2>				uwBUFFER_5(5,0)<16;8,2>
-	add.sat (8) r[a0.4,0]<2>:uw		uwBUFFER_5(4,0)<16;8,2>				0x0080:uw
-
-	add	  (8)	uwBUFFER_5(6,0)<2>			uwBUFFER_5(6,0)<16;8,2>				uwBUFFER_5(7,0)<16;8,2>
-	add.sat (8) r[a0.4,64]<2>:uw		uwBUFFER_5(6,0)<16;8,2>				0x0080:uw
+	add.sat (8) r[a0.4,0]<2>:uw		r[a0.4,0]<16;8,2>:uw		0x0080:uw
+	add.sat (8) r[a0.4,64]<2>:uw		r[a0.4,64]<16;8,2>:uw		0x0080:uw
 
 	add   (4) a0.4:uw   		r22.0<4;4,1>:w          1536:uw	//Update Buffer 3 pointers
+
 	//Y Rounding 16x4 top part
 	add.sat (16) r[a0.1,0]<1>:uw		r[a0.1,0]<16;16,1>:uw			0x0080:uw		
 	add.sat (16) r[a0.1,32]<1>:uw		r[a0.1,32]<16;16,1>:uw		0x0080:uw		
@@ -523,30 +490,11 @@
 	add.sat (16) r[a0.1,96]<1>:uw		r[a0.1,96]<16;16,1>:uw		0x0080:uw		
 
 	// U Averaging and Rounding, 8x2 top part
-	shr   (8)	uwBUFFER_5(0,0)<2>			r[a0.2,0]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(1,0)<2>			r[a0.2,32]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(2,0)<2>			r[a0.2,64]<16;8,2>:uw			1:w
-	shr   (8)	uwBUFFER_5(3,0)<2>			r[a0.2,96]<16;8,2>:uw			1:w
-
-	add	  (8)	uwBUFFER_5(0,0)<2>			uwBUFFER_5(0,0)<16;8,2>				uwBUFFER_5(1,0)<16;8,2>
-	add.sat (8) r[a0.2,0]<2>:uw		uwBUFFER_5(0,0)<16;8,2>				0x0080:uw
-
-	add	  (8)	uwBUFFER_5(2,0)<2>			uwBUFFER_5(2,0)<16;8,2>				uwBUFFER_5(3,0)<16;8,2>
-	add.sat (8) r[a0.2,64]<2>:uw		uwBUFFER_5(2,0)<16;8,2>				0x0080:uw
-
+	add.sat (8) r[a0.2,0]<2>:uw		r[a0.2,0]<16;8,2>:uw		0x0080:uw
+	add.sat (8) r[a0.2,64]<2>:uw		r[a0.2,64]<16;8,2>:uw		0x0080:uw
 	// V Averaging and Rounding, 8x2 top part
-	shr   (8)	uwBUFFER_5(4,0)<2>			r[a0.0,0]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(5,0)<2>			r[a0.0,32]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(6,0)<2>			r[a0.0,64]<16;8,2>:uw			1:w
-	shr   (8)	uwBUFFER_5(7,0)<2>			r[a0.0,96]<16;8,2>:uw			1:w
-
-	add	  (8)	uwBUFFER_5(4,0)<2>			uwBUFFER_5(4,0)<16;8,2>				uwBUFFER_5(5,0)<16;8,2>
-	add.sat (8) r[a0.0,0]<2>:uw		uwBUFFER_5(4,0)<16;8,2>				0x0080:uw
-
-	add	  (8)	uwBUFFER_5(6,0)<2>			uwBUFFER_5(6,0)<16;8,2>				uwBUFFER_5(7,0)<16;8,2>
-	add.sat (8) r[a0.0,64]<2>:uw		uwBUFFER_5(6,0)<16;8,2>				0x0080:uw
-
-	add   (4) a0.0:uw   			r22.0<4;4,1>:w		1024:uw	//Update Buffer 2 pointers
+	add.sat (8) r[a0.0,0]<2>:uw		r[a0.0,0]<16;8,2>:uw		0x0080:uw
+	add.sat (8) r[a0.0,64]<2>:uw		r[a0.0,64]<16;8,2>:uw		0x0080:uw
 
 	//Y Rounding, 16x4 bottom part
 	add.sat (16) r[a0.5,0]<1>:uw		r[a0.5,0]<16;16,1>:uw			0x0080:uw		
@@ -555,30 +503,12 @@
 	add.sat (16) r[a0.5,96]<1>:uw		r[a0.5,96]<16;16,1>:uw		0x0080:uw		
 
 	// U Averaging and Rounding, 8x2 bottom part
-	shr   (8)	uwBUFFER_5(0,0)<2>			r[a0.6,0]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(1,0)<2>			r[a0.6,32]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(2,0)<2>			r[a0.6,64]<16;8,2>:uw			1:w
-	shr   (8)	uwBUFFER_5(3,0)<2>			r[a0.6,96]<16;8,2>:uw			1:w
-
-	add	  (8)	uwBUFFER_5(0,0)<2>			uwBUFFER_5(0,0)<16;8,2>				uwBUFFER_5(1,0)<16;8,2>
-	add.sat (8) r[a0.6,0]<2>:uw		uwBUFFER_5(0,0)<16;8,2>				0x0080:uw
-
-	add	  (8)	uwBUFFER_5(2,0)<2>			uwBUFFER_5(2,0)<16;8,2>				uwBUFFER_5(3,0)<16;8,2>
-	add.sat (8) r[a0.6,64]<2>:uw		uwBUFFER_5(2,0)<16;8,2>				0x0080:uw
-
+	add.sat (8) r[a0.6,0]<2>:uw		r[a0.6,0]<16;8,2>:uw		0x0080:uw
+	add.sat (8) r[a0.6,64]<2>:uw		r[a0.6,64]<16;8,2>:uw		0x0080:uw
 	// V Averaging and Rounding, 8x2 bottom part
-	shr   (8)	uwBUFFER_5(4,0)<2>			r[a0.4,0]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(5,0)<2>			r[a0.4,32]<16;8,2>:uw			1:w
-	shr	  (8)	uwBUFFER_5(6,0)<2>			r[a0.4,64]<16;8,2>:uw			1:w
-	shr   (8)	uwBUFFER_5(7,0)<2>			r[a0.4,96]<16;8,2>:uw			1:w
+	add.sat (8) r[a0.4,0]<2>:uw		r[a0.4,0]<16;8,2>:uw		0x0080:uw
+	add.sat (8) r[a0.4,64]<2>:uw		r[a0.4,64]<16;8,2>:uw		0x0080:uw
 
-	add	  (8)	uwBUFFER_5(4,0)<2>			uwBUFFER_5(4,0)<16;8,2>				uwBUFFER_5(5,0)<16;8,2>
-	add.sat (8) r[a0.4,0]<2>:uw		uwBUFFER_5(4,0)<16;8,2>				0x0080:uw
-
-	add	  (8)	uwBUFFER_5(6,0)<2>			uwBUFFER_5(6,0)<16;8,2>				uwBUFFER_5(7,0)<16;8,2>
-	add.sat (8) r[a0.4,64]<2>:uw		uwBUFFER_5(6,0)<16;8,2>				0x0080:uw
-
-	add   (4) a0.4:uw   		r22.0<4;4,1>:w          1536:uw	//Update Buffer 3 pointers
 	// restore pBUF_CHNL_TOP_8x4 and pBUF_CHNL_BOT_8x4 registers
 	add   (4) a0.0:uw   r22.0<4;4,1>:w          0:uw
 	add   (4) a0.4:uw   r22.0<4;4,1>:w          512:uw
