@@ -378,7 +378,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
 
     .max_width = 4096,
     .max_height = 4096,
-    .min_linear_wpitch = 64,
+    .min_linear_wpitch = 128,
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
@@ -430,7 +430,7 @@ static struct hw_codec_info kbl_hw_codec_info = {
 
     .max_width = 4096,
     .max_height = 4096,
-    .min_linear_wpitch = 64,
+    .min_linear_wpitch = 128,
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
