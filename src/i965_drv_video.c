@@ -1112,7 +1112,9 @@ i965_CreateConfig(VADriverContextP ctx,
     }
 
     if ((vaStatus == VA_STATUS_SUCCESS) &&
-        (profile == VAProfileVP9Profile0)) {
+        (profile == VAProfileVP9Profile0) &&
+        (entrypoint == VAEntrypointVLD) &&
+        !HAS_VP9_DECODING(i965)) {
 
         if (i965->wrapper_pdrvctx) {
             VAGenericID wrapper_config;
@@ -6357,6 +6359,11 @@ i965_initialize_wrapper(VADriverContextP ctx, const char *driver_name)
     void *handle = NULL;
     VAStatus va_status = VA_STATUS_SUCCESS;
     bool driver_loaded = false;
+
+    if (HAS_VP9_DECODING(i965)) {
+        i965->wrapper_pdrvctx = NULL;
+        return va_status;
+    }
 
     wrapper_pdrvctx = calloc(1, sizeof(*wrapper_pdrvctx));
     vtable = calloc(1, sizeof(*vtable));
