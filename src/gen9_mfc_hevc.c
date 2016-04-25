@@ -1687,6 +1687,8 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
     int cu_index = 0;
     int inter_rdo, intra_rdo;
     int qp;
+    int drop_cu_row_in_last_mb = 0;
+    int drop_cu_column_in_last_mb = 0;
 
     if (log2_ctb_size == 5) num_cu_record = 16;
     else if (log2_ctb_size == 4) num_cu_record = 4;
@@ -1751,10 +1753,29 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
         int last_ctb = (i_ctb == (pSliceParameter->slice_segment_address + pSliceParameter->num_ctu_in_slice - 1));
         int ctb_height_in_mb_internal = ctb_width_in_mb;
         int ctb_width_in_mb_internal = ctb_width_in_mb;
+        int max_cu_num_in_mb = 4;
+
         ctb_x = i_ctb % width_in_ctb;
         ctb_y = i_ctb / width_in_ctb;
-        if(ctb_y == (height_in_ctb - 1) && row_pad_flag)  ctb_height_in_mb_internal = 1;
-        if(ctb_x == (width_in_ctb - 1) && col_pad_flag)  ctb_width_in_mb_internal = 1;
+
+        drop_cu_row_in_last_mb = 0;
+        drop_cu_column_in_last_mb = 0;
+
+        if(ctb_y == (height_in_ctb - 1) && row_pad_flag)
+        {
+            ctb_height_in_mb_internal = (pSequenceParameter->pic_height_in_luma_samples - (ctb_y * ctb_size) + 15)/16;
+
+            if((log2_cu_size == 3) && (pSequenceParameter->pic_height_in_luma_samples % 16))
+                drop_cu_row_in_last_mb = (16 - (pSequenceParameter->pic_height_in_luma_samples % 16))>>log2_cu_size;
+        }
+
+        if(ctb_x == (width_in_ctb - 1) && col_pad_flag)
+        {
+            ctb_width_in_mb_internal = (pSequenceParameter->pic_width_in_luma_samples - (ctb_x * ctb_size) + 15) / 16;
+
+            if((log2_cu_size == 3) && (pSequenceParameter->pic_width_in_luma_samples % 16))
+                drop_cu_column_in_last_mb = (16 - (pSequenceParameter->pic_width_in_luma_samples % 16))>>log2_cu_size;
+        }
 
         mb_x = 0;
         mb_y = 0;
@@ -1769,6 +1790,13 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
             mb_addr = macroblock_address + mb_y * width_in_mbs ;
             for (mb_x = 0; mb_x < ctb_width_in_mb_internal; mb_x++)
             {
+                max_cu_num_in_mb = 4;
+                if(drop_cu_row_in_last_mb && (mb_y == ctb_height_in_mb_internal - 1))
+                    max_cu_num_in_mb /= 2;
+
+                if(drop_cu_column_in_last_mb && (mb_x == ctb_width_in_mb_internal - 1))
+                    max_cu_num_in_mb /= 2;
+
                 /* get the mb info from the vme out */
                 msg = (unsigned int *)(msg_ptr + mb_addr * vme_context->vme_output.size_block);
 
@@ -1779,7 +1807,23 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
                 if (is_intra || intra_rdo < inter_rdo) {
                     /* fill intra cu */
                     tmp_mb_mode = (msg[0] & AVC_INTRA_MODE_MASK) >> 4;
-                    if (tmp_mb_mode == AVC_INTRA_16X16) {
+                    if(max_cu_num_in_mb < 4){
+                        if(tmp_mb_mode == AVC_INTRA_16X16)
+                        {
+                            msg[0] = (msg[0] & !AVC_INTRA_MODE_MASK) | (AVC_INTRA_8X8<<4);
+                            tmp_mb_mode = AVC_INTRA_8X8;
+                        }
+
+                        gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
+                        if(--max_cu_num_in_mb > 0)
+                            gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,2);
+
+                        if(ctb_width_in_mb == 2)
+                            split_coding_unit_flag |= 0x1 << (mb_x + mb_y * ctb_width_in_mb + 16);
+                        else if(ctb_width_in_mb == 1)
+                            split_coding_unit_flag |= 0x1 << 20;
+                    }
+                    else if(tmp_mb_mode == AVC_INTRA_16X16) {
                         gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
                     } else { // for 4x4 to use 8x8 replace
                         gen9_hcpe_hevc_fill_indirect_cu_intra(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
@@ -1795,7 +1839,23 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
                     msg += AVC_INTER_MSG_OFFSET;
                     /* fill inter cu */
                     tmp_mb_mode = msg[0] & AVC_INTER_MODE_MASK;
-                    if (tmp_mb_mode == AVC_INTER_8X8){
+                    if(max_cu_num_in_mb < 4)
+                    {
+                        if(tmp_mb_mode != AVC_INTER_8X8)
+                        {
+                            msg[0] = (msg[0] & !AVC_INTER_MODE_MASK) | AVC_INTER_8X8;
+                            tmp_mb_mode = AVC_INTER_8X8;
+                        }
+                        gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
+                        if(--max_cu_num_in_mb > 0)
+                            gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,1);
+
+                        if(ctb_width_in_mb == 2)
+                            split_coding_unit_flag |= 0x1 << (mb_x + mb_y * ctb_width_in_mb + 16);
+                        else if(ctb_width_in_mb == 1)
+                            split_coding_unit_flag |= 0x1 << 20;
+                    }
+                    else if (tmp_mb_mode == AVC_INTER_8X8){
                         gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,0);
                         gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,1);
                         gen9_hcpe_hevc_fill_indirect_cu_inter(ctx, encode_state, encoder_context, qp, msg, ctb_x, ctb_y, mb_x, mb_y, ctb_width_in_mb, width_in_ctb, num_cu_record, slice_type,cu_index++,2);
