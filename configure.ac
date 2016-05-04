@@ -173,16 +173,20 @@ AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
 # Check for Wayland
 USE_WAYLAND="no"
 if test "$enable_wayland" = "yes"; then
-    PKG_CHECK_MODULES([WAYLAND], [wayland-client], [USE_WAYLAND="yes"], [:])
     PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland],
-        [AC_DEFINE([HAVE_VA_WAYLAND], [1], [Defined to 1 if VA/Wayland API is enabled])],
-        [USE_WAYLAND="no"])
+        [USE_WAYLAND="yes"], [:])
+
+    if test "$USE_WAYLAND" = "yes"; then
+
+        WAYLAND_PREFIX=`$PKG_CONFIG --variable=prefix wayland-client`
+        AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner],,
+                     [${WAYLAND_PREFIX}/bin$PATH_SEPARATOR$PATH])
+
+        AC_DEFINE([HAVE_VA_WAYLAND], [1],
+                  [Defined to 1 if VA/Wayland API is enabled])
+    fi
 fi
 AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
-
-m4_ifdef([WAYLAND_SCANNER_RULES],
-    [WAYLAND_SCANNER_RULES(['$(top_builddir)/src/wayland'])],
-    [wayland_scanner_rules=""; AC_SUBST(wayland_scanner_rules)])
 
 AC_OUTPUT([
     Makefile
@@ -203,7 +207,6 @@ AC_OUTPUT([
     src/shaders/render/Makefile
     src/shaders/utils/Makefile
     src/shaders/vme/Makefile
-    src/wayland/Makefile
 ])
 
 dnl Print summary

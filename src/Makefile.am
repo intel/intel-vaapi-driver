@@ -209,9 +209,12 @@ EXTRA_DIST	+= Android.mk intel_version.h.in $(PKG_VERSION_FILE)
 # Wayland protocol
 protocol_source_h = wayland-drm-client-protocol.h
 i965_output_wayland.c: $(protocol_source_h)
-@wayland_scanner_rules@
+%-client-protocol.h : %.xml
+	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
 
-DIST_SUBDIRS	+= wayland
+EXTRA_DIST += \
+	wayland-drm.xml         \
+	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in
