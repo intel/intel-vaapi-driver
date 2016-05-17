@@ -287,7 +287,9 @@ gen7_mfc_qm_state(VADriverContextP ctx,
 }
 
 static void
-gen7_mfc_avc_qm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+gen7_mfc_avc_qm_state(VADriverContextP ctx,
+                      struct encode_state *encode_state,
+                      struct intel_encoder_context *encoder_context)
 {
     unsigned int qm[16] = {
         0x10101010, 0x10101010, 0x10101010, 0x10101010,
@@ -324,7 +326,9 @@ gen7_mfc_fqm_state(VADriverContextP ctx,
 }
 
 static void
-gen7_mfc_avc_fqm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+gen7_mfc_avc_fqm_state(VADriverContextP ctx,
+                       struct encode_state *encode_state,
+                       struct intel_encoder_context *encoder_context)
 {
     unsigned int qm[32] = {
         0x10001000, 0x10001000, 0x10001000, 0x10001000,
