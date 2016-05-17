@@ -331,7 +331,9 @@ gen75_mfc_qm_state(VADriverContextP ctx,
 }
 
 static void
-gen75_mfc_avc_qm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+gen75_mfc_avc_qm_state(VADriverContextP ctx,
+                       struct encode_state *encode_state,
+                       struct intel_encoder_context *encoder_context)
 {
     unsigned int qm[16] = {
         0x10101010, 0x10101010, 0x10101010, 0x10101010,
@@ -368,7 +370,9 @@ gen75_mfc_fqm_state(VADriverContextP ctx,
 }
 
 static void
-gen75_mfc_avc_fqm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+gen75_mfc_avc_fqm_state(VADriverContextP ctx,
+                        struct encode_state *encode_state,
+                        struct intel_encoder_context *encoder_context)
 {
     unsigned int qm[32] = {
         0x10001000, 0x10001000, 0x10001000, 0x10001000,
@@ -827,8 +831,8 @@ static void gen75_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
     gen75_mfc_pipe_buf_addr_state(ctx, encoder_context);
     gen75_mfc_bsp_buf_base_addr_state(ctx, encoder_context);
     mfc_context->avc_img_state(ctx, encode_state, encoder_context);
-    mfc_context->avc_qm_state(ctx, encoder_context);
-    mfc_context->avc_fqm_state(ctx, encoder_context);
+    mfc_context->avc_qm_state(ctx, encode_state, encoder_context);
+    mfc_context->avc_fqm_state(ctx, encode_state, encoder_context);
     gen75_mfc_avc_directmode_state(ctx, encoder_context); 
     intel_mfc_avc_ref_idx_state(ctx, encode_state, encoder_context);
 }

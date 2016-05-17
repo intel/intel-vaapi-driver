@@ -129,6 +129,23 @@ static struct i965_kernel gen9_mfc_kernels[] = {
     },
 };
 
+static const uint32_t qm_flat[16] = {
+    0x10101010, 0x10101010, 0x10101010, 0x10101010,
+    0x10101010, 0x10101010, 0x10101010, 0x10101010,
+    0x10101010, 0x10101010, 0x10101010, 0x10101010,
+    0x10101010, 0x10101010, 0x10101010, 0x10101010
+};
+
+static const uint32_t fqm_flat[32] = {
+    0x10001000, 0x10001000, 0x10001000, 0x10001000,
+    0x10001000, 0x10001000, 0x10001000, 0x10001000,
+    0x10001000, 0x10001000, 0x10001000, 0x10001000,
+    0x10001000, 0x10001000, 0x10001000, 0x10001000,
+    0x10001000, 0x10001000, 0x10001000, 0x10001000,
+    0x10001000, 0x10001000, 0x10001000, 0x10001000,
+    0x10001000, 0x10001000, 0x10001000, 0x10001000,
+    0x10001000, 0x10001000, 0x10001000, 0x10001000
+};
 
 #define		INTER_MODE_MASK		0x03
 #define		INTER_8X8		0x03
@@ -361,7 +378,7 @@ gen8_mfc_avc_img_state(VADriverContextP ctx, struct encode_state *encode_state,
 static void
 gen8_mfc_qm_state(VADriverContextP ctx,
                   int qm_type,
-                  unsigned int *qm,
+                  const uint32_t *qm,
                   int qm_length,
                   struct intel_encoder_context *encoder_context)
 {
@@ -380,25 +397,42 @@ gen8_mfc_qm_state(VADriverContextP ctx,
 }
 
 static void
-gen8_mfc_avc_qm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+gen8_mfc_avc_qm_state(VADriverContextP ctx,
+                      struct encode_state *encode_state,
+                      struct intel_encoder_context *encoder_context)
 {
-    unsigned int qm[16] = {
-        0x10101010, 0x10101010, 0x10101010, 0x10101010,
-        0x10101010, 0x10101010, 0x10101010, 0x10101010,
-        0x10101010, 0x10101010, 0x10101010, 0x10101010,
-        0x10101010, 0x10101010, 0x10101010, 0x10101010
-    };
+    const unsigned int *qm_4x4_intra;
+    const unsigned int *qm_4x4_inter;
+    const unsigned int *qm_8x8_intra;
+    const unsigned int *qm_8x8_inter;
+    VAEncSequenceParameterBufferH264 *pSeqParameter =
+        (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    VAEncPictureParameterBufferH264 *pPicParameter =
+        (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
 
-    gen8_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, qm, 12, encoder_context);
-    gen8_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, qm, 12, encoder_context);
-    gen8_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, qm, 16, encoder_context);
-    gen8_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, qm, 16, encoder_context);
+    if (!pSeqParameter->seq_fields.bits.seq_scaling_matrix_present_flag
+        && !pPicParameter->pic_fields.bits.pic_scaling_matrix_present_flag) {
+        qm_4x4_intra = qm_4x4_inter = qm_8x8_intra = qm_8x8_inter = qm_flat;
+    } else {
+        VAIQMatrixBufferH264 *qm;
+        assert(encode_state->q_matrix && encode_state->q_matrix->buffer);
+        qm = (VAIQMatrixBufferH264 *)encode_state->q_matrix->buffer;
+        qm_4x4_intra = (unsigned int *)qm->ScalingList4x4[0];
+        qm_4x4_inter = (unsigned int *)qm->ScalingList4x4[3];
+        qm_8x8_intra = (unsigned int *)qm->ScalingList8x8[0];
+        qm_8x8_inter = (unsigned int *)qm->ScalingList8x8[1];
+    }
+
+    gen8_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, qm_4x4_intra, 12, encoder_context);
+    gen8_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, qm_4x4_inter, 12, encoder_context);
+    gen8_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, qm_8x8_intra, 16, encoder_context);
+    gen8_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, qm_8x8_inter, 16, encoder_context);
 }
 
 static void
 gen8_mfc_fqm_state(VADriverContextP ctx,
                    int fqm_type,
-                   unsigned int *fqm,
+                   const uint32_t *fqm,
                    int fqm_length,
                    struct intel_encoder_context *encoder_context)
 {
@@ -417,23 +451,51 @@ gen8_mfc_fqm_state(VADriverContextP ctx,
 }
 
 static void
-gen8_mfc_avc_fqm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+gen8_mfc_avc_fill_fqm(uint8_t *qm, uint16_t *fqm, int len)
 {
-    unsigned int qm[32] = {
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000,
-        0x10001000, 0x10001000, 0x10001000, 0x10001000
-    };
+    int i, j;
+    for (i = 0; i < len; i++)
+       for (j = 0; j < len; j++)
+           fqm[i * len + j] = (1 << 16) / qm[j * len + i];
+}
 
-    gen8_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, qm, 24, encoder_context);
-    gen8_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, qm, 24, encoder_context);
-    gen8_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, qm, 32, encoder_context);
-    gen8_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, qm, 32, encoder_context);
+static void
+gen8_mfc_avc_fqm_state(VADriverContextP ctx,
+                       struct encode_state *encode_state,
+                       struct intel_encoder_context *encoder_context)
+{
+    VAEncSequenceParameterBufferH264 *pSeqParameter =
+        (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    VAEncPictureParameterBufferH264 *pPicParameter =
+        (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+
+    if (!pSeqParameter->seq_fields.bits.seq_scaling_matrix_present_flag
+        && !pPicParameter->pic_fields.bits.pic_scaling_matrix_present_flag) {
+        gen8_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, fqm_flat, 24, encoder_context);
+        gen8_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, fqm_flat, 24, encoder_context);
+        gen8_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, fqm_flat, 32, encoder_context);
+        gen8_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, fqm_flat, 32, encoder_context);
+    } else {
+        int i;
+        uint32_t fqm[32];
+        VAIQMatrixBufferH264 *qm;
+        assert(encode_state->q_matrix && encode_state->q_matrix->buffer);
+        qm = (VAIQMatrixBufferH264 *)encode_state->q_matrix->buffer;
+
+        for (i = 0; i < 3; i++)
+            gen8_mfc_avc_fill_fqm(qm->ScalingList4x4[i], (uint16_t *)fqm + 16 * i, 4);
+        gen8_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, fqm, 24, encoder_context);
+
+        for (i = 3; i < 6; i++)
+            gen8_mfc_avc_fill_fqm(qm->ScalingList4x4[i], (uint16_t *)fqm + 16 * (i - 3), 4);
+        gen8_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, fqm, 24, encoder_context);
+
+        gen8_mfc_avc_fill_fqm(qm->ScalingList8x8[0], (uint16_t *)fqm, 8);
+        gen8_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, fqm, 32, encoder_context);
+
+        gen8_mfc_avc_fill_fqm(qm->ScalingList8x8[1], (uint16_t *)fqm, 8);
+        gen8_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, fqm, 32, encoder_context);
+    }
 }
 
 static void
@@ -768,8 +830,8 @@ static void gen8_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
     gen8_mfc_pipe_buf_addr_state(ctx, encoder_context);
     gen8_mfc_bsp_buf_base_addr_state(ctx, encoder_context);
     mfc_context->avc_img_state(ctx, encode_state, encoder_context);
-    mfc_context->avc_qm_state(ctx, encoder_context);
-    mfc_context->avc_fqm_state(ctx, encoder_context);
+    mfc_context->avc_qm_state(ctx, encode_state, encoder_context);
+    mfc_context->avc_fqm_state(ctx, encode_state, encoder_context);
     gen8_mfc_avc_directmode_state(ctx, encoder_context); 
     intel_mfc_avc_ref_idx_state(ctx, encode_state, encoder_context);
 }

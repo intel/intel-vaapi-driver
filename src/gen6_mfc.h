@@ -319,8 +319,10 @@ struct gen6_mfc_context
                           struct encode_state *encode_state,
                           struct intel_encoder_context *encoder_context);
     void (*avc_qm_state)(VADriverContextP ctx,
+                         struct encode_state *encode_state,
                          struct intel_encoder_context *encoder_context);
     void (*avc_fqm_state)(VADriverContextP ctx,
+                          struct encode_state *encode_state,
                           struct intel_encoder_context *encoder_context);
     void (*insert_object)(VADriverContextP ctx,
                           struct intel_encoder_context *encoder_context,

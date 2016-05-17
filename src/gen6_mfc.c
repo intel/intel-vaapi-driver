@@ -464,7 +464,9 @@ gen6_mfc_avc_slice_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
-static void gen6_mfc_avc_qm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+static void gen6_mfc_avc_qm_state(VADriverContextP ctx,
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     int i;
@@ -480,7 +482,9 @@ static void gen6_mfc_avc_qm_state(VADriverContextP ctx, struct intel_encoder_con
     ADVANCE_BCS_BATCH(batch);
 }
 
-static void gen6_mfc_avc_fqm_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+static void gen6_mfc_avc_fqm_state(VADriverContextP ctx,
+                                   struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     int i;
@@ -639,8 +643,8 @@ static void gen6_mfc_avc_pipeline_picture_programing( VADriverContextP ctx,
     gen6_mfc_pipe_buf_addr_state(ctx, encoder_context);
     gen6_mfc_bsp_buf_base_addr_state(ctx, encoder_context);
     mfc_context->avc_img_state(ctx, encode_state, encoder_context);
-    mfc_context->avc_qm_state(ctx, encoder_context);
-    mfc_context->avc_fqm_state(ctx, encoder_context);
+    mfc_context->avc_qm_state(ctx, encode_state, encoder_context);
+    mfc_context->avc_fqm_state(ctx, encode_state, encoder_context);
     gen6_mfc_avc_directmode_state(ctx, encoder_context); 
     intel_mfc_avc_ref_idx_state(ctx, encode_state, encoder_context);
 }
