@@ -2221,6 +2221,9 @@ gen9_vdenc_init_img_states(VADriverContextP ctx,
 
     pbuffer = i965_map_gpe_resource(&vdenc_context->vdenc_avc_image_state_res);
 
+    if (!pbuffer)
+        return;
+
     mfx_img_cmd = (struct gen9_mfx_avc_img_state *)pbuffer;
     gen9_vdenc_init_mfx_avc_img_state(ctx, encode_state, encoder_context, mfx_img_cmd);
     pbuffer += sizeof(*mfx_img_cmd);
@@ -2244,6 +2247,9 @@ gen9_vdenc_huc_brc_update_constant_data(VADriverContextP ctx,
     char *pbuffer;
 
     pbuffer = i965_map_gpe_resource(&vdenc_context->brc_constant_data_res);
+
+    if (!pbuffer)
+        return;
 
     if (vdenc_context->internal_rate_mode == I965_BRC_VBR) {
         memcpy(gen9_brc_update_constant_data.dist_qp_adj_tab_i, dist_qp_adj_tab_i_vbr, sizeof(dist_qp_adj_tab_i_vbr));

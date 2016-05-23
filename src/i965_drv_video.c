@@ -2543,9 +2543,11 @@ i965_MapBuffer(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_buffer *obj_buffer = BUFFER(buf_id);
     VAStatus vaStatus = VA_STATUS_ERROR_UNKNOWN;
-    struct object_context *obj_context = CONTEXT(obj_buffer->context_id);
+    struct object_context *obj_context;
 
     ASSERT_RET(obj_buffer && obj_buffer->buffer_store, VA_STATUS_ERROR_INVALID_BUFFER);
+
+    obj_context = CONTEXT(obj_buffer->context_id);
 
     /* When the wrapper_buffer exists, it will wrapper to the
      * buffer allocated from backend driver.
