@@ -468,6 +468,7 @@ static struct hw_codec_info kbl_hw_codec_info = {
     .has_hevc10_decoding = 1,
     .has_vp9_decoding = 1,
     .has_vpp_p010 = 1,
+    .has_vp9_encoding = 1,
 
     .num_filters = 5,
     .filters = {

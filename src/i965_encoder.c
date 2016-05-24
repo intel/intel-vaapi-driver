@@ -42,6 +42,8 @@
 #include "gen9_mfc.h"
 #include "gen9_vdenc.h"
 
+#include "gen9_vp9_encapi.h"
+
 extern Bool gen6_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 extern Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 extern Bool gen7_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
@@ -558,6 +560,76 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
 error:
     return VA_STATUS_ERROR_INVALID_PARAMETER;
 }
+
+static VAStatus
+intel_encoder_check_vp9_parameter(VADriverContextP ctx,
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAEncPictureParameterBufferVP9 *pic_param;
+    struct object_surface *obj_surface;
+    struct object_buffer *obj_buffer;
+    int i = 0;
+    int is_key_frame = 0;
+    int index;
+
+    if (encode_state->pic_param_ext == NULL ||
+        encode_state->pic_param_ext->buffer == NULL)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    pic_param = (VAEncPictureParameterBufferVP9 *)encode_state->pic_param_ext->buffer;
+
+    obj_surface = SURFACE(pic_param->reconstructed_frame);
+
+    if (!obj_surface)
+        goto error;
+
+    encode_state->reconstructed_object = obj_surface;
+    obj_buffer = BUFFER(pic_param->coded_buf);
+
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+        goto error;
+
+    encode_state->coded_buf_object = obj_buffer;
+
+    is_key_frame = !pic_param->pic_flags.bits.frame_type;
+    if (!is_key_frame && !pic_param->pic_flags.bits.intra_only) {
+        /* slot 0 is for last reference frame */
+        index = pic_param->ref_flags.bits.ref_last_idx;
+        obj_surface = SURFACE(pic_param->reference_frames[index]);
+        if (obj_surface && obj_surface->bo)
+            encode_state->reference_objects[i++] = obj_surface;
+        else
+            encode_state->reference_objects[i++] = NULL;
+
+        /* slot 1 is for golden reference frame */
+        index = pic_param->ref_flags.bits.ref_gf_idx;
+        obj_surface = SURFACE(pic_param->reference_frames[index]);
+        if (obj_surface && obj_surface->bo)
+            encode_state->reference_objects[i++] = obj_surface;
+        else
+            encode_state->reference_objects[i++] = NULL;
+
+        /* slot 2 is alt reference frame */
+        index = pic_param->ref_flags.bits.ref_arf_idx;
+        obj_surface = SURFACE(pic_param->reference_frames[index]);
+        if (obj_surface && obj_surface->bo)
+            encode_state->reference_objects[i++] = obj_surface;
+        else
+            encode_state->reference_objects[i++] = NULL;
+    }
+
+    for ( ; i < 16; i++)
+        encode_state->reference_objects[i] = NULL;
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+
 static VAStatus
 intel_encoder_sanity_check_input(VADriverContextP ctx,
                                  VAProfile profile,
@@ -609,6 +681,13 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
         if (vaStatus != VA_STATUS_SUCCESS)
             goto out;
         vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+        break;
+    }
+
+    case VAProfileVP9Profile0: {
+        vaStatus = intel_encoder_check_vp9_parameter(ctx, encode_state, encoder_context);
+        if (vaStatus != VA_STATUS_SUCCESS)
+            goto out;
         break;
     }
     default:
@@ -739,6 +818,10 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         encoder_context->codec = CODEC_HEVC;
         break;
 
+    case VAProfileVP9Profile0:
+        encoder_context->codec = CODEC_VP9;
+        break;
+
     default:
         /* Never get here */
         assert(0);
@@ -814,6 +897,10 @@ gen9_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
             return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_hcpe_context_init);
         } else if (obj_config->profile == VAProfileJPEGBaseline)
             return intel_enc_hw_context_init(ctx, obj_config, gen8_vme_context_init, gen8_mfc_context_init);
+        else if (obj_config->profile == VAProfileVP9Profile0)
+            return intel_enc_hw_context_init(ctx, obj_config,
+                                             gen9_vp9_vme_context_init,
+                                             gen9_vp9_pak_context_init);
         else
             return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
     }

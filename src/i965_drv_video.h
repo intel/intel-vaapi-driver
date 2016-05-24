@@ -400,6 +400,7 @@ struct hw_codec_info
     unsigned int has_vp9_decoding:1;
     unsigned int has_vpp_p010:1;
     unsigned int has_lp_h264_encoding:1;
+    unsigned int has_vp9_encoding:1;
 
     unsigned int lp_h264_brc_mode;
 
@@ -490,6 +491,7 @@ va_enc_packed_type_to_idx(int packed_type);
 #define CODEC_JPEG      3
 #define CODEC_VP8       4
 #define CODEC_HEVC      5
+#define CODEC_VP9       6
 
 #define H264_DELIMITER0 0x00
 #define H264_DELIMITER1 0x00
