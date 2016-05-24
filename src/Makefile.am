@@ -97,6 +97,7 @@ source_c = \
 	intel_memman.c		\
 	object_heap.c		\
 	intel_media_common.c		\
+	vp9_probs.c             \
 	$(NULL)
 
 source_h = \
