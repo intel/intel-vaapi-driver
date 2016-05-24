@@ -41,6 +41,8 @@
 #ifndef VP9_PROBS_H
 #define VP9_PROBS_H
 
+#include <stdbool.h>
+
 #define TX_SIZE_CONTEXTS 2
 #define TX_SIZES 4
 #define PLANE_TYPES 2
@@ -198,5 +200,31 @@ extern vp9_prob default_coef_probs_8x8[COEFF_PROB_SIZE][COEFF_PROB_NUM];
 extern vp9_prob default_coef_probs_16x16[COEFF_PROB_SIZE][COEFF_PROB_NUM];
 
 extern vp9_prob default_coef_probs_32x32[COEFF_PROB_SIZE][COEFF_PROB_NUM];
+
+extern void intel_init_default_vp9_probs(FRAME_CONTEXT *frame_context);
+
+extern void intel_vp9_copy_frame_context(FRAME_CONTEXT *dst,
+                                         FRAME_CONTEXT *src,
+                                         bool inter_flag);
+
+extern void intel_update_intra_frame_context(FRAME_CONTEXT *frame_context);
+
+
+typedef struct _vp9_header_bitoffset_ {
+    unsigned int    bit_offset_ref_lf_delta;
+    unsigned int    bit_offset_mode_lf_delta;
+    unsigned int    bit_offset_lf_level;
+    unsigned int    bit_offset_qindex;
+    unsigned int    bit_offset_first_partition_size;
+    unsigned int    bit_offset_segmentation;
+    unsigned int    bit_size_segmentation;
+} vp9_header_bitoffset;
+
+struct encode_state;
+extern bool intel_write_uncompressed_header(struct encode_state *encode_state,
+                                            int codec_profile,
+                                            char *header_data,
+                                            int *header_length,
+                                            vp9_header_bitoffset *header_bitoffset);
 
 #endif /*VP9_PROBS_H */

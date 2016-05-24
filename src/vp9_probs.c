@@ -41,8 +41,10 @@
  */
 #include <stdio.h>
 #include <stdint.h>
-#include <vp9_probs.h>
-
+#include <string.h>
+#include "vp9_probs.h"
+#include "i965_drv_video.h"
+#include <stdlib.h>
 
 struct tx_probs default_tx_probs = {
     { { 100 },
@@ -525,3 +527,510 @@ vp9_prob default_coef_probs_32x32[COEFF_PROB_SIZE][COEFF_PROB_NUM] = {
     {   1,  84, 121 }, {   1,  51,  67 }, {   1,  16,   6 }
 
 };
+
+#define FC_INTRA_OFFSET      0
+#define FC_INTRA_SIZE        1664
+
+#define FC_INTER_OFFSET      1664
+#define FC_INTER_SIZE        384
+
+#define FC_SKIP_OFFSET       1664
+#define FC_SKIP_SIZE         3
+
+void intel_init_default_vp9_probs(FRAME_CONTEXT *frame_context)
+{
+    if (!frame_context)
+        return;
+
+    frame_context->tx_probs = default_tx_probs;
+    //dummy 52
+    memcpy(frame_context->coeff_probs4x4, default_coef_probs_4x4,
+           sizeof(default_coef_probs_4x4));
+    memcpy(frame_context->coeff_probs8x8, default_coef_probs_8x8,
+           sizeof(default_coef_probs_8x8));
+    memcpy(frame_context->coeff_probs16x16, default_coef_probs_16x16,
+           sizeof(default_coef_probs_16x16));
+    memcpy(frame_context->coeff_probs32x32, default_coef_probs_32x32,
+           sizeof(default_coef_probs_16x16));
+    //dummy 16
+    memcpy(frame_context->skip_probs, default_skip_probs,
+           sizeof(default_skip_probs));
+    memcpy(frame_context->inter_mode_probs, default_inter_mode_probs,
+           sizeof(default_inter_mode_probs));
+    memcpy(frame_context->switchable_interp_prob,
+           default_switchable_interp_prob,
+           sizeof(default_switchable_interp_prob));
+    memcpy(frame_context->intra_inter_prob, default_intra_inter_p,
+           sizeof(default_intra_inter_p));
+    memcpy(frame_context->comp_inter_prob, default_comp_inter_p,
+           sizeof(default_comp_inter_p));
+    memcpy(frame_context->single_ref_prob, default_single_ref_p,
+           sizeof(default_single_ref_p));
+    memcpy(frame_context->comp_ref_prob, default_comp_ref_p,
+           sizeof(default_comp_ref_p));
+    memcpy(frame_context->y_mode_prob, default_if_y_probs,
+           sizeof(default_if_y_probs));
+    memcpy(frame_context->partition_prob, default_partition_probs,
+           sizeof(default_partition_probs));
+    frame_context->nmvc = default_nmv_context;
+    //dummy 47
+    memcpy(frame_context->uv_mode_prob, default_if_uv_probs,
+           sizeof(default_if_uv_probs));
+    memcpy(frame_context->seg_tree_probs, default_seg_tree_probs,
+           sizeof(default_seg_tree_probs));
+    memcpy(frame_context->seg_pred_probs, default_seg_pred_probs,
+           sizeof(default_seg_pred_probs));
+    return;
+}
+
+
+void intel_vp9_copy_frame_context(FRAME_CONTEXT *dst,
+                                  FRAME_CONTEXT *src,
+                                  bool inter_flag)
+{
+    unsigned char *fc_dst, *fc_src;
+
+    if (!dst || !src)
+        return;
+
+    fc_dst = (unsigned char *)dst;
+    fc_src = (unsigned char *)src;
+    /* update the prob related with tx_mode/tx_coeff */
+    memcpy(fc_dst + FC_INTRA_OFFSET, fc_src + FC_INTRA_OFFSET, FC_INTRA_SIZE);
+
+    if (inter_flag) {
+        /* update the prob related with inter-frame */
+        memcpy(fc_dst + FC_INTER_OFFSET, fc_src + FC_INTER_OFFSET, FC_INTER_SIZE);
+    } else {
+        memcpy(fc_dst + FC_SKIP_OFFSET, fc_src + FC_SKIP_OFFSET, FC_SKIP_SIZE);
+    }
+}
+
+void intel_update_intra_frame_context(FRAME_CONTEXT *frame_context)
+{
+    if (!frame_context)
+        return;
+
+    memcpy(frame_context->partition_prob, vp9_kf_partition_probs,
+           sizeof(vp9_kf_partition_probs));
+
+    memcpy(frame_context->uv_mode_prob, vp9_kf_uv_mode_prob,
+           sizeof(vp9_kf_uv_mode_prob));
+
+}
+
+struct vp9_write_bit_buffer {
+    uint8_t *bit_buffer;
+    int bit_offset;
+};
+
+static
+void vp9_wb_write_bit(struct vp9_write_bit_buffer *wb, int bit)
+{
+    const int off = wb->bit_offset;
+    const int p = off / 8;
+    const int q = 7 - off % 8;
+    if (q == 7) {
+        wb->bit_buffer[p] = bit << q;
+    } else {
+        wb->bit_buffer[p] &= ~(1 << q);
+        wb->bit_buffer[p] |= bit << q;
+    }
+    wb->bit_offset = off + 1;
+}
+
+static
+void vp9_wb_write_literal(struct vp9_write_bit_buffer *wb, int data, int bits)
+{
+    int bit;
+    for (bit = bits - 1; bit >= 0; bit--)
+        vp9_wb_write_bit(wb, (data >> bit) & 1);
+}
+
+static
+void write_bitdepth_colorspace_sampling(int codec_profile,
+                                        struct vp9_write_bit_buffer *wb)
+{
+    int profile = VAProfileVP9Profile0;
+    profile = profile + 0;
+
+    if (codec_profile >= (VAProfileVP9Profile0 + 2)) {
+        /* the bit-depth will be added for VP9Profile2/3 */
+        /* this will be added later */
+    }
+
+    /* Add the default color-space */
+    vp9_wb_write_literal(wb, 0, 3);
+    vp9_wb_write_bit(wb, 0);  // 0: [16, 235] (i.e. xvYCC), 1: [0, 255]
+
+    /* the sampling_x/y will be added for VP9Profile1/2/3 later */
+}
+
+#define    MAX_TILE_WIDTH_B64    64
+#define    MIN_TILE_WIDTH_B64    4
+
+static int get_min_log2_tile_cols(const int sb_cols) {
+    int min_log2 = 0;
+
+    while ((MAX_TILE_WIDTH_B64 << min_log2) < sb_cols)
+        ++min_log2;
+
+    return min_log2;
+}
+
+static int get_max_log2_tile_cols(const int sb_cols) {
+    int max_log2 = 1;
+
+    while ((sb_cols >> max_log2) >= MIN_TILE_WIDTH_B64)
+        ++max_log2;
+
+    return max_log2 - 1;
+}
+
+
+bool intel_write_uncompressed_header(struct encode_state *encode_state,
+                                     int codec_profile,
+                                     char *header_data,
+                                     int *header_length,
+                                     vp9_header_bitoffset *header_bitoffset)
+{
+#define    VP9_SYNC_CODE_0    0x49
+#define    VP9_SYNC_CODE_1    0x83
+#define    VP9_SYNC_CODE_2    0x42
+
+#define    VP9_FRAME_MARKER   0x2
+
+#define    REFS_PER_FRAME     3
+
+#define    REF_FRAMES_LOG2    3
+#define    REF_FRAMES         (1 << REF_FRAMES_LOG2)
+
+#define    VP9_KEY_FRAME      0
+
+    VAEncPictureParameterBufferVP9 *pic_param;
+    VAEncMiscParameterTypeVP9PerSegmantParam *seg_param = NULL;
+    struct vp9_write_bit_buffer *wb, vp9_wb;
+
+    if (!encode_state->pic_param_ext || !encode_state->pic_param_ext->buffer)
+        return false;
+
+    if (!header_data || !header_bitoffset || !header_length)
+        return false;
+
+    memset(header_bitoffset, 0, sizeof(vp9_header_bitoffset));
+
+    pic_param = (VAEncPictureParameterBufferVP9 *)encode_state->pic_param_ext->buffer;
+
+    if (encode_state->q_matrix)
+        seg_param = (VAEncMiscParameterTypeVP9PerSegmantParam *) encode_state->q_matrix->buffer;
+
+    vp9_wb.bit_buffer = (uint8_t *)header_data;
+    vp9_wb.bit_offset = 0;
+    wb = &vp9_wb;
+    vp9_wb_write_literal(wb, VP9_FRAME_MARKER, 2);
+
+    if (codec_profile == VAProfileVP9Profile0) {
+        vp9_wb_write_literal(wb, 0, 2);
+    } else {
+         /* Other VP9Profile1/2/3 will be added later */
+    }
+
+    vp9_wb_write_bit(wb, 0);  // show_existing_frame
+    vp9_wb_write_bit(wb, pic_param->pic_flags.bits.frame_type);
+    vp9_wb_write_bit(wb, pic_param->pic_flags.bits.show_frame);
+    vp9_wb_write_bit(wb, pic_param->pic_flags.bits.error_resilient_mode);
+
+    if (pic_param->pic_flags.bits.frame_type == VP9_KEY_FRAME) {
+        vp9_wb_write_literal(wb, VP9_SYNC_CODE_0, 8);
+        vp9_wb_write_literal(wb, VP9_SYNC_CODE_1, 8);
+        vp9_wb_write_literal(wb, VP9_SYNC_CODE_2, 8);
+
+        write_bitdepth_colorspace_sampling(codec_profile, wb);
+
+        /* write the encoded frame size */
+        vp9_wb_write_literal(wb, pic_param->frame_width_dst - 1, 16);
+        vp9_wb_write_literal(wb, pic_param->frame_height_dst - 1, 16);
+        /* write display size */
+        if ((pic_param->frame_width_dst != pic_param->frame_width_src) ||
+            (pic_param->frame_height_dst != pic_param->frame_height_src)) {
+            vp9_wb_write_bit(wb, 1);
+            vp9_wb_write_literal(wb, pic_param->frame_width_src - 1, 16);
+            vp9_wb_write_literal(wb, pic_param->frame_height_src - 1, 16);
+        } else
+            vp9_wb_write_bit(wb, 0);
+    } else {
+        /* for the non-Key frame */
+        if (!pic_param->pic_flags.bits.show_frame)
+            vp9_wb_write_bit(wb, pic_param->pic_flags.bits.intra_only);
+
+        if (!pic_param->pic_flags.bits.error_resilient_mode)
+            vp9_wb_write_literal(wb, pic_param->pic_flags.bits.reset_frame_context, 2);
+
+        if (pic_param->pic_flags.bits.intra_only) {
+            vp9_wb_write_literal(wb, VP9_SYNC_CODE_0, 8);
+            vp9_wb_write_literal(wb, VP9_SYNC_CODE_1, 8);
+            vp9_wb_write_literal(wb, VP9_SYNC_CODE_2, 8);
+
+            /* Add the bit_depth for VP9Profile1/2/3 */
+            /* write the refreshed_frame_flags */
+            vp9_wb_write_literal(wb, pic_param->refresh_frame_flags, REF_FRAMES);
+            /* write the encoded frame size */
+            vp9_wb_write_literal(wb, pic_param->frame_width_dst - 1, 16);
+            vp9_wb_write_literal(wb, pic_param->frame_height_dst - 1, 16);
+            /* write display size */
+            if ((pic_param->frame_width_dst != pic_param->frame_width_src) ||
+                (pic_param->frame_height_dst != pic_param->frame_height_src)) {
+                vp9_wb_write_bit(wb, 1);
+                vp9_wb_write_literal(wb, pic_param->frame_width_src - 1, 16);
+                vp9_wb_write_literal(wb, pic_param->frame_height_src - 1, 16);
+            } else
+                vp9_wb_write_bit(wb, 0);
+
+        } else {
+            /* The refresh_frame_map is  for the next frame so that it can select Last/Godlen/Alt ref_index */
+            /*
+            if ((pic_param->ref_flags.bits.ref_frame_ctrl_l0) & (1 << 0))
+                refresh_flags = 1 << pic_param->ref_flags.bits.ref_last_idx;
+            if ((pic_param->ref_flags.bits.ref_frame_ctrl_l0) & (1 << 0))
+                refresh_flags = 1 << pic_param->ref_flags.bits.ref_last_idx;
+            if ((pic_param->ref_flags.bits.ref_frame_ctrl_l0) & (1 << 0))
+                refresh_flags = 1 << pic_param->ref_flags.bits.ref_last_idx;
+            */
+            vp9_wb_write_literal(wb, pic_param->refresh_frame_flags, REF_FRAMES);
+
+            vp9_wb_write_literal(wb, pic_param->ref_flags.bits.ref_last_idx, REF_FRAMES_LOG2);
+            vp9_wb_write_bit(wb, pic_param->ref_flags.bits.ref_last_sign_bias);
+            vp9_wb_write_literal(wb, pic_param->ref_flags.bits.ref_gf_idx, REF_FRAMES_LOG2);
+            vp9_wb_write_bit(wb, pic_param->ref_flags.bits.ref_gf_sign_bias);
+            vp9_wb_write_literal(wb, pic_param->ref_flags.bits.ref_arf_idx, REF_FRAMES_LOG2);
+            vp9_wb_write_bit(wb, pic_param->ref_flags.bits.ref_arf_sign_bias);
+
+            /* write three bits with zero so that it can parse width/height directly */
+            vp9_wb_write_literal(wb, 0, 3);
+            vp9_wb_write_literal(wb, pic_param->frame_width_dst - 1, 16);
+            vp9_wb_write_literal(wb, pic_param->frame_height_dst - 1, 16);
+
+            /* write display size */
+            if ((pic_param->frame_width_dst != pic_param->frame_width_src) ||
+                (pic_param->frame_height_dst != pic_param->frame_height_src)) {
+
+                vp9_wb_write_bit(wb, 1);
+                vp9_wb_write_literal(wb, pic_param->frame_width_src - 1, 16);
+                vp9_wb_write_literal(wb, pic_param->frame_height_src - 1, 16);
+            } else
+                vp9_wb_write_bit(wb, 0);
+
+            vp9_wb_write_bit(wb, pic_param->pic_flags.bits.allow_high_precision_mv);
+
+#define    SWITCHABLE_FILTER    4
+#define    FILTER_MASK          3
+
+            if (pic_param->pic_flags.bits.mcomp_filter_type == SWITCHABLE_FILTER)
+                vp9_wb_write_bit(wb, 1);
+            else {
+                const int filter_to_literal[4] = { 1, 0, 2, 3 };
+                uint8_t filter_flag = pic_param->pic_flags.bits.mcomp_filter_type;
+                filter_flag = filter_flag & FILTER_MASK;
+                vp9_wb_write_bit(wb, 0);
+                vp9_wb_write_literal(wb, filter_to_literal[filter_flag], 2);
+            }
+        }
+    }
+
+    /* write refresh_frame_context/paralle frame_decoding */
+    if (!pic_param->pic_flags.bits.error_resilient_mode) {
+        vp9_wb_write_bit(wb, pic_param->pic_flags.bits.refresh_frame_context);
+        vp9_wb_write_bit(wb, pic_param->pic_flags.bits.frame_parallel_decoding_mode);
+    }
+
+    vp9_wb_write_literal(wb, pic_param->pic_flags.bits.frame_context_idx, 2);
+
+    /* write loop filter */
+    header_bitoffset->bit_offset_lf_level = wb->bit_offset;
+    vp9_wb_write_literal(wb, pic_param->filter_level, 6);
+    vp9_wb_write_literal(wb, pic_param->sharpness_level, 3);
+
+    {
+        int i, mode_flag;
+
+        vp9_wb_write_bit(wb, 1);
+        vp9_wb_write_bit(wb, 1);
+        header_bitoffset->bit_offset_ref_lf_delta = wb->bit_offset;
+        for (i = 0; i < 4; i++) {
+            /*
+             * This check is skipped to prepare the bit_offset_lf_ref
+            if (pic_param->ref_lf_delta[i] == 0) {
+                vp9_wb_write_bit(wb, 0);
+                continue;
+            }
+             */
+
+            vp9_wb_write_bit(wb, 1);
+            mode_flag = pic_param->ref_lf_delta[i];
+            if (mode_flag >=0) {
+                vp9_wb_write_literal(wb, mode_flag & (0x3F), 6);
+                vp9_wb_write_bit(wb, 0);
+            } else {
+                mode_flag = -mode_flag;
+                vp9_wb_write_literal(wb, mode_flag & (0x3F), 6);
+                vp9_wb_write_bit(wb, 1);
+            }
+        }
+
+        header_bitoffset->bit_offset_mode_lf_delta = wb->bit_offset;
+        for (i = 0; i < 2; i++) {
+            /*
+             * This check is skipped to prepare the bit_offset_lf_ref
+            if (pic_param->mode_lf_delta[i] == 0) {
+                vp9_wb_write_bit(wb, 0);
+                continue;
+            }
+             */
+            vp9_wb_write_bit(wb, 1);
+            mode_flag = pic_param->mode_lf_delta[i];
+            if (mode_flag >=0) {
+                vp9_wb_write_literal(wb, mode_flag & (0x3F), 6);
+                vp9_wb_write_bit(wb, 0);
+            } else {
+                mode_flag = -mode_flag;
+                vp9_wb_write_literal(wb, mode_flag & (0x3F), 6);
+                vp9_wb_write_bit(wb, 1);
+            }
+        }
+    }
+
+    /* write basic quantizer */
+    header_bitoffset->bit_offset_qindex = wb->bit_offset;
+    vp9_wb_write_literal(wb, pic_param->luma_ac_qindex, 8);
+    if (pic_param->luma_dc_qindex_delta) {
+        int delta_q = pic_param->luma_dc_qindex_delta;
+        vp9_wb_write_bit(wb, 1);
+        vp9_wb_write_literal(wb, abs(delta_q), 4);
+        vp9_wb_write_bit(wb, delta_q < 0);
+    } else
+        vp9_wb_write_bit(wb, 0);
+
+    if (pic_param->chroma_dc_qindex_delta) {
+        int delta_q = pic_param->chroma_dc_qindex_delta;
+        vp9_wb_write_bit(wb, 1);
+        vp9_wb_write_literal(wb, abs(delta_q), 4);
+        vp9_wb_write_bit(wb, delta_q < 0);
+    } else
+        vp9_wb_write_bit(wb, 0);
+
+    if (pic_param->chroma_ac_qindex_delta) {
+        int delta_q = pic_param->chroma_ac_qindex_delta;
+        vp9_wb_write_bit(wb, 1);
+        vp9_wb_write_literal(wb, abs(delta_q), 4);
+        vp9_wb_write_bit(wb, delta_q < 0);
+    } else
+        vp9_wb_write_bit(wb, 0);
+
+    vp9_wb_write_bit(wb, pic_param->pic_flags.bits.segmentation_enabled);
+    if (pic_param->pic_flags.bits.segmentation_enabled) {
+        int i;
+
+#define VP9_MAX_PROB    255
+        vp9_wb_write_bit(wb, pic_param->pic_flags.bits.segmentation_update_map);
+        if (pic_param->pic_flags.bits.segmentation_update_map) {
+
+            header_bitoffset->bit_offset_segmentation = wb->bit_offset;
+            /* write the seg_tree_probs */
+            /* segment_tree_probs/segment_pred_probs are not passed.
+             * So the hard-coded prob is writen
+             */
+            for (i = 0; i < 7; i++) {
+                vp9_wb_write_bit(wb, 1);
+                vp9_wb_write_literal(wb, VP9_MAX_PROB, 8);
+            }
+
+            vp9_wb_write_bit(wb, pic_param->pic_flags.bits.segmentation_temporal_update);
+            if (pic_param->pic_flags.bits.segmentation_temporal_update) {
+                for (i = 0; i < 3; i++) {
+                    vp9_wb_write_bit(wb, 1);
+                    vp9_wb_write_literal(wb, VP9_MAX_PROB, 8);
+                }
+            }
+        }
+
+        /* write the segment_data info */
+        if (seg_param == NULL) {
+            vp9_wb_write_bit(wb, 0);
+        } else {
+            VAEncSegParamVP9 *seg_data;
+            int seg_delta;
+
+            /* update_data */
+            vp9_wb_write_bit(wb, 1);
+            /* abs_delta should be zero */
+            vp9_wb_write_bit(wb, 0);
+            for (i = 0; i < 8; i++) {
+                seg_data = &seg_param->seg_data[i];
+
+                /* The segment qindex delta */
+                /* This check is skipped */
+                /* if (seg_data->segment_qindex_delta != 0) */
+                if (1) {
+                    vp9_wb_write_bit(wb, 1);
+                    seg_delta = seg_data->segment_qindex_delta;
+                    vp9_wb_write_literal(wb, abs(seg_delta), 8);
+                    vp9_wb_write_bit(wb, seg_delta < 0);
+                } else
+                    vp9_wb_write_bit(wb, 0);
+
+                /* The segment lf delta */
+                /* if (seg_data->segment_lf_level_delta != 0) */
+                if (1) {
+                    vp9_wb_write_bit(wb, 1);
+                    seg_delta = seg_data->segment_lf_level_delta;
+                    vp9_wb_write_literal(wb, abs(seg_delta), 6);
+                    vp9_wb_write_bit(wb, seg_delta < 0);
+                } else
+                    vp9_wb_write_bit(wb, 0);
+
+                /* segment reference flag */
+                vp9_wb_write_bit(wb, seg_data->seg_flags.bits.segment_reference_enabled);
+                if (seg_data->seg_flags.bits.segment_reference_enabled)
+                {
+                    vp9_wb_write_literal(wb, seg_data->seg_flags.bits.segment_reference, 2);
+                }
+
+                /* segment skip flag */
+                vp9_wb_write_bit(wb, seg_data->seg_flags.bits.segment_reference_skipped);
+            }
+        }
+    }
+
+    /* write tile info */
+    {
+        int sb_cols = (pic_param->frame_width_dst + 63) / 64;
+        int min_log2_tile_cols, max_log2_tile_cols;
+        int col_data;
+
+        /* write tile column info */
+        min_log2_tile_cols = get_min_log2_tile_cols(sb_cols);
+        max_log2_tile_cols = get_max_log2_tile_cols(sb_cols);
+
+        col_data = pic_param->log2_tile_columns - min_log2_tile_cols;
+        while(col_data--) {
+            vp9_wb_write_bit(wb, 1);
+        }
+        if (pic_param->log2_tile_columns < max_log2_tile_cols)
+            vp9_wb_write_bit(wb, 0);
+
+        /* write tile row info */
+        vp9_wb_write_bit(wb, pic_param->log2_tile_rows);
+        if (pic_param->log2_tile_rows)
+            vp9_wb_write_bit(wb, (pic_param->log2_tile_rows != 1));
+    }
+
+    /* get the bit_offset of the first partition size */
+    header_bitoffset->bit_offset_first_partition_size = wb->bit_offset;
+
+    /* reserve the space for writing the first partitions ize */
+    vp9_wb_write_literal(wb, 0, 16);
+
+    *header_length = (wb->bit_offset + 7) / 8;
+
+    return true;
+}
