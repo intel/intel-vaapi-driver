@@ -635,6 +635,8 @@
 #define I965_SURFACEFORMAT_R16G16B16_SSCALED              0x19E 
 #define I965_SURFACEFORMAT_R16G16B16_USCALED              0x19F
 
+#define I965_SURFACEFORMAT_RAW                            0x1FF
+
 #define I965_CULLMODE_BOTH      0
 #define I965_CULLMODE_NONE      1
 #define I965_CULLMODE_FRONT     2

@@ -92,6 +92,8 @@ struct intel_batchbuffer;
 #define ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
 #define CLAMP(min, max, a) ((a) < (min) ? (min) : ((a) > (max) ? (max) : (a)))
 
+#define ALIGN_FLOOR(i, n) ((i) & ~((n) - 1))
+
 #define Bool int
 #define True 1
 #define False 0

@@ -78,6 +78,9 @@ struct i965_gpe_context
     struct {
         dri_bo *bo;
         unsigned int length;            /* in bytes */
+        unsigned int max_entries;
+        unsigned int binding_table_offset;
+        unsigned int surface_state_offset;
     } surface_state_binding_table;
 
     struct {
@@ -161,6 +164,7 @@ struct i965_gpe_context
     } dynamic_state;
 
     unsigned int sampler_offset;
+    int sampler_entries;
     int sampler_size;
     unsigned int idrt_offset;
     int idrt_size;
@@ -329,6 +333,7 @@ void gen9_gpe_pipeline_end(VADriverContextP ctx,
 
 Bool i965_allocate_gpe_resource(dri_bufmgr *bufmgr,
                                 struct i965_gpe_resource *res,
+                                int size,
                                 const char *name);
 
 void i965_object_surface_to_2d_gpe_resource(struct i965_gpe_resource *res,
@@ -386,5 +391,115 @@ void gen9_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
 void gen9_gpe_mi_batch_buffer_start(VADriverContextP ctx,
                                     struct intel_batchbuffer *batch,
                                     struct gpe_mi_batch_buffer_start_parameter *params);
+
+
+struct gpe_media_object_parameter
+{
+    unsigned int use_scoreboard;
+    unsigned int scoreboard_x;
+    unsigned int scoreboard_y;
+    unsigned int scoreboard_mask;
+    unsigned int interface_offset;
+    void *pinline_data;
+    unsigned int inline_size;
+};
+
+struct i965_gpe_surface
+{
+    unsigned int is_buffer:1;
+    unsigned int is_2d_surface:1;
+    unsigned int is_adv_surface:1;
+    unsigned int is_uv_surface:1;
+    unsigned int is_media_block_rw:1;
+    unsigned int is_raw_buffer:1;
+
+    unsigned int vert_line_stride_offset;
+    unsigned int vert_line_stride;
+    unsigned int cacheability_control;
+    unsigned int format; // 2d surface only
+    unsigned int v_direction; // adv surface only
+    unsigned int size; // buffer only
+    unsigned int offset; // buffer only
+
+    struct i965_gpe_resource *gpe_resource;
+};
+
+extern void
+gen9_gpe_reset_binding_table(VADriverContextP ctx,
+                             struct i965_gpe_context *gpe_context);
+extern
+void *gen8p_gpe_context_map_curbe(struct i965_gpe_context *gpe_context);
+
+extern
+void gen8p_gpe_context_unmap_curbe(struct i965_gpe_context *gpe_context);
+
+extern
+void gen8_gpe_setup_interface_data(VADriverContextP ctx,
+                                   struct i965_gpe_context *gpe_context);
+extern void
+gen9_gpe_context_add_surface(struct i965_gpe_context *gpe_context,
+                             struct i965_gpe_surface *gpe_surface,
+                             int index);
+
+extern bool
+i965_gpe_allocate_2d_resource(dri_bufmgr *bufmgr,
+                           struct i965_gpe_resource *res,
+                           int width,
+                           int height,
+                           int pitch,
+                           const char *name);
+
+struct gpe_walker_xy
+{
+    union {
+        struct {
+            unsigned int x:16;
+            unsigned int y:16;
+        };
+        unsigned int value;
+    };
+};
+
+struct gpe_media_object_walker_parameter
+{
+    void *pinline_data;
+    unsigned int inline_size;
+    unsigned int interface_offset;
+    unsigned int use_scoreboard;
+    unsigned int scoreboard_mask;
+    unsigned int group_id_loop_select;
+    unsigned int color_count_minus1;
+    unsigned int mid_loop_unit_x;
+    unsigned int mid_loop_unit_y;
+    unsigned int middle_loop_extra_steps;
+    unsigned int local_loop_exec_count;
+    unsigned int global_loop_exec_count;
+    struct gpe_walker_xy block_resolution;
+    struct gpe_walker_xy local_start;
+    struct gpe_walker_xy local_end;
+    struct gpe_walker_xy local_outer_loop_stride;
+    struct gpe_walker_xy local_inner_loop_unit;
+    struct gpe_walker_xy global_resolution;
+    struct gpe_walker_xy global_start;
+    struct gpe_walker_xy global_outer_loop_stride;
+    struct gpe_walker_xy global_inner_loop_unit;
+};
+
+extern void
+gen8_gpe_media_object(VADriverContextP ctx,
+                      struct i965_gpe_context *gpe_context,
+                      struct intel_batchbuffer *batch,
+                      struct gpe_media_object_parameter *param);
+
+extern void
+gen8_gpe_media_state_flush(VADriverContextP ctx,
+                           struct i965_gpe_context *gpe_context,
+                           struct intel_batchbuffer *batch);
+
+extern void
+gen9_gpe_media_object_walker(VADriverContextP ctx,
+                             struct i965_gpe_context *gpe_context,
+                             struct intel_batchbuffer *batch,
+                             struct gpe_media_object_walker_parameter *param);
 
 #endif /* _I965_GPE_UTILS_H_ */

@@ -787,6 +787,7 @@ const int vdenc_hme_cost[8][52] = {
         buffer.tiling = I915_TILING_NONE;                       \
         i965_allocate_gpe_resource(i965->intel.bufmgr,          \
                                    &buffer,                     \
+                                   bfsize,                      \
                                    (des));                      \
     } while (0)
 
