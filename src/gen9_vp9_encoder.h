@@ -1927,6 +1927,8 @@ struct gen9_vp9_state {
     unsigned int adaptive_transform_decision_enabled;
     int      curr_mode_decision_index;
     int      target_usage;
+    int      window_size;
+    int      target_percentage;
     unsigned int mb_data_offset;
     int      curr_pak_pass;
     unsigned int brc_flag_check;
