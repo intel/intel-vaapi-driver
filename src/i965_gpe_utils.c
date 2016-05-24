@@ -1571,3 +1571,23 @@ gen9_gpe_mi_batch_buffer_start(VADriverContextP ctx,
                 I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_INSTRUCTION, 0,
                 params->offset);
 }
+
+void
+gen8_gpe_context_set_dynamic_buffer(VADriverContextP ctx,
+                                    struct i965_gpe_context *gpe_context,
+                                    struct gpe_dynamic_state_parameter *ds)
+{
+    if (!ds->bo || !gpe_context)
+        return;
+
+    dri_bo_unreference(gpe_context->dynamic_state.bo);
+    gpe_context->dynamic_state.bo = ds->bo;
+    dri_bo_reference(gpe_context->dynamic_state.bo);
+    gpe_context->dynamic_state.bo_size = ds->bo_size;
+
+    gpe_context->curbe_offset = ds->curbe_offset;
+    gpe_context->idrt_offset = ds->idrt_offset;
+    gpe_context->sampler_offset = ds->sampler_offset;
+
+    return;
+}

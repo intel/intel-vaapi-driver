@@ -64,6 +64,15 @@ struct i965_gpe_resource
     uint32_t y_cb_offset;
 };
 
+struct gpe_dynamic_state_parameter
+{
+    dri_bo *bo;
+    int bo_size;
+    unsigned int curbe_offset;
+    unsigned int idrt_offset;
+    unsigned int sampler_offset;
+};
+
 struct i965_gpe_context
 {
     struct {
@@ -295,6 +304,10 @@ extern void gen8_gpe_media_chroma_surface_setup(VADriverContextP ctx,
 void gen8_gpe_pipeline_setup(VADriverContextP ctx,
                              struct i965_gpe_context *gpe_context,
                              struct intel_batchbuffer *batch);
+extern void
+gen8_gpe_context_set_dynamic_buffer(VADriverContextP ctx,
+                                    struct i965_gpe_context *gpe_context,
+                                    struct gpe_dynamic_state_parameter *ds);
 
 
 void gen8_gpe_context_destroy(struct i965_gpe_context *gpe_context);
