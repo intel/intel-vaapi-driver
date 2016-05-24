@@ -659,6 +659,11 @@ intel_encoder_context_destroy(void *hw_context)
     if (encoder_context->vme_context_destroy && encoder_context->vme_context)
        encoder_context->vme_context_destroy(encoder_context->vme_context);
 
+    if (encoder_context->enc_priv_state) {
+        free(encoder_context->enc_priv_state);
+        encoder_context->enc_priv_state = NULL;
+    }
+
     intel_batchbuffer_free(encoder_context->base.batch);
     free(encoder_context);
 }

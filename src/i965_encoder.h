@@ -61,6 +61,7 @@ struct intel_encoder_context
     unsigned int quality_range;
     void *vme_context;
     void *mfc_context;
+    void *enc_priv_state;
 
     unsigned int is_tmp_id:1;
     unsigned int low_power_mode:1;
