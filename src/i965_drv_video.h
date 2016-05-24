@@ -159,6 +159,7 @@ struct encode_state
     struct buffer_store *packed_header_param[5];
     struct buffer_store *packed_header_data[5];
     struct buffer_store **slice_params_ext;
+    struct buffer_store *encmb_map;
     int max_slice_params_ext;
     int num_slice_params_ext;
 

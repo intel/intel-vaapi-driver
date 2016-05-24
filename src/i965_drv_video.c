@@ -2090,6 +2090,7 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
             i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_data_ext[i]);
         free(obj_context->codec_state.encode.packed_header_data_ext);
 
+        i965_release_buffer_store(&obj_context->codec_state.encode.encmb_map);
     } else {
         assert(obj_context->codec_state.decode.num_slice_params <= obj_context->codec_state.decode.max_slice_params);
         assert(obj_context->codec_state.decode.num_slice_datas <= obj_context->codec_state.decode.max_slice_datas);
@@ -2361,6 +2362,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     case VAProcFilterParameterBufferType:
     case VAHuffmanTableBufferType:
     case VAProbabilityBufferType:
+    case VAEncMacroblockMapBufferType:
         /* Ok */
         break;
 
@@ -2421,6 +2423,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
     } else if (type == VASliceDataBufferType || 
                type == VAImageBufferType || 
                type == VAEncCodedBufferType ||
+               type == VAEncMacroblockMapBufferType ||
                type == VAProbabilityBufferType) {
 
         /* If the buffer is wrapped, the bo/buffer of buffer_store is bogus.
@@ -2799,6 +2802,7 @@ i965_BeginPicture(VADriverContextP ctx,
         obj_context->codec_state.encode.num_packed_header_data_ext = 0;
         obj_context->codec_state.encode.slice_index = 0;
         obj_context->codec_state.encode.vps_sps_seq_index = 0;
+        i965_release_buffer_store(&obj_context->codec_state.encode.encmb_map);
     } else {
         obj_context->codec_state.decode.current_render_target = render_target;
         i965_release_buffer_store(&obj_context->codec_state.decode.pic_param);
@@ -3064,6 +3068,7 @@ DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(huffman_table, huffman_table)
 /* extended buffer */
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(sequence_parameter_ext, seq_param_ext)
 DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(picture_parameter_ext, pic_param_ext)
+DEF_RENDER_ENCODE_SINGLE_BUFFER_FUNC(encmb_map, encmb_map)
 
 #define DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(name, member) DEF_RENDER_MULTI_BUFFER_FUNC(encode, name, member)
 // DEF_RENDER_ENCODE_MULTI_BUFFER_FUNC(slice_parameter, slice_params)
@@ -3335,6 +3340,10 @@ i965_encoder_render_picture(VADriverContextP ctx,
                                                                  obj_buffer);
             break;
             
+        case VAEncMacroblockMapBufferType:
+            vaStatus = I965_RENDER_ENCODE_BUFFER(encmb_map);
+            break;
+
         default:
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
             break;
