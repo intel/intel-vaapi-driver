@@ -959,6 +959,10 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 if (profile != VAProfileMPEG2Main &&
                     profile != VAProfileMPEG2Simple)
                     attrib_list[i].value |= VA_RC_CBR;
+
+                if (profile == VAProfileVP9Profile0)
+                    attrib_list[i].value |= VA_RC_VBR;
+
                 break;
             } else if (entrypoint == VAEntrypointEncSliceLP) {
                 struct i965_driver_data * const i965 = i965_driver_data(ctx);
