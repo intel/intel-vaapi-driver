@@ -2835,6 +2835,13 @@ i965_BeginPicture(VADriverContextP ctx,
         obj_context->codec_state.encode.slice_index = 0;
         obj_context->codec_state.encode.vps_sps_seq_index = 0;
         i965_release_buffer_store(&obj_context->codec_state.encode.encmb_map);
+
+        if (obj_config->profile == VAProfileVP9Profile0) {
+            for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param); i++)
+                i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[i]);
+
+            i965_release_buffer_store(&obj_context->codec_state.encode.seq_param_ext);
+        }
     } else {
         obj_context->codec_state.decode.current_render_target = render_target;
         i965_release_buffer_store(&obj_context->codec_state.decode.pic_param);
