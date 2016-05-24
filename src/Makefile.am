@@ -98,6 +98,9 @@ source_c = \
 	object_heap.c		\
 	intel_media_common.c		\
 	vp9_probs.c             \
+	gen9_vp9_encoder_kernels.c      \
+	gen9_vp9_const_def.c      \
+	gen9_vp9_encoder.c      \
 	$(NULL)
 
 source_h = \
@@ -146,6 +149,10 @@ source_h = \
 	sysdeps.h		\
 	va_backend_compat.h	\
 	i965_fourcc.h           \
+	gen9_vp9_encoder.h           \
+	gen9_vp9_encapi.h           \
+	gen9_vp9_const_def.h      \
+	gen9_vp9_encoder_kernels.h           \
 	$(NULL)
 
 i965_drv_video_la_LTLIBRARIES	= i965_drv_video.la

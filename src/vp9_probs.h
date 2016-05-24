@@ -227,4 +227,23 @@ extern bool intel_write_uncompressed_header(struct encode_state *encode_state,
                                             int *header_length,
                                             vp9_header_bitoffset *header_bitoffset);
 
+typedef enum {
+    ONLY_4X4            = 0,        // only 4x4 transform used
+    ALLOW_8X8           = 1,        // allow block transform size up to 8x8
+    ALLOW_16X16         = 2,        // allow block transform size up to 16x16
+    ALLOW_32X32         = 3,        // allow block transform size up to 32x32
+    TX_MODE_SELECT      = 4,        // transform specified for each block
+    TX_MODES            = 5,
+} TX_MODE;
+
+typedef enum {
+    SINGLE_REFERENCE      = 0,
+    COMPOUND_REFERENCE    = 1,
+    REFERENCE_MODE_SELECT = 2,
+    REFERENCE_MODES       = 3,
+} REFERENCE_MODE;
+
+extern const unsigned short vp9_quant_dc[256];
+extern const unsigned short vp9_quant_ac[256];
+
 #endif /*VP9_PROBS_H */

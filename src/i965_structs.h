@@ -2201,6 +2201,155 @@ struct gen8_sampler_8x8_avs {
     struct gen8_sampler_8x8_avs_coefficients coefficients1[15];
 };
 
+struct gen9_sampler_8x8_avs
+{
+    struct {
+        unsigned int gain_factor:6;
+        unsigned int weak_edge_threshold:6;
+        unsigned int strong_edge_threshold:6;
+        unsigned int r3x_coefficient:5;
+        unsigned int r3c_coefficient:5;
+        unsigned int pad1:4;
+    } dw0;
+
+    struct {
+        unsigned int pad0;
+    } dw1;
+
+    struct {
+        unsigned int global_noise_estimation:8;
+        unsigned int non_edge_weight:3;
+        unsigned int regular_weight:3;
+        unsigned int strong_edge_weight:3;
+        unsigned int r5x_coefficient:5;
+        unsigned int r5cx_coefficient:5;
+        unsigned int r5c_coefficient:5;
+    } dw2;
+
+    struct {
+	unsigned int sin_alpha:8; /* S0.7 */
+	unsigned int cos_alpha:8; /* S0.7 */
+	unsigned int sat_max:6;
+	unsigned int hue_max:6;
+	unsigned int enable_8tap_adaptive_filter:2;
+	unsigned int ief4_smooth_enable:1;
+	unsigned int skin_ief_enable:1;
+    } dw3;
+
+    struct {
+	unsigned int s3u:11; /* S2.8 */
+	unsigned int shuffle_output_write_back:1;
+	unsigned int diamond_margin:3;
+	unsigned int vy_std_enable:1;
+	unsigned int umid:8;
+	unsigned int vmid:8;
+    } dw4;
+
+    struct {
+	unsigned int diamond_dv:7;
+	unsigned int diamond_th:6;
+	unsigned int diamond_alpha:8;
+	unsigned int hs_margin:3;
+	unsigned int diamond_du:7;
+	unsigned int skin_detailfilter:1;
+    } dw5;
+
+    struct {
+	unsigned int y_point1:8;
+	unsigned int y_point2:8;
+	unsigned int y_point3:8;
+	unsigned int y_point4:8;
+    } dw6;
+
+    struct {
+	unsigned int inv_margin_vyl:16;
+	unsigned int pad0:16;
+    } dw7;
+
+    struct {
+	unsigned int inv_margin_vyu:16;
+	unsigned int p0l:8;
+	unsigned int p1l:8;
+    } dw8;
+
+    struct {
+	unsigned int p2l:8;
+	unsigned int p3l:8;
+	unsigned int b0l:8;
+	unsigned int b1l:8;
+    } dw9;
+
+    struct {
+	unsigned int b2l:8;
+	unsigned int b3l:8;
+	unsigned int s0l:11;
+	unsigned int y_slope2:5;
+    } dw10;
+
+    struct {
+	unsigned int s1l:11;
+	unsigned int s2l:11;
+	unsigned int pad0:10;
+    } dw11;
+
+    struct {
+	unsigned int s3l:11;
+	unsigned int p0u:8;
+	unsigned int p1u:8;
+	unsigned int y_slope1:5;
+    } dw12;
+
+    struct {
+	unsigned int p2u:8;
+	unsigned int p3u:8;
+	unsigned int b0u:8;
+	unsigned int b1u:8;
+    } dw13;
+
+    struct {
+	unsigned int b2u:8;
+	unsigned int b3u:8;
+	unsigned int s0u:11;
+	unsigned int pad0:5;
+    } dw14;
+
+    struct {
+	unsigned int s1u:11;
+	unsigned int s2u:11;
+	unsigned int pad0:10;
+    } dw15;
+
+    /* DW16-DW151 for 17 coeff tabls */
+    struct gen8_sampler_8x8_avs_coefficients coefficients[17];
+
+    struct {
+        unsigned int transition_area_with_8_pixels:3;
+        unsigned int pad0:1;
+        unsigned int transition_area_with_4_pixels:3;
+        unsigned int pad1:1;
+        unsigned int max_derivative_8_pixels:8;
+        unsigned int max_derivative_4_pixels:8;
+        unsigned int default_sharpness_level:8;
+    } dw152;
+
+    struct {
+        unsigned int rgb_adaptive:1;
+        unsigned int adaptive_filter_for_all_channel:1;
+        unsigned int pad0:19;
+        unsigned int bypass_y_adaptive_filtering:1;
+        unsigned int bypass_x_adaptive_filtering:1;
+        unsigned int pad1:9;
+    } dw153;
+
+    unsigned int reserved1[6];
+
+    /* 160-279 for 17..31 avs_coeff */
+    struct gen8_sampler_8x8_avs_coefficients extra_coefficients[15];
+
+    // 280 - 511 (padding to align it to 512 dwords)
+    unsigned int reserved2[232];
+};
+
 #define SURFACE_STATE_PADDED_SIZE_0_GEN7        ALIGN(sizeof(struct gen7_surface_state), 32)
 #define SURFACE_STATE_PADDED_SIZE_1_GEN7        ALIGN(sizeof(struct gen7_surface_state2), 32)
 #define SURFACE_STATE_PADDED_SIZE_GEN7          MAX(SURFACE_STATE_PADDED_SIZE_0_GEN7, SURFACE_STATE_PADDED_SIZE_1_GEN7)
