@@ -380,6 +380,7 @@ gen8_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_cont
                           int width, int height, int pitch, int format,
 			  int index, int is_target)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen8_surface_state *ss;
     dri_bo *ss_bo;
     unsigned int tiling;
@@ -393,6 +394,10 @@ gen8_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_cont
     assert(ss_bo->virtual);
     ss = (struct gen8_surface_state *)((char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index));
     memset(ss, 0, sizeof(*ss));
+
+    if (IS_GEN9(i965->intel.device_info))
+        ss->ss1.surface_mocs = GEN9_CACHE_PTE;
+
     ss->ss0.surface_type = I965_SURFACE_2D;
     ss->ss0.surface_format = format;
     ss->ss8.base_addr = surf_bo->offset + surf_bo_offset;
@@ -424,6 +429,7 @@ gen8_pp_set_surface2_state(VADriverContextP ctx, struct i965_post_processing_con
                            int format, int interleave_chroma,
                            int index)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen8_surface_state2 *ss2;
     dri_bo *ss2_bo;
     unsigned int tiling;
@@ -437,6 +443,10 @@ gen8_pp_set_surface2_state(VADriverContextP ctx, struct i965_post_processing_con
     assert(ss2_bo->virtual);
     ss2 = (struct gen8_surface_state2 *)((char *)ss2_bo->virtual + SURFACE_STATE_OFFSET(index));
     memset(ss2, 0, sizeof(*ss2));
+
+    if (IS_GEN9(i965->intel.device_info))
+        ss2->ss5.surface_object_mocs = GEN9_CACHE_PTE;
+
     ss2->ss6.base_addr = surf_bo->offset + surf_bo_offset;
     ss2->ss1.cbcr_pixel_offset_v_direction = 0;
     ss2->ss1.width = width - 1;

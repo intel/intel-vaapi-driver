@@ -978,4 +978,6 @@
 #define MFC_BITSTREAM_BYTECOUNT_FRAME_REG       0x128A0
 #define MFC_IMAGE_STATUS_CTRL_REG               0x128B8
 
+#define GEN9_CACHE_PTE                  0x02
+
 #endif /* _I965_DEFINES_H_ */
