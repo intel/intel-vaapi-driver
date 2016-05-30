@@ -1244,23 +1244,12 @@ static void
 gen8_mfc_batchbuffer_surfaces_output(VADriverContextP ctx,
                                      struct encode_state *encode_state,
                                      struct intel_encoder_context *encoder_context)
-
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
-    int width_in_mbs = pSequenceParameter->picture_width_in_mbs;
-    int height_in_mbs = pSequenceParameter->picture_height_in_mbs;
-    mfc_context->mfc_batchbuffer_surface.num_blocks = width_in_mbs * height_in_mbs + encode_state->num_slice_params_ext * 8 + 1;
-    mfc_context->mfc_batchbuffer_surface.size_block = 16 * CMD_LEN_IN_OWORD; /* 3 OWORDs */
-    mfc_context->mfc_batchbuffer_surface.pitch = 16;
-    mfc_context->mfc_batchbuffer_surface.bo = dri_bo_alloc(i965->intel.bufmgr, 
-                                                           "MFC batchbuffer",
-                                                           mfc_context->mfc_batchbuffer_surface.num_blocks * mfc_context->mfc_batchbuffer_surface.size_block,
-                                                           0x1000);
+    assert(mfc_context->aux_batchbuffer_surface.bo);
     mfc_context->buffer_suface_setup(ctx,
                                      &mfc_context->gpe_context,
-                                     &mfc_context->mfc_batchbuffer_surface,
+                                     &mfc_context->aux_batchbuffer_surface,
                                      BINDING_TABLE_OFFSET(BIND_IDX_MFC_BATCHBUFFER),
                                      SURFACE_STATE_OFFSET(BIND_IDX_MFC_BATCHBUFFER));
 }
@@ -1602,10 +1591,10 @@ gen8_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
+    dri_bo_reference(mfc_context->aux_batchbuffer_surface.bo);
     gen8_mfc_build_avc_batchbuffer(ctx, encode_state, encoder_context);
-    dri_bo_reference(mfc_context->mfc_batchbuffer_surface.bo);
 
-    return mfc_context->mfc_batchbuffer_surface.bo;
+    return mfc_context->aux_batchbuffer_surface.bo;
 }
 
 #endif
@@ -3712,8 +3701,10 @@ static void gen8_mfc_vp8_init(VADriverContextP ctx,
     dri_bo_unreference(mfc_context->aux_batchbuffer_surface.bo);
     mfc_context->aux_batchbuffer_surface.bo = NULL;
 
-    if (mfc_context->aux_batchbuffer)
+    if (mfc_context->aux_batchbuffer) {
         intel_batchbuffer_free(mfc_context->aux_batchbuffer);
+        mfc_context->aux_batchbuffer = NULL;
+    }
 
     mfc_context->aux_batchbuffer = intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD, slice_batchbuffer_size);
     mfc_context->aux_batchbuffer_surface.bo = mfc_context->aux_batchbuffer->buffer;
