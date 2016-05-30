@@ -24,9 +24,14 @@ INTEL_G75A	= mfc_batchbuffer_hsw.g75a
 INTEL_GEN75_INC	= mfc_batchbuffer_hsw.inc
 INTEL_GEN75_ASM	= $(INTEL_G75A:%.g75a=%.gen75.asm)
 
-INTEL_G9B	= mfc_batchbuffer_avc_intra.g9b mfc_batchbuffer_avc_inter.g9b
-INTEL_G9A	= mfc_batchbuffer_avc_intra.g9a mfc_batchbuffer_avc_inter.g9a
-INTEL_GEN9_INC	= mfc_batchbuffer.inc
+INTEL_G8B	= mfc_batchbuffer_hsw.g8b
+INTEL_G8A	= mfc_batchbuffer_hsw.g8a
+INTEL_GEN8_INC	= mfc_batchbuffer_hsw.inc
+INTEL_GEN8_ASM	= $(INTEL_G9A:%.g9a=%.gen8.asm)
+
+INTEL_G9B	= mfc_batchbuffer_hsw.g9b
+INTEL_G9A	= mfc_batchbuffer_hsw.g9a
+INTEL_GEN9_INC	= mfc_batchbuffer_hsw.inc
 INTEL_GEN9_ASM	= $(INTEL_G9A:%.g9a=%.gen9.asm)
 
 TARGETS  =
@@ -34,12 +39,13 @@ if HAVE_GEN4ASM
 TARGETS += $(INTEL_G6B)
 TARGETS += $(INTEL_G7B)
 TARGETS += $(INTEL_G75B)
+TARGETS += $(INTEL_G8B)
 TARGETS += $(INTEL_G9B)
 endif
 
 all-local: $(TARGETS)
 
-SUFFIXES = .g6a .g6b .g7a .g7b .gen6.asm .gen7.asm .g75a .g75b .gen75.asm .g9a .g9b .gen9.asm
+SUFFIXES = .g6a .g6b .g7a .g7b .gen6.asm .gen7.asm .g75a .g75b .gen75.asm .g9a .g9b .gen9.asm .g8a .g8b .gen8.asm
 
 if HAVE_GEN4ASM
 $(INTEL_GEN6_ASM): $(MFC_CORE) $(MFC_CORE_AVC) $(INTEL_GEN6_INC)
@@ -66,9 +72,17 @@ $(INTEL_GEN75_ASM): $(MFC_CORE_HSW) $(INTEL_GEN75_INC)
 .gen75.asm.g75b:
 	$(AM_V_GEN)$(GEN4ASM) -g 7.5 -o $@ $<
 
-$(INTEL_GEN9_ASM): $(MFC_CORE) $(MFC_CORE_AVC) $(INTEL_GEN9_INC)
+$(INTEL_GEN8_ASM): $(MFC_CORE_HSW) $(INTEL_GEN8_INC)
+.g8a.gen8.asm:
+	$(AM_V_GEN)cpp -P $< > _mfc0.$@			&& \
+	m4 _mfc0.$@ > $@				&& \
+	rm _mfc0.$@
+.gen8.asm.g8b:
+	$(AM_V_GEN)$(GEN4ASM) -g 8 -o $@ $<
+
+$(INTEL_GEN9_ASM): $(MFC_CORE_HSW) $(INTEL_GEN8_INC)
 .g9a.gen9.asm:
-	$(AM_V_GEN)cpp -P -DDEV_IVB $< > _mfc0.$@ 	&& \
+	$(AM_V_GEN)cpp -P $< > _mfc0.$@			&& \
 	m4 _mfc0.$@ > $@				&& \
 	rm _mfc0.$@
 .gen9.asm.g9b:
@@ -76,7 +90,7 @@ $(INTEL_GEN9_ASM): $(MFC_CORE) $(MFC_CORE_AVC) $(INTEL_GEN9_INC)
 
 endif
 
-CLEANFILES = $(INTEL_GEN6_ASM) $(INTEL_GEN7_ASM) $(INTEL_GEN75_ASM) $(INTEL_GEN9_ASM)
+CLEANFILES = $(INTEL_GEN6_ASM) $(INTEL_GEN7_ASM) $(INTEL_GEN75_ASM) $(INTEL_GEN9_ASM) $(INTEL_GEN8_ASM)
 
 EXTRA_DIST = \
 	$(INTEL_G6A)		\
@@ -88,6 +102,8 @@ EXTRA_DIST = \
 	$(INTEL_GEN6_INC)	\
 	$(INTEL_GEN7_INC)	\
 	$(INTEL_GEN75_INC)	\
+	$(INTEL_G8A)		\
+	$(INTEL_G8B)		\
 	$(INTEL_G9A)		\
 	$(INTEL_G9B)		\
 	$(INTEL_GEN9_INC)	\
