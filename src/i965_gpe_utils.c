@@ -990,8 +990,6 @@ gen8_gpe_state_base_address(VADriverContextP ctx,
         OUT_BATCH(batch, 0);
     }
 
-    OUT_BATCH(batch, 0);
-
 	/* DW12. Size limitation */
     OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//General State Access Upper Bound	
     OUT_BATCH(batch, 0xFFFFF000 | BASE_ADDRESS_MODIFY);		//Dynamic State Access Upper Bound
