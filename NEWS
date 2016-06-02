@@ -1,5 +1,15 @@
-libva-intel-driver NEWS -- summary of changes.  2016-03-15
-Copyright (C) 2009-2015 Intel Corporation
+libva-intel-driver NEWS -- summary of changes.  2016-06-xx
+Copyright (C) 2009-2016 Intel Corporation
+
+Version 1.7.1 - DD.Jun.2016
+* Add support VP9 8bit encoding on KBL
+* Add support for low-power/high-performance H.264 encoder on SKL
+* Fix incorrect color space conversion in driver
+  (https://bugs.freedesktop.org/show_bug.cgi?id=94845)
+* Fix FPS caculation for HEVC encoder
+* Fix VP9 10bit decoding issue on KBL
+* Fix the noise issue when VA_FILTER_SCALING_HQ upscaling from 1280x720 to 1920x1080 with YUY2 format on BDW+
+  (https://bugs.freedesktop.org/show_bug.cgi?id=94765)
 
 Version 1.7.0 - 15.Mar.2016
 * Add support for Kabylake
