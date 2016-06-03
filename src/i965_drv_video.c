@@ -4351,14 +4351,12 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
             image->format.red_mask = 0x000000ff;
             image->format.green_mask = 0x0000ff00;
             image->format.blue_mask = 0x00ff0000;
-            image->format.alpha_mask = 0x00000000;
             break;
         case VA_FOURCC_BGRA:
         case VA_FOURCC_BGRX:
             image->format.red_mask = 0x00ff0000;
             image->format.green_mask = 0x0000ff00;
             image->format.blue_mask = 0x000000ff;
-            image->format.alpha_mask = 0x00000000;
             break;
         default:
             goto error;
@@ -4367,10 +4365,12 @@ VAStatus i965_DeriveImage(VADriverContextP ctx,
         switch (image->format.fourcc) {
         case VA_FOURCC_RGBA:
         case VA_FOURCC_BGRA:
+            image->format.alpha_mask = 0xff000000;
             image->format.depth = 32;
             break;
         case VA_FOURCC_RGBX:
         case VA_FOURCC_BGRX:
+            image->format.alpha_mask = 0x00000000;
             image->format.depth = 24;
             break;
         default:
