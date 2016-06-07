@@ -735,7 +735,7 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
         if(HAS_VP9_DECODING_PROFILE(i965, profile))
             entrypoint_list[n++] = VAEntrypointVLD;
 
-        if (HAS_VP9_ENCODING(i965))
+        if (HAS_VP9_ENCODING(i965) && (profile == VAProfileVP9Profile0))
             entrypoint_list[n++] = VAEntrypointEncSlice;
 
         if(profile == VAProfileVP9Profile0) {
