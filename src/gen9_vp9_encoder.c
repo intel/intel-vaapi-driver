@@ -272,6 +272,11 @@ gen9_vp9_init_check_surfaces(VADriverContextP ctx,
                         &vp9_surface->scaled_4x_surface_id);
 
     vp9_surface->scaled_4x_surface_obj = SURFACE(vp9_surface->scaled_4x_surface_id);
+
+    if (!vp9_surface->scaled_4x_surface_obj) {
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
     i965_check_alloc_surface_bo(ctx, vp9_surface->scaled_4x_surface_obj, 1,
                                 VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
@@ -284,6 +289,11 @@ gen9_vp9_init_check_surfaces(VADriverContextP ctx,
                         1,
                         &vp9_surface->scaled_16x_surface_id);
     vp9_surface->scaled_16x_surface_obj = SURFACE(vp9_surface->scaled_16x_surface_id);
+
+    if (!vp9_surface->scaled_16x_surface_obj) {
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
     i965_check_alloc_surface_bo(ctx, vp9_surface->scaled_16x_surface_obj, 1,
                                 VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
@@ -344,6 +354,11 @@ gen9_vp9_check_dys_surfaces(VADriverContextP ctx,
                         1,
                         &vp9_surface->dys_surface_id);
     vp9_surface->dys_surface_obj = SURFACE(vp9_surface->dys_surface_id);
+
+    if (!vp9_surface->dys_surface_obj) {
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
     i965_check_alloc_surface_bo(ctx, vp9_surface->dys_surface_obj, 1,
                                 VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
@@ -358,6 +373,11 @@ gen9_vp9_check_dys_surfaces(VADriverContextP ctx,
                         &vp9_surface->dys_4x_surface_id);
 
     vp9_surface->dys_4x_surface_obj = SURFACE(vp9_surface->dys_4x_surface_id);
+
+    if (!vp9_surface->dys_4x_surface_obj) {
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
     i965_check_alloc_surface_bo(ctx, vp9_surface->dys_4x_surface_obj, 1,
                                 VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
@@ -370,6 +390,11 @@ gen9_vp9_check_dys_surfaces(VADriverContextP ctx,
                         1,
                         &vp9_surface->dys_16x_surface_id);
     vp9_surface->dys_16x_surface_obj = SURFACE(vp9_surface->dys_16x_surface_id);
+
+    if (!vp9_surface->dys_16x_surface_obj) {
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+    }
+
     i965_check_alloc_surface_bo(ctx, vp9_surface->dys_16x_surface_obj, 1,
                                 VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
@@ -1135,6 +1160,10 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
     segment_param  = param->psegment_param;
 
     cmd = gen8p_gpe_context_map_curbe(gpe_context);
+
+    if (!cmd)
+        return;
+
     memset(cmd, 0, sizeof(vp9_brc_curbe_data));
 
     if (!vp9_state->dys_enabled)
@@ -1548,7 +1577,7 @@ intel_vp9enc_construct_picstate_batchbuf(VADriverContextP ctx,
     pdata = i965_map_gpe_resource(gpe_resource);
     vp9_state = (struct gen9_vp9_state *) encoder_context->enc_priv_state;
 
-    if (!vp9_state || !vp9_state->pic_param)
+    if (!vp9_state || !vp9_state->pic_param || !pdata)
         return;
 
     pic_param = vp9_state->pic_param;
@@ -1954,6 +1983,10 @@ gen9_vp9_brc_update_kernel(VADriverContextP ctx,
     {
         char *brc_const_buffer;
         brc_const_buffer = i965_map_gpe_resource(&vme_context->res_brc_const_data_buffer);
+
+        if (!brc_const_buffer)
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+
         if (vp9_state->picture_coding_type)
             memcpy(brc_const_buffer, vp9_brc_const_data_p_g9,
                    sizeof(vp9_brc_const_data_p_g9));
@@ -2025,6 +2058,10 @@ void gen9_vp9_set_curbe_me(VADriverContextP ctx,
         enc_media_state = VP9_MEDIA_STATE_4X_ME;
 
     me_cmd = gen8p_gpe_context_map_curbe(gpe_context);
+
+    if (!me_cmd)
+        return;
+
     memset(me_cmd, 0, sizeof(vp9_me_curbe_data));
 
     me_cmd->dw1.max_num_mvs           = 0x10;
@@ -2362,6 +2399,10 @@ gen9_vp9_set_curbe_scaling_cm(VADriverContextP ctx,
     vp9_scaling4x_curbe_data_cm *curbe_cmd;
 
     curbe_cmd = gen8p_gpe_context_map_curbe(gpe_context);
+
+    if (!curbe_cmd)
+        return;
+
     memset(curbe_cmd, 0, sizeof(vp9_scaling4x_curbe_data_cm));
 
     curbe_cmd->dw0.input_picture_width = curbe_param->input_picture_width;
@@ -2549,7 +2590,14 @@ static void
 gen9_vp9_dys_set_sampler_state(struct i965_gpe_context *gpe_context)
 {
     struct gen9_sampler_8x8_avs                *sampler_cmd;
+
+    if (!gpe_context)
+        return;
+
     dri_bo_map(gpe_context->dynamic_state.bo, 1);
+
+    if (!gpe_context->dynamic_state.bo->virtual)
+        return;
 
     sampler_cmd = (struct gen9_sampler_8x8_avs *)
        (gpe_context->dynamic_state.bo->virtual + gpe_context->sampler_offset);
@@ -2623,6 +2671,10 @@ gen9_vp9_set_curbe_dys(VADriverContextP ctx,
     vp9_dys_curbe_data  *curbe_cmd;
 
     curbe_cmd = gen8p_gpe_context_map_curbe(gpe_context);
+
+    if (!curbe_cmd)
+        return;
+
     memset(curbe_cmd, 0, sizeof(vp9_dys_curbe_data));
 
     curbe_cmd->dw0.input_frame_width    = curbe_param->input_width;
@@ -2780,7 +2832,8 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
                             &dys_kernel_param);
     }
 
-    if (vp9_state->dys_ref_frame_flag & VP9_LAST_REF) {
+    if ((vp9_state->dys_ref_frame_flag & VP9_LAST_REF) &&
+         vp9_state->last_ref_obj) {
         obj_surface = vp9_state->last_ref_obj;
         vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -2832,7 +2885,8 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
         }
     }
 
-    if (vp9_state->dys_ref_frame_flag & VP9_GOLDEN_REF) {
+    if ((vp9_state->dys_ref_frame_flag & VP9_GOLDEN_REF) &&
+         vp9_state->golden_ref_obj) {
         obj_surface = vp9_state->golden_ref_obj;
         vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -2884,7 +2938,8 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
         }
     }
 
-    if (vp9_state->dys_ref_frame_flag & VP9_ALT_REF) {
+    if ((vp9_state->dys_ref_frame_flag & VP9_ALT_REF) &&
+         vp9_state->alt_ref_obj) {
         obj_surface = vp9_state->alt_ref_obj;
         vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -2969,6 +3024,10 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
     }
 
     curbe_cmd = gen8p_gpe_context_map_curbe(gpe_context);
+
+    if (!curbe_cmd)
+        return;
+
     memset(curbe_cmd, 0, sizeof(vp9_mbenc_curbe_data));
 
     if (vp9_state->dys_in_use)
@@ -3843,6 +3902,10 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
         encode_state->seq_param_ext->buffer)
         seq_param = (VAEncSequenceParameterBufferVP9 *)encode_state->seq_param_ext->buffer;
 
+    if (!seq_param) {
+        seq_param = &vp9_state->bogus_seq_param;
+    }
+
     vp9_state->pic_param = pic_param;
     vp9_state->segment_param = seg_param;
     vp9_state->seq_param = seq_param;
@@ -4051,7 +4114,8 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
         !pic_param->pic_flags.bits.intra_only) {
         vp9_state->dys_ref_frame_flag = vp9_state->ref_frame_flag;
 
-        if (vp9_state->ref_frame_flag & VP9_LAST_REF) {
+        if ((vp9_state->ref_frame_flag & VP9_LAST_REF) &&
+             vp9_state->last_ref_obj) {
             obj_surface = vp9_state->last_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -4059,7 +4123,8 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                 vp9_state->frame_height == vp9_priv_surface->frame_height)
                 vp9_state->dys_ref_frame_flag &= ~(VP9_LAST_REF);
         }
-        if (vp9_state->ref_frame_flag & VP9_GOLDEN_REF) {
+        if ((vp9_state->ref_frame_flag & VP9_GOLDEN_REF) &&
+             vp9_state->golden_ref_obj) {
             obj_surface = vp9_state->golden_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -4067,7 +4132,8 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                 vp9_state->frame_height == vp9_priv_surface->frame_height)
                 vp9_state->dys_ref_frame_flag &= ~(VP9_GOLDEN_REF);
         }
-        if (vp9_state->ref_frame_flag & VP9_ALT_REF) {
+        if ((vp9_state->ref_frame_flag & VP9_ALT_REF) &&
+             vp9_state->alt_ref_obj) {
             obj_surface = vp9_state->alt_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -4214,7 +4280,8 @@ gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
     }
 
     if (vp9_state->dys_ref_frame_flag) {
-        if (vp9_state->dys_ref_frame_flag & VP9_LAST_REF) {
+        if ((vp9_state->dys_ref_frame_flag & VP9_LAST_REF) &&
+             vp9_state->last_ref_obj) {
             obj_surface = vp9_state->last_ref_obj;
             surface_param.frame_width = vp9_state->frame_width;
             surface_param.frame_height = vp9_state->frame_height;
@@ -4225,7 +4292,8 @@ gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
             if (va_status)
                 return va_status;
         }
-        if (vp9_state->dys_ref_frame_flag & VP9_GOLDEN_REF) {
+        if ((vp9_state->dys_ref_frame_flag & VP9_GOLDEN_REF) &&
+             vp9_state->golden_ref_obj) {
             obj_surface = vp9_state->golden_ref_obj;
             surface_param.frame_width = vp9_state->frame_width;
             surface_param.frame_height = vp9_state->frame_height;
@@ -4236,7 +4304,8 @@ gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
             if (va_status)
                 return va_status;
         }
-        if (vp9_state->dys_ref_frame_flag & VP9_ALT_REF) {
+        if ((vp9_state->dys_ref_frame_flag & VP9_ALT_REF) &&
+             vp9_state->alt_ref_obj) {
             obj_surface = vp9_state->alt_ref_obj;
             surface_param.frame_width = vp9_state->frame_width;
             surface_param.frame_height = vp9_state->frame_height;
@@ -4843,6 +4912,9 @@ intel_vp9enc_refresh_frame_internal_buffers(VADriverContextP ctx,
     i965_zero_gpe_resource(&pak_context->res_compressed_input_buffer);
     buffer = i965_map_gpe_resource(&pak_context->res_compressed_input_buffer);
 
+    if (!buffer)
+        return;
+
     /* write tx_size */
     if ((pic_param->luma_ac_qindex == 0) &&
         (pic_param->luma_dc_qindex_delta == 0) &&
@@ -5357,6 +5429,9 @@ intel_vp9enc_construct_pak_insertobj_batchbuffer(VADriverContextP ctx,
     uncompressed_header_length = vp9_state->header_length;
     cmd_ptr = i965_map_gpe_resource(obj_batch_buffer);
 
+    if (!cmd_ptr)
+        return;
+
     bits_in_last_dw = uncompressed_header_length % 4;
     bits_in_last_dw *= 8;
 
@@ -5437,6 +5512,10 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
             uint8_t *prob_ptr;
 
             prob_ptr = i965_map_gpe_resource(&pak_context->res_prob_buffer);
+
+            if (!prob_ptr)
+                return;
+
             /* copy the current fc to vp9_prob buffer */
             memcpy(prob_ptr, &vp9_state->vp9_current_fc, sizeof(FRAME_CONTEXT));
             if ((pic_param->pic_flags.bits.frame_type == HCP_VP9_KEY_FRAME) ||

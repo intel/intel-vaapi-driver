@@ -1908,6 +1908,7 @@ struct gen9_vp9_state {
     struct object_surface                       *alt_ref_obj;
 
     VAEncSequenceParameterBufferVP9 *seq_param;
+    VAEncSequenceParameterBufferVP9 bogus_seq_param;
     VAEncPictureParameterBufferVP9  *pic_param;
     VAEncMiscParameterTypeVP9PerSegmantParam *segment_param;
     double   brc_init_current_target_buf_full_in_bits;
