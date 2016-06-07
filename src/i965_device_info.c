@@ -321,15 +321,17 @@ static struct hw_codec_info chv_hw_codec_info = {
 
 extern struct hw_context *gen9_enc_hw_context_init(VADriverContextP, struct object_config *);
 extern void gen9_post_processing_context_init(VADriverContextP, void *, struct intel_batchbuffer *);
+extern void gen9_max_resolution(struct i965_driver_data *, struct object_config *, int *, int *);
 static struct hw_codec_info skl_hw_codec_info = {
     .dec_hw_context_init = gen9_dec_hw_context_init,
     .enc_hw_context_init = gen9_enc_hw_context_init,
     .proc_hw_context_init = gen75_proc_context_init,
     .render_init = gen9_render_init,
     .post_processing_context_init = gen9_post_processing_context_init,
+    .max_resolution = gen9_max_resolution,
 
-    .max_width = 4096,
-    .max_height = 4096,
+    .max_width = 4096,  /* default. See max_resolution */
+    .max_height = 4096, /* default. See max_resolution */
     .min_linear_wpitch = 128,
     .min_linear_hpitch = 16,
 
@@ -378,9 +380,10 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .proc_hw_context_init = gen75_proc_context_init,
     .render_init = gen9_render_init,
     .post_processing_context_init = gen9_post_processing_context_init,
+    .max_resolution = gen9_max_resolution,
 
-    .max_width = 4096,
-    .max_height = 4096,
+    .max_width = 4096,  /* default. See max_resolution */
+    .max_height = 4096, /* default. See max_resolution */
     .min_linear_wpitch = 128,
     .min_linear_hpitch = 16,
 
@@ -430,9 +433,10 @@ static struct hw_codec_info kbl_hw_codec_info = {
     .proc_hw_context_init = gen75_proc_context_init,
     .render_init = gen9_render_init,
     .post_processing_context_init = gen9_post_processing_context_init,
+    .max_resolution = gen9_max_resolution,
 
-    .max_width = 4096,
-    .max_height = 4096,
+    .max_width = 4096,   /* default. See max_resolution */
+    .max_height = 4096,  /* default. See max_resolution */
     .min_linear_wpitch = 128,
     .min_linear_hpitch = 16,
 

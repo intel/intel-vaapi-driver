@@ -1989,3 +1989,17 @@ gen9_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
         return gen8_dec_hw_context_init(ctx, obj_config);
     }
 }
+
+void gen9_max_resolution(struct i965_driver_data *i965,
+                         struct object_config *obj_config,
+                         int *w,                                /* out */
+                         int *h)                                /* out */
+{
+    if (obj_config->profile == VAProfileJPEGBaseline) {
+        *w = 8192;
+        *h = 8192;
+    } else {
+        *w = i965->codec_info->max_width;
+        *h = i965->codec_info->max_height;
+    }
+}
