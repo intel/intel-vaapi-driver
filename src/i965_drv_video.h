@@ -354,6 +354,8 @@ struct i965_filter
     int ring;
 };
 
+struct i965_driver_data;
+
 struct hw_codec_info
 {
     struct hw_context *(*dec_hw_context_init)(VADriverContextP, struct object_config *);
@@ -362,6 +364,13 @@ struct hw_codec_info
     bool (*render_init)(VADriverContextP);
     void (*post_processing_context_init)(VADriverContextP, void *, struct intel_batchbuffer *);
     void (*preinit_hw_codec)(VADriverContextP, struct hw_codec_info *);
+
+    /**
+     * Allows HW info to support per-codec max resolution.  If this functor is
+     * not initialized, then @max_width and @max_height will be used as the
+     * default maximum resolution for all codecs on this HW info.
+     */
+    void (*max_resolution)(struct i965_driver_data *, struct object_config *, int *, int *);
 
     int max_width;
     int max_height;

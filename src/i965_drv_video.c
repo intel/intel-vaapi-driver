@@ -2130,6 +2130,20 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
     object_heap_free(heap, obj);
 }
 
+static inline void
+max_resolution(struct i965_driver_data *i965,
+               struct object_config *obj_config,
+               int *w,                                  /* out */
+               int *h)                                  /* out */
+{
+    if (i965->codec_info->max_resolution) {
+        i965->codec_info->max_resolution(i965, obj_config, w, h);
+    } else {
+        *w = i965->codec_info->max_width;
+        *h = i965->codec_info->max_height;
+    }
+}
+
 VAStatus
 i965_CreateContext(VADriverContextP ctx,
                    VAConfigID config_id,
@@ -2147,14 +2161,18 @@ i965_CreateContext(VADriverContextP ctx,
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int contextID;
     int i;
+    int max_width;
+    int max_height;
 
     if (NULL == obj_config) {
         vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
         return vaStatus;
     }
 
-    if (picture_width > i965->codec_info->max_width ||
-        picture_height > i965->codec_info->max_height) {
+    max_resolution(i965, obj_config, &max_width, &max_height);
+
+    if (picture_width > max_width ||
+        picture_height > max_height) {
         vaStatus = VA_STATUS_ERROR_RESOLUTION_NOT_SUPPORTED;
         return vaStatus;
     }
@@ -5485,7 +5503,9 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
     struct object_config *obj_config;
     int i = 0;
     VASurfaceAttrib *attribs = NULL;
-    
+    int max_width;
+    int max_height;
+
     if (config == VA_INVALID_ID)
         return VA_STATUS_ERROR_INVALID_CONFIG;
 
@@ -5873,16 +5893,18 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
     attribs[i].value.value.p = NULL; /* ignore */
     i++;
 
+    max_resolution(i965, obj_config, &max_width, &max_height);
+
     attribs[i].type = VASurfaceAttribMaxWidth;
     attribs[i].value.type = VAGenericValueTypeInteger;
     attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
-    attribs[i].value.value.i = i965->codec_info->max_width;
+    attribs[i].value.value.i = max_width;
     i++;
 
     attribs[i].type = VASurfaceAttribMaxHeight;
     attribs[i].value.type = VAGenericValueTypeInteger;
     attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
-    attribs[i].value.value.i = i965->codec_info->max_height;
+    attribs[i].value.value.i = max_height;
     i++;
 
     if (i > *num_attribs) {
