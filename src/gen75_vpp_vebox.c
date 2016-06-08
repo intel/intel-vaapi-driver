@@ -1500,16 +1500,18 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
      return 0;
 }
 
-int hsw_veb_post_format_convert(VADriverContextP ctx,
+VAStatus
+hsw_veb_post_format_convert(VADriverContextP ctx,
                            struct intel_vebox_context *proc_ctx)
 {
     struct object_surface *obj_surface = NULL;
+    VAStatus va_status = VA_STATUS_SUCCESS;
     
     obj_surface = proc_ctx->frame_store[proc_ctx->current_output].obj_surface;
 
     if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
         /* copy the saved frame in the second call */
-        vpp_surface_convert(ctx, obj_surface, proc_ctx->surface_output_object);
+        va_status = vpp_surface_convert(ctx, obj_surface, proc_ctx->surface_output_object);
     } else if(!(proc_ctx->format_convert_flags & POST_FORMAT_CONVERT) &&
        !(proc_ctx->format_convert_flags & POST_SCALING_CONVERT)){
         /* Output surface format is covered by vebox pipeline and 
@@ -1518,7 +1520,7 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
     } else if ((proc_ctx->format_convert_flags & POST_FORMAT_CONVERT) &&
                !(proc_ctx->format_convert_flags & POST_SCALING_CONVERT)){
        /* convert and copy NV12 to YV12/IMC3/IMC2/RGBA output*/
-        vpp_surface_convert(ctx, obj_surface, proc_ctx->surface_output_object);
+        va_status = vpp_surface_convert(ctx, obj_surface, proc_ctx->surface_output_object);
 
     } else if(proc_ctx->format_convert_flags & POST_SCALING_CONVERT) {
         VAProcPipelineParameterBuffer * const pipe = proc_ctx->pipeline_param;
@@ -1532,20 +1534,10 @@ int hsw_veb_post_format_convert(VADriverContextP ctx,
         /* second step: color format convert and copy to output */
         obj_surface = proc_ctx->surface_output_object;
 
-        if(obj_surface->fourcc ==  VA_FOURCC_NV12 ||
-           obj_surface->fourcc ==  VA_FOURCC_YV12 ||
-           obj_surface->fourcc ==  VA_FOURCC_I420 ||
-           obj_surface->fourcc ==  VA_FOURCC_YUY2 ||
-           obj_surface->fourcc ==  VA_FOURCC_IMC1 ||
-           obj_surface->fourcc ==  VA_FOURCC_IMC3 ||
-           obj_surface->fourcc ==  VA_FOURCC_RGBA) {
-            vpp_surface_convert(ctx, proc_ctx->surface_output_scaled_object, obj_surface);
-       }else {
-           assert(0); 
-       }
+	va_status = vpp_surface_convert(ctx, proc_ctx->surface_output_scaled_object, obj_surface);
    }
 
-    return 0;
+    return va_status;
 }
 
 static VAStatus
@@ -1714,9 +1706,9 @@ gen75_vebox_process_picture(VADriverContextP ctx,
         intel_batchbuffer_flush(proc_ctx->batch);
     }
 
-    hsw_veb_post_format_convert(ctx, proc_ctx);
+    status = hsw_veb_post_format_convert(ctx, proc_ctx);
      
-    return VA_STATUS_SUCCESS;
+    return status;
 }
 
 void gen75_vebox_context_destroy(VADriverContextP ctx, 
@@ -1944,9 +1936,9 @@ gen8_vebox_process_picture(VADriverContextP ctx,
         intel_batchbuffer_flush(proc_ctx->batch);
     }
 
-    hsw_veb_post_format_convert(ctx, proc_ctx);
+    status = hsw_veb_post_format_convert(ctx, proc_ctx);
      
-    return VA_STATUS_SUCCESS;
+    return status;
 }
 
 
@@ -2412,7 +2404,7 @@ gen9_vebox_process_picture(VADriverContextP ctx,
         intel_batchbuffer_flush(proc_ctx->batch);
     }
 
-    hsw_veb_post_format_convert(ctx, proc_ctx);
+    status = hsw_veb_post_format_convert(ctx, proc_ctx);
 
-    return VA_STATUS_SUCCESS;
+    return status;
 }
