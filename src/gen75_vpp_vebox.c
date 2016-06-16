@@ -923,6 +923,7 @@ void hsw_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
         dri_bo *iecp_bo = proc_ctx->iecp_state_table.bo;
         dri_bo_map(iecp_bo, 1);
         proc_ctx->iecp_state_table.ptr = iecp_bo->virtual;
+        memset(proc_ctx->iecp_state_table.ptr, 0, 97 * 4);
 
         hsw_veb_iecp_std_table(ctx, proc_ctx);
         hsw_veb_iecp_ace_table(ctx, proc_ctx);
@@ -2196,6 +2197,7 @@ void skl_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
         dri_bo *iecp_bo = proc_ctx->iecp_state_table.bo;
         dri_bo_map(iecp_bo, 1);
         proc_ctx->iecp_state_table.ptr = iecp_bo->virtual;
+        memset(proc_ctx->iecp_state_table.ptr, 0, 90 * 4);
 
         hsw_veb_iecp_std_table(ctx, proc_ctx);
         hsw_veb_iecp_ace_table(ctx, proc_ctx);
