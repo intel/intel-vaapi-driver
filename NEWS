@@ -1,7 +1,7 @@
-libva-intel-driver NEWS -- summary of changes.  2016-06-xx
+libva-intel-driver NEWS -- summary of changes.  2016-06-21
 Copyright (C) 2009-2016 Intel Corporation
 
-Version 1.7.1 - DD.Jun.2016
+Version 1.7.1 - 21.Jun.2016
 * Add support VP9 8bit encoding on KBL
 * Add support for low-power/high-performance H.264 encoder on SKL
 * Fix incorrect color space conversion in driver
