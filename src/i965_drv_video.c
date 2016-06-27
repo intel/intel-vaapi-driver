@@ -4162,10 +4162,12 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         case VA_FOURCC_YV16:
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->width = ALIGN(obj_surface->cb_cr_width, i965->codec_info->min_linear_wpitch) * 2;
             obj_surface->cb_cr_height = obj_surface->orig_height;
             obj_surface->y_cr_offset = obj_surface->height;
             obj_surface->y_cb_offset = obj_surface->y_cr_offset + ALIGN(obj_surface->cb_cr_height, 32) / 2;
             obj_surface->cb_cr_pitch = obj_surface->width / 2;
+            region_width = obj_surface->width;
             region_height = obj_surface->height + ALIGN(obj_surface->cb_cr_height, 32);
             break;
 
@@ -4180,8 +4182,10 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             }
 
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->width = ALIGN(obj_surface->cb_cr_width, i965->codec_info->min_linear_wpitch) * 2;
             obj_surface->cb_cr_height = obj_surface->orig_height / 2;
             obj_surface->cb_cr_pitch = obj_surface->width / 2;
+            region_width = obj_surface->width;
             region_height = obj_surface->height + obj_surface->height / 2;
             break;
 
