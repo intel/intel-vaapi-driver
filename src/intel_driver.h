@@ -239,4 +239,6 @@ struct intel_region {
 
 #define IS_GLK(device_info)             (device_info->is_glklake)
 
+#define IS_GEN10(device_info)           (device_info->gen == 10)
+
 #endif /* _INTEL_DRIVER_H_ */

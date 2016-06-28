@@ -65,7 +65,7 @@ static VAStatus
 gen75_vpp_vebox(VADriverContextP ctx,
                 struct intel_video_process_context* proc_ctx)
 {
-    VAStatus va_status = VA_STATUS_SUCCESS;
+    VAStatus va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
     VAProcPipelineParameterBuffer* pipeline_param = proc_ctx->pipeline_param;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
@@ -84,6 +84,8 @@ gen75_vpp_vebox(VADriverContextP ctx,
         va_status = gen8_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
     else if (IS_GEN9(i965->intel.device_info))
         va_status = gen9_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
+    else if (IS_GEN10(i965->intel.device_info))
+        va_status = gen10_vebox_process_picture(ctx, proc_ctx->vpp_vebox_ctx);
 
     return va_status;
 }

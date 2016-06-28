@@ -171,4 +171,7 @@ VAStatus gen8_vebox_process_picture(VADriverContextP ctx,
 VAStatus gen9_vebox_process_picture(VADriverContextP ctx,
                                     struct intel_vebox_context *proc_ctx);
 
+VAStatus gen10_vebox_process_picture(VADriverContextP ctx,
+                                     struct intel_vebox_context *proc_ctx);
+
 #endif

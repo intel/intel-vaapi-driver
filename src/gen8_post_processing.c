@@ -410,7 +410,8 @@ gen8_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_cont
     ss = (struct gen8_surface_state *)((char *)ss_bo->virtual + SURFACE_STATE_OFFSET(index));
     memset(ss, 0, sizeof(*ss));
 
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         ss->ss1.surface_mocs = GEN9_CACHE_PTE;
 
     ss->ss0.surface_type = I965_SURFACE_2D;
@@ -459,7 +460,8 @@ gen8_pp_set_surface2_state(VADriverContextP ctx, struct i965_post_processing_con
     ss2 = (struct gen8_surface_state2 *)((char *)ss2_bo->virtual + SURFACE_STATE_OFFSET(index));
     memset(ss2, 0, sizeof(*ss2));
 
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         ss2->ss5.surface_object_mocs = GEN9_CACHE_PTE;
 
     ss2->ss6.base_addr = surf_bo->offset + surf_bo_offset;

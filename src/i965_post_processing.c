@@ -5368,6 +5368,8 @@ vebox_processing_simple(VADriverContextP ctx,
 
     if (IS_GEN9(i965->intel.device_info))
         status = gen9_vebox_process_picture(ctx, pp_context->vebox_proc_ctx);
+    else if (IS_GEN10(i965->intel.device_info))
+        status = gen10_vebox_process_picture(ctx, pp_context->vebox_proc_ctx);
 
     return status;
 }
@@ -6205,7 +6207,8 @@ i965_proc_picture(VADriverContextP ctx,
 
     if (IS_GEN7(i965->intel.device_info) ||
         IS_GEN8(i965->intel.device_info) ||
-        IS_GEN9(i965->intel.device_info)) {
+        IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info)) {
         unsigned int saved_filter_flag;
         struct i965_post_processing_context *i965pp_context = i965->pp_context;
 

@@ -220,9 +220,11 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
     if (IS_GEN6(intel->device_info) ||
         IS_GEN7(intel->device_info) ||
         IS_GEN8(intel->device_info) ||
-        IS_GEN9(intel->device_info)) {
+        IS_GEN9(intel->device_info) ||
+        IS_GEN10(intel->device_info)) {
         if (ring_flag == I915_EXEC_RENDER) {
-            if (IS_GEN8(intel->device_info) || IS_GEN9(intel->device_info)) {
+            if (IS_GEN8(intel->device_info) || IS_GEN9(intel->device_info) ||
+                IS_GEN10(intel->device_info)) {
                 BEGIN_BATCH(batch, 6);
                 OUT_BATCH(batch, CMD_PIPE_CONTROL | (6 - 2));
 
