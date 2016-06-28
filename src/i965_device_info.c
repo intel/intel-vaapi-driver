@@ -641,6 +641,68 @@ static struct hw_codec_info cfl_hw_codec_info = {
     },
 };
 
+static struct hw_codec_info cnl_hw_codec_info = {
+    .dec_hw_context_init = gen9_dec_hw_context_init,
+    .enc_hw_context_init = gen9_enc_hw_context_init,
+    .proc_hw_context_init = gen75_proc_context_init,
+    .render_init = gen9_render_init,
+    .post_processing_context_init = gen9_post_processing_context_init,
+    .max_resolution = gen9_max_resolution,
+    .preinit_hw_codec = gen9_hw_codec_preinit,
+
+    .max_width = 4096,   /* default. See max_resolution */
+    .max_height = 4096,  /* default. See max_resolution */
+    .min_linear_wpitch = 64,
+    .min_linear_hpitch = 16,
+
+    .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) | VA_PROFILE_MASK(H264MultiviewHigh)),
+    .vp9_dec_profiles = VP9_PROFILE_MASK(0) | VP9_PROFILE_MASK(2),
+    .vp9_enc_profiles = VP9_PROFILE_MASK(0),
+
+    .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
+    .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
+    .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
+    .hevc_dec_chroma_formats = EXTRA_HEVC_DEC_CHROMA_FORMATS,
+    .vp9_dec_chroma_formats = EXTRA_VP9_DEC_CHROMA_FORMATS,
+
+    .has_mpeg2_decoding = 1,
+    .has_mpeg2_encoding = 1,
+    .has_h264_decoding = 1,
+    .has_h264_encoding = 1,
+    .has_vc1_decoding = 1,
+    .has_jpeg_decoding = 1,
+    .has_jpeg_encoding = 1,
+    .has_vpp = 1,
+    .has_accelerated_getimage = 1,
+    .has_accelerated_putimage = 1,
+    .has_tiled_surface = 1,
+    .has_di_motion_adptive = 1,
+    .has_di_motion_compensated = 1,
+    .has_vp8_decoding = 1,
+    .has_vp8_encoding = 0,
+    .has_h264_mvc_encoding = 1,
+    .has_hevc_decoding = 1,
+    .has_hevc_encoding = 0,
+    .has_hevc10_decoding = 1,
+    .has_hevc10_encoding = 0,
+    .has_vp9_decoding = 1,
+    .has_vpp_p010 = 1,
+    .has_vp9_encoding = 0,
+    .has_lp_h264_encoding = 0,
+
+    .lp_h264_brc_mode = VA_RC_CQP,
+    .h264_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR | VA_RC_MB,
+
+    .num_filters = 5,
+    .filters = {
+        { VAProcFilterNoiseReduction, I965_RING_VEBOX },
+        { VAProcFilterDeinterlacing, I965_RING_VEBOX },
+        { VAProcFilterSharpening, I965_RING_NULL },
+        { VAProcFilterColorBalance, I965_RING_VEBOX},
+        { VAProcFilterSkinToneEnhancement, I965_RING_VEBOX},
+    },
+};
+
 struct hw_codec_info *
 i965_get_codec_info(int devid)
 {
@@ -804,6 +866,13 @@ static const struct intel_device_info cfl_device_info = {
     .max_wm_threads = 64,       /* per PSD */
 
     .is_cfllake = 1,
+};
+
+static const struct intel_device_info cnl_device_info = {
+    .gen = 10,
+
+    .urb_size = 4096,
+    .max_wm_threads = 64,       /* per PSD */
 };
 
 const struct intel_device_info *

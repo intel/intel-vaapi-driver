@@ -1614,7 +1614,8 @@ gen8_mfc_avc_batchbuffer_pipeline(VADriverContextP ctx,
 
     intel_batchbuffer_start_atomic(batch, 0x4000);
 
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         gen9_gpe_pipeline_setup(ctx, &mfc_context->gpe_context, batch);
     else
         gen8_gpe_pipeline_setup(ctx, &mfc_context->gpe_context, batch);
@@ -1640,7 +1641,8 @@ gen8_mfc_avc_batchbuffer_pipeline(VADriverContextP ctx,
         mfc_context->aux_batchbuffer = NULL;
     }
 
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         gen9_gpe_pipeline_end(ctx, &mfc_context->gpe_context, batch);
 
     intel_batchbuffer_end_atomic(batch);
@@ -4584,7 +4586,8 @@ Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     mfc_context->gpe_context.vfe_state.urb_entry_size = 59 - 1;
     mfc_context->gpe_context.vfe_state.curbe_allocation_size = 37 - 1;
 
-    if (IS_GEN9(i965->intel.device_info)) {
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info)) {
         gen8_gpe_load_kernels(ctx,
                               &mfc_context->gpe_context,
                               gen9_mfc_kernels,

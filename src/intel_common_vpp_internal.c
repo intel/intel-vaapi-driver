@@ -76,7 +76,8 @@ intel_10bit_8bit_scaling_post_processing(VADriverContextP   ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         va_status = gen9_10bit_8bit_scaling_post_processing(ctx, pp_context,
                                                             src_surface,
                                                             src_rect,

@@ -2083,6 +2083,7 @@ i965_guess_surface_format(VADriverContextP ctx,
     if (IS_GEN6(i965->intel.device_info) ||
         IS_GEN7(i965->intel.device_info) ||
         IS_GEN8(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info) ||
         IS_GEN9(i965->intel.device_info)) {
         *fourcc = VA_FOURCC_NV12;
         *is_tiled = 1;
@@ -5783,7 +5784,8 @@ i965_GetSurfaceAttributes(
                     attrib_list[i].value.value.i = VA_FOURCC_NV12;
                 } else if (IS_GEN7(i965->intel.device_info) ||
                            IS_GEN8(i965->intel.device_info) ||
-                           IS_GEN9(i965->intel.device_info)) {
+                           IS_GEN9(i965->intel.device_info) ||
+                           IS_GEN10(i965->intel.device_info)) {
                     if (obj_config->profile == VAProfileJPEGBaseline)
                         attrib_list[i].value.value.i = 0; /* internal format */
                     else
@@ -5861,7 +5863,8 @@ i965_GetSurfaceAttributes(
                     }
                 } else if (IS_GEN7(i965->intel.device_info) ||
                            IS_GEN8(i965->intel.device_info) ||
-                           IS_GEN9(i965->intel.device_info)) {
+                           IS_GEN9(i965->intel.device_info) ||
+                           IS_GEN10(i965->intel.device_info)) {
                     if (obj_config->entrypoint == VAEntrypointEncSlice ||
                         obj_config->entrypoint == VAEntrypointVideoProc ||
                         obj_config->entrypoint == VAEntrypointEncSliceLP ||
@@ -6176,7 +6179,8 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             }
         }
     } else if (IS_GEN8(i965->intel.device_info) ||
-               IS_GEN9(i965->intel.device_info)) {
+               IS_GEN9(i965->intel.device_info) ||
+               IS_GEN10(i965->intel.device_info)) {
         if (obj_config->entrypoint == VAEntrypointVLD) { /* decode */
             if (obj_config->profile == VAProfileJPEGBaseline) {
                 attribs[i].type = VASurfaceAttribPixelFormat;

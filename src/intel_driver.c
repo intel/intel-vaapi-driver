@@ -158,7 +158,8 @@ intel_driver_init(VADriverContextP ctx)
 
 #define GEN9_PTE_CACHE    2
 
-    if (IS_GEN9(intel->device_info))
+    if (IS_GEN9(intel->device_info) ||
+        IS_GEN10(intel->device_info))
         intel->mocs_state = GEN9_PTE_CACHE;
 
     intel_driver_get_revid(intel, &intel->revision);
