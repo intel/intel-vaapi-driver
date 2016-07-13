@@ -1450,8 +1450,8 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
         proc_ctx->format_convert_flags |= POST_FORMAT_CONVERT;
     } else if(obj_surf_output->fourcc ==  VA_FOURCC_AYUV ||
               obj_surf_output->fourcc ==  VA_FOURCC_YUY2 ||
-                obj_surf_input->fourcc ==  VA_FOURCC_NV12 ||
-                obj_surf_input->fourcc ==  VA_FOURCC_P010){
+              obj_surf_output->fourcc ==  VA_FOURCC_NV12 ||
+              obj_surf_output->fourcc ==  VA_FOURCC_P010) {
 
               /* Nothing to do here */
      } else {
