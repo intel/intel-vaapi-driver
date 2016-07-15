@@ -1176,9 +1176,6 @@ intel_mfc_avc_ref_idx_state(VADriverContextP ctx,
             fref_entry &= ~(0xFF << ref_idx_l0_shift);
             fref_entry += (intel_get_ref_idx_state_1(vme_context->used_references[0], frame_index) << ref_idx_l0_shift);
         }
-        if(frame_index == 1){
-            WARN_ONCE("Input ref list is Wrong !\n");
-        }
     }
 
     if (slice_type == SLICE_TYPE_B) {
