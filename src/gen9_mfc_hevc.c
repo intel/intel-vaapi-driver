@@ -714,10 +714,6 @@ gen9_hcpe_ref_idx_state_1(struct intel_batchbuffer *batch,
         WARN_ONCE("RefPicList 0 or 1 is not found in DPB!\n");
     }
 
-    if(num_ref_minus1 == 0 && frame_index == 1 && list == 0){
-        WARN_ONCE("Input ref list is Wrong !\n");
-    }
-
     BEGIN_BCS_BATCH(batch, 18);
 
     OUT_BCS_BATCH(batch, HCP_REF_IDX_STATE | (18 - 2));
