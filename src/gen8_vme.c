@@ -562,6 +562,17 @@ gen8_vme_fill_vme_batchbuffer(VADriverContextP ctx,
     int mb_x = 0, mb_y = 0;
     int i, s;
     unsigned int *command_ptr;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    int qp;
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+    int qp_mb, qp_index;
+
+    if (encoder_context->rate_control_mode == VA_RC_CQP)
+        qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+    else
+        qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
 
     dri_bo_map(vme_context->vme_batchbuffer.bo, 1);
     command_ptr = vme_context->vme_batchbuffer.bo->virtual;
@@ -599,7 +610,7 @@ gen8_vme_fill_vme_batchbuffer(VADriverContextP ctx,
 	    if ((i == mb_width) && slice_mb_x) {
 		mb_intra_ub &= ~(INTRA_PRED_AVAIL_FLAG_D);
 	    }
-            *command_ptr++ = (CMD_MEDIA_OBJECT | (8 - 2));
+            *command_ptr++ = (CMD_MEDIA_OBJECT | (9 - 2));
             *command_ptr++ = kernel;
             *command_ptr++ = 0;
             *command_ptr++ = 0;
@@ -609,6 +620,13 @@ gen8_vme_fill_vme_batchbuffer(VADriverContextP ctx,
             /*inline data */
             *command_ptr++ = (mb_width << 16 | mb_y << 8 | mb_x);
             *command_ptr++ = ((encoder_context->quality_level << 24) | (1 << 16) | transform_8x8_mode_flag | (mb_intra_ub << 8));
+            /* qp occupies one byte */
+            if (vme_context->roi_enabled) {
+                qp_index = mb_y * mb_width + mb_x;
+                qp_mb = *(vme_context->qp_per_mb + qp_index);
+            } else
+                qp_mb = qp;
+            *command_ptr++ = qp_mb;
 
             *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
             *command_ptr++ = 0;
@@ -725,6 +743,7 @@ static VAStatus gen8_vme_prepare(VADriverContextP ctx,
 
     intel_vme_update_mbmv_cost(ctx, encode_state, encoder_context);
     intel_h264_initialize_mbmv_cost(ctx, encode_state, encoder_context);
+    intel_h264_enc_roi_config(ctx, encode_state, encoder_context);
 
     /*Setup all the memory object*/
     gen8_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);

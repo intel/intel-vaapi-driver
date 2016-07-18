@@ -936,7 +936,6 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                          int num_attribs)
 {
     VAStatus va_status;
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     int i;
 
     va_status = i965_validate_config(ctx, profile, entrypoint);
@@ -1058,12 +1057,11 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     roi_config->bits.num_roi_regions = 3;
                     roi_config->bits.roi_rc_priority_support = 0;
                     roi_config->bits.roi_rc_qp_delat_support = 0;
-                } else if (IS_GEN7(i965->intel.device_info)) {
+                } else {
                     roi_config->bits.num_roi_regions = I965_MAX_NUM_ROI_REGIONS;
                     roi_config->bits.roi_rc_priority_support = 0;
                     roi_config->bits.roi_rc_qp_delat_support = 1;
-                } else
-                    roi_config->bits.num_roi_regions = 0;
+                }
             }else {
                 attrib_list[i].value = 0;
             }
