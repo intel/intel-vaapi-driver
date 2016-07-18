@@ -47,8 +47,6 @@
 #define SURFACE_STATE_OFFSET(index)             (SURFACE_STATE_PADDED_SIZE * index)
 #define BINDING_TABLE_OFFSET(index)             (SURFACE_STATE_OFFSET(MAX_MEDIA_SURFACES_GEN6) + sizeof(unsigned int) * index)
 
-#define MFC_SOFTWARE_HASWELL	1
-
 #define B0_STEP_REV		2
 #define IS_STEPPING_BPLUS(i965)	((i965->intel.revision) >= B0_STEP_REV)
 
@@ -856,8 +854,6 @@ gen9_mfc_avc_slice_state(VADriverContextP ctx,
 }
 
 
-#ifdef MFC_SOFTWARE_HASWELL
-
 static int
 gen9_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb,
                               int qp,unsigned int *msg,
@@ -1037,6 +1033,7 @@ gen9_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
     int is_intra = slice_type == SLICE_TYPE_I;
     int qp_slice;
+    int qp_mb;
 
     qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
@@ -1080,19 +1077,24 @@ gen9_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
         y = i / width_in_mbs;
         msg = (unsigned int *) (msg_ptr + i * vme_context->vme_output.size_block);
 
+        if (vme_context->roi_enabled) {
+            qp_mb = *(vme_context->qp_per_mb + i);
+        } else
+            qp_mb = qp;
+
         if (is_intra) {
             assert(msg);
-            gen9_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+            gen9_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp_mb, msg, encoder_context, 0, 0, slice_batch);
         } else {
 	    int inter_rdo, intra_rdo;
 	    inter_rdo = msg[AVC_INTER_RDO_OFFSET] & AVC_RDO_MASK;
 	    intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
 	    offset = i * vme_context->vme_output.size_block + AVC_INTER_MV_OFFSET;
 	    if (intra_rdo < inter_rdo) {
-                gen9_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+                gen9_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp_mb, msg, encoder_context, 0, 0, slice_batch);
             } else {
 		msg += AVC_INTER_MSG_OFFSET;
-                gen9_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
+                gen9_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp_mb, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
             }
         }
     }
@@ -1141,8 +1143,6 @@ gen9_mfc_avc_software_batchbuffer(VADriverContextP ctx,
 
     return batch_bo;
 }
-
-#else
 
 static void
 gen9_mfc_batchbuffer_surfaces_input(VADriverContextP ctx,
@@ -1537,7 +1537,6 @@ gen9_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
     return mfc_context->mfc_batchbuffer_surface.bo;
 }
 
-#endif
 
 static void
 gen9_mfc_avc_pipeline_programing(VADriverContextP ctx,
@@ -1553,11 +1552,11 @@ gen9_mfc_avc_pipeline_programing(VADriverContextP ctx,
         return;
     }
 
-#ifdef MFC_SOFTWARE_HASWELL
-    slice_batch_bo = gen9_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
-#else
-    slice_batch_bo = gen9_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
-#endif
+    if (encoder_context->soft_batch_force)
+        slice_batch_bo = gen9_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
+    else
+        slice_batch_bo = gen9_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
+
 
     // begin programing
     intel_batchbuffer_start_atomic_bcs(batch, 0x4000);
@@ -1705,12 +1704,12 @@ Bool gen9_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 {
     struct gen6_mfc_context *mfc_context = NULL;
 
-#if MFC_SOFTWARE_HASWELL
+
     if ((encoder_context->codec == CODEC_H264) ||
         (encoder_context->codec == CODEC_H264_MVC)) {
-        return gen8_mfc_context_init(ctx, encoder_context);
+            return gen8_mfc_context_init(ctx, encoder_context);
     }
-#endif
+
 
     if ((encoder_context->codec == CODEC_VP8) ||
         (encoder_context->codec == CODEC_MPEG2))

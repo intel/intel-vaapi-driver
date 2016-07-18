@@ -939,8 +939,6 @@ gen8_mfc_avc_slice_state(VADriverContextP ctx,
 #define    AVC_INTER_MV_OFFSET     48
 #define    AVC_RDO_MASK            0xFFFF
 
-#if MFC_SOFTWARE_BATCH
-
 static int
 gen8_mfc_avc_pak_object_intra(VADriverContextP ctx, int x, int y, int end_mb,
                               int qp,unsigned int *msg,
@@ -1114,6 +1112,7 @@ gen8_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
     int is_intra = slice_type == SLICE_TYPE_I;
     int qp_slice;
+    int qp_mb;
 
     qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
@@ -1156,20 +1155,24 @@ gen8_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
         x = i % width_in_mbs;
         y = i / width_in_mbs;
         msg = (unsigned int *) (msg_ptr + i * vme_context->vme_output.size_block);
+        if (vme_context->roi_enabled) {
+            qp_mb = *(vme_context->qp_per_mb + i);
+        } else
+            qp_mb = qp;
 
         if (is_intra) {
             assert(msg);
-            gen8_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+            gen8_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp_mb, msg, encoder_context, 0, 0, slice_batch);
         } else {
 	    int inter_rdo, intra_rdo;
 	    inter_rdo = msg[AVC_INTER_RDO_OFFSET] & AVC_RDO_MASK;
 	    intra_rdo = msg[AVC_INTRA_RDO_OFFSET] & AVC_RDO_MASK;
 	    offset = i * vme_context->vme_output.size_block + AVC_INTER_MV_OFFSET;
 	    if (intra_rdo < inter_rdo) { 
-                gen8_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp, msg, encoder_context, 0, 0, slice_batch);
+                gen8_mfc_avc_pak_object_intra(ctx, x, y, last_mb, qp_mb, msg, encoder_context, 0, 0, slice_batch);
             } else {
 		msg += AVC_INTER_MSG_OFFSET;
-                gen8_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
+                gen8_mfc_avc_pak_object_inter(ctx, x, y, last_mb, qp_mb, msg, offset, encoder_context, 0, 0, pSliceParameter->slice_type, slice_batch);
             }
         }
     }
@@ -1217,7 +1220,6 @@ gen8_mfc_avc_software_batchbuffer(VADriverContextP ctx,
     return batch_bo;
 }
 
-#else
 
 static void
 gen8_mfc_batchbuffer_surfaces_input(VADriverContextP ctx,
@@ -1374,6 +1376,8 @@ gen8_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
     int last_mb, slice_end_x, slice_end_y;
     int remaining_mb = total_mbs;
     uint32_t fwd_ref , bwd_ref, mb_flag;
+    char tmp_qp;
+    int number_roi_mbs, max_mb_cmds, i;
 
     last_mb = slice_param->macroblock_address + total_mbs - 1;
     slice_end_x = last_mb % width_in_mbs;
@@ -1401,12 +1405,31 @@ gen8_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
 	number_mb_cmds = width_in_mbs;
     }
 
+    max_mb_cmds = number_mb_cmds;
+
     do {
-	if (number_mb_cmds >= remaining_mb) {
-		number_mb_cmds = remaining_mb;
-	}
 	mb_x = (slice_param->macroblock_address + starting_offset) % width_in_mbs;
 	mb_y = (slice_param->macroblock_address + starting_offset) / width_in_mbs;
+
+        number_mb_cmds = max_mb_cmds;
+        if (vme_context->roi_enabled) {
+
+            number_roi_mbs = 1;
+            tmp_qp = *(vme_context->qp_per_mb + starting_offset);
+            for (i = 1; i < max_mb_cmds; i++) {
+                if (tmp_qp != *(vme_context->qp_per_mb + starting_offset + i))
+                    break;
+
+                number_roi_mbs++;
+            }
+
+            number_mb_cmds = number_roi_mbs;
+            qp = tmp_qp;
+        }
+
+        if (number_mb_cmds >= remaining_mb) {
+            number_mb_cmds = remaining_mb;
+        }
 
         gen8_mfc_batchbuffer_emit_object_command(batch,
 						  mb_flag,
@@ -1585,8 +1608,6 @@ gen8_mfc_avc_hardware_batchbuffer(VADriverContextP ctx,
     return mfc_context->aux_batchbuffer_surface.bo;
 }
 
-#endif
-
 static void
 gen8_mfc_avc_pipeline_programing(VADriverContextP ctx,
                                  struct encode_state *encode_state,
@@ -1601,11 +1622,11 @@ gen8_mfc_avc_pipeline_programing(VADriverContextP ctx,
         return; 
     }
 
-#if MFC_SOFTWARE_BATCH
-    slice_batch_bo = gen8_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
-#else
-    slice_batch_bo = gen8_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
-#endif
+    if (encoder_context->soft_batch_force)
+        slice_batch_bo = gen8_mfc_avc_software_batchbuffer(ctx, encode_state, encoder_context);
+    else
+        slice_batch_bo = gen8_mfc_avc_hardware_batchbuffer(ctx, encode_state, encoder_context);
+
 
     // begin programing
     intel_batchbuffer_start_atomic_bcs(batch, 0x4000); 
