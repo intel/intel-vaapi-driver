@@ -5798,6 +5798,15 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
                 attribs[i].value.value.i = VA_FOURCC_NV12;
                 i++;
+
+                if ((obj_config->profile == VAProfileHEVCMain10) ||
+                    (obj_config->profile == VAProfileVP9Profile2)) {
+                    attribs[i].type = VASurfaceAttribPixelFormat;
+                    attribs[i].value.type = VAGenericValueTypeInteger;
+                    attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                    attribs[i].value.value.i = VA_FOURCC_P010;
+                    i++;
+                }
             }
         } else if (obj_config->entrypoint == VAEntrypointEncSlice ||  /* encode */
                    obj_config->entrypoint == VAEntrypointVideoProc ||
