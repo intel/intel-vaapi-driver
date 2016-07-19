@@ -24,6 +24,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <assert.h>
 #include <va/va_backend.h>
 #include <va/va_backend_wayland.h>
@@ -141,7 +142,7 @@ registry_handle_global(
 
     if (strcmp(interface, "wl_drm") == 0) {
         wl_output->wl_drm = registry_bind(wl_vtable, wl_output->wl_registry,
-                                          id, wl_vtable->drm_interface, 1);
+                                          id, wl_vtable->drm_interface, 2);
     }
 }
 
@@ -170,11 +171,15 @@ ensure_wl_output(VADriverContextP ctx)
     return true;
 }
 
-/* Create planar YUV buffer */
+/* Create planar/prime YUV buffer
+ * Create a prime buffer if fd is not -1, otherwise a
+ * planar buffer
+ */
 static struct wl_buffer *
-create_planar_buffer(
+create_prime_or_planar_buffer(
     struct va_wl_output *wl_output,
     uint32_t             name,
+    int                  fd,
     int32_t              width,
     int32_t              height,
     uint32_t             format,
@@ -194,9 +199,9 @@ create_planar_buffer(
 
     wl_vtable->proxy_marshal(
         (struct wl_proxy *)wl_output->wl_drm,
-        WL_DRM_CREATE_PLANAR_BUFFER,
+        (fd != -1) ? WL_DRM_CREATE_PRIME_BUFFER : WL_DRM_CREATE_PLANAR_BUFFER,
         id,
-        name,
+        (fd != -1) ? fd : name,
         width, height, format,
         offsets[0], pitches[0],
         offsets[1], pitches[1],
@@ -214,11 +219,13 @@ va_GetSurfaceBufferWl(
     struct wl_buffer      **out_buffer
 )
 {
+    struct VADriverVTableWayland * const vtable = ctx->vtable_wayland;
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
     struct wl_buffer *buffer;
     uint32_t name, drm_format;
     int offsets[3], pitches[3];
+    int fd = -1;
 
     obj_surface = SURFACE(surface);
     if (!obj_surface)
@@ -233,8 +240,12 @@ va_GetSurfaceBufferWl(
     if (!ensure_wl_output(ctx))
         return VA_STATUS_ERROR_INVALID_DISPLAY;
 
-    if (drm_intel_bo_flink(obj_surface->bo, &name) != 0)
-        return VA_STATUS_ERROR_INVALID_SURFACE;
+    if (!vtable->has_prime_sharing || (drm_intel_bo_gem_export_to_prime(obj_surface->bo, &fd) != 0)) {
+        fd = -1;
+
+        if (drm_intel_bo_flink(obj_surface->bo, &name) != 0)
+            return VA_STATUS_ERROR_INVALID_SURFACE;
+    }
 
     switch (obj_surface->fourcc) {
     case VA_FOURCC_NV12:
@@ -284,15 +295,20 @@ va_GetSurfaceBufferWl(
         return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
     }
 
-    buffer = create_planar_buffer(
+    buffer = create_prime_or_planar_buffer(
         i965->wl_output,
         name,
+        fd,
         obj_surface->orig_width,
         obj_surface->orig_height,
         drm_format,
         offsets,
         pitches
     );
+
+    if (fd != -1)
+        close(fd);
+
     if (!buffer)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
