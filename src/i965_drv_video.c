@@ -4118,7 +4118,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             obj_surface->y_cb_offset = 0; 
             obj_surface->y_cr_offset = 0; 
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
-            obj_surface->cb_cr_height = obj_surface->orig_height / 2;
+            obj_surface->cb_cr_height = obj_surface->orig_height;
             region_width = obj_surface->width;
             region_height = obj_surface->height;
             
