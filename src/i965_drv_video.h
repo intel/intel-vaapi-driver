@@ -295,6 +295,9 @@ struct object_surface
     uint32_t user_disable_tiling : 1;
     uint32_t user_h_stride_set   : 1;
     uint32_t user_v_stride_set   : 1;
+    /* we need clear right and bottom border for NV12.
+     * to avoid encode run to run issue*/
+    uint32_t border_cleared      : 1;
 
     VAGenericID wrapper_surface;
 

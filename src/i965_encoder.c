@@ -50,6 +50,58 @@ extern Bool gen7_mfc_context_init(VADriverContextP ctx, struct intel_encoder_con
 extern Bool gen9_hcpe_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 static VAStatus
+clear_border(struct object_surface *obj_surface)
+{
+    int width[3], height[3], hstride[3], vstride[3]; /* in byte */
+    int planes;
+    unsigned char* p;
+    int i,j;
+
+    if (obj_surface->border_cleared)
+        return VA_STATUS_SUCCESS;
+
+    if (obj_surface->fourcc == VA_FOURCC_NV12) {
+        planes = 2;
+        width[0] = width[1] = obj_surface->orig_width;
+        height[0] = obj_surface->orig_height;
+        height[1] = obj_surface->orig_height / 2;
+        hstride[0] = hstride[1] = obj_surface->width;
+        vstride[0]= obj_surface->height;
+        vstride[1] = obj_surface->height / 2;
+
+    } else {
+        /* todo add P010 */
+        return VA_STATUS_SUCCESS;
+    }
+    drm_intel_gem_bo_map_gtt(obj_surface->bo);
+
+    p = (unsigned char*)obj_surface->bo->virtual;
+    if (!p)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    for (i = 0; i < planes; i++) {
+        int w = width[i];
+        int h = height[i];
+        int hs = hstride[i];
+        int vs = vstride[i];
+        /* right */
+        for (j = 0; j < h; j++) {
+            memset(p + w, 0, hs - w);
+            p += hs;
+        }
+        /* bottom */
+        for (/* nothing */; j < vs; j++) {
+            memset(p, 0, hs);
+            p += hs;
+        }
+
+    }
+    drm_intel_gem_bo_unmap_gtt(obj_surface->bo);
+    obj_surface->border_cleared = true;
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
 intel_encoder_check_yuv_surface(VADriverContextP ctx,
                                 VAProfile profile,
                                 struct encode_state *encode_state,
@@ -82,7 +134,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
         if (tiling == I915_TILING_Y) {
             encoder_context->input_yuv_surface = encode_state->current_render_target;
             encode_state->input_yuv_object = obj_surface;
-            return VA_STATUS_SUCCESS;
+            return clear_border(obj_surface);
         }
     }
 
@@ -124,7 +176,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
 
     encoder_context->is_tmp_id = 1;
 
-    return VA_STATUS_SUCCESS;
+    return clear_border(obj_surface);
 }
 
 
