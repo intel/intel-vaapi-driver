@@ -135,6 +135,9 @@ i965_put_surface_dri(
      */
     obj_surface = SURFACE(surface);
     ASSERT_RET(obj_surface && obj_surface->bo, VA_STATUS_SUCCESS);
+    ASSERT_RET(obj_surface->fourcc != VA_FOURCC_YUY2 &&
+               obj_surface->fourcc != VA_FOURCC_UYVY,
+               VA_STATUS_ERROR_UNIMPLEMENTED);
 
     _i965LockMutex(&i965->render_mutex);
 
