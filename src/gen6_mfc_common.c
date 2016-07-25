@@ -790,6 +790,11 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
 
     assert(qp <= QP_MAX); 
     lambda = intel_lambda_qp(qp);
+
+    m_cost = lambda;
+    vme_state_message[MODE_CHROMA_INTRA] = intel_format_lutvalue(m_cost, 0x8f);
+    vme_state_message[MODE_REFID_COST] = intel_format_lutvalue(m_cost, 0x8f);
+
     if (slice_type == SLICE_TYPE_I) {
         vme_state_message[MODE_INTRA_16X16] = 0;
         m_cost = lambda * 4;
