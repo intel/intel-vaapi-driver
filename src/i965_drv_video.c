@@ -1576,6 +1576,7 @@ i965_CreateSurfaces2(
         obj_surface->user_disable_tiling = false;
         obj_surface->user_h_stride_set = false;
         obj_surface->user_v_stride_set = false;
+        obj_surface->border_cleared = false;
 
         obj_surface->subpic_render_idx = 0;
         for(j = 0; j < I965_MAX_SUBPIC_SUM; j++){
