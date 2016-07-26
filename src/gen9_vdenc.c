@@ -778,7 +778,7 @@ const int vdenc_hme_cost[8][52] = {
         OUT_BCS_BATCH(batch, attr);                             \
     } while (0)
 
-#define ALLOC_VDENC_BUFFER_RESOURCE(buffer, bfsize, des) {      \
+#define ALLOC_VDENC_BUFFER_RESOURCE(buffer, bfsize, des) do {   \
         buffer.type = I965_GPE_RESOURCE_BUFFER;                 \
         buffer.width = bfsize;                                  \
         buffer.height = 1;                                      \
