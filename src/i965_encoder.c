@@ -721,10 +721,12 @@ intel_encoder_end_picture(VADriverContextP ctx,
 
     if((encoder_context->vme_context && encoder_context->vme_pipeline)) {
         vaStatus = encoder_context->vme_pipeline(ctx, profile, encode_state, encoder_context);
+        if (vaStatus != VA_STATUS_SUCCESS)
+            return vaStatus;
     }
 
-    if (vaStatus == VA_STATUS_SUCCESS)
-        encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
+    encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
+
     return VA_STATUS_SUCCESS;
 }
 
