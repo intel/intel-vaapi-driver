@@ -906,10 +906,16 @@ void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
         qp = mfc_context->bit_rate_control_context[slice_type].QpPrimeY;
 
     lambda = intel_lambda_qp(qp * QP_MAX / VP8_QP_MAX);
+
+    m_cost = lambda;
+    vme_state_message[MODE_CHROMA_INTRA] = intel_format_lutvalue(m_cost, 0x8f);
+
     if (is_key_frame) {
 	vme_state_message[MODE_INTRA_16X16] = 0;
 	m_cost = lambda * 16; 
 	vme_state_message[MODE_INTRA_4X4] = intel_format_lutvalue(m_cost, 0x8f);
+	m_cost = lambda * 3;
+	vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
     } else {
     	m_cost = 0;
 	vme_state_message[MODE_INTER_MV0] = intel_format_lutvalue(m_cost, 0x6f);
@@ -934,6 +940,7 @@ void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
             vme_state_message[MODE_INTER_16X8] = 0x4a;
             vme_state_message[MODE_INTER_8X8] = 0x4a;
             vme_state_message[MODE_INTER_4X4] = 0x4a;
+            vme_state_message[MODE_INTER_BWD] = 0;
             return;
 	}
 	m_costf = lambda * 10;
@@ -941,6 +948,10 @@ void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
 	m_cost = lambda * 24; 
 	vme_state_message[MODE_INTRA_4X4] = intel_format_lutvalue(m_cost, 0x8f);
             
+        m_costf = lambda * 3.5;
+        m_cost = m_costf;
+        vme_state_message[MODE_INTRA_NONPRED] = intel_format_lutvalue(m_cost, 0x6f);
+
         m_costf = lambda * 2.5;
         m_cost = m_costf;
         vme_state_message[MODE_INTER_16X16] = intel_format_lutvalue(m_cost, 0x8f);
