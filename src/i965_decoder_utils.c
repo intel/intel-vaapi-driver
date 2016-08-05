@@ -953,17 +953,9 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
     VASliceParameterBufferH264 *slice_param, *next_slice_param, *next_slice_group_param;
     int j;
 
-    assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
-    assert(pic_param->CurrPic.picture_id != VA_INVALID_SURFACE);
-
-    if (pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID ||
-        pic_param->CurrPic.picture_id == VA_INVALID_SURFACE)
-        goto error;
-
-    assert(pic_param->CurrPic.picture_id == decode_state->current_render_target);
-
-    if (pic_param->CurrPic.picture_id != decode_state->current_render_target)
-        goto error;
+    ASSERT_RET(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID), VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET((pic_param->CurrPic.picture_id != VA_INVALID_SURFACE), VA_STATUS_ERROR_INVALID_PARAMETER);
+    ASSERT_RET((pic_param->CurrPic.picture_id == decode_state->current_render_target), VA_STATUS_ERROR_INVALID_PARAMETER);
 
     if ((h264_profile != VAProfileH264Baseline)) {
        if (pic_param->num_slice_groups_minus1 ||
@@ -1002,7 +994,7 @@ intel_decoder_check_avc_parameter(VADriverContextP ctx,
     }
 
     for (j = 0; j < decode_state->num_slice_params; j++) {
-        assert(decode_state->slice_params && decode_state->slice_params[j]->buffer);
+        ASSERT_RET((decode_state->slice_params && decode_state->slice_params[j]->buffer), VA_STATUS_ERROR_INVALID_PARAMETER);
         slice_param = (VASliceParameterBufferH264 *)decode_state->slice_params[j]->buffer;
 
         if (j == decode_state->num_slice_params - 1)
