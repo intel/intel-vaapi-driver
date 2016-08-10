@@ -3585,6 +3585,7 @@ static void vp8_enc_frame_header_binarize(struct encode_state *encode_state,
     frame_header_buffer = (unsigned char *)mfc_context->vp8_state.frame_header_bo->virtual;
     assert(frame_header_buffer);
     memcpy(frame_header_buffer, mfc_context->vp8_state.vp8_frame_header, (mfc_context->vp8_state.frame_header_bit_count + 7) / 8);
+    free(mfc_context->vp8_state.vp8_frame_header);
     dri_bo_unmap(mfc_context->vp8_state.frame_header_bo);
 }
 
