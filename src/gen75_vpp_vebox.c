@@ -1367,7 +1367,7 @@ gen75_vebox_ensure_surfaces(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
-int hsw_veb_pre_format_convert(VADriverContextP ctx,
+VAStatus hsw_veb_pre_format_convert(VADriverContextP ctx,
                            struct intel_vebox_context *proc_ctx)
 {
     VAStatus va_status;
@@ -1381,11 +1381,11 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
 
     if ((obj_surf_input == NULL) &&
         (proc_ctx->pipeline_param->surface_region == NULL))
-        assert(0);
+        ASSERT_RET(0, VA_STATUS_ERROR_INVALID_PARAMETER);
 
     if ((obj_surf_output == NULL) &&
         (proc_ctx->pipeline_param->output_region == NULL))
-        assert(0);
+        ASSERT_RET(0, VA_STATUS_ERROR_INVALID_PARAMETER);
 
     if (proc_ctx->pipeline_param->surface_region) {
         proc_ctx->width_input   = proc_ctx->pipeline_param->surface_region->width;
@@ -1434,7 +1434,7 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
                 // nothing to do here
      } else {
            /* not support other format as input */ 
-           assert(0);
+         ASSERT_RET(0, VA_STATUS_ERROR_UNIMPLEMENTED);
      }
     
      if (proc_ctx->format_convert_flags & PRE_FORMAT_CONVERT) {
@@ -1474,8 +1474,8 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
 
               /* Nothing to do here */
      } else {
-           /* not support other format as input */ 
-           assert(0);
+           /* not support other format as input */
+         ASSERT_RET(0, VA_STATUS_ERROR_UNIMPLEMENTED);
      }
   
      if(proc_ctx->format_convert_flags & POST_FORMAT_CONVERT ||
@@ -1517,7 +1517,7 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
        }
      } 
     
-     return 0;
+     return VA_STATUS_SUCCESS;
 }
 
 VAStatus
@@ -1701,7 +1701,9 @@ gen75_vebox_process_picture(VADriverContextP ctx,
     if (status != VA_STATUS_SUCCESS)
         return status;
 
-    hsw_veb_pre_format_convert(ctx, proc_ctx);
+    status = hsw_veb_pre_format_convert(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
     status = gen75_vebox_ensure_surfaces(ctx, proc_ctx);
     if (status != VA_STATUS_SUCCESS)
@@ -1931,7 +1933,9 @@ gen8_vebox_process_picture(VADriverContextP ctx,
     if (status != VA_STATUS_SUCCESS)
         return status;
 
-    hsw_veb_pre_format_convert(ctx, proc_ctx);
+    status = hsw_veb_pre_format_convert(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
     status = gen75_vebox_ensure_surfaces(ctx, proc_ctx);
     if (status != VA_STATUS_SUCCESS)
@@ -2400,7 +2404,9 @@ gen9_vebox_process_picture(VADriverContextP ctx,
     if (status != VA_STATUS_SUCCESS)
         return status;
 
-    hsw_veb_pre_format_convert(ctx, proc_ctx);
+    status = hsw_veb_pre_format_convert(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
 
     status = gen75_vebox_ensure_surfaces(ctx, proc_ctx);
     if (status != VA_STATUS_SUCCESS)
