@@ -1379,10 +1379,29 @@ int hsw_veb_pre_format_convert(VADriverContextP ctx,
 
     proc_ctx->format_convert_flags = 0;
 
-    proc_ctx->width_input   = proc_ctx->pipeline_param->surface_region->width;
-    proc_ctx->height_input  = proc_ctx->pipeline_param->surface_region->height;
-    proc_ctx->width_output  = proc_ctx->pipeline_param->output_region->width;
-    proc_ctx->height_output = proc_ctx->pipeline_param->output_region->height;
+    if ((obj_surf_input == NULL) &&
+        (proc_ctx->pipeline_param->surface_region == NULL))
+        assert(0);
+
+    if ((obj_surf_output == NULL) &&
+        (proc_ctx->pipeline_param->output_region == NULL))
+        assert(0);
+
+    if (proc_ctx->pipeline_param->surface_region) {
+        proc_ctx->width_input   = proc_ctx->pipeline_param->surface_region->width;
+        proc_ctx->height_input  = proc_ctx->pipeline_param->surface_region->height;
+    } else {
+        proc_ctx->width_input   = obj_surf_input->orig_width;
+        proc_ctx->height_input  = obj_surf_input->orig_height;
+    }
+
+    if (proc_ctx->pipeline_param->output_region) {
+        proc_ctx->width_output  = proc_ctx->pipeline_param->output_region->width;
+        proc_ctx->height_output = proc_ctx->pipeline_param->output_region->height;
+    } else {
+        proc_ctx->width_output  = obj_surf_output->orig_width;
+        proc_ctx->height_output = obj_surf_output->orig_height;
+    }
 
     /* only partial frame is not supported to be processed */
     /*
