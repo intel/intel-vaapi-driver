@@ -3813,7 +3813,6 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
     vp9_state->status_buffer.bo = obj_buffer->buffer_store->bo;
 
     encode_state->reconstructed_object = SURFACE(pic_param->reconstructed_frame);
-    encode_state->input_yuv_object = SURFACE(encode_state->current_render_target);
 
     if (!encode_state->reconstructed_object ||
         !encode_state->input_yuv_object)
