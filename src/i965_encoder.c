@@ -740,6 +740,7 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
         vaStatus = intel_encoder_check_vp9_parameter(ctx, encode_state, encoder_context);
         if (vaStatus != VA_STATUS_SUCCESS)
             goto out;
+        vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
         break;
     }
     default:
