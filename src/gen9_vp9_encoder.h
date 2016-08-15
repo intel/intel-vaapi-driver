@@ -1849,15 +1849,19 @@ enum INTEL_ENC_VP9_TU_MODE
 #define VP9_GOLDEN_REF         0x02
 #define VP9_ALT_REF            0x04
 
-/* the vp9_encode_status_buffer is the shadow
- * of vp9_encode_status_buffer_internal.
- */
+struct vp9_encode_status
+{
+    uint32_t bs_byte_count;
+    uint32_t image_status_mask;
+    uint32_t image_status_ctrl;
+    uint32_t media_index;
+};
+
 struct vp9_encode_status_buffer_internal
 {
     uint32_t bs_byte_count_offset;
     uint32_t reserved[15];
 
-    /* the above is shared with the gen9_encode_status_buffer */
     uint32_t image_status_mask_offset;
     uint32_t image_status_ctrl_offset;
 
