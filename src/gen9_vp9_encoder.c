@@ -5984,15 +5984,16 @@ gen9_vp9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
     /* the definition of status buffer offset for VP9 */
     {
         struct vp9_encode_status_buffer_internal *status_buffer;
+        uint32_t base_offset = offsetof(struct i965_coded_buffer_segment, codec_private_data);
 
         status_buffer = &vp9_state->status_buffer;
         memset(status_buffer, 0,
                sizeof(struct vp9_encode_status_buffer_internal));
 
-        status_buffer->bs_byte_count_offset = 2048;
-        status_buffer->image_status_mask_offset = 2052;
-        status_buffer->image_status_ctrl_offset = 2056;
-        status_buffer->media_index_offset       = 2060;
+        status_buffer->bs_byte_count_offset = base_offset + offsetof(struct vp9_encode_status, bs_byte_count);
+        status_buffer->image_status_mask_offset = base_offset + offsetof(struct vp9_encode_status, image_status_mask);
+        status_buffer->image_status_ctrl_offset = base_offset + offsetof(struct vp9_encode_status, image_status_ctrl);
+        status_buffer->media_index_offset       = base_offset + offsetof(struct vp9_encode_status, media_index);
 
         status_buffer->vp9_bs_frame_reg_offset = 0x1E9E0;
         status_buffer->vp9_image_mask_reg_offset = 0x1E9F0;
@@ -6013,24 +6014,13 @@ gen9_vp9_get_coded_status(VADriverContextP ctx,
                           struct intel_encoder_context *encoder_context,
                           struct i965_coded_buffer_segment *coded_buf_seg)
 {
-    struct gen9_vp9_state *vp9_state = NULL;
-    struct vp9_encode_status_buffer_internal *status_buffer;
-    unsigned int *buf_ptr;
+    struct vp9_encode_status *vp9_encode_status;
 
     if (!encoder_context || !coded_buf_seg)
         return VA_STATUS_ERROR_INVALID_BUFFER;
 
-    vp9_state = (struct gen9_vp9_state *)(encoder_context->enc_priv_state);
-
-    if (!vp9_state)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
-
-    status_buffer = &vp9_state->status_buffer;
-
-    buf_ptr = (unsigned int *)((char *)coded_buf_seg + status_buffer->bs_byte_count_offset);
-
-    /* the stream size is writen into the bs_byte_count_offset address of buffer */
-    coded_buf_seg->base.size = *buf_ptr;
+    vp9_encode_status = (struct vp9_encode_status *)coded_buf_seg->codec_private_data;
+    coded_buf_seg->base.size = vp9_encode_status->bs_byte_count;
 
     /* One VACodedBufferSegment for VP9 will be added later.
      * It will be linked to the next element of coded_buf_seg->base.next
