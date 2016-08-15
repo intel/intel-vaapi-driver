@@ -40,13 +40,4 @@ gen9_vp9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
 extern Bool
 gen9_vp9_pak_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
-/* buffer points to the start address of coded_buffer. It is also
- * interpreted as i965_coded_buffer_segment.
- */
-extern VAStatus
-gen9_vp9_get_coded_status(VADriverContextP ctx,
-                          char *buffer,
-                          struct hw_context *hw_context);
-
-
 #endif  // _INTE_VP9_ENC_API_H_
