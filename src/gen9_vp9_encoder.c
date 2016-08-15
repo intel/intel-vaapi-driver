@@ -5789,6 +5789,7 @@ gen9_vp9_pak_pipeline_prepare(VADriverContextP ctx,
     coded_buffer_segment = (struct i965_coded_buffer_segment *)bo->virtual;
     coded_buffer_segment->mapped = 0;
     coded_buffer_segment->codec = encoder_context->codec;
+    coded_buffer_segment->status_support = 1;
     dri_bo_unmap(bo);
 
     return VA_STATUS_SUCCESS;
@@ -6007,6 +6008,37 @@ gen9_vp9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
     return true;
 }
 
+static VAStatus
+gen9_vp9_get_coded_status(VADriverContextP ctx,
+                          struct intel_encoder_context *encoder_context,
+                          struct i965_coded_buffer_segment *coded_buf_seg)
+{
+    struct gen9_vp9_state *vp9_state = NULL;
+    struct vp9_encode_status_buffer_internal *status_buffer;
+    unsigned int *buf_ptr;
+
+    if (!encoder_context || !coded_buf_seg)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
+    vp9_state = (struct gen9_vp9_state *)(encoder_context->enc_priv_state);
+
+    if (!vp9_state)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
+    status_buffer = &vp9_state->status_buffer;
+
+    buf_ptr = (unsigned int *)((char *)coded_buf_seg + status_buffer->bs_byte_count_offset);
+
+    /* the stream size is writen into the bs_byte_count_offset address of buffer */
+    coded_buf_seg->base.size = *buf_ptr;
+
+    /* One VACodedBufferSegment for VP9 will be added later.
+     * It will be linked to the next element of coded_buf_seg->base.next
+     */
+
+    return VA_STATUS_SUCCESS;
+}
+
 Bool
 gen9_vp9_pak_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
@@ -6020,45 +6052,6 @@ gen9_vp9_pak_context_init(VADriverContextP ctx, struct intel_encoder_context *en
     encoder_context->mfc_context_destroy = gen9_vp9_pak_context_destroy;
     encoder_context->mfc_pipeline = gen9_vp9_pak_pipeline;
     encoder_context->mfc_brc_prepare = gen9_vp9_pak_brc_prepare;
-
+    encoder_context->get_status = gen9_vp9_get_coded_status;
     return true;
-}
-
-VAStatus
-gen9_vp9_get_coded_status(VADriverContextP ctx,
-                          char *buffer,
-                          struct hw_context *hw_context)
-{
-    struct intel_encoder_context *encoder_context =
-                      (struct intel_encoder_context *)hw_context;
-    struct gen9_vp9_state *vp9_state = NULL;
-    struct vp9_encode_status_buffer_internal *status_buffer;
-    struct i965_coded_buffer_segment *coded_buf_seg;
-    unsigned int *buf_ptr;
-
-    if (!encoder_context || !buffer)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
-
-    vp9_state = (struct gen9_vp9_state *)(encoder_context->enc_priv_state);
-    coded_buf_seg = (struct i965_coded_buffer_segment *) buffer;
-
-    if (!vp9_state)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
-
-    status_buffer = &vp9_state->status_buffer;
-
-    buf_ptr = (unsigned int *)(buffer + status_buffer->bs_byte_count_offset);
-    coded_buf_seg->base.buf = buffer + I965_CODEDBUFFER_HEADER_SIZE;
-    coded_buf_seg->base.next = NULL;
-
-    /* the stream size is writen into the bs_byte_count_offset address of buffer */
-    coded_buf_seg->base.size = *buf_ptr;
-
-    coded_buf_seg->mapped = 1;
-
-    /* One VACodedBufferSegment for VP9 will be added later.
-     * It will be linked to the next element of coded_buf_seg->base.next
-     */
-
-    return VA_STATUS_SUCCESS;
 }

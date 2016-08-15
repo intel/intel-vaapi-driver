@@ -2654,16 +2654,7 @@ i965_MapBuffer(VADriverContextP ctx,
                     coded_buffer_segment->status_support) {
                     vaStatus = obj_context->hw_context->get_status(ctx, obj_context->hw_context, coded_buffer_segment);
                 } else {
-
-                    if (coded_buffer_segment->codec == CODEC_VP9) {
-
-                        if (obj_context == NULL)
-                            return VA_STATUS_ERROR_ENCODING_ERROR;
-
-                        gen9_vp9_get_coded_status(ctx, (char *)coded_buffer_segment,
-                                                  obj_context->hw_context);
-                    }
-                    else if (coded_buffer_segment->codec == CODEC_H264 ||
+                    if (coded_buffer_segment->codec == CODEC_H264 ||
                         coded_buffer_segment->codec == CODEC_H264_MVC) {
                         delimiter0 = H264_DELIMITER0;
                         delimiter1 = H264_DELIMITER1;
@@ -2690,9 +2681,6 @@ i965_MapBuffer(VADriverContextP ctx,
                         ASSERT_RET(0, VA_STATUS_ERROR_UNSUPPORTED_PROFILE);
                     }
 
-                    if(coded_buffer_segment->codec == CODEC_VP9) {
-                        /* it is already handled */
-                    } else
                     if(coded_buffer_segment->codec == CODEC_JPEG) {
                         for(i = 0; i <  obj_buffer->size_element - header_offset - 1 - 0x1000; i++) {
                             if( (buffer[i] == 0xFF) && (buffer[i + 1] == 0xD9)) {
