@@ -3221,7 +3221,7 @@ gen8_mfc_jpeg_pipeline_picture_programing(VADriverContextP ctx,
 
     //I dont think I need this for loop. Just to be consistent with other encoding logic...
     for(i = 0; i < encode_state->num_slice_params_ext; i++) {
-        assert(encode_state->slice_params && encode_state->slice_params_ext[i]->buffer);
+        assert(encode_state->slice_params_ext && encode_state->slice_params_ext[i]->buffer);
         slice_param = (VAEncSliceParameterBufferJPEG *)encode_state->slice_params_ext[i]->buffer;
         
         for(j = 0; j < encode_state->slice_params_ext[i]->num_elements; j++) {
