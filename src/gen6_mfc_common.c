@@ -776,7 +776,7 @@ void intel_h264_calc_mbmvcost_qp(int qp,
     lambda = intel_lambda_qp(qp);
 
     m_cost = lambda;
-    vme_state_message[MODE_CHROMA_INTRA] = intel_format_lutvalue(m_cost, 0x8f);
+    vme_state_message[MODE_CHROMA_INTRA] = 0;
     vme_state_message[MODE_REFID_COST] = intel_format_lutvalue(m_cost, 0x8f);
 
     if (slice_type == SLICE_TYPE_I) {
