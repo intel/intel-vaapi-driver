@@ -2067,17 +2067,8 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
         i965_release_buffer_store(&obj_context->codec_state.proc.pipeline_param);
 
     } else if (obj_context->codec_type == CODEC_ENC) {
-        assert(obj_context->codec_state.encode.num_slice_params <= obj_context->codec_state.encode.max_slice_params);
-        i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
-        i965_release_buffer_store(&obj_context->codec_state.encode.seq_param);
-
         i965_release_buffer_store(&obj_context->codec_state.encode.q_matrix);
         i965_release_buffer_store(&obj_context->codec_state.encode.huffman_table);
-
-        for (i = 0; i < obj_context->codec_state.encode.num_slice_params; i++)
-            i965_release_buffer_store(&obj_context->codec_state.encode.slice_params[i]);
-
-        free(obj_context->codec_state.encode.slice_params);
 
         assert(obj_context->codec_state.encode.num_slice_params_ext <= obj_context->codec_state.encode.max_slice_params_ext);
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param_ext);
@@ -2236,9 +2227,6 @@ i965_CreateContext(VADriverContextP ctx,
             obj_context->codec_type = CODEC_ENC;
             memset(&obj_context->codec_state.encode, 0, sizeof(obj_context->codec_state.encode));
             obj_context->codec_state.encode.current_render_target = VA_INVALID_ID;
-            obj_context->codec_state.encode.max_slice_params = NUM_SLICES;
-            obj_context->codec_state.encode.slice_params = calloc(obj_context->codec_state.encode.max_slice_params,
-                                                               sizeof(*obj_context->codec_state.encode.slice_params));
             obj_context->codec_state.encode.max_packed_header_params_ext = NUM_SLICES;
             obj_context->codec_state.encode.packed_header_params_ext =
                 calloc(obj_context->codec_state.encode.max_packed_header_params_ext,
@@ -2817,14 +2805,6 @@ i965_BeginPicture(VADriverContextP ctx,
     if (obj_context->codec_type == CODEC_PROC) {
         obj_context->codec_state.proc.current_render_target = render_target;
     } else if (obj_context->codec_type == CODEC_ENC) {
-        i965_release_buffer_store(&obj_context->codec_state.encode.pic_param);
-
-        for (i = 0; i < obj_context->codec_state.encode.num_slice_params; i++) {
-            i965_release_buffer_store(&obj_context->codec_state.encode.slice_params[i]);
-        }
-
-        obj_context->codec_state.encode.num_slice_params = 0;
-
         /* ext */
         i965_release_buffer_store(&obj_context->codec_state.encode.pic_param_ext);
 
@@ -3522,19 +3502,16 @@ i965_EndPicture(VADriverContextP ctx, VAContextID context)
             WARN_ONCE("the packed header/data is not paired for encoding!\n");
             return VA_STATUS_ERROR_INVALID_PARAMETER;
         }
-        if (!(obj_context->codec_state.encode.pic_param ||
-                obj_context->codec_state.encode.pic_param_ext)) {
+        if (!obj_context->codec_state.encode.pic_param_ext) {
             return VA_STATUS_ERROR_INVALID_PARAMETER;
         }
-        if (!(obj_context->codec_state.encode.seq_param ||
-                obj_context->codec_state.encode.seq_param_ext) &&
+        if (!obj_context->codec_state.encode.seq_param_ext &&
                 (VAEntrypointEncPicture != obj_config->entrypoint)) {
             /* The seq_param is not mandatory for VP9 encoding */
             if (obj_config->profile != VAProfileVP9Profile0)
                 return VA_STATUS_ERROR_INVALID_PARAMETER;
         }
-        if ((obj_context->codec_state.encode.num_slice_params <=0) &&
-                (obj_context->codec_state.encode.num_slice_params_ext <=0) &&
+        if ((obj_context->codec_state.encode.num_slice_params_ext <=0) &&
                 ((obj_config->profile != VAProfileVP8Version0_3) &&
                  (obj_config->profile != VAProfileVP9Profile0))) {
             return VA_STATUS_ERROR_INVALID_PARAMETER;

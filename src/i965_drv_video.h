@@ -145,15 +145,9 @@ struct decode_state
 struct encode_state
 {
     struct codec_state_base base;
-    struct buffer_store *seq_param;
-    struct buffer_store *pic_param;
-    struct buffer_store *pic_control;
     struct buffer_store *iq_matrix;
     struct buffer_store *q_matrix;
-    struct buffer_store **slice_params;
     struct buffer_store *huffman_table;
-    int max_slice_params;
-    int num_slice_params;
 
     /* for ext */
     struct buffer_store *seq_param_ext;
