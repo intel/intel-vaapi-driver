@@ -458,6 +458,19 @@ send (8)
         mlen sic_vme_msg_length
         rlen vme_wb_length
         {align1};
+
+/* Check whether mb type is 0 */
+and.z.f0.0 (1) null<1>:UD vme_wb.0<0,1,0>:UD W0_INTRA_MB_TYPE_MASK {align1};
+(-f0.0) jmpi (1) __write_intra_output;
+
+/* Check whether intra mb mode is INTRA_8x8 */
+and (1) tmp_reg2<1>:UD vme_wb.0<0,1,0>:UD W0_INTRA_MB_MODE_MASK {align1};
+cmp.z.f0.0 (1) null<1>:UD tmp_reg2<0,1,0>:UD W0_INTRA_8x8 {align1};
+
+/* Set transform 8x8 flag */
+(f0.0) or (1) vme_wb.0<1>:UD vme_wb.0<0,1,0>:UD W0_TRANSFORM_8x8_FLAG {align1};
+
+__write_intra_output:
 /*
  * Oword Block Write message
  */
