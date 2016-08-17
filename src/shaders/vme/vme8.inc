@@ -129,6 +129,11 @@ define(`OBW_WRITE_COMMIT_CATEGORY',     `0')    /* category on Ivybridge */
 
 define(`OBW_HEADER_PRESENT',            `1')
 
+define(`W0_INTRA_MB_TYPE_MASK',         `0x1F0000:UD')
+define(`W0_INTRA_MB_MODE_MASK',         `0x30:UD')
+define(`W0_INTRA_8x8',                  `0x10:UD')
+define(`W0_TRANSFORM_8x8_FLAG',         `0x8000:UD')
+
 /* GRF registers
  * r0 header
  * r1~r4 constant buffer (reserved)
