@@ -76,7 +76,7 @@ int intel_format_convert(float src, int out_int_bits, int out_frac_bits,int out_
      if(negative_flag)
          output_value = (~output_value + 1) & ((1 <<(out_int_bits + out_frac_bits)) -1);
 
-     if(out_sign_flag == 1 && negative_flag)
+     if(output_value != 0 && out_sign_flag == 1 && negative_flag)
      {
           output_value |= negative_flag <<(out_int_bits + out_frac_bits);
      }
