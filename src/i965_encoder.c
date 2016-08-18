@@ -153,10 +153,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
                                  VA_RT_FORMAT_YUV420,
                                  1,
                                  &encoder_context->input_yuv_surface);
-    assert(status == VA_STATUS_SUCCESS);
-
-    if (status != VA_STATUS_SUCCESS)
-        return status;
+    ASSERT_RET(status == VA_STATUS_SUCCESS, status);
 
     obj_surface = SURFACE(encoder_context->input_yuv_surface);
     encode_state->input_yuv_object = obj_surface;
