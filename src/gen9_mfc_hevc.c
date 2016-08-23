@@ -2333,9 +2333,9 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
     mfc_context->bit_rate_control_context[HEVC_SLICE_I].QpPrimeY = mfc_context->bit_rate_control_context[HEVC_SLICE_P].QpPrimeY;
     mfc_context->bit_rate_control_context[HEVC_SLICE_B].QpPrimeY = mfc_context->bit_rate_control_context[HEVC_SLICE_I].QpPrimeY;
 
-    BRC_CLIP(mfc_context->bit_rate_control_context[HEVC_SLICE_I].QpPrimeY, 1, 51);
-    BRC_CLIP(mfc_context->bit_rate_control_context[HEVC_SLICE_P].QpPrimeY, 1, 51);
-    BRC_CLIP(mfc_context->bit_rate_control_context[HEVC_SLICE_B].QpPrimeY, 1, 51);
+    BRC_CLIP(mfc_context->bit_rate_control_context[HEVC_SLICE_I].QpPrimeY, 1, 36);
+    BRC_CLIP(mfc_context->bit_rate_control_context[HEVC_SLICE_P].QpPrimeY, 1, 40);
+    BRC_CLIP(mfc_context->bit_rate_control_context[HEVC_SLICE_B].QpPrimeY, 1, 45);
 }
 
 int intel_hcpe_update_hrd(struct encode_state *encode_state,
