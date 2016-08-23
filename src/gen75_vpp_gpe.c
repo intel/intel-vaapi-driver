@@ -137,13 +137,15 @@ gen75_gpe_process_surfaces_setup(VADriverContextP ctx,
                                          &vpp_gpe_ctx->gpe_ctx,
                                           obj_surface,
                                           BINDING_TABLE_OFFSET_GEN7(i),
-                                          SURFACE_STATE_OFFSET_GEN7(i));
+                                          SURFACE_STATE_OFFSET_GEN7(i),
+                                          0);
 
          gen75_gpe_media_chroma_surface_setup(ctx,
                                           &vpp_gpe_ctx->gpe_ctx,
                                           obj_surface,
                                           BINDING_TABLE_OFFSET_GEN7(i + 1),
-                                          SURFACE_STATE_OFFSET_GEN7(i + 1));
+                                          SURFACE_STATE_OFFSET_GEN7(i + 1),
+                                          0);
     }
 
     /* Binding output NV12 surface(Luma + Chroma) */
@@ -153,12 +155,14 @@ gen75_gpe_process_surfaces_setup(VADriverContextP ctx,
                                     &vpp_gpe_ctx->gpe_ctx,
                                     obj_surface,
                                     BINDING_TABLE_OFFSET_GEN7(input_surface_sum),
-                                    SURFACE_STATE_OFFSET_GEN7(input_surface_sum));
+                                    SURFACE_STATE_OFFSET_GEN7(input_surface_sum),
+                                    1);
     gen75_gpe_media_chroma_surface_setup(ctx,
                                     &vpp_gpe_ctx->gpe_ctx,
                                     obj_surface,
                                     BINDING_TABLE_OFFSET_GEN7(input_surface_sum + 1),
-                                    SURFACE_STATE_OFFSET_GEN7(input_surface_sum + 1));
+                                    SURFACE_STATE_OFFSET_GEN7(input_surface_sum + 1),
+                                    1);
     /* Bind kernel return buffer surface */
     gen7_gpe_buffer_suface_setup(ctx,
                                   &vpp_gpe_ctx->gpe_ctx,
@@ -361,13 +365,15 @@ gen8_gpe_process_surfaces_setup(VADriverContextP ctx,
                                          &vpp_gpe_ctx->gpe_ctx,
                                           obj_surface,
                                           BINDING_TABLE_OFFSET_GEN8(i),
-                                          SURFACE_STATE_OFFSET_GEN8(i));
+                                          SURFACE_STATE_OFFSET_GEN8(i),
+                                          0);
 
          gen8_gpe_media_chroma_surface_setup(ctx,
                                           &vpp_gpe_ctx->gpe_ctx,
                                           obj_surface,
                                           BINDING_TABLE_OFFSET_GEN8(i + 1),
-                                          SURFACE_STATE_OFFSET_GEN8(i + 1));
+                                          SURFACE_STATE_OFFSET_GEN8(i + 1),
+                                          0);
     }
 
     /* Binding output NV12 surface(Luma + Chroma) */
@@ -377,12 +383,14 @@ gen8_gpe_process_surfaces_setup(VADriverContextP ctx,
                                     &vpp_gpe_ctx->gpe_ctx,
                                     obj_surface,
                                     BINDING_TABLE_OFFSET_GEN8(input_surface_sum),
-                                    SURFACE_STATE_OFFSET_GEN8(input_surface_sum));
+                                    SURFACE_STATE_OFFSET_GEN8(input_surface_sum),
+                                    1);
     gen8_gpe_media_chroma_surface_setup(ctx,
                                     &vpp_gpe_ctx->gpe_ctx,
                                     obj_surface,
                                     BINDING_TABLE_OFFSET_GEN8(input_surface_sum + 1),
-                                    SURFACE_STATE_OFFSET_GEN8(input_surface_sum + 1));
+                                    SURFACE_STATE_OFFSET_GEN8(input_surface_sum + 1),
+                                    1);
     /* Bind kernel return buffer surface */
     gen7_gpe_buffer_suface_setup(ctx,
                                   &vpp_gpe_ctx->gpe_ctx,

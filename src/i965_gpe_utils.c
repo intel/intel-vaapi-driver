@@ -425,7 +425,8 @@ i965_gpe_media_rw_surface_setup(VADriverContextP ctx,
                                 struct i965_gpe_context *gpe_context,
                                 struct object_surface *obj_surface,
                                 unsigned long binding_table_offset,
-                                unsigned long surface_state_offset)
+                                unsigned long surface_state_offset,
+                                int write_enabled)
 {
     struct i965_surface_state *ss;
     dri_bo *bo;
@@ -437,7 +438,7 @@ i965_gpe_media_rw_surface_setup(VADriverContextP ctx,
     ss = (struct i965_surface_state *)((char *)bo->virtual + surface_state_offset);
     i965_gpe_set_media_rw_surface_state(ctx, obj_surface, ss);
     dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 0,
+                      I915_GEM_DOMAIN_RENDER, write_enabled ? I915_GEM_DOMAIN_RENDER : 0,
                       0,
                       surface_state_offset + offsetof(struct i965_surface_state, ss1),
                       obj_surface->bo);
@@ -616,7 +617,8 @@ gen7_gpe_media_rw_surface_setup(VADriverContextP ctx,
                                 struct i965_gpe_context *gpe_context,
                                 struct object_surface *obj_surface,
                                 unsigned long binding_table_offset,
-                                unsigned long surface_state_offset)
+                                unsigned long surface_state_offset,
+                                int write_enabled)
 {
     struct gen7_surface_state *ss;
     dri_bo *bo;
@@ -628,7 +630,7 @@ gen7_gpe_media_rw_surface_setup(VADriverContextP ctx,
     ss = (struct gen7_surface_state *)((char *)bo->virtual + surface_state_offset);
     gen7_gpe_set_media_rw_surface_state(ctx, obj_surface, ss);
     dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 0,
+                      I915_GEM_DOMAIN_RENDER, write_enabled ? I915_GEM_DOMAIN_RENDER : 0,
                       0,
                       surface_state_offset + offsetof(struct gen7_surface_state, ss1),
                       obj_surface->bo);
@@ -642,7 +644,8 @@ gen75_gpe_media_chroma_surface_setup(VADriverContextP ctx,
                                 struct i965_gpe_context *gpe_context,
                                 struct object_surface *obj_surface,
                                 unsigned long binding_table_offset,
-                                unsigned long surface_state_offset)
+                                unsigned long surface_state_offset,
+                                int write_enabled)
 {
     struct gen7_surface_state *ss;
     dri_bo *bo;
@@ -657,7 +660,7 @@ gen75_gpe_media_chroma_surface_setup(VADriverContextP ctx,
     ss = (struct gen7_surface_state *)((char *)bo->virtual + surface_state_offset);
     gen75_gpe_set_media_chroma_surface_state(ctx, obj_surface, ss);
     dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 0,
+                      I915_GEM_DOMAIN_RENDER, write_enabled ? I915_GEM_DOMAIN_RENDER : 0,
                       cbcr_offset,
                       surface_state_offset + offsetof(struct gen7_surface_state, ss1),
                       obj_surface->bo);
@@ -853,7 +856,8 @@ gen8_gpe_media_rw_surface_setup(VADriverContextP ctx,
                                 struct i965_gpe_context *gpe_context,
                                 struct object_surface *obj_surface,
                                 unsigned long binding_table_offset,
-                                unsigned long surface_state_offset)
+                                unsigned long surface_state_offset,
+                                int write_enabled)
 {
     struct gen8_surface_state *ss;
     dri_bo *bo;
@@ -865,7 +869,7 @@ gen8_gpe_media_rw_surface_setup(VADriverContextP ctx,
     ss = (struct gen8_surface_state *)((char *)bo->virtual + surface_state_offset);
     gen8_gpe_set_media_rw_surface_state(ctx, obj_surface, ss);
     dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 0,
+                      I915_GEM_DOMAIN_RENDER, write_enabled ? I915_GEM_DOMAIN_RENDER : 0,
                       0,
                       surface_state_offset + offsetof(struct gen8_surface_state, ss8),
                       obj_surface->bo);
@@ -879,7 +883,8 @@ gen8_gpe_media_chroma_surface_setup(VADriverContextP ctx,
                                 struct i965_gpe_context *gpe_context,
                                 struct object_surface *obj_surface,
                                 unsigned long binding_table_offset,
-                                unsigned long surface_state_offset)
+                                unsigned long surface_state_offset,
+                                int write_enabled)
 {
     struct gen8_surface_state *ss;
     dri_bo *bo;
@@ -894,7 +899,7 @@ gen8_gpe_media_chroma_surface_setup(VADriverContextP ctx,
     ss = (struct gen8_surface_state *)((char *)bo->virtual + surface_state_offset);
     gen8_gpe_set_media_chroma_surface_state(ctx, obj_surface, ss);
     dri_bo_emit_reloc(bo,
-                      I915_GEM_DOMAIN_RENDER, 0,
+                      I915_GEM_DOMAIN_RENDER, write_enabled ? I915_GEM_DOMAIN_RENDER : 0,
                       cbcr_offset,
                       surface_state_offset + offsetof(struct gen8_surface_state, ss8),
                       obj_surface->bo);
