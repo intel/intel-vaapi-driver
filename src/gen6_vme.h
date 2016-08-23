@@ -72,7 +72,8 @@ struct gen6_vme_context
                                        struct i965_gpe_context *gpe_context,
                                        struct object_surface *obj_surface,
                                        unsigned long binding_table_offset,
-                                       unsigned long surface_state_offset);
+                                       unsigned long surface_state_offset,
+                                       int write_enabled);
     void (*vme_buffer_suface_setup)(VADriverContextP ctx,
                                     struct i965_gpe_context *gpe_context,
                                     struct i965_buffer_surface *buffer_surface,
@@ -82,7 +83,8 @@ struct gen6_vme_context
                                            struct i965_gpe_context *gpe_context,
                                            struct object_surface *obj_surface,
                                            unsigned long binding_table_offset,
-                                           unsigned long surface_state_offset);
+                                           unsigned long surface_state_offset,
+                                           int write_enabled);
     void *vme_state_message;
     unsigned int h264_level;
     unsigned int hevc_level;

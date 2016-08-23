@@ -164,7 +164,8 @@ gen75_vme_media_source_surface_state(VADriverContextP ctx,
                                             &vme_context->gpe_context,
                                             obj_surface,
                                             BINDING_TABLE_OFFSET(index),
-                                            SURFACE_STATE_OFFSET(index));
+                                            SURFACE_STATE_OFFSET(index),
+                                            0);
 }
 
 static void
@@ -179,7 +180,8 @@ gen75_vme_media_chroma_source_surface_state(VADriverContextP ctx,
                                                 &vme_context->gpe_context,
                                                 obj_surface,
                                                 BINDING_TABLE_OFFSET(index),
-                                                SURFACE_STATE_OFFSET(index));
+                                                SURFACE_STATE_OFFSET(index),
+                                                0);
 }
 
 static void
