@@ -1,7 +1,7 @@
 # intel-driver package version number
 m4_define([intel_driver_major_version], [1])
 m4_define([intel_driver_minor_version], [7])
-m4_define([intel_driver_micro_version], [2])
+m4_define([intel_driver_micro_version], [3])
 m4_define([intel_driver_pre_version],   [1])
 m4_define([intel_driver_version],
           [intel_driver_major_version.intel_driver_minor_version.intel_driver_micro_version])
