@@ -1242,15 +1242,16 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
     int cu_size = 1;
     int tu_size = 0x55;
     int tu_count = 4;
+    int chroma_mode_remap[4]={5,4,3,2};
 
     if (!is_inter) inerpred_idc = 0xff;
 
     intraMbMode = (msg[0] & AVC_INTRA_MODE_MASK) >> 4;
 
-
+    intra_chroma_mode = (msg[3] & 0x3);
+    intra_chroma_mode =  chroma_mode_remap[intra_chroma_mode];
     if (intraMbMode == AVC_INTRA_16X16) {
         cu_part_mode = 0; //2Nx2N
-        intra_chroma_mode = 5;
         cu_size = 1;
         tu_size = 0x55;
         tu_count = 4;
@@ -1260,7 +1261,6 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
         intraMode[3] = intra_mode_16x16_avc2hevc[msg[1] & 0xf];
     } else if (intraMbMode == AVC_INTRA_8X8) {
         cu_part_mode = 0; //2Nx2N
-        intra_chroma_mode = 5;
         cu_size = 0;
         tu_size = 0;
         tu_count = 4;
@@ -1271,7 +1271,6 @@ gen9_hcpe_hevc_fill_indirect_cu_intra(VADriverContextP ctx,
 
     } else { // for 4x4 to use 8x8 replace
         cu_part_mode = 3; //NxN
-        intra_chroma_mode = 0;
         cu_size = 0;
         tu_size = 0;
         tu_count = 4;
