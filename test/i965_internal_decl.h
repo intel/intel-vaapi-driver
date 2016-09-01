@@ -66,6 +66,9 @@ extern "C" {
     extern VAStatus i965_DestroyImage(
         VADriverContextP, VAImageID);
 
+    extern struct hw_codec_info *i965_get_codec_info(int);
+    extern const struct intel_device_info *i965_get_device_info(int);
+
 } // extern "C"
 
 #endif
