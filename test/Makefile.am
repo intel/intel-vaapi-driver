@@ -58,6 +58,7 @@ test_i965_drv_video_LDFLAGS =						\
 	$(NULL)
 
 test_i965_drv_video_LDADD =						\
+	$(top_srcdir)/src/libi965_drv_video.la				\
 	libgtest.la							\
 	$(DRM_LIBS)							\
 	$(LIBVA_DEPS_LIBS)						\
