@@ -9,6 +9,8 @@ AM_CPPFLAGS =								\
 	-DGTEST_USE_OWN_TR1_TUPLE=0					\
 	-DGTEST_LANG_CXX11=1						\
 	-DGTEST_HAS_TR1_TUPLE=1						\
+	-DPTHREADS							\
+	-DVA_DRIVERS_PATH="\"$(LIBVA_DRIVERS_PATH)\""			\
 	-std=c++11							\
 	$(NULL)
 
@@ -16,6 +18,7 @@ AM_LDFLAGS =								\
 	-pthread							\
 	$(NULL)
 
+# libgtest
 noinst_LTLIBRARIES = libgtest.la
 
 libgtest_la_SOURCES =							\
@@ -36,3 +39,43 @@ EXTRA_DIST =								\
 	gtest/README.md							\
 	gtest/LICENSE							\
 	$(NULL)
+
+# test_i965_drv_video
+noinst_PROGRAMS = test_i965_drv_video
+noinst_HEADERS =							\
+	test.h								\
+	$(NULL)
+
+test_i965_drv_video_SOURCES =						\
+	test_main.cpp							\
+	$(NULL)
+
+test_i965_drv_video_LDFLAGS =						\
+	$(DRM_LDFLAGS)							\
+	$(LIBVA_DEPS_LDFLAGS)						\
+	$(LIBVA_DRM_DEPS_LDFLAGS)					\
+	$(AM_LDFLAGS)							\
+	$(NULL)
+
+test_i965_drv_video_LDADD =						\
+	libgtest.la							\
+	$(DRM_LIBS)							\
+	$(LIBVA_DEPS_LIBS)						\
+	$(LIBVA_DRM_DEPS_LIBS)						\
+	-ldrm_intel -lm -ldl						\
+	$(NULL)
+
+test_i965_drv_video_CPPFLAGS =						\
+	$(DRM_CFLAGS)							\
+	$(LIBVA_DEPS_CFLAGS)						\
+	$(LIBVA_DRM_DEPS_CFLAGS)					\
+	$(AM_CPPFLAGS)							\
+	$(NULL)
+
+test_i965_drv_video_CXXFLAGS =						\
+	-Wall -Werror							\
+	$(AM_CXXFLAGS)							\
+	$(NULL)
+
+check-local: test_i965_drv_video
+	$(builddir)/test_i965_drv_video
