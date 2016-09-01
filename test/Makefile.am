@@ -50,6 +50,7 @@ noinst_HEADERS =							\
 	$(NULL)
 
 test_i965_drv_video_SOURCES =						\
+	i965_initialize_test.cpp					\
 	i965_test_fixture.cpp						\
 	test_main.cpp							\
 	$(NULL)
