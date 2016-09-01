@@ -11,6 +11,7 @@ AM_CPPFLAGS =								\
 	-DGTEST_HAS_TR1_TUPLE=1						\
 	-DPTHREADS							\
 	-DVA_DRIVERS_PATH="\"$(LIBVA_DRIVERS_PATH)\""			\
+	-DTEST_VA_DRIVERS_PATH="\"$(abs_top_srcdir)/src/.libs\""	\
 	-std=c++11							\
 	$(NULL)
 
@@ -43,10 +44,13 @@ EXTRA_DIST =								\
 # test_i965_drv_video
 noinst_PROGRAMS = test_i965_drv_video
 noinst_HEADERS =							\
+	i965_internal_decl.h						\
+	i965_test_fixture.h						\
 	test.h								\
 	$(NULL)
 
 test_i965_drv_video_SOURCES =						\
+	i965_test_fixture.cpp						\
 	test_main.cpp							\
 	$(NULL)
 
