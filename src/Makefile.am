@@ -38,7 +38,7 @@ driver_cflags = \
 	$(NULL)
 
 driver_ldflags = \
-	-module -avoid-version	\
+	-avoid-version		\
 	-no-undefined		\
 	-Wl,--no-undefined	\
 	$(NULL)
@@ -155,12 +155,21 @@ source_h = \
 	gen9_vp9_encoder_kernels.h           \
 	$(NULL)
 
+# convenience library that can be linked by driver and tests
+noinst_LTLIBRARIES		= libi965_drv_video.la
+libi965_drv_video_la_CFLAGS	= $(driver_cflags)
+libi965_drv_video_la_LDFLAGS	= $(driver_ldflags)
+libi965_drv_video_la_LIBADD	= $(driver_libs)
+libi965_drv_video_la_SOURCES	= $(source_c)
+
+# driver module
 i965_drv_video_la_LTLIBRARIES	= i965_drv_video.la
 i965_drv_video_ladir		= $(LIBVA_DRIVERS_PATH)
 i965_drv_video_la_CFLAGS	= $(driver_cflags)
-i965_drv_video_la_LDFLAGS	= $(driver_ldflags)
-i965_drv_video_la_LIBADD	= $(driver_libs)
-i965_drv_video_la_SOURCES	= $(source_c)
+i965_drv_video_la_LDFLAGS	= -module $(driver_ldflags)
+i965_drv_video_la_LIBADD	= libi965_drv_video.la $(driver_libs)
+i965_drv_video_la_SOURCES	=
+
 noinst_HEADERS			= $(source_h)
 
 if USE_X11
