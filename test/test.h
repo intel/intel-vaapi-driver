@@ -46,4 +46,7 @@
 #define ASSERT_PTR(ptr) \
     ASSERT_FALSE(NULL == (ptr))
 
+#define EXPECT_PTR_NULL(ptr) \
+    ASSERT_TRUE(NULL == (ptr))
+
 #endif // TEST_H
