@@ -2,7 +2,7 @@
   libva-intel-driver
   VA driver for Intel G45 & HD Graphics family
 
-  Copyright (C) 2009-2015 Intel Corporation
+  Copyright (C) 2009-2016 Intel Corporation
 
 
 License
@@ -50,3 +50,8 @@ Requirements
 ------------
 
 libva >= 1.7.0
+
+Testing
+-------
+
+Please read the TESTING file available in this package.
