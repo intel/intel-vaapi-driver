@@ -2,6 +2,11 @@ AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = debian.upstream src
 
+if ENABLE_TESTS
+SUBDIRS += test
+endif
+
+
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = \
 	aclocal.m4 compile config.guess config.sub \

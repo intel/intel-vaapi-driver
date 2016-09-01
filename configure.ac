@@ -61,11 +61,16 @@ AC_ARG_ENABLE([hybrid-codec],
                     [build with hybrid codec support @<:@default=no@:>@])],
     [], [enable_hybrid_codec="no"])
 
+AC_ARG_ENABLE([tests],
+    [AC_HELP_STRING([--enable-tests],
+                    [build tests @<:@default=no@:>@])],
+    [], [enable_tests="no"])
+
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_PROG_CC
 AM_PROG_CC_C_O
-
+AC_PROG_CXX
 AC_C_BIGENDIAN
 AC_HEADER_STDC
 AC_SYS_LARGEFILE
@@ -115,6 +120,8 @@ AM_CONDITIONAL(USE_DRM, test "$USE_DRM" = "yes")
 if test "$enable_hybrid_codec" = "yes"; then
     AC_DEFINE([HAVE_HYBRID_CODEC], [1], [Defined to 1 if hybrid codec is needed])
 fi
+
+AM_CONDITIONAL(ENABLE_TESTS, test "$enable_tests" = "yes")
 
 VA_VERSION=`$PKG_CONFIG --modversion libva`
 VA_MAJOR_VERSION=`echo "$VA_VERSION" | cut -d'.' -f1`
@@ -207,6 +214,7 @@ AC_OUTPUT([
     src/shaders/render/Makefile
     src/shaders/utils/Makefile
     src/shaders/vme/Makefile
+    test/Makefile
 ])
 
 dnl Print summary
@@ -221,4 +229,5 @@ echo
 echo VA-API version ................... : $VA_VERSION_STR
 echo VA-API drivers path .............. : $LIBVA_DRIVERS_PATH
 echo Windowing systems ................ : $BACKENDS
+echo Build tests ...................... : $enable_tests
 echo
