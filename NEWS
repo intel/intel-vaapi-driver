@@ -1,7 +1,7 @@
-libva-intel-driver NEWS -- summary of changes.  2016-09-xx
+libva-intel-driver NEWS -- summary of changes.  2016-09-05
 Copyright (C) 2009-2016 Intel Corporation
 
-Version 1.7.2 - DD.Sep.2016
+Version 1.7.2 - 05.Sep.2016
 * Update PCI IDs for KBL
 * Allow up to 8K JPEG decoding/encoding on SKL+
 * Add support for ROI on IVB+
