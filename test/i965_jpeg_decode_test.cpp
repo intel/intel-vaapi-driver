@@ -203,6 +203,15 @@ protected:
 
 TEST_P(FourCCTest, Decode)
 {
+    struct i965_driver_data *i965(*this);
+    ASSERT_PTR(i965);
+    if (not HAS_JPEG_DECODING(i965)) {
+        RecordProperty("skipped", true);
+        std::cout << "[  SKIPPED ] " << getFullTestName()
+            << " is unsupported on this hardware" << std::endl;
+        return;
+    }
+
     VAConfigAttrib a = { type:VAConfigAttribRTFormat, value:pd->format };
     ConfigAttribs attribs(1, a);
 
