@@ -28,6 +28,7 @@
 #include "test.h"
 #include "i965_internal_decl.h"
 
+#include <string>
 #include <vector>
 
 typedef std::vector<VASurfaceID> Surfaces;
@@ -81,6 +82,8 @@ protected:
     {
         terminate();
     }
+
+    const std::string getFullTestName() const;
 
 public:
     /**
