@@ -45,6 +45,15 @@ I965TestFixture::~I965TestFixture()
     m_vaDisplay = NULL;
 }
 
+const std::string I965TestFixture::getFullTestName() const
+{
+    const ::testing::TestInfo * const info =
+        ::testing::UnitTest::GetInstance()->current_test_info();
+    return std::string(info->test_case_name())
+        + std::string(".")
+        + std::string(info->name());
+}
+
 void I965TestFixture::initialize()
 {
     ASSERT_FALSE(NULL == (VADisplay)*this);
