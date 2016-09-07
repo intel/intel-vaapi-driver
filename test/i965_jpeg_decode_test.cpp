@@ -133,43 +133,42 @@ protected:
         }
     }
 
+    void printComponentDataTo(std::ostream& os, const uint8_t * const data,
+        unsigned w, unsigned h, unsigned pitch, unsigned hsample = 1,
+        unsigned vsample = 1)
+    {
+        const uint8_t *row = data;
+        for (unsigned i(0); i < (h/vsample); ++i) {
+            for (size_t j(0); j < (w/hsample); ++j) {
+                os  << "0x" << std::hex << std::setfill('0') << std::setw(2)
+                    << (uint32_t)row[j] << ",";
+            }
+            os << std::endl;
+            row += pitch;
+        }
+        os << std::setw(0) << std::setfill(' ') << std::dec << std::endl;
+    }
+
+    void printImageOutputTo(std::ostream& os, const VAImage& image,
+        const uint8_t * const output)
+    {
+        printComponentDataTo(os, output + image.offsets[0], image.width,
+            image.height, image.pitches[0]); // Y
+
+        printComponentDataTo(os, output + image.offsets[1], image.width,
+            image.height, image.pitches[1],
+            pd->pparam.components[0].h_sampling_factor,
+            pd->pparam.components[0].v_sampling_factor); // U
+
+        printComponentDataTo(os, output + image.offsets[2], image.width,
+            image.height, image.pitches[2],
+            pd->pparam.components[0].h_sampling_factor,
+            pd->pparam.components[0].v_sampling_factor); // V
+    }
+
     TestPattern::SharedConst testPattern;
     PictureData::SharedConst pd;
 };
-
-void printComponentDataTo(std::ostream& os, const uint8_t * const data,
-    unsigned w, unsigned h, unsigned pitch)
-{
-    os << "    ";
-    for (unsigned i(0); i < w; ++i)
-        os << std::setw(4) << i << " ";
-    os << std::endl;
-
-    const uint8_t *row = data;
-    for (unsigned i(0); i < h; ++i) {
-        os << std::dec << std::setfill(' ') << std::setw(3) << (i * w) << " ";
-        for (size_t j(0); j < w; ++j) {
-            os  << "0x" << std::hex << std::setfill('0') << std::setw(2)
-                << (uint32_t)row[j] << ",";
-        }
-        os << std::endl;
-        row += pitch;
-    }
-    os << std::setw(0) << std::setfill(' ') << std::dec << std::endl;
-}
-
-void printImageOutputTo(std::ostream& os, const VAImage& image,
-    const uint8_t * const output)
-{
-    printComponentDataTo(os, output + image.offsets[0], image.width,
-        image.height, image.pitches[0]); // Y
-
-    printComponentDataTo(os, output + image.offsets[1], image.width,
-        image.height, image.pitches[1]); // U
-
-    printComponentDataTo(os, output + image.offsets[2], image.width,
-        image.height, image.pitches[2]); // V
-}
 
 #define ASSERT_NO_FAILURE(statement) \
     statement; \
