@@ -35,16 +35,43 @@
 
 namespace JPEG {
 
+class JPEGDecodeTest : public I965TestFixture
+{
+protected:
+    static const VAEntrypoint entrypoint = VAEntrypointVLD;
+};
+
+TEST_F(JPEGDecodeTest, Entrypoint)
+{
+    VAConfigID config = VA_INVALID_ID;
+    ConfigAttribs attributes;
+    struct i965_driver_data *i965(*this);
+
+    ASSERT_PTR(i965);
+
+    if (HAS_JPEG_DECODING(i965)) {
+        config = createConfig(profile, entrypoint, attributes);
+    } else {
+        VAStatus status = i965_CreateConfig(
+            *this, profile, entrypoint, attributes.data(), attributes.size(),
+            &config);
+        EXPECT_STATUS_EQ(VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT, status);
+        EXPECT_INVALID_ID(config);
+    }
+
+    if (config != VA_INVALID_ID)
+        destroyConfig(config);
+}
+
 class FourCCTest
-    : public I965TestFixture
+    : public JPEGDecodeTest
     , public ::testing::WithParamInterface<
         std::tuple<TestPattern::SharedConst, const char*> >
 {
 protected:
-    static const VAEntrypoint entrypoint = VAEntrypointVLD;
-
-    virtual void SetUp() {
-        I965TestFixture::SetUp();
+    virtual void SetUp()
+    {
+        JPEGDecodeTest::SetUp();
 
         std::string sFourcc;
         std::tie(testPattern, sFourcc) = GetParam();
