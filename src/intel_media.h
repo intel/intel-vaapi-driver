@@ -57,6 +57,11 @@ struct gen_hevc_surface
 {
     GenCodecSurface base;
     dri_bo *motion_vector_temporal_bo;
+    //Encoding HEVC10:internal surface keep for P010->NV12 , this is only for hevc10 to save the P010->NV12
+    struct object_surface *nv12_surface_obj;
+    VASurfaceID nv12_surface_id;
+    VADriverContextP ctx;
+    int has_p010_to_nv12_done;
 };
 
 typedef struct gen_vp9_surface GenVP9Surface;

@@ -29,6 +29,7 @@
 
 #include "intel_driver.h"
 #include "intel_media.h"
+#include "i965_drv_video.h"
 
 static pthread_mutex_t free_avc_surface_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -101,6 +102,12 @@ gen_free_hevc_surface(void **data)
 
     dri_bo_unreference(hevc_surface->motion_vector_temporal_bo);
     hevc_surface->motion_vector_temporal_bo = NULL;
+
+    if (hevc_surface->nv12_surface_obj) {
+        i965_DestroySurfaces(hevc_surface->ctx, &hevc_surface->nv12_surface_id, 1);
+        hevc_surface->nv12_surface_id = VA_INVALID_SURFACE;
+        hevc_surface->nv12_surface_obj = NULL;
+    }
 
     free(hevc_surface);
     *data = NULL;
