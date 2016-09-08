@@ -116,7 +116,7 @@ struct gen6_vme_context
 #define	MPEG2_LEVEL_MAIN	0x08
 #define	MPEG2_LEVEL_HIGH	0x04
 
-
+Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 extern void intel_vme_update_mbmv_cost(VADriverContextP ctx,

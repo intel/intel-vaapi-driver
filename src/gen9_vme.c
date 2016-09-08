@@ -42,6 +42,7 @@
 #include "gen6_mfc.h"
 #include "gen9_mfc.h"
 #include "intel_media.h"
+#include "gen9_vp9_encapi.h"
 
 #ifdef SURFACE_STATE_PADDED_SIZE
 #undef SURFACE_STATE_PADDED_SIZE
@@ -1971,9 +1972,21 @@ gen9_vme_context_destroy(void *context)
 
 Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    struct gen6_vme_context *vme_context = calloc(1, sizeof(struct gen6_vme_context));
+    struct gen6_vme_context *vme_context;
     struct i965_kernel *vme_kernel_list = NULL;
     int i965_kernel_num;
+
+    if (encoder_context->low_power_mode || encoder_context->codec == CODEC_JPEG) {
+        encoder_context->vme_context = NULL;
+        encoder_context->vme_pipeline = NULL;
+        encoder_context->vme_context_destroy = NULL;
+
+        return True;
+    } else if (encoder_context->codec == CODEC_VP9) {
+        return gen9_vp9_vme_context_init(ctx, encoder_context);
+    }
+
+    vme_context = calloc(1, sizeof(struct gen6_vme_context));
 
     switch (encoder_context->codec) {
     case CODEC_H264:

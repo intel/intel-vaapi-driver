@@ -346,6 +346,12 @@ VAStatus gen6_mfc_pipeline(VADriverContextP ctx,
 void gen6_mfc_context_destroy(void *context);
 
 extern
+Bool gen6_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+
+extern
+Bool gen7_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+
+extern
 Bool gen75_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 

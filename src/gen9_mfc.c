@@ -39,18 +39,31 @@
 #include "i965_drv_video.h"
 #include "i965_encoder.h"
 #include "gen6_mfc.h"
+#include "gen9_mfc.h"
+#include "gen9_vdenc.h"
+#include "gen9_vp9_encapi.h"
 
 Bool gen9_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    if ((encoder_context->codec == CODEC_H264) ||
-        (encoder_context->codec == CODEC_H264_MVC)) {
-            return gen8_mfc_context_init(ctx, encoder_context);
-    }
-
-
-    if ((encoder_context->codec == CODEC_VP8) ||
-        (encoder_context->codec == CODEC_MPEG2))
+    switch (encoder_context->codec) {
+    case CODEC_VP8:
+    case CODEC_MPEG2:
+    case CODEC_JPEG:
         return gen8_mfc_context_init(ctx, encoder_context);
+
+    case CODEC_H264:
+    case CODEC_H264_MVC:
+        if (encoder_context->low_power_mode)
+            return gen9_vdenc_context_init(ctx, encoder_context);
+        else
+            return gen8_mfc_context_init(ctx, encoder_context);
+
+    case CODEC_HEVC:
+        return gen9_hcpe_context_init(ctx, encoder_context);
+
+    case CODEC_VP9:
+        return gen9_vp9_pak_context_init(ctx, encoder_context);
+    }
 
     /* Other profile/entrypoint pairs never get here, see gen9_enc_hw_context_init() */
     assert(0);

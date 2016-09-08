@@ -39,15 +39,6 @@
 #include "i965_encoder.h"
 #include "gen6_vme.h"
 #include "gen6_mfc.h"
-#include "gen9_mfc.h"
-#include "gen9_vdenc.h"
-
-#include "gen9_vp9_encapi.h"
-
-extern Bool gen6_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
-extern Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
-extern Bool gen7_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
-extern Bool gen9_hcpe_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 static VAStatus
 clear_border(struct object_surface *obj_surface)
@@ -843,6 +834,9 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
     encoder_context->quality_range = 1;
 
+    if (obj_config->entrypoint == VAEntrypointEncSliceLP)
+        encoder_context->low_power_mode = 1;
+
     switch (obj_config->profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
@@ -906,14 +900,8 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
     if (vme_context_init) {
         vme_context_init(ctx, encoder_context);
-
-        if (obj_config->profile != VAProfileJPEGBaseline) {
-            assert(encoder_context->vme_context);
-            assert(encoder_context->vme_context_destroy);
-            assert(encoder_context->vme_pipeline);
-        }
-    } else {
-        encoder_context->low_power_mode = 1;
+        assert(!encoder_context->vme_context ||
+               (encoder_context->vme_context_destroy && encoder_context->vme_pipeline));
     }
 
     mfc_context_init(ctx, encoder_context);
@@ -952,18 +940,5 @@ gen8_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 struct hw_context *
 gen9_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
-    if (obj_config->entrypoint == VAEntrypointEncSliceLP) {
-        return intel_enc_hw_context_init(ctx, obj_config, NULL, gen9_vdenc_context_init);
-    } else {
-        if ((obj_config->profile == VAProfileHEVCMain) || (obj_config->profile == VAProfileHEVCMain10)) {
-            return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_hcpe_context_init);
-        } else if (obj_config->profile == VAProfileJPEGBaseline)
-            return intel_enc_hw_context_init(ctx, obj_config, gen8_vme_context_init, gen8_mfc_context_init);
-        else if (obj_config->profile == VAProfileVP9Profile0)
-            return intel_enc_hw_context_init(ctx, obj_config,
-                                             gen9_vp9_vme_context_init,
-                                             gen9_vp9_pak_context_init);
-        else
-            return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
-    }
+    return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
 }
