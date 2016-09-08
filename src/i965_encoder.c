@@ -126,9 +126,15 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     if (!obj_surface || !obj_surface->bo)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    if (obj_surface->fourcc == VA_FOURCC_NV12) {
-        unsigned int tiling = 0, swizzle = 0;
+    if (VAProfileHEVCMain10 == profile &&
+        obj_surface->fourcc != VA_FOURCC_P010)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
 
+    if (obj_surface->fourcc == VA_FOURCC_NV12 ||
+        (VAProfileHEVCMain10 == profile &&
+        obj_surface->fourcc == VA_FOURCC_P010)) {
+
+        unsigned int tiling = 0, swizzle = 0;
         dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
 
         if (tiling == I915_TILING_Y) {
@@ -493,7 +499,7 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
     if (!obj_surface)
         goto error;
     
-    encode_state->reconstructed_object = obj_surface;    
+    encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
     assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
 
@@ -725,7 +731,8 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
         break;
     }
 
-    case VAProfileHEVCMain:  {
+    case VAProfileHEVCMain:
+    case VAProfileHEVCMain10:  {
         vaStatus = intel_encoder_check_hevc_parameter(ctx, encode_state, encoder_context);
         if (vaStatus != VA_STATUS_SUCCESS)
             goto out;
@@ -867,6 +874,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         break;
 
     case VAProfileHEVCMain:
+    case VAProfileHEVCMain10:
         encoder_context->codec = CODEC_HEVC;
         break;
 
@@ -947,7 +955,7 @@ gen9_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     if (obj_config->entrypoint == VAEntrypointEncSliceLP) {
         return intel_enc_hw_context_init(ctx, obj_config, NULL, gen9_vdenc_context_init);
     } else {
-        if (obj_config->profile == VAProfileHEVCMain) {
+        if ((obj_config->profile == VAProfileHEVCMain) || (obj_config->profile == VAProfileHEVCMain10)) {
             return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_hcpe_context_init);
         } else if (obj_config->profile == VAProfileJPEGBaseline)
             return intel_enc_hw_context_init(ctx, obj_config, gen8_vme_context_init, gen8_mfc_context_init);

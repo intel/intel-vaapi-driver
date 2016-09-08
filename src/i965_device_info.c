@@ -469,6 +469,7 @@ static struct hw_codec_info kbl_hw_codec_info = {
     .has_h264_mvc_encoding = 1,
     .has_hevc_decoding = 1,
     .has_hevc_encoding = 1,
+    .has_hevc10_encoding = 1,
     .has_hevc10_decoding = 1,
     .has_vp9_decoding = 1,
     .has_vpp_p010 = 1,

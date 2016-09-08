@@ -120,6 +120,8 @@
 
 #define HAS_HEVC10_DECODING(ctx)        ((ctx)->codec_info->has_hevc10_decoding && \
                                          (ctx)->intel.has_bsd)
+#define HAS_HEVC10_ENCODING(ctx)        ((ctx)->codec_info->has_hevc10_encoding && \
+                                         (ctx)->intel.has_bsd)
 
 #define HAS_VPP_P010(ctx)        ((ctx)->codec_info->has_vpp_p010 && \
                                          (ctx)->intel.has_bsd)
@@ -605,7 +607,8 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
         profile_list[i++] = VAProfileHEVCMain;
     }
 
-    if (HAS_HEVC10_DECODING(i965)) {
+    if (HAS_HEVC10_DECODING(i965)||
+        HAS_HEVC10_ENCODING(i965)) {
         profile_list[i++] = VAProfileHEVCMain10;
     }
 
@@ -727,6 +730,9 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
     case VAProfileHEVCMain10:
         if (HAS_HEVC10_DECODING(i965))
             entrypoint_list[n++] = VAEntrypointVLD;
+
+        if (HAS_HEVC10_ENCODING(i965))
+            entrypoint_list[n++] = VAEntrypointEncSlice;
 
         break;
 
@@ -852,7 +858,8 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         break;
 
     case VAProfileHEVCMain10:
-        if (HAS_HEVC10_DECODING(i965) && (entrypoint == VAEntrypointVLD))
+        if ((HAS_HEVC10_DECODING(i965) && (entrypoint == VAEntrypointVLD))||
+            (HAS_HEVC10_ENCODING(i965) && (entrypoint == VAEntrypointEncSlice)))
             va_status = VA_STATUS_SUCCESS;
         else
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -988,7 +995,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     profile == VAProfileH264High ||
                     profile == VAProfileH264StereoHigh ||
                     profile == VAProfileH264MultiviewHigh ||
-                    profile == VAProfileHEVCMain) {
+                    profile == VAProfileHEVCMain ||
+                    profile == VAProfileHEVCMain10) {
                     attrib_list[i].value |= (VA_ENC_PACKED_HEADER_RAW_DATA |
                                              VA_ENC_PACKED_HEADER_SLICE);
                 }
@@ -3270,7 +3278,8 @@ i965_encoder_render_picture(VADriverContextP ctx,
             if ((param->type == VAEncPackedHeaderRawData) ||
                 (param->type == VAEncPackedHeaderSlice)) {
                 vaStatus = I965_RENDER_ENCODE_BUFFER(packed_header_params_ext);
-            } else if((obj_config->profile == VAProfileHEVCMain) &&
+            } else if((obj_config->profile == VAProfileHEVCMain ||
+                obj_config->profile == VAProfileHEVCMain10) &&
                 (encode->last_packed_header_type == VAEncPackedHeaderSequence)) {
                 vaStatus = i965_encoder_render_packed_header_parameter_buffer(ctx,
                                                                           obj_context,
@@ -3368,7 +3377,8 @@ i965_encoder_render_picture(VADriverContextP ctx,
                     ((encode->last_packed_header_type & (~VAEncPackedHeaderMiscMask)) != 0)),
                     VA_STATUS_ERROR_ENCODING_ERROR);
 
-                if((obj_config->profile == VAProfileHEVCMain) &&
+                if((obj_config->profile == VAProfileHEVCMain ||
+                    obj_config->profile == VAProfileHEVCMain10) &&
                     (encode->last_packed_header_type == VAEncPackedHeaderSequence)) {
 
                         vaStatus = i965_encoder_render_packed_header_data_buffer(ctx,
