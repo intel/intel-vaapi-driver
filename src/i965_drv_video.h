@@ -553,6 +553,8 @@ extern VAStatus i965_CreateSurfaces(VADriverContextP ctx,
                     int format,
                     int num_surfaces,
                     VASurfaceID *surfaces);
+extern VAStatus i965_SyncSurface(VADriverContextP ctx,
+                    VASurfaceID render_target);
 
 #define I965_SURFACE_MEM_NATIVE             0
 #define I965_SURFACE_MEM_GEM_FLINK          1
