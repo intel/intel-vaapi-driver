@@ -404,6 +404,7 @@ struct hw_codec_info
     unsigned int has_h264_mvc_encoding:1;
     unsigned int has_hevc_decoding:1;
     unsigned int has_hevc_encoding:1;
+    unsigned int has_hevc10_encoding:1;
     unsigned int has_hevc10_decoding:1;
     unsigned int has_vp9_decoding:1;
     unsigned int has_vpp_p010:1;
