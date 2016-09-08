@@ -77,6 +77,78 @@
 
 #define ENCODER_LP_QUALITY_RANGE  8
 
+#define HAS_MPEG2_DECODING(ctx)  ((ctx)->codec_info->has_mpeg2_decoding && \
+                                  (ctx)->intel.has_bsd)
+
+#define HAS_MPEG2_ENCODING(ctx)  ((ctx)->codec_info->has_mpeg2_encoding && \
+                                  (ctx)->intel.has_bsd)
+
+#define HAS_H264_DECODING(ctx)  ((ctx)->codec_info->has_h264_decoding && \
+                                 (ctx)->intel.has_bsd)
+
+#define HAS_H264_ENCODING(ctx)  ((ctx)->codec_info->has_h264_encoding && \
+                                 (ctx)->intel.has_bsd)
+
+#define HAS_LP_H264_ENCODING(ctx)  ((ctx)->codec_info->has_lp_h264_encoding && \
+                                    (ctx)->intel.has_bsd)
+
+#define HAS_VC1_DECODING(ctx)   ((ctx)->codec_info->has_vc1_decoding && \
+                                 (ctx)->intel.has_bsd)
+
+#define HAS_JPEG_DECODING(ctx)  ((ctx)->codec_info->has_jpeg_decoding && \
+                                 (ctx)->intel.has_bsd)
+
+#define HAS_JPEG_ENCODING(ctx)  ((ctx)->codec_info->has_jpeg_encoding && \
+                                 (ctx)->intel.has_bsd)
+
+#define HAS_VPP(ctx)    ((ctx)->codec_info->has_vpp)
+
+#define HAS_ACCELERATED_GETIMAGE(ctx)   ((ctx)->codec_info->has_accelerated_getimage)
+
+#define HAS_ACCELERATED_PUTIMAGE(ctx)   ((ctx)->codec_info->has_accelerated_putimage)
+
+#define HAS_TILED_SURFACE(ctx) ((ctx)->codec_info->has_tiled_surface)
+
+#define HAS_VP8_DECODING(ctx)   ((ctx)->codec_info->has_vp8_decoding && \
+                                 (ctx)->intel.has_bsd)
+
+#define HAS_VP8_ENCODING(ctx)   ((ctx)->codec_info->has_vp8_encoding && \
+                                 (ctx)->intel.has_bsd)
+
+#define HAS_H264_MVC_DECODING(ctx) \
+    (HAS_H264_DECODING(ctx) && (ctx)->codec_info->h264_mvc_dec_profiles)
+
+#define HAS_H264_MVC_DECODING_PROFILE(ctx, profile)                     \
+    (HAS_H264_MVC_DECODING(ctx) &&                                      \
+     ((ctx)->codec_info->h264_mvc_dec_profiles & (1U << profile)))
+
+#define HAS_H264_MVC_ENCODING(ctx)  ((ctx)->codec_info->has_h264_mvc_encoding && \
+                                     (ctx)->intel.has_bsd)
+
+#define HAS_HEVC_DECODING(ctx)          ((ctx)->codec_info->has_hevc_decoding && \
+                                         (ctx)->intel.has_bsd)
+
+#define HAS_HEVC_ENCODING(ctx)          ((ctx)->codec_info->has_hevc_encoding && \
+                                         (ctx)->intel.has_bsd)
+
+#define HAS_VP9_DECODING(ctx)          ((ctx)->codec_info->has_vp9_decoding && \
+                                         (ctx)->intel.has_bsd)
+
+#define HAS_VP9_DECODING_PROFILE(ctx, profile)                     \
+    (HAS_VP9_DECODING(ctx) &&                                      \
+     ((ctx)->codec_info->vp9_dec_profiles & (1U << (profile - VAProfileVP9Profile0))))
+
+#define HAS_HEVC10_DECODING(ctx)        ((ctx)->codec_info->has_hevc10_decoding && \
+                                         (ctx)->intel.has_bsd)
+#define HAS_HEVC10_ENCODING(ctx)        ((ctx)->codec_info->has_hevc10_encoding && \
+                                         (ctx)->intel.has_bsd)
+
+#define HAS_VPP_P010(ctx)        ((ctx)->codec_info->has_vpp_p010 && \
+                                         (ctx)->intel.has_bsd)
+
+#define HAS_VP9_ENCODING(ctx)          ((ctx)->codec_info->has_vp9_encoding && \
+                                         (ctx)->intel.has_bsd)
+
 struct i965_surface
 {
     struct object_base *base;
