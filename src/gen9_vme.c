@@ -40,6 +40,8 @@
 #include "i965_encoder.h"
 #include "gen6_vme.h"
 #include "gen6_mfc.h"
+#include "gen9_mfc.h"
+#include "intel_media.h"
 
 #ifdef SURFACE_STATE_PADDED_SIZE
 #undef SURFACE_STATE_PADDED_SIZE
@@ -334,6 +336,7 @@ gen9_vme_surface_setup(VADriverContextP ctx,
     /*Setup surfaces state*/
     /* current picture for encoding */
     obj_surface = encode_state->input_yuv_object;
+    assert(obj_surface);
     gen9_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen9_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
     gen9_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);
@@ -1418,10 +1421,19 @@ gen9_vme_hevc_surface_setup(VADriverContextP ctx,
                        struct intel_encoder_context *encoder_context)
 {
     struct object_surface *obj_surface;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    GenHevcSurface *hevc_encoder_surface = NULL;
 
     /*Setup surfaces state*/
     /* current picture for encoding */
     obj_surface = encode_state->input_yuv_object;
+
+    if((pSequenceParameter->seq_fields.bits.bit_depth_luma_minus8 > 0)
+        || (pSequenceParameter->seq_fields.bits.bit_depth_chroma_minus8 > 0)) {
+        hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
+        assert(hevc_encoder_surface);
+        obj_surface = hevc_encoder_surface->nv12_surface_obj;
+    }
     gen9_vme_source_surface_state(ctx, 0, obj_surface, encoder_context);
     gen9_vme_media_source_surface_state(ctx, 4, obj_surface, encoder_context);
     gen9_vme_media_chroma_source_surface_state(ctx, 6, obj_surface, encoder_context);
@@ -1735,6 +1747,144 @@ static void gen9_vme_hevc_pipeline_programing(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
 }
 
+static VAStatus gen9_intel_init_hevc_surface(VADriverContextP ctx,
+                            struct intel_encoder_context *encoder_context,
+                            struct encode_state *encode_state,
+                            struct object_surface *input_obj_surface)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    GenHevcSurface *hevc_encoder_surface;
+    struct i965_surface src_surface, dst_surface;
+    struct object_surface *obj_surface;
+    VARectangle rect;
+    VAStatus status;
+
+    uint32_t size;
+
+    obj_surface = input_obj_surface;
+    assert(obj_surface && obj_surface->bo);
+
+    if (obj_surface->private_data == NULL) {
+
+        if (mfc_context->pic_size.ctb_size == 16)
+            size = ((pSequenceParameter->pic_width_in_luma_samples + 63) >> 6) *
+            ((pSequenceParameter->pic_height_in_luma_samples + 15) >> 4);
+        else
+            size = ((pSequenceParameter->pic_width_in_luma_samples + 31) >> 5) *
+            ((pSequenceParameter->pic_height_in_luma_samples + 31) >> 5);
+        size <<= 6; /* in unit of 64bytes */
+
+        hevc_encoder_surface = calloc(sizeof(GenHevcSurface), 1);
+
+        assert(hevc_encoder_surface);
+        hevc_encoder_surface->motion_vector_temporal_bo =
+            dri_bo_alloc(i965->intel.bufmgr,
+            "motion vector temporal buffer",
+            size,
+            0x1000);
+        assert(hevc_encoder_surface->motion_vector_temporal_bo);
+
+        hevc_encoder_surface->ctx = ctx;
+        hevc_encoder_surface->nv12_surface_obj = NULL;
+        hevc_encoder_surface->nv12_surface_id = VA_INVALID_SURFACE;
+        hevc_encoder_surface->has_p010_to_nv12_done = 0;
+
+        obj_surface->private_data = (void *)hevc_encoder_surface;
+        obj_surface->free_private_data = (void *)gen_free_hevc_surface;
+    }
+
+    hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
+
+    if(!hevc_encoder_surface->has_p010_to_nv12_done && obj_surface->fourcc == VA_FOURCC_P010)
+    {
+        // convert input
+        rect.x = 0;
+        rect.y = 0;
+        rect.width = obj_surface->orig_width;
+        rect.height = obj_surface->orig_height;
+
+        src_surface.base = (struct object_base *)obj_surface;
+        src_surface.type = I965_SURFACE_TYPE_SURFACE;
+        src_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+        if(SURFACE(hevc_encoder_surface->nv12_surface_id) == NULL)
+        {
+            status = i965_CreateSurfaces(ctx,
+                obj_surface->orig_width,
+                obj_surface->orig_height,
+                VA_RT_FORMAT_YUV420,
+                1,
+                &hevc_encoder_surface->nv12_surface_id);
+            assert(status == VA_STATUS_SUCCESS);
+
+            if (status != VA_STATUS_SUCCESS)
+                return status;
+        }
+
+        obj_surface = SURFACE(hevc_encoder_surface->nv12_surface_id);
+        hevc_encoder_surface->nv12_surface_obj = obj_surface;
+        assert(obj_surface);
+        i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+
+        dst_surface.base = (struct object_base *)obj_surface;
+        dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+        dst_surface.flags = I965_SURFACE_FLAG_FRAME;
+
+        status = i965_image_processing(ctx,
+            &src_surface,
+            &rect,
+            &dst_surface,
+            &rect);
+        assert(status == VA_STATUS_SUCCESS);
+        hevc_encoder_surface->has_p010_to_nv12_done = 1;
+    }
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus gen9_intel_hevc_input_check(VADriverContextP ctx,
+                            struct encode_state *encode_state,
+                            struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
+    struct object_surface *obj_surface;
+    GenHevcSurface *hevc_encoder_surface = NULL;
+    int i;
+
+    obj_surface = SURFACE(encode_state->current_render_target);
+    assert(obj_surface && obj_surface->bo);
+    hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
+    if(hevc_encoder_surface)
+        hevc_encoder_surface->has_p010_to_nv12_done = 0;
+    gen9_intel_init_hevc_surface(ctx,encoder_context,encode_state,obj_surface);
+
+    /* Setup current frame and current direct mv buffer*/
+    obj_surface = encode_state->reconstructed_object;
+    hevc_encoder_surface = NULL;
+    hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
+    if(hevc_encoder_surface)
+        hevc_encoder_surface->has_p010_to_nv12_done = 1;
+    gen9_intel_init_hevc_surface(ctx,encoder_context,encode_state,obj_surface);
+
+    /* Setup reference frames and direct mv buffers*/
+    for (i = 0; i < MAX_HCP_REFERENCE_SURFACES; i++) {
+        obj_surface = encode_state->reference_objects[i];
+
+        if (obj_surface && obj_surface->bo) {
+            mfc_context->reference_surfaces[i].bo = obj_surface->bo;
+            dri_bo_reference(obj_surface->bo);
+
+            gen9_intel_init_hevc_surface(ctx,encoder_context,encode_state,obj_surface);
+        } else {
+            break;
+        }
+    }
+
+    return VA_STATUS_SUCCESS;
+}
+
 static VAStatus gen9_vme_hevc_prepare(VADriverContextP ctx,
                                  struct encode_state *encode_state,
                                  struct intel_encoder_context *encoder_context)
@@ -1750,6 +1900,9 @@ static VAStatus gen9_vme_hevc_prepare(VADriverContextP ctx,
         (vme_context->hevc_level != pSequenceParameter->general_level_idc)) {
         vme_context->hevc_level = pSequenceParameter->general_level_idc;
     }
+
+    //internal input check for main10
+    gen9_intel_hevc_input_check(ctx,encode_state,encoder_context);
 
     intel_vme_hevc_update_mbmv_cost(ctx, encode_state, encoder_context);
 

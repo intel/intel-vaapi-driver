@@ -2089,12 +2089,19 @@ intel_hevc_vme_reference_state(VADriverContextP ctx,
     struct object_surface *obj_surface = NULL;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VASurfaceID ref_surface_id;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     VAEncPictureParameterBufferHEVC *pic_param = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferHEVC *slice_param = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[0]->buffer;
     int max_num_references;
     VAPictureHEVC *curr_pic;
     VAPictureHEVC *ref_list;
     int ref_idx;
+    unsigned int is_hevc10 = 0;
+    GenHevcSurface *hevc_encoder_surface = NULL;
+
+    if((pSequenceParameter->seq_fields.bits.bit_depth_luma_minus8 > 0)
+        || (pSequenceParameter->seq_fields.bits.bit_depth_chroma_minus8 > 0))
+        is_hevc10 = 1;
 
     if (list_index == 0) {
         max_num_references = pic_param->num_ref_idx_l0_default_active_minus1 + 1;
@@ -2141,6 +2148,12 @@ intel_hevc_vme_reference_state(VADriverContextP ctx,
         obj_surface->bo) {
         assert(ref_idx >= 0);
         vme_context->used_reference_objects[list_index] = obj_surface;
+
+        if(is_hevc10){
+            hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
+            assert(hevc_encoder_surface);
+            obj_surface = hevc_encoder_surface->nv12_surface_obj;
+        }
         vme_source_surface_state(ctx, surface_index, obj_surface, encoder_context);
         vme_context->ref_index_in_mb[list_index] = (ref_idx << 24 |
                 ref_idx << 16 |

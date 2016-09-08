@@ -193,11 +193,20 @@ gen9_hcpe_surface_state(VADriverContextP ctx, struct encode_state *encode_state,
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct object_surface *obj_surface = encode_state->reconstructed_object;
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
+    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    unsigned int surface_format = SURFACE_FORMAT_PLANAR_420_8;
 
     /* to do */
     unsigned int y_cb_offset;
 
     assert(obj_surface);
+
+    if((pSequenceParameter->seq_fields.bits.bit_depth_luma_minus8 > 0)
+        || (pSequenceParameter->seq_fields.bits.bit_depth_chroma_minus8 > 0))
+    {
+        assert(obj_surface->fourcc == VA_FOURCC_P010);
+        surface_format = SURFACE_FORMAT_P010;
+    }
 
     y_cb_offset = obj_surface->y_cb_offset;
 
@@ -207,7 +216,7 @@ gen9_hcpe_surface_state(VADriverContextP ctx, struct encode_state *encode_state,
                   (1 << 28) |                   /* surface id */
                   (mfc_context->surface_state.w_pitch - 1));    /* pitch - 1 */
     OUT_BCS_BATCH(batch,
-                  (SURFACE_FORMAT_PLANAR_420_8 << 28) |
+                  surface_format << 28 |
                   y_cb_offset);
     ADVANCE_BCS_BATCH(batch);
 
@@ -217,7 +226,7 @@ gen9_hcpe_surface_state(VADriverContextP ctx, struct encode_state *encode_state,
                   (0 << 28) |                   /* surface id */
                   (mfc_context->surface_state.w_pitch - 1));    /* pitch - 1 */
     OUT_BCS_BATCH(batch,
-                  (SURFACE_FORMAT_PLANAR_420_8 << 28) |
+                  surface_format << 28 |
                   y_cb_offset);
     ADVANCE_BCS_BATCH(batch);
 }
@@ -588,8 +597,8 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
                   seq_param->seq_fields.bits.sample_adaptive_offset_enabled_flag << 3 | /* 0 for encoder */
                   0);
     OUT_BCS_BATCH(batch,
-                  0 << 27 |                 /* 8 bit only for encoder */
-                  0 << 24 |                 /* 8 bit only for encoder */
+                  seq_param->seq_fields.bits.bit_depth_luma_minus8 << 27 |                 /* 10 bit for KBL+*/
+                  seq_param->seq_fields.bits.bit_depth_chroma_minus8 << 24 |                 /* 10 bit for KBL+ */
                   pcm_sample_bit_depth_luma_minus1 << 20 |
                   pcm_sample_bit_depth_chroma_minus1 << 16 |
                   seq_param->max_transform_hierarchy_depth_inter << 13 |    /*  for encoder */
@@ -913,6 +922,11 @@ static void gen9_hcpe_init(VADriverContextP ctx,
     int height_in_mb = ALIGN(pSequenceParameter->pic_height_in_luma_samples, 16) / 16;
 
     int num_cu_record = 64;
+    int size_shift = 3;
+
+    if((pSequenceParameter->seq_fields.bits.bit_depth_luma_minus8 > 0)
+        || (pSequenceParameter->seq_fields.bits.bit_depth_chroma_minus8 > 0))
+        size_shift = 2;
 
     if (log2_ctb_size == 5) num_cu_record = 16;
     else if (log2_ctb_size == 4) num_cu_record = 4;
@@ -991,12 +1005,12 @@ static void gen9_hcpe_init(VADriverContextP ctx,
 
     /* Current internal buffer for HCP */
 
-    size = ALIGN(pSequenceParameter->pic_width_in_luma_samples, 32) >> 3;
+    size = ALIGN(pSequenceParameter->pic_width_in_luma_samples, 32) >> size_shift;
     size <<= 6;
     ALLOC_ENCODER_BUFFER((&mfc_context->deblocking_filter_line_buffer), "line buffer", size);
     ALLOC_ENCODER_BUFFER((&mfc_context->deblocking_filter_tile_line_buffer), "tile line buffer", size);
 
-    size = ALIGN(pSequenceParameter->pic_height_in_luma_samples + 6 * width_in_ctb, 32) >> 3;
+    size = ALIGN(pSequenceParameter->pic_height_in_luma_samples + 6 * width_in_ctb, 32) >> size_shift;
     size <<= 6;
     ALLOC_ENCODER_BUFFER((&mfc_context->deblocking_filter_tile_column_buffer), "tile column buffer", size);
 
@@ -1026,15 +1040,15 @@ static void gen9_hcpe_init(VADriverContextP ctx,
         ALLOC_ENCODER_BUFFER((&mfc_context->metadata_tile_column_buffer), "metadata tile column buffer", size);
     }
 
-    size = ALIGN(((pSequenceParameter->pic_width_in_luma_samples >> 1) + 3 * width_in_ctb), 16) >> 3;
+    size = ALIGN(((pSequenceParameter->pic_width_in_luma_samples >> 1) + 3 * width_in_ctb), 16) >> size_shift;
     size <<= 6;
     ALLOC_ENCODER_BUFFER((&mfc_context->sao_line_buffer), "sao line buffer", size);
 
-    size = ALIGN(((pSequenceParameter->pic_width_in_luma_samples >> 1) + 6 * width_in_ctb), 16) >> 3;
+    size = ALIGN(((pSequenceParameter->pic_width_in_luma_samples >> 1) + 6 * width_in_ctb), 16) >> size_shift;
     size <<= 6;
     ALLOC_ENCODER_BUFFER((&mfc_context->sao_tile_line_buffer), "sao tile line buffer", size);
 
-    size = ALIGN(((pSequenceParameter->pic_height_in_luma_samples >> 1) + 6 * height_in_ctb), 16) >> 3;
+    size = ALIGN(((pSequenceParameter->pic_height_in_luma_samples >> 1) + 6 * height_in_ctb), 16) >> size_shift;
     size <<= 6;
     ALLOC_ENCODER_BUFFER((&mfc_context->sao_tile_column_buffer), "sao tile column buffer", size);
 
@@ -1707,8 +1721,8 @@ gen9_hcpe_hevc_pipeline_slice_programing(VADriverContextP ctx,
     }
 
     /* only support for 8-bit pixel bit-depth */
-    assert(pSequenceParameter->seq_fields.bits.bit_depth_luma_minus8 == 0);
-    assert(pSequenceParameter->seq_fields.bits.bit_depth_chroma_minus8 == 0);
+    assert(pSequenceParameter->seq_fields.bits.bit_depth_luma_minus8 >= 0 && pSequenceParameter->seq_fields.bits.bit_depth_luma_minus8 <= 2);
+    assert(pSequenceParameter->seq_fields.bits.bit_depth_chroma_minus8 >= 0 && pSequenceParameter->seq_fields.bits.bit_depth_chroma_minus8 <= 2);
     assert(pPicParameter->pic_init_qp >= 0 && pPicParameter->pic_init_qp < 52);
     assert(qp >= 0 && qp < 52);
 
@@ -2073,7 +2087,6 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
                                  struct encode_state *encode_state,
                                  struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
@@ -2081,45 +2094,20 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
     dri_bo *bo;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     int i;
-	struct i965_coded_buffer_segment *coded_buffer_segment;
-    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
+    struct i965_coded_buffer_segment *coded_buffer_segment;
 
     /*Setup all the input&output object*/
 
     /* Setup current frame and current direct mv buffer*/
     obj_surface = encode_state->reconstructed_object;
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
-    if (obj_surface->private_data == NULL) {
-        uint32_t size;
-
-        if (mfc_context->pic_size.ctb_size == 16)
-            size = ((pSequenceParameter->pic_width_in_luma_samples + 63) >> 6) *
-                   ((pSequenceParameter->pic_height_in_luma_samples + 15) >> 4);
-        else
-            size = ((pSequenceParameter->pic_width_in_luma_samples + 31) >> 5) *
-                   ((pSequenceParameter->pic_height_in_luma_samples + 31) >> 5);
-        size <<= 6; /* in unit of 64bytes */
-
-        hevc_encoder_surface = calloc(sizeof(GenHevcSurface), 1);
-
-        assert(hevc_encoder_surface);
-        hevc_encoder_surface->motion_vector_temporal_bo =
-            dri_bo_alloc(i965->intel.bufmgr,
-                         "motion vector temporal buffer",
-                         size,
-                         0x1000);
-        assert(hevc_encoder_surface->motion_vector_temporal_bo);
-
-        obj_surface->private_data = (void *)hevc_encoder_surface;
-        obj_surface->free_private_data = (void *)gen_free_hevc_surface;
-    }
     hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
+    assert(hevc_encoder_surface);
 
     if (hevc_encoder_surface) {
+        hevc_encoder_surface->has_p010_to_nv12_done=0;
         hevc_encoder_surface->base.frame_store_id = -1;
         mfc_context->current_collocated_mv_temporal_buffer[NUM_HCP_CURRENT_COLLOCATED_MV_TEMPORAL_BUFFERS - 1].bo = hevc_encoder_surface->motion_vector_temporal_bo;
-
         dri_bo_reference(hevc_encoder_surface->motion_vector_temporal_bo);
     }
 
@@ -2137,33 +2125,8 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
             dri_bo_reference(obj_surface->bo);
 
             /* Check MV temporal buffer */
-            if (obj_surface->private_data == NULL) {
-                uint32_t size;
-
-                if (mfc_context->pic_size.ctb_size == 16)
-                    size = ((pSequenceParameter->pic_width_in_luma_samples + 63) >> 6) *
-                           ((pSequenceParameter->pic_height_in_luma_samples + 15) >> 4);
-                else
-                    size = ((pSequenceParameter->pic_width_in_luma_samples + 31) >> 5) *
-                           ((pSequenceParameter->pic_height_in_luma_samples + 31) >> 5);
-                size <<= 6; /* in unit of 64bytes */
-
-                hevc_encoder_surface = calloc(sizeof(GenHevcSurface), 1);
-
-                if (hevc_encoder_surface) {
-                    hevc_encoder_surface->motion_vector_temporal_bo =
-                        dri_bo_alloc(i965->intel.bufmgr,
-                                     "motion vector temporal buffer",
-                                     size,
-                                     0x1000);
-                    assert(hevc_encoder_surface->motion_vector_temporal_bo);
-                }
-
-                obj_surface->private_data = (void *)hevc_encoder_surface;
-                obj_surface->free_private_data = (void *)gen_free_hevc_surface;
-            }
-
             hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
+            assert(hevc_encoder_surface);
 
             if (hevc_encoder_surface) {
                 hevc_encoder_surface->base.frame_store_id = -1;
@@ -2175,6 +2138,7 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
             break;
         }
     }
+
 
     mfc_context->uncompressed_picture_source.bo = encode_state->input_yuv_object->bo;
     dri_bo_reference(mfc_context->uncompressed_picture_source.bo);
@@ -2265,6 +2229,14 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
     int ratio_max = 32;
     int ratio = 8;
     double buffer_size = 0;
+    int bpp = 1;
+
+    if((pSequenceParameter->seq_fields.bits.bit_depth_luma_minus8 > 0) ||
+        (pSequenceParameter->seq_fields.bits.bit_depth_chroma_minus8 > 0))
+        bpp = 2;
+
+    qp1_size = qp1_size * bpp;
+    qp51_size = qp51_size * bpp;
 
     if (!encode_state->misc_param[VAEncMiscParameterTypeHRD] || !encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer)
         return;
@@ -2733,6 +2705,7 @@ VAStatus gen9_hcpe_pipeline(VADriverContextP ctx,
 
     switch (profile) {
     case VAProfileHEVCMain:
+    case VAProfileHEVCMain10:
         vaStatus = gen9_hcpe_hevc_encode_picture(ctx, encode_state, encoder_context);
         break;
 
