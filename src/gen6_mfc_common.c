@@ -71,19 +71,7 @@ intel_mfc_bit_rate_control_context_init(struct encode_state *encode_state,
                                         struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    int width_in_mbs = WIDTH_IN_MACROBLOCKS(encoder_context->frame_width_in_pixel);
-    int height_in_mbs = HEIGHT_IN_MACROBLOCKS(encoder_context->frame_height_in_pixel);
-    float fps =  encoder_context->brc.framerate_per_100s / 100.0;
-    int inter_mb_size = encoder_context->brc.bits_per_second * 1.0 / (fps+4.0) / width_in_mbs / height_in_mbs;
-    int intra_mb_size = inter_mb_size * 5.0;
     int i;
-
-    mfc_context->bit_rate_control_context[SLICE_TYPE_I].target_mb_size = intra_mb_size;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_I].target_frame_size = intra_mb_size * width_in_mbs * height_in_mbs;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_P].target_mb_size = inter_mb_size;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_P].target_frame_size = inter_mb_size * width_in_mbs * height_in_mbs;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_B].target_mb_size = inter_mb_size;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_B].target_frame_size = inter_mb_size * width_in_mbs * height_in_mbs;
 
     for(i = 0 ; i < 3; i++) {
         mfc_context->bit_rate_control_context[i].QpPrimeY = 26;
@@ -101,14 +89,6 @@ intel_mfc_bit_rate_control_context_init(struct encode_state *encode_state,
         mfc_context->bit_rate_control_context[i].Correct[4] = 4;
         mfc_context->bit_rate_control_context[i].Correct[5] = 8;
     }
-    
-    mfc_context->bit_rate_control_context[SLICE_TYPE_I].TargetSizeInWord = (intra_mb_size + 16)/ 16;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_P].TargetSizeInWord = (inter_mb_size + 16)/ 16;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_B].TargetSizeInWord = (inter_mb_size + 16)/ 16;
-
-    mfc_context->bit_rate_control_context[SLICE_TYPE_I].MaxSizeInWord = mfc_context->bit_rate_control_context[SLICE_TYPE_I].TargetSizeInWord * 1.5;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_P].MaxSizeInWord = mfc_context->bit_rate_control_context[SLICE_TYPE_P].TargetSizeInWord * 1.5;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_B].MaxSizeInWord = mfc_context->bit_rate_control_context[SLICE_TYPE_B].TargetSizeInWord * 1.5;
 }
 
 static void intel_mfc_brc_init(struct encode_state *encode_state,
@@ -317,8 +297,7 @@ static void intel_mfc_hrd_context_init(struct encode_state *encode_state,
     // current we only support CBR mode.
     if (rate_control_mode == VA_RC_CBR) {
         mfc_context->vui_hrd.i_bit_rate_value = target_bit_rate >> 10;
-        mfc_context->vui_hrd.i_cpb_size_value = (target_bit_rate * 8) >> 10;
-        mfc_context->vui_hrd.i_initial_cpb_removal_delay = mfc_context->vui_hrd.i_cpb_size_value * 0.5 * 1024 / target_bit_rate * 90000;
+        mfc_context->vui_hrd.i_initial_cpb_removal_delay = ((target_bit_rate * 8) >> 10) * 0.5 * 1024 / target_bit_rate * 90000;
         mfc_context->vui_hrd.i_cpb_removal_delay = 2;
         mfc_context->vui_hrd.i_frame_number = 0;
 
@@ -362,7 +341,6 @@ void intel_mfc_brc_prepare(struct encode_state *encode_state,
                            struct intel_encoder_context *encoder_context)
 {
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
     if (encoder_context->codec != CODEC_H264 &&
         encoder_context->codec != CODEC_H264_MVC)
@@ -370,14 +348,13 @@ void intel_mfc_brc_prepare(struct encode_state *encode_state,
 
     if (rate_control_mode == VA_RC_CBR) {
         /*Programing bit rate control */
-        if ((mfc_context->bit_rate_control_context[SLICE_TYPE_I].MaxSizeInWord == 0) ||
-            encoder_context->brc.need_reset) {
+        if (encoder_context->brc.need_reset) {
             intel_mfc_bit_rate_control_context_init(encode_state, encoder_context);
             intel_mfc_brc_init(encode_state, encoder_context);
         }
 
         /*Programing HRD control */
-        if ((mfc_context->vui_hrd.i_cpb_size_value == 0) || encoder_context->brc.need_reset)
+        if (encoder_context->brc.need_reset)
             intel_mfc_hrd_context_init(encode_state, encoder_context);    
     }
 }

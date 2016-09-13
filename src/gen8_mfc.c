@@ -3319,31 +3319,6 @@ static int gen8_mfc_vp8_qindex_estimate(struct encode_state *encode_state,
     return target_qindex;
 }
 
-static void
-gen8_mfc_vp8_bit_rate_control_context_init(struct encode_state *encode_state,
-                                        struct gen6_mfc_context *mfc_context)
-{
-    VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
-    VAEncMiscParameterBuffer *misc_param_frame_rate_buffer = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFrameRate]->buffer;
-    VAEncMiscParameterFrameRate* param_frame_rate = (VAEncMiscParameterFrameRate*)misc_param_frame_rate_buffer->data;
-    int width_in_mbs = ALIGN(seq_param->frame_width, 16) / 16;
-    int height_in_mbs = ALIGN(seq_param->frame_height, 16) / 16;
-    float fps = param_frame_rate->framerate;
-    int inter_mb_size = seq_param->bits_per_second * 1.0 / (fps+4.0) / width_in_mbs / height_in_mbs;
-    int intra_mb_size = inter_mb_size * 5.0;
-
-    mfc_context->bit_rate_control_context[SLICE_TYPE_I].target_mb_size = intra_mb_size;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_I].target_frame_size = intra_mb_size * width_in_mbs * height_in_mbs;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_P].target_mb_size = inter_mb_size;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_P].target_frame_size = inter_mb_size * width_in_mbs * height_in_mbs;
-
-    mfc_context->bit_rate_control_context[SLICE_TYPE_I].TargetSizeInWord = (intra_mb_size + 16)/ 16;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_P].TargetSizeInWord = (inter_mb_size + 16)/ 16;
-
-    mfc_context->bit_rate_control_context[SLICE_TYPE_I].MaxSizeInWord = mfc_context->bit_rate_control_context[SLICE_TYPE_I].TargetSizeInWord * 1.5;
-    mfc_context->bit_rate_control_context[SLICE_TYPE_P].MaxSizeInWord = mfc_context->bit_rate_control_context[SLICE_TYPE_P].TargetSizeInWord * 1.5;
-}
-
 static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
                                struct intel_encoder_context* encoder_context)
 {
@@ -3516,8 +3491,7 @@ static void gen8_mfc_vp8_hrd_context_init(struct encode_state *encode_state,
     // current we only support CBR mode.
     if (rate_control_mode == VA_RC_CBR) {
         mfc_context->vui_hrd.i_bit_rate_value = target_bit_rate >> 10;
-        mfc_context->vui_hrd.i_cpb_size_value = (target_bit_rate * 8) >> 10;
-        mfc_context->vui_hrd.i_initial_cpb_removal_delay = mfc_context->vui_hrd.i_cpb_size_value * 0.5 * 1024 / target_bit_rate * 90000;
+        mfc_context->vui_hrd.i_initial_cpb_removal_delay = ((target_bit_rate * 8) >> 10) * 0.5 * 1024 / target_bit_rate * 90000;
         mfc_context->vui_hrd.i_cpb_removal_delay = 2;
         mfc_context->vui_hrd.i_frame_number = 0;
 
@@ -3577,7 +3551,6 @@ static void gen8_mfc_vp8_brc_prepare(struct encode_state *encode_state,
                            struct intel_encoder_context *encoder_context)
 {
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
     if (rate_control_mode == VA_RC_CBR) {
         bool brc_updated;
@@ -3586,14 +3559,12 @@ static void gen8_mfc_vp8_brc_prepare(struct encode_state *encode_state,
         brc_updated = gen8_mfc_vp8_brc_updated_check(encode_state, encoder_context);
 
         /*Programing bit rate control */
-        if ((mfc_context->bit_rate_control_context[SLICE_TYPE_I].MaxSizeInWord == 0) ||
-             brc_updated) {
-            gen8_mfc_vp8_bit_rate_control_context_init(encode_state, mfc_context);
+        if (brc_updated) {
             gen8_mfc_vp8_brc_init(encode_state, encoder_context);
         }
 
         /*Programing HRD control */
-        if ((mfc_context->vui_hrd.i_cpb_size_value == 0) || brc_updated )
+        if (brc_updated)
             gen8_mfc_vp8_hrd_context_init(encode_state, encoder_context);
     }
 }

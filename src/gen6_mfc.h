@@ -220,16 +220,11 @@ struct gen6_mfc_context
         unsigned int QpPrimeY;
         unsigned int MaxQpNegModifier;
         unsigned int MaxQpPosModifier;
-        unsigned char MaxSizeInWord;
-        unsigned char TargetSizeInWord;
         unsigned char Correct[6];
         unsigned char GrowInit;
         unsigned char GrowResistance;
         unsigned char ShrinkInit;
         unsigned char ShrinkResistance; 
-
-        unsigned int target_mb_size;
-        unsigned int target_frame_size;
     } bit_rate_control_context[3];      //INTERNAL: for I, P, B frames
 
     struct {
@@ -257,7 +252,6 @@ struct gen6_mfc_context
     //HRD control context
     struct {
         int i_bit_rate_value;
-        int i_cpb_size_value;
 
         int i_initial_cpb_removal_delay;
         int i_cpb_removal_delay;
