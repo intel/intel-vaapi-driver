@@ -80,9 +80,6 @@ struct encode_state;
 #define VDENC_LUTMODE_REF_ID                    0x0A
 #define VDENC_LUTMODE_INTRA_CHROMA              0x0B
 
-#define WIDTH_IN_MACROBLOCKS(width)             (ALIGN(width, 16) >> 4)
-#define HEIGHT_IN_MACROBLOCKS(height)           (ALIGN(height, 16) >> 4)
-
 struct gen9_mfx_avc_img_state
 {
     union {
