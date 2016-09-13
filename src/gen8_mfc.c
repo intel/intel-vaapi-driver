@@ -1178,7 +1178,7 @@ gen8_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
 
     qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
-        qp = mfc_context->brc.qp_prime_y[slice_type];
+        qp = mfc_context->brc.qp_prime_y[0][slice_type];
         if (encode_state->slice_header_index[slice_index] == 0) {
             pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
             qp_slice = qp;
@@ -1535,7 +1535,7 @@ gen8_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
     qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
-        qp = mfc_context->brc.qp_prime_y[slice_type];
+        qp = mfc_context->brc.qp_prime_y[0][slice_type];
         if (encode_state->slice_header_index[slice_index] == 0) {
             pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
             qp_slice = qp;
@@ -3340,23 +3340,23 @@ static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
 
     mfc_context->brc.mode = encoder_context->rate_control_mode;
 
-    mfc_context->brc.target_frame_size[SLICE_TYPE_I] = (int)((double)((bitrate * intra_period)/frame_rate) /
+    mfc_context->brc.target_frame_size[0][SLICE_TYPE_I] = (int)((double)((bitrate * intra_period)/frame_rate) /
                                                              (double)(inum + BRC_PWEIGHT * pnum ));
-    mfc_context->brc.target_frame_size[SLICE_TYPE_P] = BRC_PWEIGHT * mfc_context->brc.target_frame_size[SLICE_TYPE_I];
+    mfc_context->brc.target_frame_size[0][SLICE_TYPE_P] = BRC_PWEIGHT * mfc_context->brc.target_frame_size[0][SLICE_TYPE_I];
 
     mfc_context->brc.gop_nums[SLICE_TYPE_I] = inum;
     mfc_context->brc.gop_nums[SLICE_TYPE_P] = pnum;
 
-    mfc_context->brc.bits_per_frame = bitrate/frame_rate;
+    mfc_context->brc.bits_per_frame[0] = bitrate/frame_rate;
 
-    mfc_context->brc.qp_prime_y[SLICE_TYPE_I] = gen8_mfc_vp8_qindex_estimate(encode_state,
-                                                                             mfc_context,
-                                                                             mfc_context->brc.target_frame_size[SLICE_TYPE_I],
-                                                                             1);
-    mfc_context->brc.qp_prime_y[SLICE_TYPE_P] = gen8_mfc_vp8_qindex_estimate(encode_state,
-                                                                             mfc_context,
-                                                                             mfc_context->brc.target_frame_size[SLICE_TYPE_P],
-                                                                             0);
+    mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I] = gen8_mfc_vp8_qindex_estimate(encode_state,
+                                                                                mfc_context,
+                                                                                mfc_context->brc.target_frame_size[0][SLICE_TYPE_I],
+                                                                                1);
+    mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P] = gen8_mfc_vp8_qindex_estimate(encode_state,
+                                                                                mfc_context,
+                                                                                mfc_context->brc.target_frame_size[0][SLICE_TYPE_P],
+                                                                                0);
 
     mfc_context->hrd.buffer_size = (double)param_hrd->buffer_size;
     mfc_context->hrd.current_buffer_fullness =
@@ -3376,8 +3376,8 @@ static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
     VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     int is_key_frame = !pic_param->pic_flags.bits.frame_type;
     int slicetype = (is_key_frame ? SLICE_TYPE_I : SLICE_TYPE_P);
-    int qpi = mfc_context->brc.qp_prime_y[SLICE_TYPE_I];
-    int qpp = mfc_context->brc.qp_prime_y[SLICE_TYPE_P];
+    int qpi = mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I];
+    int qpp = mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P];
     int qp; // quantizer of previously encoded slice of current type
     int qpn; // predicted quantizer for next frame of current type in integer format
     double qpf; // predicted quantizer for next frame of current type in float format
@@ -3392,9 +3392,9 @@ static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
     unsigned int max_qindex = pic_param->clamp_qindex_high;
     unsigned int min_qindex = pic_param->clamp_qindex_low;
 
-    qp = mfc_context->brc.qp_prime_y[slicetype];
+    qp = mfc_context->brc.qp_prime_y[0][slicetype];
 
-    target_frame_size = mfc_context->brc.target_frame_size[slicetype];
+    target_frame_size = mfc_context->brc.target_frame_size[0][slicetype];
     if (mfc_context->hrd.buffer_capacity < 5)
         frame_size_alpha = 0;
     else
@@ -3455,13 +3455,13 @@ static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
         /* correcting QPs of slices of other types */
         if (!is_key_frame) {
             if (abs(qpn - BRC_I_P_QP_DIFF - qpi) > 4)
-                mfc_context->brc.qp_prime_y[SLICE_TYPE_I] += (qpn - BRC_I_P_QP_DIFF - qpi) >> 2;
+                mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I] += (qpn - BRC_I_P_QP_DIFF - qpi) >> 2;
         } else {
             if (abs(qpn + BRC_I_P_QP_DIFF - qpp) > 4)
-                mfc_context->brc.qp_prime_y[SLICE_TYPE_P] += (qpn + BRC_I_P_QP_DIFF - qpp) >> 2;
+                mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P] += (qpn + BRC_I_P_QP_DIFF - qpp) >> 2;
         }
-        BRC_CLIP(mfc_context->brc.qp_prime_y[SLICE_TYPE_I], min_qindex, max_qindex);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[SLICE_TYPE_P], min_qindex, max_qindex);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I], min_qindex, max_qindex);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P], min_qindex, max_qindex);
     } else if (sts == BRC_UNDERFLOW) { // underflow
         if (qpn <= qp) qpn = qp + 2;
         if (qpn > max_qindex) {
@@ -3476,7 +3476,7 @@ static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
         }
     }
 
-    mfc_context->brc.qp_prime_y[slicetype] = qpn;
+    mfc_context->brc.qp_prime_y[0][slicetype] = qpn;
 
     return sts;
 }
@@ -3672,7 +3672,7 @@ static void gen8_mfc_vp8_init(VADriverContextP ctx,
     rate_control_mode = encoder_context->rate_control_mode;
 
     if (rate_control_mode == VA_RC_CBR) {
-        q_matrix->quantization_index[0] = mfc_context->brc.qp_prime_y[slice_type];
+        q_matrix->quantization_index[0] = mfc_context->brc.qp_prime_y[0][slice_type];
         for (i = 1; i < 4; i++)
             q_matrix->quantization_index[i] = q_matrix->quantization_index[0];
         for (i = 0; i < 5; i++)

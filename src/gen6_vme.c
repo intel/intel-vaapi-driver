@@ -369,7 +369,7 @@ static void gen6_vme_state_setup_fixup(VADriverContextP ctx,
     if (encoder_context->rate_control_mode == VA_RC_CQP)
         vme_state_message[16] = intra_mb_mode_cost_table[pic_param->pic_init_qp + slice_param->slice_qp_delta];
     else
-        vme_state_message[16] = intra_mb_mode_cost_table[mfc_context->brc.qp_prime_y[SLICE_TYPE_I]];
+        vme_state_message[16] = intra_mb_mode_cost_table[mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I]];
 }
 
 static VAStatus gen6_vme_vme_state_setup(VADriverContextP ctx,
