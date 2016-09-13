@@ -1370,7 +1370,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
         gen6_mfc_run(ctx, encode_state, encoder_context);
         if (rate_control_mode == VA_RC_CBR /*|| rate_control_mode == VA_RC_VBR*/) {
             gen6_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
-            sts = intel_mfc_brc_postpack(encode_state, mfc_context, current_frame_bits_size);
+            sts = intel_mfc_brc_postpack(encode_state, encoder_context, current_frame_bits_size);
             if (sts == BRC_NO_HRD_VIOLATION) {
                 intel_mfc_hrd_context_update(encode_state, mfc_context);
                 break;

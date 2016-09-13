@@ -147,9 +147,10 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 }
 
 int intel_mfc_update_hrd(struct encode_state *encode_state,
-                         struct gen6_mfc_context *mfc_context,
+                         struct intel_encoder_context *encoder_context,
                          int frame_bits)
 {
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     double prev_bf = mfc_context->hrd.current_buffer_fullness;
 
     mfc_context->hrd.current_buffer_fullness -= frame_bits;
@@ -172,9 +173,10 @@ int intel_mfc_update_hrd(struct encode_state *encode_state,
 }
 
 int intel_mfc_brc_postpack(struct encode_state *encode_state,
-                           struct gen6_mfc_context *mfc_context,
+                           struct intel_encoder_context *encoder_context,
                            int frame_bits)
 {
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     gen6_brc_status sts = BRC_NO_HRD_VIOLATION;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; 
     int slicetype = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
@@ -229,7 +231,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     BRC_CLIP(qpn, 1, 51);
 
     /* checking wthether HRD compliance is still met */
-    sts = intel_mfc_update_hrd(encode_state, mfc_context, frame_bits);
+    sts = intel_mfc_update_hrd(encode_state, encoder_context, frame_bits);
 
     /* calculating QP delta as some function*/
     x = mfc_context->hrd.target_buffer_fullness - mfc_context->hrd.current_buffer_fullness;
