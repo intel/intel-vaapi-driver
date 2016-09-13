@@ -467,6 +467,72 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
 }
 
 static VAStatus
+intel_encoder_check_temporal_layer_structure(VADriverContextP ctx,
+                                             struct encode_state *encode_state,
+                                             struct intel_encoder_context *encoder_context)
+{
+    VAEncMiscParameterBuffer* misc_param;
+    VAEncMiscParameterTemporalLayerStructure *tls_paramter;
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
+    int i;
+
+    if (!encoder_context->is_new_sequence) {
+        if (encoder_context->layer.num_layers > 1)
+            encoder_context->layer.curr_frame_layer_id = encoder_context->layer.frame_layer_ids[(encoder_context->num_frames_in_sequence - 1) % encoder_context->layer.size_frame_layer_ids];
+        else
+            encoder_context->layer.curr_frame_layer_id = 0;
+
+        return VA_STATUS_SUCCESS;
+    }
+
+    if (!(rate_control_mode & (VA_RC_CBR | VA_RC_VBR)))
+        return VA_STATUS_SUCCESS;
+
+    if (!encode_state->misc_param[VAEncMiscParameterTypeTemporalLayerStructure][0] ||
+        !encode_state->misc_param[VAEncMiscParameterTypeTemporalLayerStructure][0]->buffer)
+        return VA_STATUS_SUCCESS;
+
+    misc_param = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeTemporalLayerStructure][0]->buffer;
+    tls_paramter = (VAEncMiscParameterTemporalLayerStructure *)misc_param->data;
+
+    if (tls_paramter->number_of_layers <= 1)
+        return VA_STATUS_SUCCESS;
+
+    if (tls_paramter->number_of_layers >= MAX_TEMPORAL_LAYERS)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (tls_paramter->periodicity > 32 || tls_paramter->periodicity <= 1)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    for (i = 0; i < tls_paramter->number_of_layers; i++) {
+        if (!encode_state->misc_param[VAEncMiscParameterTypeRateControl][i] ||
+            !encode_state->misc_param[VAEncMiscParameterTypeRateControl][i]->buffer ||
+            !encode_state->misc_param[VAEncMiscParameterTypeFrameRate][i] ||
+            !encode_state->misc_param[VAEncMiscParameterTypeFrameRate][i]->buffer) {
+
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+    }
+
+    encoder_context->layer.size_frame_layer_ids = tls_paramter->periodicity;
+    encoder_context->layer.num_layers = tls_paramter->number_of_layers;
+
+    for (i = 0; i < encoder_context->layer.size_frame_layer_ids; i++) {
+        if (tls_paramter->layer_id[i] >= tls_paramter->number_of_layers)
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+        encoder_context->layer.frame_layer_ids[i] = tls_paramter->layer_id[i];
+    }
+
+    if (encoder_context->is_new_sequence)
+        encoder_context->layer.curr_frame_layer_id = 0;
+    else
+        encoder_context->layer.curr_frame_layer_id = encoder_context->layer.frame_layer_ids[(encoder_context->num_frames_in_sequence - 1) % encoder_context->layer.size_frame_layer_ids];
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
 intel_encoder_check_misc_parameter(VADriverContextP ctx,
                                   struct encode_state *encode_state,
                                   struct intel_encoder_context *encoder_context)
@@ -486,6 +552,11 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
             goto out;
         }
     }
+
+    ret = intel_encoder_check_temporal_layer_structure(ctx, encode_state, encoder_context);
+
+    if (ret)
+        goto out;
 
     ret = intel_encoder_check_brc_parameter(ctx, encode_state, encoder_context);
 
@@ -1020,6 +1091,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->rate_control_mode = VA_RC_NONE;
     encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
     encoder_context->quality_range = 1;
+    encoder_context->layer.num_layers = 1;
 
     if (obj_config->entrypoint == VAEntrypointEncSliceLP)
         encoder_context->low_power_mode = 1;

@@ -43,6 +43,7 @@
 
 #define WIDTH_IN_MACROBLOCKS(width)     (ALIGN(width, 16) >> 4)
 #define HEIGHT_IN_MACROBLOCKS(height)   (ALIGN(height, 16) >> 4)
+#define MAX_TEMPORAL_LAYERS	        4
 
 struct intel_roi
 {
@@ -65,6 +66,13 @@ struct intel_encoder_context
     unsigned int num_frames_in_sequence;
     unsigned int frame_width_in_pixel;
     unsigned int frame_height_in_pixel;
+
+    struct {
+        unsigned int num_layers;
+        unsigned int size_frame_layer_ids;
+        unsigned int frame_layer_ids[32];
+        unsigned int curr_frame_layer_id;
+    } layer;
 
     struct {
         unsigned short gop_size;
