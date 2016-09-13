@@ -350,11 +350,11 @@ Bool gen75_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *
 
 
 extern int intel_mfc_update_hrd(struct encode_state *encode_state,
-                                struct gen6_mfc_context *mfc_context,
+                                struct intel_encoder_context *encoder_context,
                                 int frame_bits);
 
 extern int intel_mfc_brc_postpack(struct encode_state *encode_state,
-                                  struct gen6_mfc_context *mfc_context,
+                                  struct intel_encoder_context *encoder_context,
                                   int frame_bits);
 
 extern void intel_mfc_hrd_context_update(struct encode_state *encode_state,

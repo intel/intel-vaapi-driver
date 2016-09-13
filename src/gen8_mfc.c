@@ -1731,7 +1731,7 @@ gen8_mfc_avc_encode_picture(VADriverContextP ctx,
         gen8_mfc_run(ctx, encode_state, encoder_context);
         if (rate_control_mode == VA_RC_CBR /*|| rate_control_mode == VA_RC_VBR*/) {
             gen8_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
-            sts = intel_mfc_brc_postpack(encode_state, mfc_context, current_frame_bits_size);
+            sts = intel_mfc_brc_postpack(encode_state, encoder_context, current_frame_bits_size);
             if (sts == BRC_NO_HRD_VIOLATION) {
                 intel_mfc_hrd_context_update(encode_state, mfc_context);
                 break;
@@ -3368,9 +3368,10 @@ static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
 }
 
 static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
-                           struct gen6_mfc_context *mfc_context,
+                           struct intel_encoder_context *encoder_context,
                            int frame_bits)
 {
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     gen6_brc_status sts = BRC_NO_HRD_VIOLATION;
     VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     int is_key_frame = !pic_param->pic_flags.bits.frame_type;
@@ -3428,7 +3429,7 @@ static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
     BRC_CLIP(qpn, min_qindex, max_qindex);
 
     /* checking wthether HRD compliance is still met */
-    sts = intel_mfc_update_hrd(encode_state, mfc_context, frame_bits);
+    sts = intel_mfc_update_hrd(encode_state, encoder_context, frame_bits);
 
     /* calculating QP delta as some function*/
     x = mfc_context->hrd.target_buffer_fullness - mfc_context->hrd.current_buffer_fullness;
@@ -4466,7 +4467,7 @@ gen8_mfc_vp8_encode_picture(VADriverContextP ctx,
     current_frame_bits_size = 8 * gen8_mfc_calc_vp8_coded_buffer_size(ctx, encode_state, encoder_context);
 
     if (rate_control_mode == VA_RC_CBR /*|| rate_control_mode == VA_RC_VBR*/) {
-        sts = gen8_mfc_vp8_brc_postpack(encode_state, mfc_context, current_frame_bits_size);
+        sts = gen8_mfc_vp8_brc_postpack(encode_state, encoder_context, current_frame_bits_size);
         if (sts == BRC_NO_HRD_VIOLATION) {
             gen8_mfc_vp8_hrd_context_update(encode_state, mfc_context);
         }
