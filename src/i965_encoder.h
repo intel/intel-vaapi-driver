@@ -67,6 +67,7 @@ struct intel_encoder_context
     unsigned int low_power_mode:1;
     unsigned int soft_batch_force:1;
     unsigned int context_roi:1;
+    unsigned int is_new_sequence:1; /* Currently only valid for H.264, TODO for other codecs */
 
     void (*vme_context_destroy)(void *vme_context);
     VAStatus (*vme_pipeline)(VADriverContextP ctx,

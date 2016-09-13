@@ -331,6 +331,7 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     struct object_surface *obj_surface;	
     struct object_buffer *obj_buffer;
     VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int i;
 
     assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
@@ -373,7 +374,14 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
 
     for ( ; i < 16; i++)
         encode_state->reference_objects[i] = NULL;
-    
+
+    /*
+     * A sequence consists of an IDR unit, followed by zero or more non-IDR unit, but not including any
+     * subsequent IDR unit, so idr_pic_flag can indicate the current frame is the start of a new
+     * sequnce
+     */
+    encoder_context->is_new_sequence = (pic_param->pic_fields.bits.idr_pic_flag && seq_param);
+
     return VA_STATUS_SUCCESS;
 
 error:
