@@ -266,7 +266,7 @@ struct encode_state
 
     int last_packed_header_type;
 
-    struct buffer_store *misc_param[16];
+    struct buffer_store *misc_param[16][8];
 
     VASurfaceID current_render_target;
     struct object_surface *input_yuv_object;

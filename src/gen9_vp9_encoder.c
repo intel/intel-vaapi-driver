@@ -3944,7 +3944,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                     VAEncMiscParameterHRD *misc_param_hrd;
 
                     misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer;
+                        encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer;
                     misc_param_hrd = (VAEncMiscParameterHRD *)misc_param->data;
 
                     vp9_state->init_vbv_buffer_fullness_in_bit = misc_param_hrd->initial_buffer_fullness;
@@ -3955,7 +3955,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                     VAEncMiscParameterFrameRate *misc_param_fr;
 
                     misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeFrameRate]->buffer;
+                        encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
                     misc_param_fr = (VAEncMiscParameterFrameRate *)misc_param->data;
 
                     vp9_state->frame_rate = misc_param_fr->framerate;
@@ -3969,7 +3969,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                     VAEncMiscParameterRateControl *misc_param_rc;
 
                     misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeRateControl]->buffer;
+                        encode_state->misc_param[VAEncMiscParameterTypeRateControl][0]->buffer;
                     misc_param_rc = (VAEncMiscParameterRateControl *)misc_param->data;
 
                     vp9_state->target_bit_rate = misc_param_rc->bits_per_second;
@@ -3990,7 +3990,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                     VAEncMiscParameterFrameRate *misc_param_fr;
 
                     misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeFrameRate]->buffer;
+                        encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
                     misc_param_fr = (VAEncMiscParameterFrameRate *)misc_param->data;
 
                     vp9_state->frame_rate = misc_param_fr->framerate;
@@ -4003,7 +4003,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                     VAEncMiscParameterRateControl *misc_param_rc;
 
                     misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeRateControl]->buffer;
+                        encode_state->misc_param[VAEncMiscParameterTypeRateControl][0]->buffer;
                     misc_param_rc = (VAEncMiscParameterRateControl *)misc_param->data;
 
                     vp9_state->max_bit_rate = misc_param_rc->bits_per_second;
@@ -4027,7 +4027,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                VAEncMiscParameterFrameRate *misc_param_fr;
 
                misc_param = (VAEncMiscParameterBuffer *)
-                   encode_state->misc_param[VAEncMiscParameterTypeFrameRate]->buffer;
+                   encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
                misc_param_fr = (VAEncMiscParameterFrameRate *)misc_param->data;
 
                if (vp9_state->frame_rate != misc_param_fr->framerate) {
@@ -4049,7 +4049,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                 VAEncMiscParameterRateControl *misc_param_rc;
 
                 misc_param = (VAEncMiscParameterBuffer *)
-                    encode_state->misc_param[VAEncMiscParameterTypeRateControl]->buffer;
+                    encode_state->misc_param[VAEncMiscParameterTypeRateControl][0]->buffer;
                 misc_param_rc = (VAEncMiscParameterRateControl *)misc_param->data;
 
                 if (encoder_context->rate_control_mode == VA_RC_CBR) {
@@ -5815,19 +5815,19 @@ gen9_vp9_pak_brc_prepare(struct encode_state *encode_state,
         }
 
         /* Frame_rate */
-        if (encode_state->misc_param[VAEncMiscParameterTypeFrameRate] &&
-            encode_state->misc_param[VAEncMiscParameterTypeFrameRate]->buffer) {
+        if (encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0] &&
+            encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer) {
             vp9_state->brc_flag_check |= VP9_BRC_FR;
         }
 
         /* HRD */
-        if (encode_state->misc_param[VAEncMiscParameterTypeRateControl] &&
-            encode_state->misc_param[VAEncMiscParameterTypeRateControl]->buffer) {
+        if (encode_state->misc_param[VAEncMiscParameterTypeRateControl][0] &&
+            encode_state->misc_param[VAEncMiscParameterTypeRateControl][0]->buffer) {
             vp9_state->brc_flag_check |= VP9_BRC_RC;
         }
 
-        if (encode_state->misc_param[VAEncMiscParameterTypeHRD] &&
-            encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer) {
+        if (encode_state->misc_param[VAEncMiscParameterTypeHRD][0] &&
+            encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer) {
             vp9_state->brc_flag_check |= VP9_BRC_HRD;
         }
 

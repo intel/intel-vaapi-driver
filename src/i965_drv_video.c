@@ -1992,7 +1992,7 @@ static void
 i965_destroy_context(struct object_heap *heap, struct object_base *obj)
 {
     struct object_context *obj_context = (struct object_context *)obj;
-    int i;
+    int i, j;
 
     if (obj_context->hw_context) {
         obj_context->hw_context->destroy(obj_context->hw_context);
@@ -2017,7 +2017,8 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
             i965_release_buffer_store(&obj_context->codec_state.encode.packed_header_data[i]);
 
         for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param); i++)
-            i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[i]);
+            for (j = 0; j < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param[0]); j++)
+                i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[i][j]);
 
         for (i = 0; i < obj_context->codec_state.encode.num_slice_params_ext; i++)
             i965_release_buffer_store(&obj_context->codec_state.encode.slice_params_ext[i]);
@@ -2728,7 +2729,7 @@ i965_BeginPicture(VADriverContextP ctx,
     struct object_surface *obj_surface = SURFACE(render_target);
     struct object_config *obj_config;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    int i;
+    int i, j;
 
     ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
     ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
@@ -2779,13 +2780,14 @@ i965_BeginPicture(VADriverContextP ctx,
         * It is uncertain whether the other misc buffer should be released.
         * So only release the previous ROI buffer.
         */
-        i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[VAEncMiscParameterTypeROI]);
+        i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[VAEncMiscParameterTypeROI][0]);
 
         i965_release_buffer_store(&obj_context->codec_state.encode.encmb_map);
 
         if (obj_config->profile == VAProfileVP9Profile0) {
             for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param); i++)
-                i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[i]);
+                for (j = 0; j < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param[0]); j++)
+                    i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[i][j]);
 
             i965_release_buffer_store(&obj_context->codec_state.encode.seq_param_ext);
         }
@@ -3111,8 +3113,8 @@ i965_encoder_render_misc_parameter_buffer(VADriverContextP ctx,
     if (param->type >= ARRAY_ELEMS(encode->misc_param))
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    i965_release_buffer_store(&encode->misc_param[param->type]);
-    i965_reference_buffer_store(&encode->misc_param[param->type], obj_buffer->buffer_store);
+    i965_release_buffer_store(&encode->misc_param[param->type][0]);
+    i965_reference_buffer_store(&encode->misc_param[param->type][0], obj_buffer->buffer_store);
 
     return VA_STATUS_SUCCESS;
 }
