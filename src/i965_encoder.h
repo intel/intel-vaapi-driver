@@ -41,6 +41,9 @@
 #define I965_BRC_VBR	                2
 #define I965_BRC_CQP	                3
 
+#define WIDTH_IN_MACROBLOCKS(width)     (ALIGN(width, 16) >> 4)
+#define HEIGHT_IN_MACROBLOCKS(height)   (ALIGN(height, 16) >> 4)
+
 struct intel_roi
 {
     short left;
@@ -59,6 +62,10 @@ struct intel_encoder_context
     unsigned int rate_control_mode;
     unsigned int quality_level;
     unsigned int quality_range;
+    unsigned int num_frames_in_sequence;
+    unsigned int frame_width_in_pixel;
+    unsigned int frame_height_in_pixel;
+
     void *vme_context;
     void *mfc_context;
     void *enc_priv_state;

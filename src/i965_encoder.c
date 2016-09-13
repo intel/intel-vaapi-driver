@@ -382,6 +382,12 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
      */
     encoder_context->is_new_sequence = (pic_param->pic_fields.bits.idr_pic_flag && seq_param);
 
+    if (encoder_context->is_new_sequence) {
+        encoder_context->num_frames_in_sequence = 0;
+        encoder_context->frame_width_in_pixel = seq_param->picture_width_in_mbs * 16;
+        encoder_context->frame_height_in_pixel = seq_param->picture_height_in_mbs * 16;
+    }
+
     return VA_STATUS_SUCCESS;
 
 error:
@@ -782,6 +788,7 @@ intel_encoder_end_picture(VADriverContextP ctx,
     }
 
     encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
+    encoder_context->num_frames_in_sequence++;
 
     return VA_STATUS_SUCCESS;
 }
