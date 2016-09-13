@@ -434,10 +434,10 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
         return ret;
 
     for (i = 0; i < ARRAY_ELEMS(encode_state->misc_param); i++) {
-        if (!encode_state->misc_param[i] || !encode_state->misc_param[i]->buffer)
+        if (!encode_state->misc_param[i][0] || !encode_state->misc_param[i][0]->buffer)
             continue;
 
-        misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i]->buffer;
+        misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i][0]->buffer;
 
         switch (misc_param->type) {
         case VAEncMiscParameterTypeFrameRate:
@@ -473,9 +473,9 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
 {
     VAStatus ret = VA_STATUS_SUCCESS;
 
-    if (encode_state->misc_param[VAEncMiscParameterTypeQualityLevel] &&
-        encode_state->misc_param[VAEncMiscParameterTypeQualityLevel]->buffer) {
-        VAEncMiscParameterBuffer* pMiscParam = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeQualityLevel]->buffer;
+    if (encode_state->misc_param[VAEncMiscParameterTypeQualityLevel][0] &&
+        encode_state->misc_param[VAEncMiscParameterTypeQualityLevel][0]->buffer) {
+        VAEncMiscParameterBuffer* pMiscParam = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeQualityLevel][0]->buffer;
         VAEncMiscParameterBufferQualityLevel* param_quality_level = (VAEncMiscParameterBufferQualityLevel*)pMiscParam->data;
         encoder_context->quality_level = param_quality_level->quality_level;
 

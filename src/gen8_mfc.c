@@ -3324,9 +3324,9 @@ static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
-    VAEncMiscParameterBuffer* misc_param_hrd = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer;
+    VAEncMiscParameterBuffer* misc_param_hrd = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer;
     VAEncMiscParameterHRD* param_hrd = (VAEncMiscParameterHRD*)misc_param_hrd->data;
-    VAEncMiscParameterBuffer* misc_param_frame_rate_buffer = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFrameRate]->buffer;
+    VAEncMiscParameterBuffer* misc_param_frame_rate_buffer = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
     VAEncMiscParameterFrameRate* param_frame_rate = (VAEncMiscParameterFrameRate*)misc_param_frame_rate_buffer->data;
     double bitrate = seq_param->bits_per_second;
     unsigned int frame_rate = param_frame_rate->framerate;
@@ -3523,7 +3523,7 @@ static bool gen8_mfc_vp8_brc_updated_check(struct encode_state *encode_state,
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     double cur_fps, cur_bitrate;
     VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
-    VAEncMiscParameterBuffer *misc_param_frame_rate_buf = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFrameRate]->buffer;
+    VAEncMiscParameterBuffer *misc_param_frame_rate_buf = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
     VAEncMiscParameterFrameRate *param_frame_rate = (VAEncMiscParameterFrameRate*)misc_param_frame_rate_buf->data;
     unsigned int frame_rate = param_frame_rate->framerate;
 

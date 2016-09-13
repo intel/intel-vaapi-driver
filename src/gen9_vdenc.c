@@ -931,10 +931,10 @@ gen9_vdenc_update_misc_parameters(VADriverContextP ctx,
     VAEncMiscParameterBuffer *misc_param;
 
     for (i = 0; i < ARRAY_ELEMS(encode_state->misc_param); i++) {
-        if (!encode_state->misc_param[i] || !encode_state->misc_param[i]->buffer)
+        if (!encode_state->misc_param[i][0] || !encode_state->misc_param[i][0]->buffer)
             continue;
 
-        misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i]->buffer;
+        misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i][0]->buffer;
 
         switch (misc_param->type) {
         case VAEncMiscParameterTypeFrameRate:

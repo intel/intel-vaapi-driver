@@ -1884,8 +1884,8 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
     if (!encoder_context->context_roi || (encode_state->num_slice_params_ext > 1))
         return;
 
-    if (encode_state->misc_param[VAEncMiscParameterTypeROI] != NULL) {
-        pMiscParamROI = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeROI]->buffer;
+    if (encode_state->misc_param[VAEncMiscParameterTypeROI][0] != NULL) {
+        pMiscParamROI = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeROI][0]->buffer;
         pParamROI = (VAEncMiscParameterBufferROI *)pMiscParamROI->data;
 
         /* check whether number of ROI is correct */

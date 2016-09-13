@@ -2238,10 +2238,10 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
     qp1_size = qp1_size * bpp;
     qp51_size = qp51_size * bpp;
 
-    if (!encode_state->misc_param[VAEncMiscParameterTypeHRD] || !encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer)
+    if (!encode_state->misc_param[VAEncMiscParameterTypeHRD][0] || !encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer)
         return;
 
-    pMiscParamHRD = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD]->buffer;
+    pMiscParamHRD = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer;
     pParameterHRD = (VAEncMiscParameterHRD*)pMiscParamHRD->data;
 
     if (pSequenceParameter->ip_period) {
