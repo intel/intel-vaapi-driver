@@ -311,8 +311,8 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
         return VA_STATUS_SUCCESS;
 
     assert(seq_param);
-    bits_per_second = seq_param->bits_per_second;
-    framerate_per_100s = seq_param->time_scale * 100 / (2 * seq_param->num_units_in_tick);
+    bits_per_second = seq_param->bits_per_second; // for the highest layer
+    framerate_per_100s = seq_param->time_scale * 100 / (2 * seq_param->num_units_in_tick); // for the highest layer
     encoder_context->brc.num_iframes_in_gop = 1; // Always 1
 
     if (seq_param->intra_period == 0) { // E.g. IDRPP... / IDR(PBB)... (no IDR/I any more)
@@ -339,12 +339,12 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
 
     if (num_pframes_in_gop != encoder_context->brc.num_pframes_in_gop ||
         num_bframes_in_gop != encoder_context->brc.num_bframes_in_gop ||
-        bits_per_second != encoder_context->brc.bits_per_second[0] ||
-        framerate_per_100s != encoder_context->brc.framerate_per_100s[0]) {
+        bits_per_second != encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] ||
+        framerate_per_100s != encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1]) {
         encoder_context->brc.num_pframes_in_gop = num_pframes_in_gop;
         encoder_context->brc.num_bframes_in_gop = num_bframes_in_gop;
-        encoder_context->brc.bits_per_second[0] = bits_per_second;
-        encoder_context->brc.framerate_per_100s[0] = framerate_per_100s;
+        encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] = bits_per_second;
+        encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1] = framerate_per_100s;
         encoder_context->brc.need_reset = 1;
     }
 
@@ -378,9 +378,17 @@ intel_encoder_check_rate_control_parameter(VADriverContextP ctx,
                                            struct intel_encoder_context *encoder_context,
                                            VAEncMiscParameterRateControl *misc)
 {
+    int temporal_id = 0;
+
+    if (encoder_context->layer.num_layers >= 2)
+        temporal_id = misc->rc_flags.bits.temporal_id;
+
+    if (temporal_id >= encoder_context->layer.num_layers)
+        return;
+
     // TODO: for VBR
-    if (encoder_context->brc.bits_per_second[0] != misc->bits_per_second) {
-        encoder_context->brc.bits_per_second[0] = misc->bits_per_second;
+    if (encoder_context->brc.bits_per_second[temporal_id] != misc->bits_per_second) {
+        encoder_context->brc.bits_per_second[temporal_id] = misc->bits_per_second;
         encoder_context->brc.need_reset = 1;
     }
 }
@@ -404,14 +412,21 @@ intel_encoder_check_framerate_parameter(VADriverContextP ctx,
                                         VAEncMiscParameterFrameRate *misc)
 {
     int framerate_per_100s;
+    int temporal_id = 0;
+
+    if (encoder_context->layer.num_layers >= 2)
+        temporal_id = misc->framerate_flags.bits.temporal_id;
+
+    if (temporal_id >= encoder_context->layer.num_layers)
+        return;
 
     if (misc->framerate & 0xffff0000)
         framerate_per_100s = (misc->framerate & 0xffff) * 100 / ((misc->framerate >> 16) & 0xffff);
     else
         framerate_per_100s = misc->framerate * 100;
 
-    if (encoder_context->brc.framerate_per_100s[0] != framerate_per_100s) {
-        encoder_context->brc.framerate_per_100s[0] = framerate_per_100s;
+    if (encoder_context->brc.framerate_per_100s[temporal_id] != framerate_per_100s) {
+        encoder_context->brc.framerate_per_100s[temporal_id] = framerate_per_100s;
         encoder_context->brc.need_reset = 1;
     }
 }
@@ -423,7 +438,7 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
 {
     VAStatus ret;
     VAEncMiscParameterBuffer *misc_param;
-    int i;
+    int i, j;
 
     if (!(encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR)))
         return VA_STATUS_SUCCESS;
@@ -434,32 +449,34 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
         return ret;
 
     for (i = 0; i < ARRAY_ELEMS(encode_state->misc_param); i++) {
-        if (!encode_state->misc_param[i][0] || !encode_state->misc_param[i][0]->buffer)
-            continue;
+        for (j = 0; j < ARRAY_ELEMS(encode_state->misc_param[0]); j++) {
+            if (!encode_state->misc_param[i][j] || !encode_state->misc_param[i][j]->buffer)
+                continue;
 
-        misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i][0]->buffer;
+            misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i][j]->buffer;
 
-        switch (misc_param->type) {
-        case VAEncMiscParameterTypeFrameRate:
-            intel_encoder_check_framerate_parameter(ctx,
-                                                    encoder_context,
-                                                    (VAEncMiscParameterFrameRate *)misc_param->data);
-            break;
+            switch (misc_param->type) {
+            case VAEncMiscParameterTypeFrameRate:
+                intel_encoder_check_framerate_parameter(ctx,
+                                                        encoder_context,
+                                                        (VAEncMiscParameterFrameRate *)misc_param->data);
+                break;
 
-        case VAEncMiscParameterTypeRateControl:
-            intel_encoder_check_rate_control_parameter(ctx,
-                                                       encoder_context,
-                                                       (VAEncMiscParameterRateControl *)misc_param->data);
-            break;
+            case VAEncMiscParameterTypeRateControl:
+                intel_encoder_check_rate_control_parameter(ctx,
+                                                           encoder_context,
+                                                           (VAEncMiscParameterRateControl *)misc_param->data);
+                break;
 
-        case VAEncMiscParameterTypeHRD:
-            intel_encoder_check_hrd_parameter(ctx,
-                                              encoder_context,
-                                              (VAEncMiscParameterHRD *)misc_param->data);
-            break;
+            case VAEncMiscParameterTypeHRD:
+                intel_encoder_check_hrd_parameter(ctx,
+                                                  encoder_context,
+                                                  (VAEncMiscParameterHRD *)misc_param->data);
+                break;
 
-        default:
-            break;
+            default:
+                break;
+            }
         }
     }
 
