@@ -1175,7 +1175,7 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
 
     qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
-        qp = mfc_context->brc.qp_prime_y[slice_type];
+        qp = mfc_context->brc.qp_prime_y[0][slice_type];
         if (encode_state->slice_header_index[slice_index] == 0) {
             pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
             qp_slice = qp;
@@ -1522,7 +1522,7 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
     qp_slice = qp;
     if (rate_control_mode == VA_RC_CBR) {
-        qp = mfc_context->brc.qp_prime_y[slice_type];
+        qp = mfc_context->brc.qp_prime_y[0][slice_type];
         if (encode_state->slice_header_index[slice_index] == 0) {
             pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
             qp_slice = qp;

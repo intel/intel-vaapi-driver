@@ -229,9 +229,9 @@ struct gen6_mfc_context
     struct {
         int mode;
         int gop_nums[3];
-        int target_frame_size[3]; // I,P,B
-        int qp_prime_y[3];
-        double bits_per_frame;
+        int target_frame_size[MAX_TEMPORAL_LAYERS][3]; // I,P,B
+        int qp_prime_y[MAX_TEMPORAL_LAYERS][3];
+        double bits_per_frame[MAX_TEMPORAL_LAYERS];
         double qpf_rounding_accumulator;
 
         double saved_bps;
