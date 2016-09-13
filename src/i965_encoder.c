@@ -299,10 +299,179 @@ intel_encoder_check_jpeg_yuv_surface(VADriverContextP ctx,
 }
 
 static VAStatus
+intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
+                                                struct encode_state *encode_state,
+                                                struct intel_encoder_context *encoder_context)
+{
+    VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    unsigned short num_pframes_in_gop, num_bframes_in_gop;
+    unsigned int bits_per_second, framerate_per_100s;
+
+    if (!encoder_context->is_new_sequence)
+        return VA_STATUS_SUCCESS;
+
+    assert(seq_param);
+    bits_per_second = seq_param->bits_per_second;
+    framerate_per_100s = seq_param->time_scale * 100 / (2 * seq_param->num_units_in_tick);
+    encoder_context->brc.num_iframes_in_gop = 1; // Always 1
+
+    if (seq_param->intra_period == 0) { // E.g. IDRPP... / IDR(PBB)... (no IDR/I any more)
+        if (seq_param->ip_period == 0)
+            goto error;
+
+        encoder_context->brc.gop_size = (unsigned int)(framerate_per_100s / 100.0 + 0.5); // fake
+        num_pframes_in_gop = (encoder_context->brc.gop_size +
+                              seq_param->ip_period - 1) / seq_param->ip_period - 1;
+    } else if (seq_param->intra_period == 1) { // E.g. IDRIII...
+        encoder_context->brc.gop_size = 1;
+        num_pframes_in_gop = 0;
+    } else {
+        if (seq_param->ip_period == 0)
+            goto error;
+
+        encoder_context->brc.gop_size = seq_param->intra_period;
+        num_pframes_in_gop = (encoder_context->brc.gop_size +
+                              seq_param->ip_period - 1) / seq_param->ip_period - 1;
+    }
+
+    num_bframes_in_gop = (encoder_context->brc.gop_size -
+                          encoder_context->brc.num_iframes_in_gop - num_pframes_in_gop);
+
+    if (num_pframes_in_gop != encoder_context->brc.num_pframes_in_gop ||
+        num_bframes_in_gop != encoder_context->brc.num_bframes_in_gop ||
+        bits_per_second != encoder_context->brc.bits_per_second ||
+        framerate_per_100s != encoder_context->brc.framerate_per_100s) {
+        encoder_context->brc.num_pframes_in_gop = num_pframes_in_gop;
+        encoder_context->brc.num_bframes_in_gop = num_bframes_in_gop;
+        encoder_context->brc.bits_per_second = bits_per_second;
+        encoder_context->brc.framerate_per_100s = framerate_per_100s;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    if (!encoder_context->brc.hrd_buffer_size ||
+        !encoder_context->brc.hrd_initial_buffer_fullness) {
+        encoder_context->brc.hrd_buffer_size = seq_param->bits_per_second << 1;
+        encoder_context->brc.hrd_initial_buffer_fullness = seq_param->bits_per_second;
+    }
+
+    return VA_STATUS_SUCCESS;
+
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
+intel_encoder_check_brc_sequence_parameter(VADriverContextP ctx,
+                                           struct encode_state *encode_state,
+                                           struct intel_encoder_context *encoder_context)
+{
+    if (encoder_context->codec == CODEC_H264 ||
+        encoder_context->codec == CODEC_H264_MVC)
+        return intel_encoder_check_brc_h264_sequence_parameter(ctx, encode_state, encoder_context);
+
+    // TODO: other codecs
+    return VA_STATUS_SUCCESS;
+}
+
+static void
+intel_encoder_check_rate_control_parameter(VADriverContextP ctx,
+                                           struct intel_encoder_context *encoder_context,
+                                           VAEncMiscParameterRateControl *misc)
+{
+    // TODO: for VBR
+    if (encoder_context->brc.bits_per_second != misc->bits_per_second) {
+        encoder_context->brc.bits_per_second = misc->bits_per_second;
+        encoder_context->brc.need_reset = 1;
+    }
+}
+
+static void
+intel_encoder_check_hrd_parameter(VADriverContextP ctx,
+                                  struct intel_encoder_context *encoder_context,
+                                  VAEncMiscParameterHRD *misc)
+{
+    if (encoder_context->brc.hrd_buffer_size != misc->buffer_size ||
+        encoder_context->brc.hrd_initial_buffer_fullness != misc->initial_buffer_fullness) {
+        encoder_context->brc.hrd_buffer_size = misc->buffer_size;
+        encoder_context->brc.hrd_initial_buffer_fullness = misc->initial_buffer_fullness;
+        encoder_context->brc.need_reset = 1;
+    }
+}
+
+static void
+intel_encoder_check_framerate_parameter(VADriverContextP ctx,
+                                        struct intel_encoder_context *encoder_context,
+                                        VAEncMiscParameterFrameRate *misc)
+{
+    int framerate_per_100s;
+
+    if (misc->framerate & 0xffff0000)
+        framerate_per_100s = (misc->framerate & 0xffff) * 100 / ((misc->framerate >> 16) & 0xffff);
+    else
+        framerate_per_100s = misc->framerate * 100;
+
+    if (encoder_context->brc.framerate_per_100s != framerate_per_100s) {
+        encoder_context->brc.framerate_per_100s = framerate_per_100s;
+        encoder_context->brc.need_reset = 1;
+    }
+}
+
+static VAStatus
+intel_encoder_check_brc_parameter(VADriverContextP ctx,
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
+{
+    VAStatus ret;
+    VAEncMiscParameterBuffer *misc_param;
+    int i;
+
+    if (!(encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR)))
+        return VA_STATUS_SUCCESS;
+
+    ret = intel_encoder_check_brc_sequence_parameter(ctx, encode_state, encoder_context);
+
+    if (ret)
+        return ret;
+
+    for (i = 0; i < ARRAY_ELEMS(encode_state->misc_param); i++) {
+        if (!encode_state->misc_param[i] || !encode_state->misc_param[i]->buffer)
+            continue;
+
+        misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i]->buffer;
+
+        switch (misc_param->type) {
+        case VAEncMiscParameterTypeFrameRate:
+            intel_encoder_check_framerate_parameter(ctx,
+                                                    encoder_context,
+                                                    (VAEncMiscParameterFrameRate *)misc_param->data);
+            break;
+
+        case VAEncMiscParameterTypeRateControl:
+            intel_encoder_check_rate_control_parameter(ctx,
+                                                       encoder_context,
+                                                       (VAEncMiscParameterRateControl *)misc_param->data);
+            break;
+
+        case VAEncMiscParameterTypeHRD:
+            intel_encoder_check_hrd_parameter(ctx,
+                                              encoder_context,
+                                              (VAEncMiscParameterHRD *)misc_param->data);
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
 intel_encoder_check_misc_parameter(VADriverContextP ctx,
                                   struct encode_state *encode_state,
                                   struct intel_encoder_context *encoder_context)
 {
+    VAStatus ret = VA_STATUS_SUCCESS;
 
     if (encode_state->misc_param[VAEncMiscParameterTypeQualityLevel] &&
         encode_state->misc_param[VAEncMiscParameterTypeQualityLevel]->buffer) {
@@ -312,14 +481,16 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
 
         if (encoder_context->quality_level == 0)
             encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
-        else if (encoder_context->quality_level > encoder_context->quality_range)
-            goto error;
-   }
+        else if (encoder_context->quality_level > encoder_context->quality_range) {
+            ret = VA_STATUS_ERROR_INVALID_PARAMETER;
+            goto out;
+        }
+    }
 
-    return VA_STATUS_SUCCESS;
+    ret = intel_encoder_check_brc_parameter(ctx, encode_state, encoder_context);
 
-error:
-    return VA_STATUS_ERROR_INVALID_PARAMETER;
+out:
+    return ret;
 }
 
 static VAStatus
@@ -789,6 +960,7 @@ intel_encoder_end_picture(VADriverContextP ctx,
 
     encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
     encoder_context->num_frames_in_sequence++;
+    encoder_context->brc.need_reset = 0;
 
     return VA_STATUS_SUCCESS;
 }
