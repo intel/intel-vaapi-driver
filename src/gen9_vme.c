@@ -1854,6 +1854,7 @@ static VAStatus gen9_intel_hevc_input_check(VADriverContextP ctx,
     struct object_surface *obj_surface;
     GenHevcSurface *hevc_encoder_surface = NULL;
     int i;
+    int fourcc;
 
     obj_surface = SURFACE(encode_state->current_render_target);
     assert(obj_surface && obj_surface->bo);
@@ -1862,8 +1863,13 @@ static VAStatus gen9_intel_hevc_input_check(VADriverContextP ctx,
         hevc_encoder_surface->has_p010_to_nv12_done = 0;
     gen9_intel_init_hevc_surface(ctx,encoder_context,encode_state,obj_surface);
 
+    fourcc = obj_surface->fourcc;
     /* Setup current frame and current direct mv buffer*/
     obj_surface = encode_state->reconstructed_object;
+    if(fourcc == VA_FOURCC_P010)
+        i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_P010, SUBSAMPLE_YUV420);
+    else
+        i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
     hevc_encoder_surface = NULL;
     hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
     if(hevc_encoder_surface)
