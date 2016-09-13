@@ -174,7 +174,7 @@ int intel_mfc_update_hrd(struct encode_state *encode_state,
         return BRC_UNDERFLOW;
     }
     
-    mfc_context->hrd.current_buffer_fullness += mfc_context->brc.bits_per_frame[0];
+    mfc_context->hrd.current_buffer_fullness += mfc_context->brc.bits_per_frame[encoder_context->layer.curr_frame_layer_id];
     if (mfc_context->hrd.buffer_size > 0 && mfc_context->hrd.current_buffer_fullness > mfc_context->hrd.buffer_size) {
         if (mfc_context->brc.mode == VA_RC_VBR)
             mfc_context->hrd.current_buffer_fullness = mfc_context->hrd.buffer_size;
@@ -194,9 +194,8 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     gen6_brc_status sts = BRC_NO_HRD_VIOLATION;
     VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer; 
     int slicetype = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
-    int qpi = mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I];
-    int qpp = mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P];
-    int qpb = mfc_context->brc.qp_prime_y[0][SLICE_TYPE_B];
+    int curr_frame_layer_id, next_frame_layer_id;
+    int qpi, qpp, qpb;
     int qp; // quantizer of previously encoded slice of current type
     int qpn; // predicted quantizer for next frame of current type in integer format
     double qpf; // predicted quantizer for next frame of current type in float format
@@ -207,15 +206,41 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
      *  y - how far we are from target HRD buffer fullness
      */
     double x, y;
-    double frame_size_alpha;
+    double frame_size_alpha, factor;
 
-    qp = mfc_context->brc.qp_prime_y[0][slicetype];
+    if (encoder_context->layer.num_layers < 2 || encoder_context->layer.size_frame_layer_ids == 0) {
+        curr_frame_layer_id = 0;
+        next_frame_layer_id = 0;
+    } else {
+        curr_frame_layer_id = encoder_context->layer.curr_frame_layer_id;
+        next_frame_layer_id = encoder_context->layer.frame_layer_ids[encoder_context->num_frames_in_sequence % encoder_context->layer.size_frame_layer_ids];
+    }
 
-    target_frame_size = mfc_context->brc.target_frame_size[0][slicetype];
+    /* checking wthether HRD compliance first */
+    sts = intel_mfc_update_hrd(encode_state, encoder_context, frame_bits);
+
+    if (sts == BRC_NO_HRD_VIOLATION) { // no HRD violation
+        /* nothing */
+    } else {
+        next_frame_layer_id = curr_frame_layer_id;
+    }
+
+    if (encoder_context->layer.num_layers < 2 || encoder_context->layer.size_frame_layer_ids == 0)
+        factor = 1.0;
+    else
+        factor = (double)encoder_context->brc.framerate_per_100s[next_frame_layer_id] / encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1];
+
+    qpi = mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_I];
+    qpp = mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_P];
+    qpb = mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_B];
+
+    qp = mfc_context->brc.qp_prime_y[next_frame_layer_id][slicetype];
+
+    target_frame_size = mfc_context->brc.target_frame_size[next_frame_layer_id][slicetype];
     if (mfc_context->hrd.buffer_capacity < 5)
         frame_size_alpha = 0;
     else
-        frame_size_alpha = (double)mfc_context->brc.gop_nums[slicetype];
+        frame_size_alpha = (double)mfc_context->brc.gop_nums[slicetype] * factor;
     if (frame_size_alpha > 30) frame_size_alpha = 30;
     frame_size_next = target_frame_size + (double)(target_frame_size - frame_bits) /
         (double)(frame_size_alpha + 1.);
@@ -244,9 +269,6 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     /* making sure that with QP predictions we did do not leave QPs range */
     BRC_CLIP(qpn, 1, 51);
 
-    /* checking wthether HRD compliance is still met */
-    sts = intel_mfc_update_hrd(encode_state, encoder_context, frame_bits);
-
     /* calculating QP delta as some function*/
     x = mfc_context->hrd.target_buffer_fullness - mfc_context->hrd.current_buffer_fullness;
     if (x > 0) {
@@ -271,23 +293,23 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
         /* correcting QPs of slices of other types */
         if (slicetype == SLICE_TYPE_P) {
             if (abs(qpn + BRC_P_B_QP_DIFF - qpb) > 2)
-                mfc_context->brc.qp_prime_y[0][SLICE_TYPE_B] += (qpn + BRC_P_B_QP_DIFF - qpb) >> 1;
+                mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_B] += (qpn + BRC_P_B_QP_DIFF - qpb) >> 1;
             if (abs(qpn - BRC_I_P_QP_DIFF - qpi) > 2)
-                mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I] += (qpn - BRC_I_P_QP_DIFF - qpi) >> 1;
+                mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_I] += (qpn - BRC_I_P_QP_DIFF - qpi) >> 1;
         } else if (slicetype == SLICE_TYPE_I) {
             if (abs(qpn + BRC_I_B_QP_DIFF - qpb) > 4)
-                mfc_context->brc.qp_prime_y[0][SLICE_TYPE_B] += (qpn + BRC_I_B_QP_DIFF - qpb) >> 2;
+                mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_B] += (qpn + BRC_I_B_QP_DIFF - qpb) >> 2;
             if (abs(qpn + BRC_I_P_QP_DIFF - qpp) > 2)
-                mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P] += (qpn + BRC_I_P_QP_DIFF - qpp) >> 2;
+                mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_P] += (qpn + BRC_I_P_QP_DIFF - qpp) >> 2;
         } else { // SLICE_TYPE_B
             if (abs(qpn - BRC_P_B_QP_DIFF - qpp) > 2)
-                mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P] += (qpn - BRC_P_B_QP_DIFF - qpp) >> 1;
+                mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_P] += (qpn - BRC_P_B_QP_DIFF - qpp) >> 1;
             if (abs(qpn - BRC_I_B_QP_DIFF - qpi) > 4)
-                mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I] += (qpn - BRC_I_B_QP_DIFF - qpi) >> 2;
+                mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_I] += (qpn - BRC_I_B_QP_DIFF - qpi) >> 2;
         }
-        BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I], 1, 51);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P], 1, 51);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_B], 1, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_I], 1, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_P], 1, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_B], 1, 51);
     } else if (sts == BRC_UNDERFLOW) { // underflow
         if (qpn <= qp) qpn = qp + 1;
         if (qpn > 51) {
@@ -302,7 +324,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
         }
     }
 
-    mfc_context->brc.qp_prime_y[0][slicetype] = qpn;
+    mfc_context->brc.qp_prime_y[next_frame_layer_id][slicetype] = qpn;
 
     return sts;
 }
@@ -312,7 +334,7 @@ static void intel_mfc_hrd_context_init(struct encode_state *encode_state,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    int target_bit_rate = encoder_context->brc.bits_per_second[0];
+    int target_bit_rate = encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1];
     
     // current we only support CBR mode.
     if (rate_control_mode == VA_RC_CBR) {
@@ -821,7 +843,7 @@ void intel_vme_update_mbmv_cost(VADriverContextP ctx,
     if (encoder_context->rate_control_mode == VA_RC_CQP)
         qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
     else
-        qp = mfc_context->brc.qp_prime_y[0][slice_type];
+        qp = mfc_context->brc.qp_prime_y[encoder_context->layer.curr_frame_layer_id][slice_type];
 
     if (vme_state_message == NULL)
         return;
@@ -850,7 +872,7 @@ void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
     if (encoder_context->rate_control_mode == VA_RC_CQP)
         qp = q_matrix->quantization_index[0];
     else
-        qp = mfc_context->brc.qp_prime_y[0][slice_type];
+        qp = mfc_context->brc.qp_prime_y[encoder_context->layer.curr_frame_layer_id][slice_type];
 
     lambda = intel_lambda_qp(qp * QP_MAX / VP8_QP_MAX);
 
@@ -979,7 +1001,7 @@ gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
     if (encoder_context->rate_control_mode == VA_RC_CQP)
         qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
     else
-        qp = mfc_context->brc.qp_prime_y[0][slice_type];
+        qp = mfc_context->brc.qp_prime_y[encoder_context->layer.curr_frame_layer_id][slice_type];
 
 #define		USE_SCOREBOARD		(1 << 21)
  
@@ -1932,7 +1954,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
         int qp;
         int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
-        qp = mfc_context->brc.qp_prime_y[0][slice_type];
+        qp = mfc_context->brc.qp_prime_y[encoder_context->layer.curr_frame_layer_id][slice_type];
         intel_h264_enc_roi_cbr(ctx, qp, pParamROI,encode_state, encoder_context);
 
     } else if (encoder_context->rate_control_mode == VA_RC_CQP){
