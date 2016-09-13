@@ -94,33 +94,21 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
                                struct intel_encoder_context* encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    double bitrate = encoder_context->brc.bits_per_second[0];
-    double framerate = (double)encoder_context->brc.framerate_per_100s[0] / 100.0;
+    double bitrate, framerate;
+    double qp1_size = 0.1 * 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
+    double qp51_size = 0.001 * 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
+    double bpf, factor;
     int inum = encoder_context->brc.num_iframes_in_gop,
         pnum = encoder_context->brc.num_pframes_in_gop,
         bnum = encoder_context->brc.num_bframes_in_gop; /* Gop structure: number of I, P, B frames in the Gop. */
     int intra_period = encoder_context->brc.gop_size;
-    double qp1_size = 0.1 * 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
-    double qp51_size = 0.001 * 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
-    double bpf;
     int i;
 
     mfc_context->brc.mode = encoder_context->rate_control_mode;
 
-    for (i = 0; i < 3; i++) {
-        mfc_context->brc.qp_prime_y[0][i] = 26;
-    }
-
-    mfc_context->brc.target_frame_size[0][SLICE_TYPE_I] = (int)((double)((bitrate * intra_period)/framerate) /
-                                                             (double)(inum + BRC_PWEIGHT * pnum + BRC_BWEIGHT * bnum));
-    mfc_context->brc.target_frame_size[0][SLICE_TYPE_P] = BRC_PWEIGHT * mfc_context->brc.target_frame_size[0][SLICE_TYPE_I];
-    mfc_context->brc.target_frame_size[0][SLICE_TYPE_B] = BRC_BWEIGHT * mfc_context->brc.target_frame_size[0][SLICE_TYPE_I];
-
     mfc_context->brc.gop_nums[SLICE_TYPE_I] = inum;
     mfc_context->brc.gop_nums[SLICE_TYPE_P] = pnum;
     mfc_context->brc.gop_nums[SLICE_TYPE_B] = bnum;
-
-    bpf = mfc_context->brc.bits_per_frame[0] = bitrate/framerate;
 
     mfc_context->hrd.buffer_size = encoder_context->brc.hrd_buffer_size;
     mfc_context->hrd.current_buffer_fullness =
@@ -130,20 +118,46 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
     mfc_context->hrd.buffer_capacity = (double)mfc_context->hrd.buffer_size/qp1_size;
     mfc_context->hrd.violation_noted = 0;
 
-    if ((bpf > qp51_size) && (bpf < qp1_size)) {
-        mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P] = 51 - 50*(bpf - qp51_size)/(qp1_size - qp51_size);
+    for (i = 0; i < encoder_context->layer.num_layers; i++) {
+        mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I] = 26;
+        mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 26;
+        mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B] = 26;
+
+        if (i == 0) {
+            bitrate = encoder_context->brc.bits_per_second[0];
+            framerate = (double)encoder_context->brc.framerate_per_100s[0] / 100.0;
+        } else {
+            bitrate = (encoder_context->brc.bits_per_second[i] - encoder_context->brc.bits_per_second[i - 1]);
+            framerate = (double)(encoder_context->brc.framerate_per_100s[i] - encoder_context->brc.framerate_per_100s[i - 1]) / 100.0;
+        }
+
+        if (i == encoder_context->layer.num_layers - 1)
+            factor = 1.0;
+        else
+            factor = (double)encoder_context->brc.framerate_per_100s[i] / encoder_context->brc.framerate_per_100s[i + 1];
+
+        mfc_context->brc.target_frame_size[i][SLICE_TYPE_I] = (int)((double)((bitrate * intra_period * factor)/framerate) /
+                                                                    (double)(inum + BRC_PWEIGHT * pnum * factor + BRC_BWEIGHT * bnum * factor));
+        mfc_context->brc.target_frame_size[i][SLICE_TYPE_P] = BRC_PWEIGHT * mfc_context->brc.target_frame_size[i][SLICE_TYPE_I];
+        mfc_context->brc.target_frame_size[i][SLICE_TYPE_B] = BRC_BWEIGHT * mfc_context->brc.target_frame_size[i][SLICE_TYPE_I];
+
+        bpf = mfc_context->brc.bits_per_frame[i] = bitrate/framerate;
+
+        if ((bpf > qp51_size) && (bpf < qp1_size)) {
+            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 51 - 50*(bpf - qp51_size)/(qp1_size - qp51_size);
+        }
+        else if (bpf >= qp1_size)
+            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 1;
+        else if (bpf <= qp51_size)
+            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 51;
+
+        mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P];
+        mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I];
+
+        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I], 1, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P], 1, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B], 1, 51);
     }
-    else if (bpf >= qp1_size)
-        mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P] = 1;
-    else if (bpf <= qp51_size)
-        mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P] = 51;
-
-    mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I] = mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P];
-    mfc_context->brc.qp_prime_y[0][SLICE_TYPE_B] = mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I];
-
-    BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I], 1, 51);
-    BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P], 1, 51);
-    BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_B], 1, 51);
 }
 
 int intel_mfc_update_hrd(struct encode_state *encode_state,
