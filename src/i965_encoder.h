@@ -66,6 +66,18 @@ struct intel_encoder_context
     unsigned int frame_width_in_pixel;
     unsigned int frame_height_in_pixel;
 
+    struct {
+        unsigned short gop_size;
+        unsigned short num_iframes_in_gop;
+        unsigned short num_pframes_in_gop;
+        unsigned short num_bframes_in_gop;
+        unsigned int bits_per_second;
+        unsigned int framerate_per_100s;
+        unsigned int hrd_buffer_size;
+        unsigned int hrd_initial_buffer_fullness;
+        unsigned int need_reset;
+    } brc;
+
     void *vme_context;
     void *mfc_context;
     void *enc_priv_state;
