@@ -217,7 +217,6 @@ struct gen6_mfc_context
 
     //Bit rate tracking context
     struct {
-        unsigned int QpPrimeY;
         unsigned int MaxQpNegModifier;
         unsigned int MaxQpPosModifier;
         unsigned char Correct[6];
@@ -231,6 +230,7 @@ struct gen6_mfc_context
         int mode;
         int gop_nums[3];
         int target_frame_size[3]; // I,P,B
+        int qp_prime_y[3];
         double bits_per_frame;
         double qpf_rounding_accumulator;
 
