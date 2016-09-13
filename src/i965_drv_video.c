@@ -3097,6 +3097,29 @@ i965_encoder_render_packed_header_data_buffer(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
+static int
+i965_encoder_get_misc_paramerter_buffer_index(VADriverContextP ctx,
+                                              struct encode_state *encode,
+                                              VAEncMiscParameterBuffer *misc_param)
+{
+    int index = 0;
+
+    if (!encode->has_layers)
+        return 0;
+
+    if (misc_param->type == VAEncMiscParameterTypeRateControl) {
+        VAEncMiscParameterRateControl *misc_rate_control = (VAEncMiscParameterRateControl *)misc_param->data;
+
+        index = misc_rate_control->rc_flags.bits.temporal_id;
+    } else if (misc_param->type == VAEncMiscParameterTypeFrameRate) {
+        VAEncMiscParameterFrameRate *misc_frame_rate = (VAEncMiscParameterFrameRate *)misc_param->data;
+
+        index = misc_frame_rate->framerate_flags.bits.temporal_id;
+    }
+
+    return index;
+}
+
 static VAStatus
 i965_encoder_render_misc_parameter_buffer(VADriverContextP ctx,
                                           struct object_context *obj_context,
@@ -3104,6 +3127,7 @@ i965_encoder_render_misc_parameter_buffer(VADriverContextP ctx,
 {
     struct encode_state *encode = &obj_context->codec_state.encode;
     VAEncMiscParameterBuffer *param = NULL;
+    int index;
 
     ASSERT_RET(obj_buffer->buffer_store->bo == NULL, VA_STATUS_ERROR_INVALID_BUFFER);
     ASSERT_RET(obj_buffer->buffer_store->buffer, VA_STATUS_ERROR_INVALID_BUFFER);
@@ -3113,8 +3137,16 @@ i965_encoder_render_misc_parameter_buffer(VADriverContextP ctx,
     if (param->type >= ARRAY_ELEMS(encode->misc_param))
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    i965_release_buffer_store(&encode->misc_param[param->type][0]);
-    i965_reference_buffer_store(&encode->misc_param[param->type][0], obj_buffer->buffer_store);
+    if (param->type == VAEncMiscParameterTypeTemporalLayerStructure)
+        encode->has_layers = 1;
+
+    index = i965_encoder_get_misc_paramerter_buffer_index(ctx, encode, param);
+
+    if (index >= ARRAY_ELEMS(encode->misc_param[0]))
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    i965_release_buffer_store(&encode->misc_param[param->type][index]);
+    i965_reference_buffer_store(&encode->misc_param[param->type][index], obj_buffer->buffer_store);
 
     return VA_STATUS_SUCCESS;
 }
