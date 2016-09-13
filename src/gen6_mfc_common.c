@@ -422,9 +422,12 @@ void intel_mfc_brc_prepare(struct encode_state *encode_state,
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
 
+    if (encoder_context->codec != CODEC_H264 &&
+        encoder_context->codec != CODEC_H264_MVC)
+        return;
+
     if (rate_control_mode == VA_RC_CBR) {
         bool brc_updated;
-        assert(encoder_context->codec != CODEC_MPEG2);
 
         brc_updated = intel_mfc_brc_updated_check(encode_state, encoder_context);
 
