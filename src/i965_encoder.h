@@ -79,8 +79,8 @@ struct intel_encoder_context
         unsigned short num_iframes_in_gop;
         unsigned short num_pframes_in_gop;
         unsigned short num_bframes_in_gop;
-        unsigned int bits_per_second;
-        unsigned int framerate_per_100s;
+        unsigned int bits_per_second[MAX_TEMPORAL_LAYERS];
+        unsigned int framerate_per_100s[MAX_TEMPORAL_LAYERS];
         unsigned int hrd_buffer_size;
         unsigned int hrd_initial_buffer_fullness;
         unsigned int need_reset;
