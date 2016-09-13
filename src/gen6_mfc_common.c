@@ -94,8 +94,8 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
                                struct intel_encoder_context* encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    double bitrate = encoder_context->brc.bits_per_second;
-    double framerate = (double)encoder_context->brc.framerate_per_100s / 100.0;
+    double bitrate = encoder_context->brc.bits_per_second[0];
+    double framerate = (double)encoder_context->brc.framerate_per_100s[0] / 100.0;
     int inum = encoder_context->brc.num_iframes_in_gop,
         pnum = encoder_context->brc.num_pframes_in_gop,
         bnum = encoder_context->brc.num_bframes_in_gop; /* Gop structure: number of I, P, B frames in the Gop. */
@@ -296,7 +296,7 @@ static void intel_mfc_hrd_context_init(struct encode_state *encode_state,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    int target_bit_rate = encoder_context->brc.bits_per_second;
+    int target_bit_rate = encoder_context->brc.bits_per_second[0];
     
     // current we only support CBR mode.
     if (rate_control_mode == VA_RC_CBR) {

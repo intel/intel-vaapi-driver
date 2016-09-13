@@ -339,12 +339,12 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
 
     if (num_pframes_in_gop != encoder_context->brc.num_pframes_in_gop ||
         num_bframes_in_gop != encoder_context->brc.num_bframes_in_gop ||
-        bits_per_second != encoder_context->brc.bits_per_second ||
-        framerate_per_100s != encoder_context->brc.framerate_per_100s) {
+        bits_per_second != encoder_context->brc.bits_per_second[0] ||
+        framerate_per_100s != encoder_context->brc.framerate_per_100s[0]) {
         encoder_context->brc.num_pframes_in_gop = num_pframes_in_gop;
         encoder_context->brc.num_bframes_in_gop = num_bframes_in_gop;
-        encoder_context->brc.bits_per_second = bits_per_second;
-        encoder_context->brc.framerate_per_100s = framerate_per_100s;
+        encoder_context->brc.bits_per_second[0] = bits_per_second;
+        encoder_context->brc.framerate_per_100s[0] = framerate_per_100s;
         encoder_context->brc.need_reset = 1;
     }
 
@@ -379,8 +379,8 @@ intel_encoder_check_rate_control_parameter(VADriverContextP ctx,
                                            VAEncMiscParameterRateControl *misc)
 {
     // TODO: for VBR
-    if (encoder_context->brc.bits_per_second != misc->bits_per_second) {
-        encoder_context->brc.bits_per_second = misc->bits_per_second;
+    if (encoder_context->brc.bits_per_second[0] != misc->bits_per_second) {
+        encoder_context->brc.bits_per_second[0] = misc->bits_per_second;
         encoder_context->brc.need_reset = 1;
     }
 }
@@ -410,8 +410,8 @@ intel_encoder_check_framerate_parameter(VADriverContextP ctx,
     else
         framerate_per_100s = misc->framerate * 100;
 
-    if (encoder_context->brc.framerate_per_100s != framerate_per_100s) {
-        encoder_context->brc.framerate_per_100s = framerate_per_100s;
+    if (encoder_context->brc.framerate_per_100s[0] != framerate_per_100s) {
+        encoder_context->brc.framerate_per_100s[0] = framerate_per_100s;
         encoder_context->brc.need_reset = 1;
     }
 }
@@ -498,7 +498,7 @@ intel_encoder_check_temporal_layer_structure(VADriverContextP ctx,
     if (tls_paramter->number_of_layers <= 1)
         return VA_STATUS_SUCCESS;
 
-    if (tls_paramter->number_of_layers >= MAX_TEMPORAL_LAYERS)
+    if (tls_paramter->number_of_layers > MAX_TEMPORAL_LAYERS)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     if (tls_paramter->periodicity > 32 || tls_paramter->periodicity <= 1)
