@@ -1,5 +1,33 @@
-libva-intel-driver NEWS -- summary of changes.  2016-03-15
-Copyright (C) 2009-2015 Intel Corporation
+libva-intel-driver NEWS -- summary of changes.  2016-09-05
+Copyright (C) 2009-2016 Intel Corporation
+
+Version 1.7.2 - 05.Sep.2016
+* Update PCI IDs for KBL
+* Allow up to 8K JPEG decoding/encoding on SKL+
+* Add support for ROI on IVB+
+* Support I420/YV12 input surface for VP9 encoding
+* Fix assertion failure when decoding stream through VLC
+  (https://bugs.freedesktop.org/show_bug.cgi?id=94007)
+* Fix image corruption in ColorBalance and STDE on BDW+
+  (https://bugs.freedesktop.org/show_bug.cgi?id=95349)
+* Fix run2run issue in H.264 encoder
+  (https://bugs.freedesktop.org/show_bug.cgi?id=96703)
+* Fix video rendering corruption when using VAAPI postproc denoise on 1080p videos
+  (https://bugs.freedesktop.org/show_bug.cgi?id=96739)
+* Fix image corruption in ColorBalance with hue=-180
+  (https://bugs.freedesktop.org/show_bug.cgi?id=96744)
+* Fix memory leak in VP8 encoding
+  (https://bugs.freedesktop.org/show_bug.cgi?id=97272)
+
+Version 1.7.1 - 21.Jun.2016
+* Add support VP9 8bit encoding on KBL
+* Add support for low-power/high-performance H.264 encoder on SKL
+* Fix incorrect color space conversion in driver
+  (https://bugs.freedesktop.org/show_bug.cgi?id=94845)
+* Fix FPS caculation for HEVC encoder
+* Fix VP9 10bit decoding issue on KBL
+* Fix the noise issue when VA_FILTER_SCALING_HQ upscaling from 1280x720 to 1920x1080 with YUY2 format on BDW+
+  (https://bugs.freedesktop.org/show_bug.cgi?id=94765)
 
 Version 1.7.0 - 15.Mar.2016
 * Add support for Kabylake
