@@ -794,7 +794,7 @@ void hsw_veb_iecp_pro_amp_table(VADriverContextP ctx, struct intel_vebox_context
 }
 
 
-void hsw_veb_iecp_csc_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+void hsw_veb_iecp_csc_transform_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     unsigned int *p_table = (unsigned int*)(proc_ctx->iecp_state_table.ptr + 220);
     float tran_coef[9] = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
@@ -802,7 +802,7 @@ void hsw_veb_iecp_csc_table(VADriverContextP ctx, struct intel_vebox_context *pr
     float u_coef[3]    = {0.0, 0.0, 0.0};
     int   is_transform_enabled = 0;
 
-    if(!(proc_ctx->filters_mask & VPP_IECP_CSC)){
+    if(!(proc_ctx->filters_mask & VPP_IECP_CSC_TRANSFORM)){
         memset(p_table, 0, 8 * 4);
         return;
     }
@@ -929,7 +929,7 @@ void hsw_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
         hsw_veb_iecp_ace_table(ctx, proc_ctx);
         hsw_veb_iecp_tcc_table(ctx, proc_ctx);
         hsw_veb_iecp_pro_amp_table(ctx, proc_ctx);
-        hsw_veb_iecp_csc_table(ctx, proc_ctx);
+        hsw_veb_iecp_csc_transform_table(ctx, proc_ctx);
         hsw_veb_iecp_aoi_table(ctx, proc_ctx);
    
         dri_bo_unmap(iecp_bo);
@@ -1196,8 +1196,21 @@ gen75_vebox_ensure_surfaces_storage(VADriverContextP ctx,
     /* Update VEBOX pipeline formats */
     proc_ctx->fourcc_input = input_fourcc;
     proc_ctx->fourcc_output = output_fourcc;
-    if (input_fourcc != output_fourcc)
-        proc_ctx->is_iecp_enabled = 1; // IECP needed for format conversion
+    if (input_fourcc != output_fourcc) {
+        proc_ctx->filters_mask |= VPP_IECP_CSC;
+
+        if (input_fourcc == VA_FOURCC_RGBA &&
+            (output_fourcc == VA_FOURCC_NV12 ||
+             output_fourcc == VA_FOURCC_P010)) {
+            proc_ctx->filters_mask |= VPP_IECP_CSC_TRANSFORM;
+        } else if (output_fourcc == VA_FOURCC_RGBA &&
+                   (input_fourcc == VA_FOURCC_NV12 ||
+                    input_fourcc == VA_FOURCC_P010)) {
+            proc_ctx->filters_mask |= VPP_IECP_CSC_TRANSFORM;
+        }
+    }
+
+    proc_ctx->is_iecp_enabled = (proc_ctx->filters_mask & VPP_IECP_MASK) != 0;
    
     /* Create pipeline surfaces */
     for (i = 0; i < ARRAY_ELEMS(proc_ctx->frame_store); i ++) {
@@ -1602,6 +1615,10 @@ gen75_vebox_init_pipe_params(VADriverContextP ctx,
             return VA_STATUS_ERROR_UNSUPPORTED_FILTER;
         }
     }
+
+    if(proc_ctx->filters_mask == 0)
+        proc_ctx->filters_mask |= VPP_IECP_CSC;
+
     return VA_STATUS_SUCCESS;
 }
 
@@ -1617,11 +1634,6 @@ gen75_vebox_init_filter_params(VADriverContextP ctx,
     proc_ctx->is_di_adv_enabled = 0;
     proc_ctx->is_first_frame = 0;
     proc_ctx->is_second_field = 0;
-
-    if(!proc_ctx->is_di_enabled && !proc_ctx->is_dn_enabled) {
-        // MUST enable IECP if all DI&DN are disabled
-        proc_ctx->is_iecp_enabled = 1;
-    }
 
     /* Check whether we are deinterlacing the second field */
     if (proc_ctx->is_di_enabled) {
@@ -2090,7 +2102,7 @@ skl_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
                     5 );          // sad tha
 }
 
-void skl_veb_iecp_csc_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+void skl_veb_iecp_csc_transform_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     unsigned int *p_table = (unsigned int*)(proc_ctx->iecp_state_table.ptr + 220);
     float tran_coef[9] = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
@@ -2098,7 +2110,7 @@ void skl_veb_iecp_csc_table(VADriverContextP ctx, struct intel_vebox_context *pr
     float u_coef[3]    = {0.0, 0.0, 0.0};
     int   is_transform_enabled = 0;
 
-    if(!(proc_ctx->filters_mask & VPP_IECP_CSC)){
+    if(!(proc_ctx->filters_mask & VPP_IECP_CSC_TRANSFORM)){
         memset(p_table, 0, 12 * 4);
         return;
     }
@@ -2226,7 +2238,7 @@ void skl_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
         hsw_veb_iecp_ace_table(ctx, proc_ctx);
         hsw_veb_iecp_tcc_table(ctx, proc_ctx);
         hsw_veb_iecp_pro_amp_table(ctx, proc_ctx);
-        skl_veb_iecp_csc_table(ctx, proc_ctx);
+        skl_veb_iecp_csc_transform_table(ctx, proc_ctx);
         skl_veb_iecp_aoi_table(ctx, proc_ctx);
 
         dri_bo_unmap(iecp_bo);
