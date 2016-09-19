@@ -1840,7 +1840,6 @@ static VAStatus gen9_intel_init_hevc_surface(VADriverContextP ctx,
             &rect);
         assert(status == VA_STATUS_SUCCESS);
         hevc_encoder_surface->has_p010_to_nv12_done = 1;
-        i965_SyncSurface(ctx,hevc_encoder_surface->nv12_surface_id);
     }
     return VA_STATUS_SUCCESS;
 }
