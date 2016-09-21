@@ -564,7 +564,7 @@ void set_std_table_9(struct intel_vebox_context *proc_ctx, unsigned int *p_table
 
 void hsw_veb_iecp_std_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
-    unsigned int *p_table = proc_ctx->iecp_state_table.ptr + 0 ;
+    unsigned int *p_table = (unsigned int *)proc_ctx->iecp_state_table.ptr;
 
     if(!(proc_ctx->filters_mask & VPP_IECP_STD_STE)){ 
         memset(p_table, 0, 29 * 4);
