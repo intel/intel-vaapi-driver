@@ -98,7 +98,7 @@ typedef struct veb_frame_store {
 
 typedef struct veb_buffer {
     dri_bo  *bo;
-    void *  ptr;
+    char *  ptr;
     unsigned char  valid;
 } VEBBuffer;
 
