@@ -91,25 +91,6 @@ gen75_vpp_vebox(VADriverContextP ctx,
      return va_status;
 } 
 
-static VAStatus 
-gen75_vpp_gpe(VADriverContextP ctx, 
-              struct intel_video_process_context* proc_ctx)
-{
-     VAStatus va_status = VA_STATUS_SUCCESS;
-
-     if(proc_ctx->vpp_gpe_ctx == NULL){
-         proc_ctx->vpp_gpe_ctx = vpp_gpe_context_init(ctx);
-     }
-   
-     proc_ctx->vpp_gpe_ctx->pipeline_param = proc_ctx->pipeline_param;
-     proc_ctx->vpp_gpe_ctx->surface_pipeline_input_object = proc_ctx->surface_pipeline_input_object;
-     proc_ctx->vpp_gpe_ctx->surface_output_object = proc_ctx->surface_render_output_object;
-
-     va_status = vpp_gpe_process_picture(ctx, proc_ctx->vpp_gpe_ctx);
- 
-     return va_status;     
-}
-
 VAStatus 
 gen75_proc_picture(VADriverContextP ctx,
                    VAProfile profile,
@@ -324,16 +305,9 @@ gen75_proc_picture(VADriverContextP ctx,
            if (filter->type == VAProcFilterNoiseReduction         ||
                filter->type == VAProcFilterDeinterlacing          ||
                filter->type == VAProcFilterSkinToneEnhancement    ||
+               filter->type == VAProcFilterSharpening             ||
                filter->type == VAProcFilterColorBalance){
                gen75_vpp_vebox(ctx, proc_ctx);
-           }else if(filter->type == VAProcFilterSharpening){
-               if (proc_ctx->surface_pipeline_input_object->fourcc != VA_FOURCC_NV12 ||
-                   proc_ctx->surface_render_output_object->fourcc != VA_FOURCC_NV12) {
-                   status = VA_STATUS_ERROR_UNIMPLEMENTED;
-                   goto error;
-               }
-
-               gen75_vpp_gpe(ctx, proc_ctx);
            }
         }else if (pipeline_param->num_filters >= 2) {
              unsigned int i = 0;
@@ -413,11 +387,6 @@ gen75_proc_context_destroy(void *hw_context)
        proc_ctx->vpp_vebox_ctx = NULL;
     }
 
-    if(proc_ctx->vpp_gpe_ctx){
-       vpp_gpe_context_destroy(ctx,proc_ctx->vpp_gpe_ctx);
-       proc_ctx->vpp_gpe_ctx = NULL;
-    }
-
     free(proc_ctx);
 }
 
@@ -433,7 +402,6 @@ gen75_proc_context_init(VADriverContextP ctx,
     proc_context->base.run     = gen75_proc_picture;
 
     proc_context->vpp_vebox_ctx    = NULL;
-    proc_context->vpp_gpe_ctx      = NULL;
     proc_context->vpp_fmt_cvt_ctx  = NULL;
  
     proc_context->driver_context = ctx;

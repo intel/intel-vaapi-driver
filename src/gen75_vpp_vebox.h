@@ -37,6 +37,7 @@
 #include "i965_drv_video.h"
 
 #include "i965_post_processing.h"
+#include "gen75_vpp_gpe.h"
 
 #define INPUT_SURFACE  0
 #define OUTPUT_SURFACE 1
@@ -52,6 +53,8 @@
 #define VPP_IECP_AOI       0x00002000
 #define VPP_IECP_CSC_TRANSFORM 0x00004000
 #define VPP_IECP_MASK      0x0000ff00
+#define VPP_SHARP          0x00010000
+#define VPP_SHARP_MASK     0x000f0000
 #define MAX_FILTER_SUM     8
 
 #define PRE_FORMAT_CONVERT      0x01
@@ -152,6 +155,8 @@ struct intel_vebox_context
     unsigned int is_di_adv_enabled      : 1;
     unsigned int is_first_frame         : 1;
     unsigned int is_second_field        : 1;
+
+    struct vpp_gpe_context     *vpp_gpe_ctx;
 };
 
 VAStatus gen75_vebox_process_picture(VADriverContextP ctx,

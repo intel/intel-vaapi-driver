@@ -115,6 +115,25 @@ vpp_surface_scaling(VADriverContextP ctx, struct object_surface *src_obj_surf,
     return va_status;
 }
 
+static VAStatus
+vpp_sharpness_filtering(VADriverContextP ctx,
+    struct intel_vebox_context *proc_ctx)
+{
+     VAStatus va_status = VA_STATUS_SUCCESS;
+
+     if(proc_ctx->vpp_gpe_ctx == NULL){
+         proc_ctx->vpp_gpe_ctx = vpp_gpe_context_init(ctx);
+     }
+
+     proc_ctx->vpp_gpe_ctx->pipeline_param = proc_ctx->pipeline_param;
+     proc_ctx->vpp_gpe_ctx->surface_pipeline_input_object = proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface;
+     proc_ctx->vpp_gpe_ctx->surface_output_object = proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface;
+
+     va_status = vpp_gpe_process_picture(ctx, proc_ctx->vpp_gpe_ctx);
+
+     return va_status;
+}
+
 void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -1615,6 +1634,9 @@ gen75_vebox_init_pipe_params(VADriverContextP ctx,
             proc_ctx->filters_mask |= VPP_IECP_STD_STE;
             proc_ctx->filter_iecp_std = filter;
             break;
+        case VAProcFilterSharpening:
+            proc_ctx->filters_mask |= VPP_SHARP;
+            break;
         default:
             WARN_ONCE("unsupported filter (type: %d)\n", filter->type);
             return VA_STATUS_ERROR_UNSUPPORTED_FILTER;
@@ -1730,7 +1752,9 @@ gen75_vebox_process_picture(VADriverContextP ctx,
     if (status != VA_STATUS_SUCCESS)
         return status;
 
-    if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
+    if (proc_ctx->filters_mask & VPP_SHARP_MASK) {
+        vpp_sharpness_filtering(ctx, proc_ctx);
+    } else if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
         assert(proc_ctx->is_second_field);
         /* directly copy the saved frame in the second call */
     } else {
@@ -1754,6 +1778,11 @@ void gen75_vebox_context_destroy(VADriverContextP ctx,
                           struct intel_vebox_context *proc_ctx)
 {
     int i;
+
+    if(proc_ctx->vpp_gpe_ctx){
+       vpp_gpe_context_destroy(ctx,proc_ctx->vpp_gpe_ctx);
+       proc_ctx->vpp_gpe_ctx = NULL;
+    }
 
     if(proc_ctx->surface_input_vebox != VA_INVALID_ID){
        i965_DestroySurfaces(ctx, &proc_ctx->surface_input_vebox, 1);
@@ -1820,6 +1849,7 @@ struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx)
     proc_context->surface_output_scaled_object = NULL;
     proc_context->filters_mask          = 0;
     proc_context->format_convert_flags  = 0;
+    proc_context->vpp_gpe_ctx      = NULL;
 
     return proc_context;
 }
@@ -1967,7 +1997,9 @@ gen8_vebox_process_picture(VADriverContextP ctx,
     if (status != VA_STATUS_SUCCESS)
         return status;
 
-    if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
+    if (proc_ctx->filters_mask & VPP_SHARP_MASK) {
+        vpp_sharpness_filtering(ctx, proc_ctx);
+    } else if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
         assert(proc_ctx->is_second_field);
         /* directly copy the saved frame in the second call */
     } else {
@@ -2438,7 +2470,9 @@ gen9_vebox_process_picture(VADriverContextP ctx,
     if (status != VA_STATUS_SUCCESS)
         return status;
 
-    if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
+    if (proc_ctx->filters_mask & VPP_SHARP_MASK) {
+        vpp_sharpness_filtering(ctx, proc_ctx);
+    } else if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
         assert(proc_ctx->is_second_field);
         /* directly copy the saved frame in the second call */
     } else {

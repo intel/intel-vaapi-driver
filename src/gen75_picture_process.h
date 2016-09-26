@@ -31,7 +31,6 @@
 #include <va/va_vpp.h>
 #include "i965_drv_video.h"
 #include "gen75_vpp_vebox.h"
-#include "gen75_vpp_gpe.h"
 
 struct intel_video_process_context
 {
@@ -40,7 +39,6 @@ struct intel_video_process_context
   
     struct intel_vebox_context *vpp_vebox_ctx;
     struct hw_context          *vpp_fmt_cvt_ctx;
-    struct vpp_gpe_context     *vpp_gpe_ctx;
 
     VAProcPipelineParameterBuffer* pipeline_param;
 
