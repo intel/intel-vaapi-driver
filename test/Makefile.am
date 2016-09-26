@@ -53,6 +53,7 @@ noinst_HEADERS =							\
 test_i965_drv_video_SOURCES =						\
 	i965_chipset_test.cpp						\
 	i965_initialize_test.cpp					\
+	i965_jpeg_test_data.cpp						\
 	i965_test_fixture.cpp						\
 	i965_jpeg_decode_test.cpp					\
 	object_heap_test.cpp						\
