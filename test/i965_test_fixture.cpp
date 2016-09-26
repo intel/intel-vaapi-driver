@@ -97,12 +97,24 @@ I965TestFixture::operator VADisplay()
     return m_vaDisplay;
 }
 
-Surfaces I965TestFixture::createSurfaces(int w, int h, int format, size_t count)
+Surfaces I965TestFixture::createSurfaces(int w, int h, int format, size_t count,
+    const SurfaceAttribs& attributes)
 {
     Surfaces surfaces(count, VA_INVALID_ID);
-    EXPECT_STATUS(
-        i965_CreateSurfaces(
-            *this, w, h, format, surfaces.size(), surfaces.data()));
+    if (attributes.empty()) {
+        EXPECT_STATUS(
+            i965_CreateSurfaces(
+                *this, w, h, format, surfaces.size(), surfaces.data()));
+    } else {
+        VADriverContextP ctx(*this);
+        EXPECT_PTR(ctx);
+        if (ctx)
+            EXPECT_STATUS(
+                ctx->vtable->vaCreateSurfaces2(
+                    *this, format, w, h, surfaces.data(), surfaces.size(),
+                    const_cast<VASurfaceAttrib*>(attributes.data()),
+                    attributes.size()));
+    }
 
     for (size_t i(0); i < count; ++i) {
         EXPECT_ID(surfaces[i]);
