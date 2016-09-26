@@ -1030,8 +1030,8 @@ void hsw_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *pro
                   is_output);      // surface indentification.
 
     OUT_VEB_BATCH(batch,
-                  (obj_surf->height - 1) << 18 |  // height . w3
-                  (obj_surf->width -1 )  << 4  |  // width
+                  (obj_surf->orig_height - 1) << 18 |  // height . w3
+                  (obj_surf->orig_width - 1)  << 4  |  // width
                   0);                             // reserve
 
     OUT_VEB_BATCH(batch,
@@ -1062,7 +1062,12 @@ void hsw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
 {
     struct intel_batchbuffer *batch = proc_ctx->batch;
     unsigned char frame_ctrl_bits = 0;
-    const unsigned int width64 = ALIGN(proc_ctx->width_input, 64);
+    struct object_surface *obj_surface = proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface;
+    unsigned int width64 = ALIGN(proc_ctx->width_input, 64);
+
+    assert(obj_surface);
+    if (width64 > obj_surface->orig_width)
+        width64 = obj_surface->orig_width;
 
     /* s1:update the previous and current input */
 /*    tempFrame = proc_ctx->frame_store[FRAME_IN_PREVIOUS];
@@ -1879,7 +1884,12 @@ void bdw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
 {
     struct intel_batchbuffer *batch = proc_ctx->batch;
     unsigned char frame_ctrl_bits = 0;
-    const unsigned int width64 = ALIGN(proc_ctx->width_input, 64);
+    struct object_surface *obj_surface = proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface;
+    unsigned int width64 = ALIGN(proc_ctx->width_input, 64);
+
+    assert(obj_surface);
+    if (width64 > obj_surface->orig_width)
+        width64 = obj_surface->orig_width;
 
     BEGIN_VEB_BATCH(batch, 0x14);
     OUT_VEB_BATCH(batch, VEB_DNDI_IECP_STATE | (0x14 - 2));//DWord 0
@@ -2372,8 +2382,8 @@ void skl_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *pro
                   is_output);      // surface indentification.
 
     OUT_VEB_BATCH(batch,
-                  (obj_surf->height - 1) << 18 |  // height . w3
-                  (obj_surf->width -1 )  << 4  |  // width
+                  (obj_surf->orig_height - 1) << 18 |  // height . w3
+                  (obj_surf->orig_width - 1)  << 4  |  // width
                   0);                             // reserve
 
     OUT_VEB_BATCH(batch,
