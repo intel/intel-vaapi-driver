@@ -35,6 +35,7 @@
 typedef std::vector<VASurfaceID> Surfaces;
 typedef std::vector<VASurfaceAttrib> SurfaceAttribs;
 typedef std::vector<VAConfigAttrib> ConfigAttribs;
+typedef std::vector<VABufferID> Buffers;
 
 /**
  * This test fixture handles initialization and termination of the i965 driver

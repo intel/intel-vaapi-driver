@@ -25,6 +25,8 @@
 #ifndef I965_JPEG_TEST_DATA_H
 #define I965_JPEG_TEST_DATA_H
 
+#include "i965_test_fixture.h"
+
 #include <array>
 #include <iostream>
 #include <map>
@@ -183,6 +185,18 @@ namespace Decode {
             const HuffmanTable& huffman = defaultHuffmanTable,
             const IQMatrix& iqmatrix = defaultIQMatrix)
         {
+            return make(fourcc, slice, W, H, sparam, pparam, huffman, iqmatrix);
+        }
+
+        static SharedConst make(
+            const unsigned fourcc,
+            const ByteData& slice,
+            const unsigned w, const unsigned h,
+            const SliceParameter& sparam = defaultSliceParameter,
+            const PictureParameter& pparam = defaultPictureParameter,
+            const HuffmanTable& huffman = defaultHuffmanTable,
+            const IQMatrix& iqmatrix = defaultIQMatrix)
+        {
             Shared pd(
                 new PictureData {
                     slice: slice,
@@ -196,8 +210,8 @@ namespace Decode {
             );
 
             pd->sparam.slice_data_size = slice.size();
-            pd->pparam.picture_width = W;
-            pd->pparam.picture_height = H;
+            pd->pparam.picture_width = w;
+            pd->pparam.picture_height = h;
 
             switch(fourcc)
             {
@@ -232,8 +246,8 @@ namespace Decode {
             /* Calculate num_mcus */
             int hfactor = pd->pparam.components[0].h_sampling_factor << 3;
             int vfactor = pd->pparam.components[0].v_sampling_factor << 3;
-            int wmcu = (W + hfactor - 1) / hfactor;
-            int hmcu = (H + vfactor - 1) / vfactor;
+            int wmcu = (w + hfactor - 1) / hfactor;
+            int hmcu = (h + vfactor - 1) / vfactor;
             pd->sparam.num_mcus = wmcu * hmcu;
 
             return pd;
@@ -319,6 +333,182 @@ namespace Decode {
         static const bool m_valid;
     };
 } // namespace Decode
+} // namespace JPEG
+
+namespace JPEG {
+namespace Encode {
+    typedef VAQMatrixBufferJPEG                 IQMatrix;
+    typedef VAHuffmanTableBufferJPEGBaseline    HuffmanTable;
+    typedef VAEncPictureParameterBufferJPEG     PictureParameter;
+    typedef VAEncSliceParameterBufferJPEG       SliceParameter;
+
+    static const VAEntrypoint entrypoint = VAEntrypointEncPicture;
+
+    static const IQMatrix defaultIQMatrix = { /* Quality 50 */
+        load_lum_quantiser_matrix: 1,
+        load_chroma_quantiser_matrix: 1,
+        lum_quantiser_matrix: {
+            0x10,0x0b,0x0c,0x0e,0x0c,0x0a,0x10,0x0e,
+            0x0d,0x0e,0x12,0x11,0x10,0x13,0x18,0x28,
+            0x1a,0x18,0x16,0x16,0x18,0x31,0x23,0x25,
+            0x1d,0x28,0x3a,0x33,0x3d,0x3c,0x39,0x33,
+            0x38,0x37,0x40,0x48,0x5c,0x4e,0x40,0x44,
+            0x57,0x45,0x37,0x38,0x50,0x6d,0x51,0x57,
+            0x5f,0x62,0x67,0x68,0x67,0x3e,0x4d,0x71,
+            0x79,0x70,0x64,0x78,0x5c,0x65,0x67,0x63,
+        },
+        chroma_quantiser_matrix: {
+            0x11,0x12,0x12,0x18,0x15,0x18,0x2f,0x1a,
+            0x1a,0x2f,0x63,0x42,0x38,0x42,0x63,0x63,
+            0x63,0x63,0x63,0x63,0x63,0x63,0x63,0x63,
+            0x63,0x63,0x63,0x63,0x63,0x63,0x63,0x63,
+            0x63,0x63,0x63,0x63,0x63,0x63,0x63,0x63,
+            0x63,0x63,0x63,0x63,0x63,0x63,0x63,0x63,
+            0x63,0x63,0x63,0x63,0x63,0x63,0x63,0x63,
+            0x63,0x63,0x63,0x63,0x63,0x63,0x63,0x63,
+        },
+    };
+
+    static const HuffmanTable defaultHuffmanTable =
+        ::JPEG::Decode::defaultHuffmanTable;
+
+    static const PictureParameter defaultPictureParameter = {
+        reconstructed_picture:      VA_INVALID_ID,
+        picture_width:              10,
+        picture_height:             10,
+        coded_buf:                  VA_INVALID_ID,
+        pic_flags:                  {value: 0x00100},
+        sample_bit_depth:           8,
+        num_scan:                   1,
+        num_components:             3,
+        component_id:               {0, 1, 2, 0},
+        quantiser_table_selector:   {0, 1, 1, 0},
+        quality:                    100,
+    };
+
+    static const SliceParameter defaultSliceParameter = {
+        restart_interval:   0,
+        num_components:     3,
+        /* component_selector, dc_table_selector, ac_table_selector */
+        components:         {{1,0,0},{2,1,1},{3,1,1}},
+    };
+
+    class TestInput
+    {
+    public:
+        typedef std::shared_ptr<TestInput> Shared;
+        typedef std::shared_ptr<TestInput> SharedConst;
+
+        TestInput(const unsigned fourcc, const unsigned w, const unsigned h)
+            : bytes() // caller must fill this in after instantiation
+            , picture(defaultPictureParameter)
+            , matrix(defaultIQMatrix)
+            , huffman(defaultHuffmanTable)
+            , slice(defaultSliceParameter)
+            , fourcc(fourcc)
+            , fourcc_output(fourcc)
+            , format(0)
+            , planes(0)
+            , widths{0,0,0}
+            , heights{0,0,0}
+            , offsets{0,0,0}
+            , sizes{0,0,0}
+        {
+            picture.picture_width = ALIGN(w,2);
+            picture.picture_height = ALIGN(h,2);
+
+            switch(fourcc) {
+            case VA_FOURCC('I', '4', '2', '0'):
+                planes = 3;
+                widths = {
+                    w +( w & 1),
+                    (w + 1) >> 1,
+                    (w + 1) >> 1
+                };
+                heights = {
+                    h + (h & 1),
+                    (h + 1) >> 1,
+                    (h + 1) >> 1
+                };
+                format = VA_RT_FORMAT_YUV420;
+                fourcc_output = VA_FOURCC_IMC3;
+                break;
+            case VA_FOURCC_NV12:
+                planes = 2;
+                widths = {
+                    w + (w & 1),
+                    w + (w & 1),
+                    0
+                };
+                heights = {
+                    h + (h & 1),
+                    (h + 1) >> 1,
+                    0
+                };
+                format = VA_RT_FORMAT_YUV420;
+                fourcc_output = VA_FOURCC_IMC3;
+                break;
+            default:
+                return;
+            }
+
+            for (size_t i(0); i < planes; ++i) {
+                sizes[i] = widths[i] * heights[i];
+            }
+
+            for (size_t i(1); i < planes; ++i) {
+                offsets[i] = sizes[i - 1];
+                offsets[i] += offsets[i - 1];
+            }
+        }
+
+        const unsigned width() const
+        {
+            return picture.picture_width;
+        }
+
+        const unsigned height() const
+        {
+            return picture.picture_height;
+        }
+
+        const uint8_t* plane(const size_t i) const
+        {
+            return bytes.data() + offsets[i];
+        }
+
+        friend ::std::ostream& operator<<(::std::ostream& os, const TestInput& t)
+        {
+            return os
+                << std::string((char*)(&t.fourcc), 4)
+                << " " << t.width() << "x" << t.height()
+                << " " << t.widths << " " << t.heights
+                << " " << t.sizes << " " << t.offsets
+            ;
+        }
+
+        friend ::std::ostream& operator<<(::std::ostream& os, const Shared& t)
+        {
+            return os << *t;
+        }
+
+        ByteData            bytes;
+        PictureParameter    picture;
+        IQMatrix            matrix;
+        HuffmanTable        huffman;
+        SliceParameter      slice;
+        unsigned            fourcc;
+        unsigned            fourcc_output;
+        unsigned            format;
+        size_t              planes;
+        std::array<size_t, 3> widths;
+        std::array<size_t, 3> heights;
+        std::array<size_t, 3> offsets;
+        std::array<size_t, 3> sizes;
+    };
+
+
+} // namespace Encode
 } // namespace JPEG
 
 #endif

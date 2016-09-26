@@ -57,6 +57,7 @@ test_i965_drv_video_SOURCES =						\
 	i965_jpeg_test_data.cpp						\
 	i965_test_fixture.cpp						\
 	i965_jpeg_decode_test.cpp					\
+	i965_jpeg_encode_test.cpp					\
 	object_heap_test.cpp						\
 	test_main.cpp							\
 	$(NULL)
