@@ -207,6 +207,12 @@ public:
     void destroyImage(VAImage &);
 
     /**
+     * Convenience wrapper for i965_SyncSurface.  May generate a non-fatal
+     * test assertion failure.
+     */
+    void syncSurface(VASurfaceID);
+
+    /**
      * VADisplay implicit and explicit conversion operator.
      */
     operator VADisplay();
