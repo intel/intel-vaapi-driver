@@ -48,6 +48,7 @@ noinst_HEADERS =							\
 	i965_jpeg_test_data.h						\
 	i965_test_fixture.h						\
 	test.h								\
+	test_utils.h							\
 	$(NULL)
 
 test_i965_drv_video_SOURCES =						\
