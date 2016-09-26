@@ -25,6 +25,8 @@
 #include "i965_jpeg_test_data.h"
 
 namespace JPEG {
+namespace Decode {
+
     /**
      * Test Pattern 1
      *
@@ -759,4 +761,6 @@ namespace JPEG {
                 0x00,0xa0,0x0f,0xff,
             }}
         });
+
+} // namespace Decode
 } // namespace JPEG

@@ -33,13 +33,29 @@
 #include <vector>
 
 namespace JPEG {
+    typedef std::vector<uint8_t> ByteData;
 
+    static const VAProfile profile = VAProfileJPEGBaseline;
+
+    static inline const ByteData generateSolid(
+        const std::array<uint8_t, 3>& yuv, const std::array<size_t, 2>& dim)
+    {
+        size_t count(dim[0] * dim[1]);
+        ByteData data(count, yuv[0]);
+        data.insert(data.end(), count, yuv[1]);
+        data.insert(data.end(), count, yuv[2]);
+        return data;
+    }
+} // namespace JPEG
+
+namespace JPEG {
+namespace Decode {
     typedef VAIQMatrixBufferJPEGBaseline                IQMatrix;
     typedef VAHuffmanTableBufferJPEGBaseline            HuffmanTable;
     typedef VAPictureParameterBufferJPEGBaseline        PictureParameter;
     typedef VASliceParameterBufferJPEGBaseline          SliceParameter;
 
-    static const VAProfile profile = VAProfileJPEGBaseline;
+    static const VAEntrypoint entrypoint = VAEntrypointVLD;
 
     static const HuffmanTable defaultHuffmanTable = {
         load_huffman_table: { 0x01, 0x01 },
@@ -130,29 +146,11 @@ namespace JPEG {
     };
 
     static const PictureParameter defaultPictureParameter = {
-        picture_width:                          10,
-        picture_height:                         10,
-        components: {
-            {
-                component_id:                   1,
-                h_sampling_factor:              1,
-                v_sampling_factor:              1,
-                quantiser_table_selector:       0,
-            },
-            {
-                component_id:                   2,
-                h_sampling_factor:              1,
-                v_sampling_factor:              1,
-                quantiser_table_selector:       1,
-            },
-            {
-                component_id:                   3,
-                h_sampling_factor:              1,
-                v_sampling_factor:              1,
-                quantiser_table_selector:       1,
-            },
-        },
-        num_components:                         3,
+        picture_width:  10,
+        picture_height: 10,
+        /* component_id, h_sampling_factor, v_sampling_factor, quantiser_table_selector */
+        components:     {{1,1,1,0}, {2,1,1,1}, {3,1,1,1}},
+        num_components: 3,
     };
 
     static const SliceParameter defaultSliceParameter = {
@@ -162,29 +160,13 @@ namespace JPEG {
         slice_horizontal_position:              0,
         slice_vertical_position:                0,
 
-        components: {
-            {
-                component_selector:             1,
-                dc_table_selector:              0,
-                ac_table_selector:              0,
-            },
-            {
-                component_selector:             2,
-                dc_table_selector:              1,
-                ac_table_selector:              1,
-            },
-            {
-                component_selector:             3,
-                dc_table_selector:              1,
-                ac_table_selector:              1,
-            },
-        },
+        /* component_selector, dc_table_selector, ac_table_selector */
+        components: {{1,0,0},{2,1,1},{3,1,1}},
+
         num_components:                         3,
         restart_interval:                       0,
         num_mcus:                               4,
     };
-
-    typedef std::vector<uint8_t> ByteData;
 
     class PictureData
     {
@@ -336,18 +318,7 @@ namespace JPEG {
 
         static const bool m_valid;
     };
-
-    static inline const ByteData generateSolid(
-        const std::array<uint8_t, 3>& yuv, const std::array<size_t, 2>& dim)
-    {
-        size_t count(dim[0] * dim[1]);
-        ByteData data(count, yuv[0]);
-        data.insert(data.end(), count, yuv[1]);
-        data.insert(data.end(), count, yuv[2]);
-        return data;
-    }
-
-
+} // namespace Decode
 } // namespace JPEG
 
 #endif
