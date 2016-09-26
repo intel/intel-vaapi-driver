@@ -212,6 +212,12 @@ void I965TestFixture::destroyImage(VAImage &image)
         i965_DestroyImage(*this, image.image_id));
 }
 
+void I965TestFixture::syncSurface(VASurfaceID surface)
+{
+    EXPECT_STATUS(
+        i965_SyncSurface(*this, surface));
+}
+
 class I965TestFixtureTest
     : public I965TestFixture
 {
