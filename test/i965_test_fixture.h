@@ -32,6 +32,7 @@
 #include <vector>
 
 typedef std::vector<VASurfaceID> Surfaces;
+typedef std::vector<VASurfaceAttrib> SurfaceAttribs;
 typedef std::vector<VAConfigAttrib> ConfigAttribs;
 
 /**
@@ -99,10 +100,13 @@ public:
     void terminate();
 
     /**
-     * Convenience wrapper for i965_CreateSurfaces.  May generate a non-fatal
-     * test assertion failure.
+     * Convenience wrapper for i965_CreateSurfaces or i965_CreateSurfaces2.
+     * If SurfaceAttribs are specified then i965_CreateSurfaces2 is used,
+     * otherwise i965_CreateSurfaces is used. May generate a non-fatal test
+     * assertion failure.
      */
-    Surfaces createSurfaces(int w, int h, int format, size_t count = 1);
+    Surfaces createSurfaces(int w, int h, int format, size_t count = 1,
+        const SurfaceAttribs& = SurfaceAttribs());
 
     /**
      * Convenience wrapper for i965_DestroySurfaces.  May generate a non-fatal
