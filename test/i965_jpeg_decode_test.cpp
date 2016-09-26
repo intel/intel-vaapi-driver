@@ -34,12 +34,9 @@
 #include <vector>
 
 namespace JPEG {
+namespace Decode {
 
-class JPEGDecodeTest : public I965TestFixture
-{
-protected:
-    static const VAEntrypoint entrypoint = VAEntrypointVLD;
-};
+class JPEGDecodeTest : public I965TestFixture { };
 
 TEST_F(JPEGDecodeTest, Entrypoint)
 {
@@ -324,4 +321,5 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::Values("IMC3", "422H", "422V", "444P", "411P"))
 );
 
+} // namespace Decode
 } // namespace JPEG
