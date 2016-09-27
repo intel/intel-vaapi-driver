@@ -312,7 +312,12 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
 
     assert(seq_param);
     bits_per_second = seq_param->bits_per_second; // for the highest layer
-    framerate_per_100s = seq_param->time_scale * 100 / (2 * seq_param->num_units_in_tick); // for the highest layer
+
+    if (!seq_param->num_units_in_tick || !seq_param->time_scale)
+        framerate_per_100s = 3000;
+    else
+        framerate_per_100s = seq_param->time_scale * 100 / (2 * seq_param->num_units_in_tick); // for the highest layer
+
     encoder_context->brc.num_iframes_in_gop = 1; // Always 1
 
     if (seq_param->intra_period == 0) { // E.g. IDRPP... / IDR(PBB)... (no IDR/I any more)
