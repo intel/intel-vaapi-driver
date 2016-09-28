@@ -157,10 +157,6 @@ const TestInput::Shared NV12toI420(const TestInput::SharedConst& nv12)
     return i420;
 }
 
-#define ASSERT_NO_FAILURE(statement) \
-    statement; \
-    ASSERT_FALSE(HasFailure());
-
 class JPEGEncodeInputTest
     : public JPEGEncodeTest
     , public ::testing::WithParamInterface<

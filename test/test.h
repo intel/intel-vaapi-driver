@@ -66,6 +66,10 @@
 #define ASSERT_PTR_NULL(ptr) \
     ASSERT_TRUE(NULL == (ptr))
 
+#define ASSERT_NO_FAILURE(statement) \
+    statement; \
+    ASSERT_FALSE(HasFailure());
+
 class VaapiStatus
 {
 public:
