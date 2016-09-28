@@ -1880,9 +1880,10 @@ gen8_mfd_jpeg_decode_init(VADriverContextP ctx,
 
     pic_param = (VAPictureParameterBufferJPEGBaseline *)decode_state->pic_param->buffer;
 
-    if (pic_param->num_components == 1)
+    if (pic_param->num_components == 1) {
         subsampling = SUBSAMPLE_YUV400;
-    else if (pic_param->num_components == 3) {
+        fourcc = VA_FOURCC_Y800;
+    } else if (pic_param->num_components == 3) {
         int h1 = pic_param->components[0].h_sampling_factor;
         int h2 = pic_param->components[1].h_sampling_factor;
         int h3 = pic_param->components[2].h_sampling_factor;
