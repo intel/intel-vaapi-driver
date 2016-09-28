@@ -777,18 +777,53 @@ namespace Encode {
     TestInput::Shared TestInput::create(
         const unsigned fourcc, const unsigned w, const unsigned h)
     {
-        return Shared(new TestInput(fourcc, w, h));
+        Shared t(new TestInput);
+
+        switch(fourcc) {
+        case VA_FOURCC_I420:
+            t->planes = 3;
+            t->widths = {w + (w & 1), (w + 1) >> 1, (w + 1) >> 1};
+            t->heights = {h + (h & 1), (h + 1) >> 1, (h + 1) >> 1};
+            t->format = VA_RT_FORMAT_YUV420;
+            t->fourcc_output = VA_FOURCC_IMC3;
+            break;
+        case VA_FOURCC_NV12:
+            t->planes = 2;
+            t->widths = {w + (w & 1), w + (w & 1), 0};
+            t->heights = {h + (h & 1), (h + 1) >> 1, 0};
+            t->format = VA_RT_FORMAT_YUV420;
+            t->fourcc_output = VA_FOURCC_IMC3;
+            break;
+        default:
+            return Shared(); // fourcc is unsupported
+        }
+
+        t->fourcc = fourcc;
+        t->picture.picture_width = ALIGN(w, 2);
+        t->picture.picture_height = ALIGN(h, 2);
+
+        for (size_t i(0); i < t->planes; ++i)
+            t->sizes[i] = t->widths[i] * t->heights[i];
+
+        for (size_t i(1); i < t->planes; ++i)
+            t->offsets[i] = t->sizes[i - 1] + t->offsets[i - 1];
+
+        // Allocate bytes. Values are arbitrary. Caller is responsible for
+        // assigning byte values as appropriate.
+        t->bytes.resize(
+            std::accumulate(std::begin(t->sizes), std::end(t->sizes), 0u));
+
+        return t;
     }
 
-    TestInput::TestInput(
-        const unsigned fourcc, const unsigned w, const unsigned h)
-        : bytes() // caller must fill this in after instantiation
+    TestInput::TestInput()
+        : bytes()
         , picture(defaultPictureParameter)
         , matrix(defaultIQMatrix)
         , huffman(defaultHuffmanTable)
         , slice(defaultSliceParameter)
-        , fourcc(fourcc)
-        , fourcc_output(fourcc)
+        , fourcc(0)
+        , fourcc_output(0)
         , format(0)
         , planes(0)
         , widths{0,0,0}
@@ -796,37 +831,7 @@ namespace Encode {
         , offsets{0,0,0}
         , sizes{0,0,0}
     {
-        picture.picture_width = ALIGN(w, 2);
-        picture.picture_height = ALIGN(h, 2);
-
-        switch(fourcc) {
-        case VA_FOURCC_I420:
-            planes = 3;
-            widths = {w + (w & 1), (w + 1) >> 1, (w + 1) >> 1};
-            heights = {h + (h & 1), (h + 1) >> 1, (h + 1) >> 1};
-            format = VA_RT_FORMAT_YUV420;
-            fourcc_output = VA_FOURCC_IMC3;
-            break;
-        case VA_FOURCC_NV12:
-            planes = 2;
-            widths = {w + (w & 1), w + (w & 1), 0};
-            heights = {h + (h & 1), (h + 1) >> 1, 0};
-            format = VA_RT_FORMAT_YUV420;
-            fourcc_output = VA_FOURCC_IMC3;
-            break;
-        default:
-            return;
-        }
-
-        for (size_t i(0); i < planes; ++i)
-            sizes[i] = widths[i] * heights[i];
-
-        for (size_t i(1); i < planes; ++i)
-            offsets[i] = sizes[i - 1] + offsets[i - 1];
-
-        // Allocate bytes. Values are arbitrary.
-        bytes.resize(
-            std::accumulate(std::begin(sizes), std::end(sizes), 0u));
+        return;
     }
 
     const unsigned TestInput::width() const
@@ -895,9 +900,11 @@ namespace Encode {
         const std::array<unsigned, 2> res = getResolution();
 
         TestInput::Shared input(TestInput::create(fourcc, res[0], res[1]));
-        std::generate_n(
-            std::begin(input->bytes), input->bytes.size(),
-            RandomValueGenerator<uint8_t>(0x00, 0xff));
+        if (input.get()) {
+            std::generate_n(
+                std::begin(input->bytes), input->bytes.size(),
+                RandomValueGenerator<uint8_t>(0x00, 0xff));
+        }
         return input;
     }
 

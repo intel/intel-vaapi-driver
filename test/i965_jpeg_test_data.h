@@ -424,7 +424,7 @@ namespace Encode {
         std::array<size_t, 3> sizes;
 
     private:
-        TestInput(const unsigned, const unsigned, const unsigned);
+        TestInput();
     };
 
     class TestInputCreator
