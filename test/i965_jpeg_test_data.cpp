@@ -794,6 +794,21 @@ namespace Encode {
             t->format = VA_RT_FORMAT_YUV420;
             t->fourcc_output = VA_FOURCC_IMC3;
             break;
+        case VA_FOURCC_UYVY:
+        case VA_FOURCC_YUY2:
+            t->planes = 1;
+            t->widths = {(w + (w & 1)) << 1, 0, 0};
+            t->heights = {h + (h & 1), 0, 0};
+            t->format = VA_RT_FORMAT_YUV422;
+            t->fourcc_output = VA_FOURCC_422H;
+            break;
+        case VA_FOURCC_422H:
+            t->planes = 3;
+            t->widths = {w + (w & 1), (w + 1) >> 1, (w + 1) >> 1};
+            t->heights = {h + (h & 1), h + (h & 1), h + (h & 1)};
+            t->format = VA_RT_FORMAT_YUV422;
+            t->fourcc_output = VA_FOURCC_422H;
+            break;
         default:
             return Shared(); // fourcc is unsupported
         }
@@ -849,28 +864,88 @@ namespace Encode {
         return bytes.data() + offsets[i];
     }
 
+    uint8_t* TestInput::begin(const size_t i)
+    {
+        return bytes.data() + offsets[i];
+    }
+
+    const uint8_t* TestInput::begin(const size_t i) const
+    {
+        return bytes.data() + offsets[i];
+    }
+
+    uint8_t* TestInput::end(const size_t i)
+    {
+        return begin(i) + sizes[i];
+    }
+
+    const uint8_t* TestInput::end(const size_t i) const
+    {
+        return begin(i) + sizes[i];
+    }
+
     const TestInput::SharedConst TestInput::toOutputFourcc() const
     {
         TestInput::Shared result;
+
+        struct IsEvenIndex
+        {
+            IsEvenIndex():i(0){}
+            inline const bool operator()(const uint8_t&)
+            {
+                const bool r = (i % 2) != 1;
+                ++i;
+                return r;
+            }
+            size_t i;
+        };
+
+        struct IsOddIndex
+        {
+            IsOddIndex():i(0){}
+            inline const bool operator()(const uint8_t&)
+            {
+                const bool r = (i % 2) == 1;
+                ++i;
+                return r;
+            }
+            size_t i;
+        };
+
         if (fourcc_output == VA_FOURCC_IMC3) {
             if (fourcc == VA_FOURCC_I420) {
                 return shared_from_this();
             } else if (fourcc == VA_FOURCC_NV12) {
                 result = create(VA_FOURCC_I420, width(), height());
-                std::copy(
-                    std::begin(bytes), std::end(bytes),
-                    std::begin(result->bytes));
-                size_t i(0);
-                auto predicate = [&i](const ByteData::value_type&) {
-                    bool isu = ((i % 2) == 0) or (i == 0);
-                    ++i;
-                    return isu;
-                };
+                // copy Y to plane 0
+                std::copy(begin(0), end(0), result->begin(0));
+                // copy U to plane 1
+                std::copy_if(begin(1), end(1), result->begin(1), IsEvenIndex());
+                // copy V to plane 2
+                std::copy_if(begin(1), end(1), result->begin(2), IsOddIndex());
+            }
+        } else if (fourcc_output == VA_FOURCC_422H) {
+            if (fourcc == VA_FOURCC_UYVY) {
+                result = create(VA_FOURCC_422H, width(), height());
+                // copy Y to plane 0
+                std::copy_if(begin(0), end(0), result->begin(0), IsOddIndex());
+                // copy UV across plane 1 and 2
+                std::copy_if(begin(0), end(0), result->begin(1), IsEvenIndex());
+                // partition U into plane 1 and V into plane 2
                 std::stable_partition(
-                    std::begin(result->bytes) + result->offsets[1],
-                    std::end(result->bytes), predicate);
+                    result->begin(1), result->end(2), IsEvenIndex());
+            } else if (fourcc == VA_FOURCC_YUY2) {
+                result = create(VA_FOURCC_422H, width(), height());
+                // copy Y to plane 0
+                std::copy_if(begin(0), end(0), result->begin(0), IsEvenIndex());
+                // copy UV across plane 1 and 2
+                std::copy_if(begin(0), end(0), result->begin(1), IsOddIndex());
+                // partition U into plane 1 and V into plane 2
+                std::stable_partition(
+                    result->begin(1), result->end(2), IsEvenIndex());
             }
         }
+
         return result;
     }
 
