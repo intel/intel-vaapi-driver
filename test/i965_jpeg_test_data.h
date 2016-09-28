@@ -421,6 +421,51 @@ namespace Encode {
         std::array<size_t, 3> offsets;
         std::array<size_t, 3> sizes;
     };
+
+    class TestInputCreator
+    {
+    public:
+        typedef std::shared_ptr<TestInputCreator> Shared;
+        typedef std::shared_ptr<const TestInputCreator> SharedConst;
+
+        TestInput::Shared create(const unsigned) const;
+
+        friend ::std::ostream& operator<<(
+            ::std::ostream&, const TestInputCreator&);
+        friend ::std::ostream& operator<<(
+            ::std::ostream&, const TestInputCreator::Shared&);
+        friend ::std::ostream& operator<<(
+            ::std::ostream&, const TestInputCreator::SharedConst&);
+
+    protected:
+        virtual std::array<unsigned, 2> getResolution() const = 0;
+        virtual void repr(::std::ostream& os) const = 0;
+    };
+
+    class RandomSizeCreator
+        : public TestInputCreator
+    {
+    protected:
+        std::array<unsigned, 2> getResolution() const;
+        void repr(::std::ostream&) const;
+    };
+
+    class FixedSizeCreator
+        : public TestInputCreator
+    {
+    public:
+        FixedSizeCreator(const std::array<unsigned, 2>&);
+
+    protected:
+        std::array<unsigned, 2> getResolution() const;
+        void repr(::std::ostream& os) const;
+
+    private:
+        const std::array<unsigned, 2> res;
+    };
+
+    typedef std::vector<TestInputCreator::SharedConst> InputCreators;
+
 } // namespace Encode
 } // namespace JPEG
 

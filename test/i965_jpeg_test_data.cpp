@@ -25,6 +25,9 @@
 #include "i965_jpeg_test_data.h"
 #include "i965_drv_video.h"
 #include "i965_streamable.h"
+#include "test_utils.h"
+
+#include <algorithm>
 
 namespace JPEG {
 namespace Decode {
@@ -849,6 +852,67 @@ namespace Encode {
         ::std::ostream& os, const TestInput::SharedConst& t)
     {
         return os << *t;
+    }
+
+    TestInput::Shared TestInputCreator::create(const unsigned fourcc) const
+    {
+        const std::array<unsigned, 2> res = getResolution();
+
+        TestInput::Shared input(new TestInput(fourcc, res[0], res[1]));
+        ByteData& bytes = input->bytes;
+
+        RandomValueGenerator<uint8_t> rg(0x00, 0xff);
+        for (size_t i(0); i < input->planes; ++i)
+            std::generate_n(
+                std::back_inserter(bytes), input->sizes[i],
+                [&rg]{ return rg(); });
+        return input;
+    }
+
+    ::std::ostream& operator<<(::std::ostream& os, const TestInputCreator& t)
+    {
+        t.repr(os);
+        return os;
+    }
+
+    ::std::ostream& operator<<(
+        ::std::ostream& os, const TestInputCreator::Shared& t)
+    {
+        return os << *t;
+    }
+
+    ::std::ostream& operator<<(
+        ::std::ostream& os, const TestInputCreator::SharedConst& t)
+    {
+        return os << *t;
+    }
+
+    std::array<unsigned, 2> RandomSizeCreator::getResolution() const
+    {
+        static RandomValueGenerator<unsigned> rg(1, 769);
+        return {rg(), rg()};
+    }
+
+    void RandomSizeCreator::repr(::std::ostream& os) const
+    {
+        os << "Random Size";
+    }
+
+    FixedSizeCreator::FixedSizeCreator(
+        const std::array<unsigned, 2>& resolution)
+        : res(resolution)
+    {
+        return;
+    }
+
+    std::array<unsigned, 2> FixedSizeCreator::getResolution() const
+    {
+        return res;
+    }
+
+    void FixedSizeCreator::repr(::std::ostream& os) const
+    {
+        os << "Fixed Size " << res[0] << "x" << res[1];
     }
 
 } // namespace Encode
