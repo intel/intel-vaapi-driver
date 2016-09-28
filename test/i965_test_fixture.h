@@ -27,7 +27,6 @@
 
 #include "test.h"
 #include "i965_internal_decl.h"
-#include "i965_streamable.h"
 
 #include <string>
 #include <vector>

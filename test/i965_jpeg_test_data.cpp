@@ -23,6 +23,8 @@
  */
 
 #include "i965_jpeg_test_data.h"
+#include "i965_drv_video.h"
+#include "i965_streamable.h"
 
 namespace JPEG {
 namespace Decode {
@@ -763,4 +765,91 @@ namespace Decode {
         });
 
 } // namespace Decode
+} // namespace JPEG
+
+namespace JPEG {
+namespace Encode {
+
+    TestInput::TestInput(
+        const unsigned fourcc, const unsigned w, const unsigned h)
+        : bytes() // caller must fill this in after instantiation
+        , picture(defaultPictureParameter)
+        , matrix(defaultIQMatrix)
+        , huffman(defaultHuffmanTable)
+        , slice(defaultSliceParameter)
+        , fourcc(fourcc)
+        , fourcc_output(fourcc)
+        , format(0)
+        , planes(0)
+        , widths{0,0,0}
+        , heights{0,0,0}
+        , offsets{0,0,0}
+        , sizes{0,0,0}
+    {
+        picture.picture_width = ALIGN(w, 2);
+        picture.picture_height = ALIGN(h, 2);
+
+        switch(fourcc) {
+        case VA_FOURCC_I420:
+            planes = 3;
+            widths = {w + (w & 1), (w + 1) >> 1, (w + 1) >> 1};
+            heights = {h + (h & 1), (h + 1) >> 1, (h + 1) >> 1};
+            format = VA_RT_FORMAT_YUV420;
+            fourcc_output = VA_FOURCC_IMC3;
+            break;
+        case VA_FOURCC_NV12:
+            planes = 2;
+            widths = {w + (w & 1), w + (w & 1), 0};
+            heights = {h + (h & 1), (h + 1) >> 1, 0};
+            format = VA_RT_FORMAT_YUV420;
+            fourcc_output = VA_FOURCC_IMC3;
+            break;
+        default:
+            return;
+        }
+
+        for (size_t i(0); i < planes; ++i)
+            sizes[i] = widths[i] * heights[i];
+
+        for (size_t i(1); i < planes; ++i)
+            offsets[i] = sizes[i - 1] + offsets[i - 1];
+    }
+
+    const unsigned TestInput::width() const
+    {
+        return picture.picture_width;
+    }
+
+    const unsigned TestInput::height() const
+    {
+        return picture.picture_height;
+    }
+
+    const uint8_t* TestInput::plane(const size_t i) const
+    {
+        return bytes.data() + offsets[i];
+    }
+
+    ::std::ostream& operator<<(::std::ostream& os, const TestInput& t)
+    {
+        return os
+            << std::string((char*)(&t.fourcc), 4)
+            << " " << t.width() << "x" << t.height()
+            << " " << t.widths << " " << t.heights
+            << " " << t.sizes << " " << t.offsets
+        ;
+    }
+
+    ::std::ostream& operator<<(::std::ostream& os, const TestInput::Shared& t)
+    {
+        return os << *t;
+    }
+
+    ::std::ostream& operator<<(
+        ::std::ostream& os, const TestInput::SharedConst& t)
+    {
+        return os << *t;
+    }
+
+} // namespace Encode
 } // namespace JPEG
