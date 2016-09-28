@@ -403,6 +403,7 @@ namespace Encode {
         const unsigned width() const;
         const unsigned height() const;
         const uint8_t* plane(const size_t) const;
+        const SharedConst toOutputFourcc() const;
 
         friend ::std::ostream& operator<<(::std::ostream&, const TestInput&);
         friend ::std::ostream& operator<<(::std::ostream&, const Shared&);

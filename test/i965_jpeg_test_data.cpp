@@ -839,6 +839,31 @@ namespace Encode {
         return bytes.data() + offsets[i];
     }
 
+    const TestInput::SharedConst TestInput::toOutputFourcc() const
+    {
+        TestInput::Shared result;
+        if (fourcc_output == VA_FOURCC_IMC3) {
+            if (fourcc == VA_FOURCC_I420) {
+                return shared_from_this();
+            } else if (fourcc == VA_FOURCC_NV12) {
+                result = create(VA_FOURCC_I420, width(), height());
+                std::copy(
+                    std::begin(bytes), std::end(bytes),
+                    std::back_inserter(result->bytes));
+                size_t i(0);
+                auto predicate = [&i](const ByteData::value_type&) {
+                    bool isu = ((i % 2) == 0) or (i == 0);
+                    ++i;
+                    return isu;
+                };
+                std::stable_partition(
+                    std::begin(result->bytes) + result->offsets[1],
+                    std::end(result->bytes), predicate);
+            }
+        }
+        return result;
+    }
+
     ::std::ostream& operator<<(::std::ostream& os, const TestInput& t)
     {
         return os

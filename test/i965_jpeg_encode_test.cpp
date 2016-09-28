@@ -82,27 +82,6 @@ TEST_F(JPEGEncodeTest, Entrypoint)
     }
 }
 
-const TestInput::Shared NV12toI420(const TestInput::SharedConst& nv12)
-{
-    TestInput::Shared i420(
-        TestInput::create(VA_FOURCC_I420, nv12->width(), nv12->height()));
-
-    i420->bytes = nv12->bytes;
-
-    size_t i(0);
-    auto predicate = [&i](const ByteData::value_type&) {
-        bool isu = ((i % 2) == 0) or (i == 0);
-        ++i;
-        return isu;
-    };
-
-    std::stable_partition(
-        i420->bytes.begin() + i420->offsets[1],
-        i420->bytes.end(), predicate);
-
-    return i420;
-}
-
 class JPEGEncodeInputTest
     : public JPEGEncodeTest
     , public ::testing::WithParamInterface<
@@ -372,9 +351,8 @@ protected:
     {
         // VerifyOutput only supports VA_FOURCC_IMC3 output, currently
         ASSERT_EQ(unsigned(VA_FOURCC_IMC3), input->fourcc_output);
-        TestInput::SharedConst expect = input;
-        if (input->fourcc == VA_FOURCC_NV12)
-            expect = NV12toI420(input);
+        TestInput::SharedConst expect = input->toOutputFourcc();
+        ASSERT_PTR(expect.get());
 
         ::JPEG::Decode::PictureData::SharedConst pd =
             ::JPEG::Decode::PictureData::make(
