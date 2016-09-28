@@ -28,6 +28,7 @@
 #include "test_utils.h"
 
 #include <algorithm>
+#include <numeric>
 
 namespace JPEG {
 namespace Decode {
@@ -822,6 +823,10 @@ namespace Encode {
 
         for (size_t i(1); i < planes; ++i)
             offsets[i] = sizes[i - 1] + offsets[i - 1];
+
+        // Allocate bytes. Values are arbitrary.
+        bytes.resize(
+            std::accumulate(std::begin(sizes), std::end(sizes), 0u));
     }
 
     const unsigned TestInput::width() const
@@ -849,7 +854,7 @@ namespace Encode {
                 result = create(VA_FOURCC_I420, width(), height());
                 std::copy(
                     std::begin(bytes), std::end(bytes),
-                    std::back_inserter(result->bytes));
+                    std::begin(result->bytes));
                 size_t i(0);
                 auto predicate = [&i](const ByteData::value_type&) {
                     bool isu = ((i % 2) == 0) or (i == 0);
@@ -890,13 +895,9 @@ namespace Encode {
         const std::array<unsigned, 2> res = getResolution();
 
         TestInput::Shared input(TestInput::create(fourcc, res[0], res[1]));
-        ByteData& bytes = input->bytes;
-
-        RandomValueGenerator<uint8_t> rg(0x00, 0xff);
-        for (size_t i(0); i < input->planes; ++i)
-            std::generate_n(
-                std::back_inserter(bytes), input->sizes[i],
-                [&rg]{ return rg(); });
+        std::generate_n(
+            std::begin(input->bytes), input->bytes.size(),
+            RandomValueGenerator<uint8_t>(0x00, 0xff));
         return input;
     }
 
