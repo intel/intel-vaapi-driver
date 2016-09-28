@@ -237,6 +237,14 @@ namespace Decode {
                 pd->format = VA_RT_FORMAT_YUV444;
                 pd->pparam.components[0].h_sampling_factor = 1;
                 pd->pparam.components[0].v_sampling_factor = 1;
+                break;
+            case VA_FOURCC_Y800:
+                pd->format = VA_RT_FORMAT_YUV400;
+                pd->pparam.components[0].h_sampling_factor = 1;
+                pd->pparam.components[0].h_sampling_factor = 1;
+                pd->pparam.num_components = 1;
+                pd->sparam.num_components = 1;
+                break;
             default:
                 break;
             }

@@ -809,6 +809,14 @@ namespace Encode {
             t->format = VA_RT_FORMAT_YUV422;
             t->fourcc_output = VA_FOURCC_422H;
             break;
+        case VA_FOURCC_Y800:
+            t->planes = 1;
+            t->widths = {w + (w & 1), 0, 0};
+            t->heights = {h + (h & 1), 0, 0};
+            t->format = VA_RT_FORMAT_YUV400;
+            t->fourcc_output = VA_FOURCC_Y800;
+            t->picture.num_components = 1;
+            break;
         default:
             return Shared(); // fourcc is unsupported
         }
@@ -943,6 +951,10 @@ namespace Encode {
                 // partition U into plane 1 and V into plane 2
                 std::stable_partition(
                     result->begin(1), result->end(2), IsEvenIndex());
+            }
+        } else if (fourcc_output == VA_FOURCC_Y800) {
+            if (fourcc == VA_FOURCC_Y800) {
+                return shared_from_this();
             }
         }
 
