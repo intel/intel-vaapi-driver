@@ -481,7 +481,7 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::ValuesIn(
             std::vector<TestInputCreator::SharedConst>(
                 5, TestInputCreator::SharedConst(new RandomSizeCreator))),
-        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2", "Y800")
     )
 );
 
@@ -515,7 +515,7 @@ INSTANTIATE_TEST_CASE_P(
     Common, JPEGEncodeInputTest,
     ::testing::Combine(
         ::testing::ValuesIn(generateCommonInputs()),
-        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2", "Y800")
     )
 );
 
@@ -525,7 +525,7 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::Values(
             TestInputCreator::Shared(new FixedSizeCreator({8192, 8192}))
         ),
-        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2", "Y800")
     )
 );
 
@@ -562,7 +562,7 @@ INSTANTIATE_TEST_CASE_P(
     Edge, JPEGEncodeInputTest,
     ::testing::Combine(
         ::testing::ValuesIn(generateEdgeCaseInputs()),
-        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2", "Y800")
     )
 );
 
@@ -580,7 +580,7 @@ INSTANTIATE_TEST_CASE_P(
     Misc, JPEGEncodeInputTest,
     ::testing::Combine(
         ::testing::ValuesIn(generateMiscInputs()),
-        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2", "Y800")
     )
 );
 
