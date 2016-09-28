@@ -25,8 +25,6 @@
 #ifndef I965_JPEG_TEST_DATA_H
 #define I965_JPEG_TEST_DATA_H
 
-#include "i965_test_fixture.h"
-
 #include <array>
 #include <iostream>
 #include <map>
@@ -399,98 +397,15 @@ namespace Encode {
         typedef std::shared_ptr<TestInput> Shared;
         typedef std::shared_ptr<const TestInput> SharedConst;
 
-        TestInput(const unsigned fourcc, const unsigned w, const unsigned h)
-            : bytes() // caller must fill this in after instantiation
-            , picture(defaultPictureParameter)
-            , matrix(defaultIQMatrix)
-            , huffman(defaultHuffmanTable)
-            , slice(defaultSliceParameter)
-            , fourcc(fourcc)
-            , fourcc_output(fourcc)
-            , format(0)
-            , planes(0)
-            , widths{0,0,0}
-            , heights{0,0,0}
-            , offsets{0,0,0}
-            , sizes{0,0,0}
-        {
-            picture.picture_width = ALIGN(w,2);
-            picture.picture_height = ALIGN(h,2);
+        TestInput(const unsigned, const unsigned, const unsigned);
 
-            switch(fourcc) {
-            case VA_FOURCC('I', '4', '2', '0'):
-                planes = 3;
-                widths = {
-                    w +( w & 1),
-                    (w + 1) >> 1,
-                    (w + 1) >> 1
-                };
-                heights = {
-                    h + (h & 1),
-                    (h + 1) >> 1,
-                    (h + 1) >> 1
-                };
-                format = VA_RT_FORMAT_YUV420;
-                fourcc_output = VA_FOURCC_IMC3;
-                break;
-            case VA_FOURCC_NV12:
-                planes = 2;
-                widths = {
-                    w + (w & 1),
-                    w + (w & 1),
-                    0
-                };
-                heights = {
-                    h + (h & 1),
-                    (h + 1) >> 1,
-                    0
-                };
-                format = VA_RT_FORMAT_YUV420;
-                fourcc_output = VA_FOURCC_IMC3;
-                break;
-            default:
-                return;
-            }
+        const unsigned width() const;
+        const unsigned height() const;
+        const uint8_t* plane(const size_t) const;
 
-            for (size_t i(0); i < planes; ++i) {
-                sizes[i] = widths[i] * heights[i];
-            }
-
-            for (size_t i(1); i < planes; ++i) {
-                offsets[i] = sizes[i - 1];
-                offsets[i] += offsets[i - 1];
-            }
-        }
-
-        const unsigned width() const
-        {
-            return picture.picture_width;
-        }
-
-        const unsigned height() const
-        {
-            return picture.picture_height;
-        }
-
-        const uint8_t* plane(const size_t i) const
-        {
-            return bytes.data() + offsets[i];
-        }
-
-        friend ::std::ostream& operator<<(::std::ostream& os, const TestInput& t)
-        {
-            return os
-                << std::string((char*)(&t.fourcc), 4)
-                << " " << t.width() << "x" << t.height()
-                << " " << t.widths << " " << t.heights
-                << " " << t.sizes << " " << t.offsets
-            ;
-        }
-
-        friend ::std::ostream& operator<<(::std::ostream& os, const Shared& t)
-        {
-            return os << *t;
-        }
+        friend ::std::ostream& operator<<(::std::ostream&, const TestInput&);
+        friend ::std::ostream& operator<<(::std::ostream&, const Shared&);
+        friend ::std::ostream& operator<<(::std::ostream&, const SharedConst&);
 
         ByteData            bytes;
         PictureParameter    picture;
@@ -506,8 +421,6 @@ namespace Encode {
         std::array<size_t, 3> offsets;
         std::array<size_t, 3> sizes;
     };
-
-
 } // namespace Encode
 } // namespace JPEG
 

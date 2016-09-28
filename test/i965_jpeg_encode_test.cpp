@@ -23,6 +23,8 @@
  */
 
 #include "i965_jpeg_test_data.h"
+#include "i965_streamable.h"
+#include "i965_test_fixture.h"
 #include "test_utils.h"
 
 #include <algorithm>
