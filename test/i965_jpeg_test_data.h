@@ -397,7 +397,7 @@ namespace Encode {
     {
     public:
         typedef std::shared_ptr<TestInput> Shared;
-        typedef std::shared_ptr<TestInput> SharedConst;
+        typedef std::shared_ptr<const TestInput> SharedConst;
 
         TestInput(const unsigned fourcc, const unsigned w, const unsigned h)
             : bytes() // caller must fill this in after instantiation
