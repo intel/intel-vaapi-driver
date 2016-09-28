@@ -44,6 +44,12 @@ uint32_t g_intel_debug_option_flags = 0;
 #define LOCAL_I915_PARAM_HAS_BSD2	30
 #endif
 
+#ifdef I915_PARAM_HAS_HUC
+#define LOCAL_I915_PARAM_HAS_HUC I915_PARAM_HAS_HUC
+#else
+#define LOCAL_I915_PARAM_HAS_HUC 42
+#endif
+
 static Bool
 intel_driver_get_param(struct intel_driver_data *intel, int param, int *value)
 {
@@ -129,6 +135,12 @@ intel_driver_init(VADriverContextP ctx)
     intel->has_bsd2 = 0;
     if (intel_driver_get_param(intel, LOCAL_I915_PARAM_HAS_BSD2, &ret_value))
         intel->has_bsd2 = !!ret_value;
+
+    intel->has_huc = 0;
+    ret_value = 0;
+
+    if (intel_driver_get_param(intel, LOCAL_I915_PARAM_HAS_HUC, &ret_value))
+        intel->has_huc = !!ret_value;
 
     intel_driver_get_revid(intel, &intel->revision);
     return true;

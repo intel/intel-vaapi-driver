@@ -181,6 +181,7 @@ struct intel_driver_data
     unsigned int has_blt    : 1; /* Flag: has BLT unit? */
     unsigned int has_vebox  : 1; /* Flag: has VEBOX unit */
     unsigned int has_bsd2   : 1; /* Flag: has the second BSD video ring unit */
+    unsigned int has_huc    : 1; /* Flag: has a fully loaded HuC firmware? */
 
     const struct intel_device_info *device_info;
 };
