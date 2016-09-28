@@ -392,12 +392,13 @@ namespace Encode {
     };
 
     class TestInput
+        : public std::enable_shared_from_this<TestInput>
     {
     public:
         typedef std::shared_ptr<TestInput> Shared;
         typedef std::shared_ptr<const TestInput> SharedConst;
 
-        TestInput(const unsigned, const unsigned, const unsigned);
+        static Shared create(const unsigned, const unsigned, const unsigned);
 
         const unsigned width() const;
         const unsigned height() const;
@@ -420,6 +421,9 @@ namespace Encode {
         std::array<size_t, 3> heights;
         std::array<size_t, 3> offsets;
         std::array<size_t, 3> sizes;
+
+    private:
+        TestInput(const unsigned, const unsigned, const unsigned);
     };
 
     class TestInputCreator

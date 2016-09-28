@@ -85,7 +85,7 @@ TEST_F(JPEGEncodeTest, Entrypoint)
 const TestInput::Shared NV12toI420(const TestInput::SharedConst& nv12)
 {
     TestInput::Shared i420(
-        new TestInput(VA_FOURCC_I420, nv12->width(), nv12->height()));
+        TestInput::create(VA_FOURCC_I420, nv12->width(), nv12->height()));
 
     i420->bytes = nv12->bytes;
 
