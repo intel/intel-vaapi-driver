@@ -319,6 +319,8 @@ static struct hw_codec_info chv_hw_codec_info = {
     },
 };
 
+static void gen9_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info);
+
 extern struct hw_context *gen9_enc_hw_context_init(VADriverContextP, struct object_config *);
 extern void gen9_post_processing_context_init(VADriverContextP, void *, struct intel_batchbuffer *);
 extern void gen9_max_resolution(struct i965_driver_data *, struct object_config *, int *, int *);
@@ -329,6 +331,7 @@ static struct hw_codec_info skl_hw_codec_info = {
     .render_init = gen9_render_init,
     .post_processing_context_init = gen9_post_processing_context_init,
     .max_resolution = gen9_max_resolution,
+    .preinit_hw_codec = gen9_hw_codec_preinit,
 
     .max_width = 4096,  /* default. See max_resolution */
     .max_height = 4096, /* default. See max_resolution */
@@ -868,4 +871,12 @@ static void gen7_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
         codec_info->has_mpeg2_encoding = 0;
     }
     return;
+}
+
+static void gen9_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    if (i965->intel.has_huc && codec_info->has_lp_h264_encoding)
+        codec_info->lp_h264_brc_mode |= (VA_RC_CBR | VA_RC_VBR);
 }
