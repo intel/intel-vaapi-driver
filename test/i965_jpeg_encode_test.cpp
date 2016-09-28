@@ -25,9 +25,8 @@
 #include "i965_jpeg_test_data.h"
 #include "i965_streamable.h"
 #include "i965_test_fixture.h"
-#include "test_utils.h"
 
-#include <algorithm>
+#include <numeric>
 #include <cstring>
 #include <memory>
 #include <tuple>
@@ -82,51 +81,6 @@ TEST_F(JPEGEncodeTest, Entrypoint)
         EXPECT_INVALID_ID(config);
     }
 }
-
-class TestInputCreator
-{
-public:
-    typedef std::shared_ptr<TestInputCreator> Shared;
-    typedef std::shared_ptr<const TestInputCreator> SharedConst;
-
-    TestInput::Shared create(const unsigned fourcc) const
-    {
-        const std::array<unsigned, 2> res = getResolution();
-
-        TestInput::Shared input(new TestInput(fourcc, res[0], res[1]));
-        ByteData& bytes = input->bytes;
-
-        RandomValueGenerator<uint8_t> rg(0x00, 0xff);
-        for (size_t i(0); i < input->planes; ++i)
-            std::generate_n(
-                std::back_inserter(bytes), input->sizes[i],
-                [&rg]{ return rg(); });
-        return input;
-    }
-
-    friend ::std::ostream& operator<<(
-        ::std::ostream& os, const TestInputCreator& t)
-    {
-        t.repr(os);
-        return os;
-    }
-
-    friend ::std::ostream& operator<<(
-        ::std::ostream& os, const TestInputCreator::Shared& t)
-    {
-        return os << *t;
-    }
-
-    friend ::std::ostream& operator<<(
-        ::std::ostream& os, const TestInputCreator::SharedConst& t)
-    {
-        return os << *t;
-    }
-
-protected:
-    virtual std::array<unsigned, 2> getResolution() const = 0;
-    virtual void repr(std::ostream& os) const = 0;
-};
 
 const TestInput::Shared NV12toI420(const TestInput::SharedConst& nv12)
 {
@@ -541,18 +495,6 @@ TEST_P(JPEGEncodeInputTest, Full)
     VerifyOutput();
 }
 
-class RandomSizeCreator
-    : public TestInputCreator
-{
-protected:
-    std::array<unsigned, 2> getResolution() const
-    {
-        static RandomValueGenerator<unsigned> rg(1, 769);
-        return {rg(), rg()};
-    }
-    void repr(std::ostream& os) const { os << "Random Size"; }
-};
-
 INSTANTIATE_TEST_CASE_P(
     Random, JPEGEncodeInputTest,
     ::testing::Combine(
@@ -562,27 +504,6 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::Values("I420", "NV12")
     )
 );
-
-class FixedSizeCreator
-    : public TestInputCreator
-{
-public:
-    FixedSizeCreator(const std::array<unsigned, 2>& resolution)
-        : res(resolution)
-    { }
-
-protected:
-    std::array<unsigned, 2> getResolution() const { return res; }
-    void repr(std::ostream& os) const
-    {
-        os << "Fixed Size " << res[0] << "x" << res[1];
-    }
-
-private:
-    const std::array<unsigned, 2> res;
-};
-
-typedef std::vector<TestInputCreator::SharedConst> InputCreators;
 
 InputCreators generateCommonInputs()
 {
