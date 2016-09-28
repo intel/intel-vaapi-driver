@@ -773,6 +773,12 @@ namespace Decode {
 namespace JPEG {
 namespace Encode {
 
+    TestInput::Shared TestInput::create(
+        const unsigned fourcc, const unsigned w, const unsigned h)
+    {
+        return Shared(new TestInput(fourcc, w, h));
+    }
+
     TestInput::TestInput(
         const unsigned fourcc, const unsigned w, const unsigned h)
         : bytes() // caller must fill this in after instantiation
@@ -858,7 +864,7 @@ namespace Encode {
     {
         const std::array<unsigned, 2> res = getResolution();
 
-        TestInput::Shared input(new TestInput(fourcc, res[0], res[1]));
+        TestInput::Shared input(TestInput::create(fourcc, res[0], res[1]));
         ByteData& bytes = input->bytes;
 
         RandomValueGenerator<uint8_t> rg(0x00, 0xff);
