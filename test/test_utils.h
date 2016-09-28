@@ -38,7 +38,7 @@ public:
     const T operator()()
     {
         static std::random_device rd;
-        static std::mt19937 gen(rd());
+        static std::default_random_engine gen(rd());
         return dis(gen);
     }
 
