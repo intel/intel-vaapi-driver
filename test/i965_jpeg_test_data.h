@@ -425,6 +425,14 @@ namespace Encode {
 
     private:
         TestInput();
+
+        /** get pointer to beginning of plane @param i **/
+        uint8_t* begin(const size_t i);
+        const uint8_t* begin(const size_t i) const;
+
+        /** get pointer to end of plane @param i **/
+        uint8_t* end(const size_t i);
+        const uint8_t* end(const size_t i) const;
     };
 
     class TestInputCreator

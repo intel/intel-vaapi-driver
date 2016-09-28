@@ -278,7 +278,7 @@ protected:
         ASSERT_INVALID_ID(coded);
         unsigned size =
             std::accumulate(input->sizes.begin(), input->sizes.end(), 8192u);
-        size *= input->planes;
+        size *= 2;
         coded = createBuffer(context, VAEncCodedBufferType, size);
     }
 
@@ -349,8 +349,6 @@ protected:
 
     void VerifyOutput()
     {
-        // VerifyOutput only supports VA_FOURCC_IMC3 output, currently
-        ASSERT_EQ(unsigned(VA_FOURCC_IMC3), input->fourcc_output);
         TestInput::SharedConst expect = input->toOutputFourcc();
         ASSERT_PTR(expect.get());
 
@@ -414,6 +412,10 @@ protected:
 
         VAImage image;
         ASSERT_NO_FAILURE(deriveImage(osurfaces.front(), image));
+        ASSERT_EQ(expect->planes, image.num_planes);
+        ASSERT_GT(image.data_size, 0u);
+        ASSERT_EQ(expect->width(), image.width);
+        ASSERT_EQ(expect->height(), image.height);
         ASSERT_NO_FAILURE(uint8_t *data = mapBuffer<uint8_t>(image.buf));
 
         auto isClose = [](const uint8_t& a, const uint8_t& b) {
@@ -479,7 +481,7 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::ValuesIn(
             std::vector<TestInputCreator::SharedConst>(
                 5, TestInputCreator::SharedConst(new RandomSizeCreator))),
-        ::testing::Values("I420", "NV12")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
     )
 );
 
@@ -513,7 +515,7 @@ INSTANTIATE_TEST_CASE_P(
     Common, JPEGEncodeInputTest,
     ::testing::Combine(
         ::testing::ValuesIn(generateCommonInputs()),
-        ::testing::Values("I420", "NV12")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
     )
 );
 
@@ -523,7 +525,7 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::Values(
             TestInputCreator::Shared(new FixedSizeCreator({8192, 8192}))
         ),
-        ::testing::Values("I420", "NV12")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
     )
 );
 
@@ -560,7 +562,7 @@ INSTANTIATE_TEST_CASE_P(
     Edge, JPEGEncodeInputTest,
     ::testing::Combine(
         ::testing::ValuesIn(generateEdgeCaseInputs()),
-        ::testing::Values("I420", "NV12")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
     )
 );
 
@@ -578,7 +580,7 @@ INSTANTIATE_TEST_CASE_P(
     Misc, JPEGEncodeInputTest,
     ::testing::Combine(
         ::testing::ValuesIn(generateMiscInputs()),
-        ::testing::Values("I420", "NV12")
+        ::testing::Values("I420", "NV12", "UYVY", "YUY2")
     )
 );
 
