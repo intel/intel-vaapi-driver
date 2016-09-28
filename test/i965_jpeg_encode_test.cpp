@@ -27,9 +27,7 @@
 
 #include <algorithm>
 #include <cstring>
-#include <fstream>
 #include <memory>
-#include <sstream>
 #include <tuple>
 
 namespace JPEG {
@@ -127,14 +125,6 @@ protected:
     virtual std::array<unsigned, 2> getResolution() const = 0;
     virtual void repr(std::ostream& os) const = 0;
 };
-
-template <typename T>
-const std::string toString(const T& t)
-{
-    std::ostringstream os;
-    os << t;
-    return os.str();
-}
 
 const TestInput::Shared NV12toI420(const TestInput::SharedConst& nv12)
 {

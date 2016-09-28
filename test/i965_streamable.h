@@ -28,6 +28,7 @@
 #include <array>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <va/va.h>
 
 namespace std {
@@ -55,6 +56,14 @@ namespace std {
         return os << std::dec << "}";
     }
 }// namespace std
+
+template <typename T>
+const std::string toString(const T& t)
+{
+    std::ostringstream os;
+    os << t;
+    return os.str();
+}
 
 inline std::ostream&
 operator<<(std::ostream& os, const VAEncPictureParameterBufferJPEG& b)
