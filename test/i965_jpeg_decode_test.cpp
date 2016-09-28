@@ -194,10 +194,6 @@ protected:
     PictureData::SharedConst pd;
 };
 
-#define ASSERT_NO_FAILURE(statement) \
-    statement; \
-    ASSERT_FALSE(HasFailure());
-
 TEST_P(FourCCTest, Decode)
 {
     struct i965_driver_data *i965(*this);
