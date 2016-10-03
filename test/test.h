@@ -26,6 +26,7 @@
 #define TEST_H
 
 #include <gtest/gtest.h>
+#include <gtest/gtest-spi.h> // for EXPECT_FATAL_FAILURE/EXPECT_NONFATAL_FAILURE
 #include <iostream>
 #include <string>
 #include <va/va.h>
