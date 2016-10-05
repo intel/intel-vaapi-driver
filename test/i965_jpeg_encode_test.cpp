@@ -64,24 +64,6 @@ protected:
     VAContextID context;
 };
 
-TEST_F(JPEGEncodeTest, Entrypoint)
-{
-    ConfigAttribs attributes;
-    struct i965_driver_data *i965(*this);
-
-    ASSERT_PTR(i965);
-
-    if (HAS_JPEG_ENCODING(i965)) {
-        config = createConfig(profile, entrypoint, attributes);
-    } else {
-        VAStatus status = i965_CreateConfig(
-            *this, profile, entrypoint, attributes.data(), attributes.size(),
-            &config);
-        EXPECT_STATUS_EQ(VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT, status);
-        EXPECT_INVALID_ID(config);
-    }
-}
-
 class JPEGEncodeInputTest
     : public JPEGEncodeTest
     , public ::testing::WithParamInterface<
