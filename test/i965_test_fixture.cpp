@@ -24,27 +24,6 @@
 
 #include "i965_test_fixture.h"
 
-#include <fcntl.h> // for O_RDWR
-#include <unistd.h> // for close()
-#include <va/va_drm.h>
-
-I965TestFixture::I965TestFixture()
-    : ::testing::Test::Test()
-    , m_handle(-1)
-    , m_vaDisplay(NULL)
-{
-    setenv("LIBVA_DRIVERS_PATH", TEST_VA_DRIVERS_PATH, 1);
-    setenv("LIBVA_DRIVER_NAME", "i965", 1);
-}
-
-I965TestFixture::~I965TestFixture()
-{
-    if (m_handle >= 0)
-        close(m_handle);
-    m_handle = -1;
-    m_vaDisplay = NULL;
-}
-
 const std::string I965TestFixture::getFullTestName() const
 {
     const ::testing::TestInfo * const info =
@@ -52,49 +31,6 @@ const std::string I965TestFixture::getFullTestName() const
     return std::string(info->test_case_name())
         + std::string(".")
         + std::string(info->name());
-}
-
-void I965TestFixture::initialize()
-{
-    ASSERT_FALSE(NULL == (VADisplay)*this);
-
-    int major, minor;
-    ASSERT_STATUS(vaInitialize(*this, &major, &minor));
-
-    EXPECT_EQ(VA_MAJOR_VERSION, major);
-    EXPECT_EQ(VA_MINOR_VERSION, minor);
-
-    VADriverContextP context(*this);
-    ASSERT_PTR(context);
-
-    const std::string vendor(context->str_vendor);
-
-    ::testing::Test::RecordProperty("driver_vendor", vendor);
-    ::testing::Test::RecordProperty("vaapi_version", VA_VERSION_S);
-}
-
-void I965TestFixture::terminate()
-{
-    if (m_vaDisplay)
-        EXPECT_STATUS(vaTerminate(m_vaDisplay));
-}
-
-I965TestFixture::operator VADisplay()
-{
-    if (m_vaDisplay)
-        return m_vaDisplay;
-
-    m_handle = open("/dev/dri/renderD128", O_RDWR);
-    if (m_handle < 0)
-        m_handle = open("/dev/dri/card0", O_RDWR);
-
-    m_vaDisplay = vaGetDisplayDRM(m_handle);
-    if (!m_vaDisplay && m_handle >= 0) {
-        close(m_handle);
-        m_handle = -1;
-    }
-
-    return m_vaDisplay;
 }
 
 Surfaces I965TestFixture::createSurfaces(int w, int h, int format, size_t count,
@@ -216,34 +152,4 @@ void I965TestFixture::syncSurface(VASurfaceID surface)
 {
     EXPECT_STATUS(
         i965_SyncSurface(*this, surface));
-}
-
-class I965TestFixtureTest
-    : public I965TestFixture
-{
-protected:
-    virtual void SetUp() { } // override I965TestFixture::SetUp
-    virtual void TearDown() { } // override I965TestFixture::TearDown
-};
-
-TEST_F(I965TestFixtureTest, Logic)
-{
-    VADisplayContextP dispCtx(*this);
-    VADriverContextP drvCtx(*this);
-    struct i965_driver_data* i965(*this);
-    VADisplay display(*this);
-
-    EXPECT_PTR(display);
-    EXPECT_PTR(dispCtx);
-    EXPECT_PTR(drvCtx);
-    EXPECT_TRUE(NULL == i965);
-    EXPECT_TRUE(NULL == drvCtx->handle);
-
-    ASSERT_NO_FATAL_FAILURE(initialize());
-
-    i965 = *this;
-    EXPECT_PTR(i965);
-    EXPECT_PTR(drvCtx->handle);
-
-    terminate();
 }

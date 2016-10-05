@@ -46,6 +46,7 @@ noinst_PROGRAMS = test_i965_drv_video
 noinst_HEADERS =							\
 	i965_internal_decl.h						\
 	i965_jpeg_test_data.h						\
+	i965_test_environment.h						\
 	i965_test_fixture.h						\
 	test.h								\
 	test_utils.h							\
@@ -55,10 +56,11 @@ test_i965_drv_video_SOURCES =						\
 	i965_chipset_test.cpp						\
 	i965_initialize_test.cpp					\
 	i965_jpeg_test_data.cpp						\
-	i965_test_fixture.cpp						\
 	i965_jpeg_decode_test.cpp					\
 	i965_jpeg_encode_test.cpp					\
 	i965_surface_test.cpp						\
+	i965_test_environment.cpp					\
+	i965_test_fixture.cpp						\
 	object_heap_test.cpp						\
 	test_main.cpp							\
 	$(NULL)

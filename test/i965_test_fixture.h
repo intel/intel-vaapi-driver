@@ -25,8 +25,7 @@
 #ifndef I965_TEST_FIXTURE_H
 #define I965_TEST_FIXTURE_H
 
-#include "test.h"
-#include "i965_internal_decl.h"
+#include "i965_test_environment.h"
 
 #include <string>
 #include <vector>
@@ -37,8 +36,7 @@ typedef std::vector<VAConfigAttrib> ConfigAttribs;
 typedef std::vector<VABufferID> Buffers;
 
 /**
- * This test fixture handles initialization and termination of the i965 driver
- * and display. It defines various operators to make it implicitly convertible
+ * This test fixture defines various operators to make it implicitly convertible
  * to a VADriverContextP, VADisplay, VADisplayContextP, and i965_driver_data*.
  * Other operators may be defined, too.  These operators allow an instance of
  * the test fixture to be passed to various driver functions that take one of
@@ -46,12 +44,7 @@ typedef std::vector<VABufferID> Buffers;
  * test fixture to simplify writing test cases.
  *
  * Test cases that wish to use this fixture should define their own test
- * fixture class that derives from this one.  The derived test fixture may
- * override the SetUp() and TearDown() methods.  These two methods are invoked
- * by gtest before and after a TEST_F test body is executed, respectively.  The
- * derived test fixture should be sure to call the I965TestFixture::SetUp() and
- * I965TestFixture::TearDown() methods when they are overridden to ensure
- * proper initialization and termination of the driver and display.
+ * fixture class that derives from this one.
  *
  * See the "Test Fixtures" section in gtest/docs/Primer.md for more details
  * on how test fixtures are used.
@@ -60,45 +53,9 @@ class I965TestFixture
     : public ::testing::Test
 {
 public:
-    I965TestFixture();
-    virtual ~I965TestFixture();
-
-protected:
-    /**
-     * This is invoked by gtest before the test body is executed.  Gtest will
-     * not run the test body if this method generates a fatal test assertion
-     * failure.
-     */
-    virtual void SetUp()
-    {
-        ASSERT_NO_FATAL_FAILURE(initialize());
-    }
-
-    /**
-     * This is invoked by gtest after the test body is executed... even if the
-     * test body generates a fatal or non-fatal test assertion failure.  If
-     * SetUp() generates a fatal test assertion, this is also invoked by gtest
-     * afterwards.
-     */
-    virtual void TearDown()
-    {
-        terminate();
-    }
+    virtual ~I965TestFixture() { }
 
     const std::string getFullTestName() const;
-
-public:
-    /**
-     * Initializes the i965 driver and display.  May generate a fatal or
-     * non-fatal test assertion failure.
-     */
-    void initialize();
-
-    /**
-     * Terminates the i965 driver and display.  May generate a non-fatal
-     * test assertion failure.
-     */
-    void terminate();
 
     /**
      * Convenience wrapper for i965_CreateSurfaces or i965_CreateSurfaces2.
@@ -215,37 +172,26 @@ public:
     /**
      * VADisplay implicit and explicit conversion operator.
      */
-    operator VADisplay();
+    inline operator VADisplay()
+    { return *I965TestEnvironment::instance(); }
 
     /**
      * VADisplayContextP implict and explicit conversion operator.
      */
     inline operator VADisplayContextP()
-    {
-        return (VADisplayContextP)((VADisplay)*this);
-    }
+    { return *I965TestEnvironment::instance(); }
 
     /**
      * VADriverContextP implict and explicit conversion operator.
      */
     inline operator VADriverContextP()
-    {
-        VADisplayContextP dctx(*this);
-        return dctx ? dctx->pDriverContext : NULL;
-    }
+    { return *I965TestEnvironment::instance(); }
 
     /**
      * i965_driver_data * implict and explicit conversion operator.
      */
     inline operator struct i965_driver_data *()
-    {
-        VADriverContextP ctx(*this);
-        return ctx ? i965_driver_data(ctx) : NULL;
-    }
-
-private:
-    int m_handle; /* current native display handle */
-    VADisplay m_vaDisplay; /* current VADisplay handle */
+    { return *I965TestEnvironment::instance(); }
 };
 
 #endif
