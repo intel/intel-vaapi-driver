@@ -44,6 +44,7 @@ EXTRA_DIST =								\
 # test_i965_drv_video
 noinst_PROGRAMS = test_i965_drv_video
 noinst_HEADERS =							\
+	i965_config_test.h						\
 	i965_internal_decl.h						\
 	i965_jpeg_test_data.h						\
 	i965_test_environment.h						\
@@ -53,7 +54,10 @@ noinst_HEADERS =							\
 	$(NULL)
 
 test_i965_drv_video_SOURCES =						\
+	i965_avcd_config_test.cpp					\
+	i965_avce_config_test.cpp					\
 	i965_chipset_test.cpp						\
+	i965_config_test.cpp						\
 	i965_initialize_test.cpp					\
 	i965_jpeg_test_data.cpp						\
 	i965_jpeg_decode_test.cpp					\
