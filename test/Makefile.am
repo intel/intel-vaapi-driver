@@ -62,6 +62,8 @@ test_i965_drv_video_SOURCES =						\
 	i965_jpeg_test_data.cpp						\
 	i965_jpeg_decode_test.cpp					\
 	i965_jpeg_encode_test.cpp					\
+	i965_jpegd_config_test.cpp					\
+	i965_jpege_config_test.cpp					\
 	i965_surface_test.cpp						\
 	i965_test_environment.cpp					\
 	i965_test_fixture.cpp						\
