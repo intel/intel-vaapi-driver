@@ -23,10 +23,14 @@
  */
 
 #include "test.h"
+#include "i965_test_environment.h"
 
 int main(int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
+
+    /** NOTE: gtest takes ownership of the I965TestEnvironment instance **/
+    ::testing::AddGlobalTestEnvironment(I965TestEnvironment::instance());
 
     return RUN_ALL_TESTS();
 }
