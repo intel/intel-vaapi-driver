@@ -66,12 +66,13 @@ void I965TestFixture::destroySurfaces(Surfaces& surfaces)
 }
 
 VAConfigID I965TestFixture::createConfig(
-    VAProfile profile, VAEntrypoint entrypoint, ConfigAttribs& attribs)
+    VAProfile profile, VAEntrypoint entrypoint, const ConfigAttribs& attribs)
 {
     VAConfigID id = VA_INVALID_ID;
     EXPECT_STATUS(
         i965_CreateConfig(
-            *this, profile, entrypoint, attribs.data(), attribs.size(), &id));
+            *this, profile, entrypoint,
+            const_cast<VAConfigAttrib*>(attribs.data()), attribs.size(), &id));
     EXPECT_ID(id);
 
     return id;

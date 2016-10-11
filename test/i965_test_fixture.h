@@ -76,7 +76,8 @@ public:
      * Convenience wrapper for i965_CreateConfig.  May generate a non-fatal
      * test assertion failure.
      */
-    VAConfigID createConfig(VAProfile, VAEntrypoint, ConfigAttribs&);
+    VAConfigID createConfig(VAProfile, VAEntrypoint,
+        const ConfigAttribs& = ConfigAttribs());
 
     /**
      * Convenience wrapper for i965_DestroyConfig.  May generate a non-fatal
