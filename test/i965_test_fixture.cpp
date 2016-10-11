@@ -83,12 +83,13 @@ void I965TestFixture::destroyConfig(VAConfigID id)
 }
 
 VAContextID I965TestFixture::createContext(
-    VAConfigID config, int w, int h, int flags, Surfaces& targets)
+    VAConfigID config, int w, int h, int flags, const Surfaces& targets)
 {
     VAContextID id = VA_INVALID_ID;
     EXPECT_STATUS(
         i965_CreateContext(
-            *this, config, w, h, flags, targets.data(), targets.size(), &id));
+            *this, config, w, h, flags,
+            const_cast<VASurfaceID*>(targets.data()), targets.size(), &id));
     EXPECT_ID(id);
 
     return id;

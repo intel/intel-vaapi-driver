@@ -88,7 +88,8 @@ public:
      * Convenience wrapper for i965_CreateContext.  May generate a non-fatal
      * test assertion failure.
      */
-    VAContextID createContext(VAConfigID, int, int, int, Surfaces&);
+    VAContextID createContext(VAConfigID, int, int, int = 0,
+        const Surfaces& = Surfaces());
 
     /**
      * Convenience wrapper for i965_DestroyContext.  May generate a non-fatal
