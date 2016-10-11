@@ -28,6 +28,7 @@
 extern "C" {
     #include "sysdeps.h"
     #include "i965_drv_video.h"
+    #include "i965_encoder.h"
 
     extern VAStatus i965_CreateConfig(
         VADriverContextP, VAProfile, VAEntrypoint,
