@@ -4146,6 +4146,7 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
 
         case VA_FOURCC_YV12:
         case VA_FOURCC_I420:
+        case VA_FOURCC_IYUV:
             if (fourcc == VA_FOURCC_YV12) {
                 obj_surface->y_cr_offset = obj_surface->height;
                 obj_surface->y_cb_offset = obj_surface->height + obj_surface->height / 4;
