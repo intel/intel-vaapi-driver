@@ -984,22 +984,29 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribEncROI:
-            if (profile == VAProfileH264ConstrainedBaseline ||
-                profile == VAProfileH264Main ||
-                profile == VAProfileH264High) {
-                VAConfigAttribValEncROI *roi_config = (VAConfigAttribValEncROI *)&(attrib_list[i].value);
+            if (entrypoint == VAEntrypointEncSlice ||
+                entrypoint == VAEntrypointEncSliceLP) {
 
-                if(entrypoint == VAEntrypointEncSliceLP) {
-                    roi_config->bits.num_roi_regions = 3;
-                    roi_config->bits.roi_rc_priority_support = 0;
-                    roi_config->bits.roi_rc_qp_delat_support = 0;
-                } else {
-                    roi_config->bits.num_roi_regions = I965_MAX_NUM_ROI_REGIONS;
-                    roi_config->bits.roi_rc_priority_support = 0;
-                    roi_config->bits.roi_rc_qp_delat_support = 1;
+                if (profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High) {
+
+                    VAConfigAttribValEncROI *roi_config =
+                        (VAConfigAttribValEncROI *)&(attrib_list[i].value);
+
+                    if(entrypoint == VAEntrypointEncSliceLP) {
+                        roi_config->bits.num_roi_regions = 3;
+                        roi_config->bits.roi_rc_priority_support = 0;
+                        roi_config->bits.roi_rc_qp_delat_support = 0;
+                    } else {
+                        roi_config->bits.num_roi_regions =
+                            I965_MAX_NUM_ROI_REGIONS;
+                        roi_config->bits.roi_rc_priority_support = 0;
+                        roi_config->bits.roi_rc_qp_delat_support = 1;
+                    }
+                }else {
+                    attrib_list[i].value = 0;
                 }
-            }else {
-                attrib_list[i].value = 0;
             }
 
             break;
