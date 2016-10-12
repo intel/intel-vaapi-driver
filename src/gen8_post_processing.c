@@ -630,6 +630,31 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
                                        SURFACE_FORMAT_R8_UNORM, 0,
                                        base_index + 2);
         }
+
+        gen8_pp_set_surface_state(ctx, pp_context,
+                                  bo, 0,
+                                  ALIGN(width[0], 4) / 4, height[0], pitch[0],
+                                  I965_SURFACEFORMAT_R8_UINT,
+                                  base_index + 3, 1);
+
+        if (fourcc_info->num_planes == 2) {
+            gen8_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[1],
+                                      ALIGN(width[1], 2) / 2, height[1], pitch[1],
+                                      I965_SURFACEFORMAT_R8G8_SINT,
+                                      base_index + 4, 1);
+        } else if (fourcc_info->num_planes == 3) {
+            gen8_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[1],
+                                      ALIGN(width[1], 4) / 4, height[1], pitch[1],
+                                      I965_SURFACEFORMAT_R8_SINT,
+                                      base_index + 4, 1);
+            gen8_pp_set_surface_state(ctx, pp_context,
+                                      bo, offset[2],
+                                      ALIGN(width[2], 4) / 4, height[2], pitch[2],
+                                      I965_SURFACEFORMAT_R8_SINT,
+                                      base_index + 5, 1);
+        }
     }
 }
 
@@ -786,6 +811,33 @@ gen8_pp_get_8tap_filter_mode(VADriverContextP ctx,
         return 1;
     else
         return 3;
+}
+
+static int
+gen8_pp_kernel_use_media_read_msg(VADriverContextP ctx,
+                                  const struct i965_surface *src_surface,
+                                  const VARectangle *src_rect,
+                                  const struct i965_surface *dst_surface,
+                                  const VARectangle *dst_rect)
+{
+    int src_fourcc = pp_get_surface_fourcc(ctx, src_surface);
+    int dst_fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+    const i965_fourcc_info *src_fourcc_info = get_fourcc_info(src_fourcc);
+    const i965_fourcc_info *dst_fourcc_info = get_fourcc_info(dst_fourcc);
+
+    if (!src_fourcc_info ||
+        src_fourcc_info->subsampling != SUBSAMPLE_YUV420 ||
+        !dst_fourcc_info ||
+        dst_fourcc_info->subsampling != SUBSAMPLE_YUV420)
+        return 0;
+
+    if (src_rect->x == dst_rect->x &&
+        src_rect->y == dst_rect->y &&
+        src_rect->width == dst_rect->width &&
+        src_rect->height == dst_rect->height)
+        return 1;
+
+    return 0;
 }
 
 VAStatus
@@ -1082,7 +1134,9 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     dw = MAX(dw, dst_rect->width + dst_left_edge_extend);
 
     pp_static_parameter->grf1.pointer_to_inline_parameter = 7;
-    pp_static_parameter->grf2.avs_wa_enable = 0; /* It is not required on GEN8+ */
+    pp_static_parameter->grf2.avs_wa_enable = gen8_pp_kernel_use_media_read_msg(ctx,
+                                                                                src_surface, src_rect,
+                                                                                dst_surface, dst_rect); /* reuse this flag for media block reading on gen8+ */
     pp_static_parameter->grf2.alpha = 255;
 
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;

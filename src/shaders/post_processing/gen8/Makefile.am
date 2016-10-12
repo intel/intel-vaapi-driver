@@ -23,10 +23,12 @@ INTEL_PP_G8A = \
 	PL2_AVS_Buf_1.g8a		\
 	PL2_AVS_Buf_2.g8a		\
 	PL2_AVS_Buf_3.g8a		\
+	PL2_media_read_buf0123.g8a	\
 	PL3_AVS_Buf_0.g8a		\
 	PL3_AVS_Buf_1.g8a		\
 	PL3_AVS_Buf_2.g8a		\
 	PL3_AVS_Buf_3.g8a		\
+	PL3_media_read_buf0123.g8a	\
 	PA_AVS_Buf_0.g8a		\
 	PA_AVS_Buf_1.g8a		\
 	PA_AVS_Buf_2.g8a		\
