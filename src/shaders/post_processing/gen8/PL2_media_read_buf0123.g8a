@@ -1,0 +1,65 @@
+
+    and.nz.f0.0  (1)     null<1>:uw     r2.3:uw    0x2:uw
+    (-f0.0)jmpi  (1)     __SKIP_MEDIA_READ
+
+    mov  (8) r28<1>:ud      r27<8;8,1>:ud
+    mov  (2) r28.0<1>:d     r9.0<2;2,1>:w                   		//ORI Y (LUMA) = ORI
+    mov  (1) r28.2<1>:ud    0xF000F:ud                              	// Y Block width and height (16x16)
+
+    send (1) r29<1>:d    r28   	0xc			0x2890003:ud
+
+    /* Save data in uwBuffer, it is not an efficient way, but we can re-use Save_AVS_NV12.g8a and Save_AVS_PL3.g8a */
+    shl  (16) uwBUFFER_0(0)<1>  r29.0<16;16,1>:ub       8:w
+    shl  (16) uwBUFFER_0(1)<1>  r29.16<16;16,1>:ub      8:w
+    shl  (16) uwBUFFER_0(2)<1>  r30.0<16;16,1>:ub       8:w
+    shl  (16) uwBUFFER_0(3)<1>  r30.16<16;16,1>:ub      8:w
+
+    shl  (16) uwBUFFER_1(0)<1>  r31.0<16;16,1>:ub       8:w
+    shl  (16) uwBUFFER_1(1)<1>  r31.16<16;16,1>:ub      8:w
+    shl  (16) uwBUFFER_1(2)<1>  r32.0<16;16,1>:ub       8:w
+    shl  (16) uwBUFFER_1(3)<1>  r32.16<16;16,1>:ub      8:w
+
+    shl  (16) uwBUFFER_2(0)<1>  r33.0<16;16,1>:ub       8:w
+    shl  (16) uwBUFFER_2(1)<1>  r33.16<16;16,1>:ub      8:w
+    shl  (16) uwBUFFER_2(2)<1>  r34.0<16;16,1>:ub       8:w
+    shl  (16) uwBUFFER_2(3)<1>  r34.16<16;16,1>:ub      8:w
+
+    shl  (16) uwBUFFER_3(0)<1>  r35.0<16;16,1>:ub       8:w
+    shl  (16) uwBUFFER_3(1)<1>  r35.16<16;16,1>:ub      8:w
+    shl  (16) uwBUFFER_3(2)<1>  r36.0<16;16,1>:ub       8:w
+    shl  (16) uwBUFFER_3(3)<1>  r36.16<16;16,1>:ub      8:w
+
+    mov  (8) r37<1>:ud      r27<8;8,1>:ud
+    mov  (1) r37.0<1>:d     r9.0<0;1,0>:w
+    shr  (1) r37.1<1>:d     r9.1<0;1,0>:w               1:w
+    mov  (1) r37.2<1>:ud    0x7000F:ud  	                        // U Block width and height (8x8)
+
+    send (1) r38<1>:d    r37   	0xc			0x2490004:ud
+
+    shl  (8) uwBUFFER_0(4)<2>  r38.0<16;8,2>:ub         8:w
+    shl  (8) uwBUFFER_0(6)<2>  r38.16<16;8,2>:ub        8:w
+
+    shl  (8) uwBUFFER_1(4)<2>  r39.0<16;8,2>:ub          8:w
+    shl  (8) uwBUFFER_1(6)<2>  r39.16<16;8,2>:ub         8:w
+
+    shl  (8) uwBUFFER_2(4)<2>  r40.0<16;8,2>:ub          8:w
+    shl  (8) uwBUFFER_2(6)<2>  r40.16<16;8,2>:ub         8:w
+
+    shl  (8) uwBUFFER_3(4)<2>  r41.0<16;8,2>:ub          8:w
+    shl  (8) uwBUFFER_3(6)<2>  r41.16<16;8,2>:ub         8:w
+
+    shl  (8) uwBUFFER_0(8)<2>  r38.1<16;8,2>:ub          8:w
+    shl  (8) uwBUFFER_0(10)<2> r38.17<16;8,2>:ub         8:w
+
+    shl  (8) uwBUFFER_1(8)<2>  r39.1<16;8,2>:ub          8:w
+    shl  (8) uwBUFFER_1(10)<2> r39.17<16;8,2>:ub         8:w
+
+    shl  (8) uwBUFFER_2(8)<2>  r40.1<16;8,2>:ub          8:w
+    shl  (8) uwBUFFER_2(10)<2> r40.17<16;8,2>:ub         8:w
+
+    shl  (8) uwBUFFER_3(8)<2>  r41.1<16;8,2>:ub          8:w
+    shl  (8) uwBUFFER_3(10)<2> r41.17<16;8,2>:ub         8:w
+
+    jmpi (1) __SAVE_BUF0123
+
+__SKIP_MEDIA_READ:
