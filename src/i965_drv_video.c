@@ -847,8 +847,11 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
         break;
 
     case VAProfileNone:
-	if(HAS_VPP_P010(i965))
+        if (HAS_VPP_P010(i965))
             chroma_formats |= VA_RT_FORMAT_YUV420_10BPP;
+
+        if (HAS_VPP(i965))
+            chroma_formats |= VA_RT_FORMAT_YUV422 | VA_RT_FORMAT_RGB32;
         break;
 
     case VAProfileVP9Profile0:
