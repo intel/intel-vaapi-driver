@@ -30,6 +30,7 @@
 #include <cstring>
 #include <memory>
 #include <tuple>
+#include <valarray>
 
 namespace JPEG {
 namespace Encode {
@@ -400,23 +401,19 @@ protected:
         ASSERT_EQ(expect->height(), image.height);
         ASSERT_NO_FAILURE(uint8_t *data = mapBuffer<uint8_t>(image.buf));
 
-        auto isClose = [](const uint8_t& a, const uint8_t& b) {
-            return std::abs(int(a)-int(b)) <= 2;
-        };
-
         for (size_t i(0); i < image.num_planes; ++i) {
-            size_t w = expect->widths[i];
-            size_t h = expect->heights[i];
-
-            const ByteData::value_type *source = expect->plane(i);
-            const uint8_t *result = data + image.offsets[i];
-            ASSERT_GE(image.pitches[i], w);
-            for (size_t r(0); r < h; ++r) {
-                EXPECT_TRUE(std::equal(result, result + w, source, isClose))
-                    << "Byte(s) mismatch in plane " << i << " row " << r;
-                source += w;
-                result += image.pitches[i];
-            }
+            ASSERT_GE(image.pitches[i], expect->widths[i]);
+            std::valarray<uint8_t> source(expect->plane(i), expect->sizes[i]);
+            std::gslice result_slice(0, {expect->heights[i], expect->widths[i]},
+                {image.pitches[i], 1});
+            std::valarray<uint8_t> result = std::valarray<uint8_t>(
+                data + image.offsets[i],
+                image.pitches[i] * expect->heights[i])[result_slice];
+            std::valarray<uint8_t> signs(1, result.size());
+            signs[result > source] = -1;
+            ASSERT_EQ(source.size(), result.size());
+            EXPECT_TRUE((source * signs - result * signs).max() <= 2)
+                << "Byte(s) mismatch in plane " << i;
         }
 
         unmapBuffer(image.buf);
