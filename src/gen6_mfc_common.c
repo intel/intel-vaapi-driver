@@ -228,6 +228,9 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     mfc_context->brc.bits_prev_frame[curr_frame_layer_id] = frame_bits;
     frame_bits = mfc_context->brc.bits_prev_frame[next_frame_layer_id];
 
+    mfc_context->brc.prev_slice_type[curr_frame_layer_id] = slicetype;
+    slicetype = mfc_context->brc.prev_slice_type[next_frame_layer_id];
+
     if (encoder_context->layer.num_layers < 2 || encoder_context->layer.size_frame_layer_ids == 0)
         factor = 1.0;
     else
