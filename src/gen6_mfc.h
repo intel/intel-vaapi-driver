@@ -232,7 +232,7 @@ struct gen6_mfc_context
         int target_frame_size[MAX_TEMPORAL_LAYERS][3]; // I,P,B
         int qp_prime_y[MAX_TEMPORAL_LAYERS][3];
         double bits_per_frame[MAX_TEMPORAL_LAYERS];
-        double qpf_rounding_accumulator;
+        double qpf_rounding_accumulator[MAX_TEMPORAL_LAYERS];
 
         double saved_bps;
         double saved_fps;
