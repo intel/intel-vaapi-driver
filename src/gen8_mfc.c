@@ -3344,8 +3344,8 @@ static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
                                                              (double)(inum + BRC_PWEIGHT * pnum ));
     mfc_context->brc.target_frame_size[0][SLICE_TYPE_P] = BRC_PWEIGHT * mfc_context->brc.target_frame_size[0][SLICE_TYPE_I];
 
-    mfc_context->brc.gop_nums[SLICE_TYPE_I] = inum;
-    mfc_context->brc.gop_nums[SLICE_TYPE_P] = pnum;
+    mfc_context->brc.gop_nums[0][SLICE_TYPE_I] = inum;
+    mfc_context->brc.gop_nums[0][SLICE_TYPE_P] = pnum;
 
     mfc_context->brc.bits_per_frame[0] = bitrate/frame_rate;
 
@@ -3398,7 +3398,7 @@ static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
     if (mfc_context->hrd.buffer_capacity < 5)
         frame_size_alpha = 0;
     else
-        frame_size_alpha = (double)mfc_context->brc.gop_nums[slicetype];
+        frame_size_alpha = (double)mfc_context->brc.gop_nums[0][slicetype];
     if (frame_size_alpha > 30) frame_size_alpha = 30;
     frame_size_next = target_frame_size + (double)(target_frame_size - frame_bits) /
         (double)(frame_size_alpha + 1.);
