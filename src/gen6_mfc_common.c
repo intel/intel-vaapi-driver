@@ -254,13 +254,13 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
 
     if (qpn == qp) {
         /* setting qpn we round qpf making mistakes: now we are trying to compensate this */
-        mfc_context->brc.qpf_rounding_accumulator += qpf - qpn;
-        if (mfc_context->brc.qpf_rounding_accumulator > 1.0) {
+        mfc_context->brc.qpf_rounding_accumulator[next_frame_layer_id] += qpf - qpn;
+        if (mfc_context->brc.qpf_rounding_accumulator[next_frame_layer_id] > 1.0) {
             qpn++;
-            mfc_context->brc.qpf_rounding_accumulator = 0.;
-        } else if (mfc_context->brc.qpf_rounding_accumulator < -1.0) {
+            mfc_context->brc.qpf_rounding_accumulator[next_frame_layer_id] = 0.;
+        } else if (mfc_context->brc.qpf_rounding_accumulator[next_frame_layer_id] < -1.0) {
             qpn--;
-            mfc_context->brc.qpf_rounding_accumulator = 0.;
+            mfc_context->brc.qpf_rounding_accumulator[next_frame_layer_id] = 0.;
         }
     }
     /* making sure that QP is not changing too fast */
