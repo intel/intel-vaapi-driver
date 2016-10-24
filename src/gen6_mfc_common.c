@@ -95,14 +95,18 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     double bitrate, framerate;
-    double qp1_size = 0.1 * 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
-    double qp51_size = 0.001 * 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
+    double frame_per_bits = 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
+    double qp1_size = 0.1 * frame_per_bits;
+    double qp51_size = 0.001 * frame_per_bits;
     double bpf, factor;
     int inum = encoder_context->brc.num_iframes_in_gop,
         pnum = encoder_context->brc.num_pframes_in_gop,
         bnum = encoder_context->brc.num_bframes_in_gop; /* Gop structure: number of I, P, B frames in the Gop. */
     int intra_period = encoder_context->brc.gop_size;
     int i;
+
+    if (encoder_context->layer.num_layers > 1)
+        qp1_size = 0.15 * frame_per_bits;
 
     mfc_context->brc.mode = encoder_context->rate_control_mode;
 
