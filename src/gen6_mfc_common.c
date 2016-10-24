@@ -225,10 +225,17 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
         next_frame_layer_id = curr_frame_layer_id;
     }
 
+    mfc_context->brc.bits_prev_frame[curr_frame_layer_id] = frame_bits;
+    frame_bits = mfc_context->brc.bits_prev_frame[next_frame_layer_id];
+
     if (encoder_context->layer.num_layers < 2 || encoder_context->layer.size_frame_layer_ids == 0)
         factor = 1.0;
     else
         factor = (double)encoder_context->brc.framerate_per_100s[next_frame_layer_id] / encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1];
+
+    /* 0 means the next frame is the first frame of next layer */
+    if (frame_bits == 0)
+        return sts;
 
     qpi = mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_I];
     qpp = mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_P];
