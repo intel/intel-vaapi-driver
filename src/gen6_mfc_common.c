@@ -106,10 +106,6 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 
     mfc_context->brc.mode = encoder_context->rate_control_mode;
 
-    mfc_context->brc.gop_nums[SLICE_TYPE_I] = inum;
-    mfc_context->brc.gop_nums[SLICE_TYPE_P] = pnum;
-    mfc_context->brc.gop_nums[SLICE_TYPE_B] = bnum;
-
     mfc_context->hrd.buffer_size = encoder_context->brc.hrd_buffer_size;
     mfc_context->hrd.current_buffer_fullness =
         (double)(encoder_context->brc.hrd_initial_buffer_fullness < mfc_context->hrd.buffer_size) ?
@@ -134,10 +130,28 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
         if (i == encoder_context->layer.num_layers - 1)
             factor = 1.0;
         else
-            factor = (double)encoder_context->brc.framerate_per_100s[i] / encoder_context->brc.framerate_per_100s[i + 1];
+            factor = (double)encoder_context->brc.framerate_per_100s[i] / encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1];
 
-        mfc_context->brc.target_frame_size[i][SLICE_TYPE_I] = (int)((double)((bitrate * intra_period * factor)/framerate) /
-                                                                    (double)(inum + BRC_PWEIGHT * pnum * factor + BRC_BWEIGHT * bnum * factor));
+        if (encoder_context->layer.num_layers > 1) {
+            if (i == 0) {
+                intra_period = (int)(encoder_context->brc.gop_size * factor);
+                inum = 1;
+                pnum = (int)(encoder_context->brc.num_pframes_in_gop * factor);
+                bnum = intra_period - inum - pnum;
+            } else {
+                intra_period = (int)(encoder_context->brc.gop_size * factor) - intra_period;
+                inum = 0;
+                pnum = (int)(encoder_context->brc.num_pframes_in_gop * factor) - pnum;
+                bnum = intra_period - inum - pnum;
+            }
+        }
+
+        mfc_context->brc.gop_nums[i][SLICE_TYPE_I] = inum;
+        mfc_context->brc.gop_nums[i][SLICE_TYPE_P] = pnum;
+        mfc_context->brc.gop_nums[i][SLICE_TYPE_B] = bnum;
+
+        mfc_context->brc.target_frame_size[i][SLICE_TYPE_I] = (int)((double)((bitrate * intra_period)/framerate) /
+                                                                    (double)(inum + BRC_PWEIGHT * pnum + BRC_BWEIGHT * bnum));
         mfc_context->brc.target_frame_size[i][SLICE_TYPE_P] = BRC_PWEIGHT * mfc_context->brc.target_frame_size[i][SLICE_TYPE_I];
         mfc_context->brc.target_frame_size[i][SLICE_TYPE_B] = BRC_BWEIGHT * mfc_context->brc.target_frame_size[i][SLICE_TYPE_I];
 
@@ -206,7 +220,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
      *  y - how far we are from target HRD buffer fullness
      */
     double x, y;
-    double frame_size_alpha, factor;
+    double frame_size_alpha;
 
     if (encoder_context->layer.num_layers < 2 || encoder_context->layer.size_frame_layer_ids == 0) {
         curr_frame_layer_id = 0;
@@ -231,11 +245,6 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     mfc_context->brc.prev_slice_type[curr_frame_layer_id] = slicetype;
     slicetype = mfc_context->brc.prev_slice_type[next_frame_layer_id];
 
-    if (encoder_context->layer.num_layers < 2 || encoder_context->layer.size_frame_layer_ids == 0)
-        factor = 1.0;
-    else
-        factor = (double)encoder_context->brc.framerate_per_100s[next_frame_layer_id] / encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1];
-
     /* 0 means the next frame is the first frame of next layer */
     if (frame_bits == 0)
         return sts;
@@ -250,7 +259,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     if (mfc_context->hrd.buffer_capacity < 5)
         frame_size_alpha = 0;
     else
-        frame_size_alpha = (double)mfc_context->brc.gop_nums[slicetype] * factor;
+        frame_size_alpha = (double)mfc_context->brc.gop_nums[next_frame_layer_id][slicetype];
     if (frame_size_alpha > 30) frame_size_alpha = 30;
     frame_size_next = target_frame_size + (double)(target_frame_size - frame_bits) /
         (double)(frame_size_alpha + 1.);
