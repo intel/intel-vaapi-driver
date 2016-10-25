@@ -348,11 +348,11 @@ void i965_object_surface_to_2d_gpe_resource(struct i965_gpe_resource *res,
 void i965_dri_object_to_buffer_gpe_resource(struct i965_gpe_resource *res,
                                             dri_bo *bo);
 
-void i965_gpe_dri_object_to_2d_gpe_resource(struct i965_gpe_resource *res,
-                                            dri_bo *bo,
-                                            unsigned int width,
-                                            unsigned int height,
-                                            unsigned int pitch);
+void i965_dri_object_to_2d_gpe_resource(struct i965_gpe_resource *res,
+                                        dri_bo *bo,
+                                        unsigned int width,
+                                        unsigned int height,
+                                        unsigned int pitch);
 
 void i965_zero_gpe_resource(struct i965_gpe_resource *res);
 

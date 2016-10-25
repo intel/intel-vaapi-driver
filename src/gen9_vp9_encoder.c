@@ -1052,7 +1052,7 @@ gen9_add_dri_buffer_2d_gpe_surface(VADriverContextP ctx,
 {
     struct i965_gpe_resource gpe_resource;
 
-    i965_gpe_dri_object_to_2d_gpe_resource(&gpe_resource, bo, width, height, pitch);
+    i965_dri_object_to_2d_gpe_resource(&gpe_resource, bo, width, height, pitch);
     gen9_add_buffer_2d_gpe_surface(ctx,
                                    gpe_context,
                                    &gpe_resource,
