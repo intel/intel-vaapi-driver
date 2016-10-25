@@ -1159,7 +1159,7 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
     seq_param      = param->pseq_param;
     segment_param  = param->psegment_param;
 
-    cmd = gen8p_gpe_context_map_curbe(gpe_context);
+    cmd = i965_gpe_context_map_curbe(gpe_context);
 
     if (!cmd)
         return;
@@ -1347,7 +1347,7 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
     cmd->dw60.brc_bitstream_size_data_bti      = VP9_BTI_BRC_BITSTREAM_SIZE_G9;
     cmd->dw61.brc_hfw_data_output_bti          = VP9_BTI_BRC_HFW_DATA_G9;
 
-    gen8p_gpe_context_unmap_curbe(gpe_context);
+    i965_gpe_context_unmap_curbe(gpe_context);
     return;
 }
 
@@ -2057,7 +2057,7 @@ void gen9_vp9_set_curbe_me(VADriverContextP ctx,
     else
         enc_media_state = VP9_MEDIA_STATE_4X_ME;
 
-    me_cmd = gen8p_gpe_context_map_curbe(gpe_context);
+    me_cmd = i965_gpe_context_map_curbe(gpe_context);
 
     if (!me_cmd)
         return;
@@ -2117,7 +2117,7 @@ void gen9_vp9_set_curbe_me(VADriverContextP ctx,
     me_cmd->dw36.vme_fwd_inter_pred_surf_index       = VP9_BTI_ME_CURR_PIC_L0;
     me_cmd->dw37.vme_bdw_inter_pred_surf_index       = VP9_BTI_ME_CURR_PIC_L1;
 
-    gen8p_gpe_context_unmap_curbe(gpe_context);
+    i965_gpe_context_unmap_curbe(gpe_context);
 }
 
 static void
@@ -2398,7 +2398,7 @@ gen9_vp9_set_curbe_scaling_cm(VADriverContextP ctx,
 {
     vp9_scaling4x_curbe_data_cm *curbe_cmd;
 
-    curbe_cmd = gen8p_gpe_context_map_curbe(gpe_context);
+    curbe_cmd = i965_gpe_context_map_curbe(gpe_context);
 
     if (!curbe_cmd)
         return;
@@ -2422,7 +2422,7 @@ gen9_vp9_set_curbe_scaling_cm(VADriverContextP ctx,
         curbe_cmd->dw10.mbv_proc_stat_bti = VP9_BTI_SCALING_FRAME_MBVPROCSTATS_DST_CM;
     }
 
-    gen8p_gpe_context_unmap_curbe(gpe_context);
+    i965_gpe_context_unmap_curbe(gpe_context);
     return;
 }
 
@@ -2670,7 +2670,7 @@ gen9_vp9_set_curbe_dys(VADriverContextP ctx,
 {
     vp9_dys_curbe_data  *curbe_cmd;
 
-    curbe_cmd = gen8p_gpe_context_map_curbe(gpe_context);
+    curbe_cmd = i965_gpe_context_map_curbe(gpe_context);
 
     if (!curbe_cmd)
         return;
@@ -2690,7 +2690,7 @@ gen9_vp9_set_curbe_dys(VADriverContextP ctx,
     curbe_cmd->dw17.output_frame_y_bti    = VP9_BTI_DYS_OUTPUT_Y;
     curbe_cmd->dw18.avs_sample_idx            = 0;
 
-    gen8p_gpe_context_unmap_curbe(gpe_context);
+    i965_gpe_context_unmap_curbe(gpe_context);
 }
 
 static void
@@ -3023,7 +3023,7 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
         seg_param = &tmp_seg_param;
     }
 
-    curbe_cmd = gen8p_gpe_context_map_curbe(gpe_context);
+    curbe_cmd = i965_gpe_context_map_curbe(gpe_context);
 
     if (!curbe_cmd)
         return;
@@ -3167,7 +3167,7 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
     curbe_cmd->dw174.cu_record_bti               = VP9_BTI_MBENC_CU_RECORDS_G9;
     curbe_cmd->dw175.pak_data_bti                = VP9_BTI_MBENC_PAK_DATA_G9;
 
-    gen8p_gpe_context_unmap_curbe(gpe_context);
+    i965_gpe_context_unmap_curbe(gpe_context);
     return;
 }
 

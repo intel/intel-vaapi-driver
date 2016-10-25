@@ -1660,7 +1660,7 @@ gen8_gpe_context_set_dynamic_buffer(VADriverContextP ctx,
 }
 
 void *
-gen8p_gpe_context_map_curbe(struct i965_gpe_context *gpe_context)
+i965_gpe_context_map_curbe(struct i965_gpe_context *gpe_context)
 {
     dri_bo_map(gpe_context->curbe.bo, 1);
 
@@ -1668,7 +1668,7 @@ gen8p_gpe_context_map_curbe(struct i965_gpe_context *gpe_context)
 }
 
 void
-gen8p_gpe_context_unmap_curbe(struct i965_gpe_context *gpe_context)
+i965_gpe_context_unmap_curbe(struct i965_gpe_context *gpe_context)
 {
     dri_bo_unmap(gpe_context->curbe.bo);
 }

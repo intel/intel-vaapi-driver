@@ -653,7 +653,7 @@ gen9_gpe_context_p010_scaling_curbe(VADriverContextP ctx,
         (dst_rect == NULL) || (dst_surface == NULL))
         return;
 
-    scaling_curbe = gen8p_gpe_context_map_curbe(gpe_context);
+    scaling_curbe = i965_gpe_context_map_curbe(gpe_context);
 
     if (!scaling_curbe)
         return;
@@ -696,7 +696,7 @@ gen9_gpe_context_p010_scaling_curbe(VADriverContextP ctx,
     }
     /* I010 will use LSB */
 
-    gen8p_gpe_context_unmap_curbe(gpe_context);
+    i965_gpe_context_unmap_curbe(gpe_context);
 }
 
 static bool

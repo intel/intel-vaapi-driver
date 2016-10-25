@@ -437,10 +437,10 @@ extern void
 gen9_gpe_reset_binding_table(VADriverContextP ctx,
                              struct i965_gpe_context *gpe_context);
 extern
-void *gen8p_gpe_context_map_curbe(struct i965_gpe_context *gpe_context);
+void *i965_gpe_context_map_curbe(struct i965_gpe_context *gpe_context);
 
 extern
-void gen8p_gpe_context_unmap_curbe(struct i965_gpe_context *gpe_context);
+void i965_gpe_context_unmap_curbe(struct i965_gpe_context *gpe_context);
 
 extern
 void gen8_gpe_setup_interface_data(VADriverContextP ctx,
