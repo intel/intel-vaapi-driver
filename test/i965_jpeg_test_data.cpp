@@ -779,183 +779,53 @@ namespace Encode {
     {
         Shared t(new TestInput);
 
-        switch(fourcc) {
-        case VA_FOURCC_I420:
-            t->planes = 3;
-            t->widths = {w + (w & 1), (w + 1) >> 1, (w + 1) >> 1};
-            t->heights = {h + (h & 1), (h + 1) >> 1, (h + 1) >> 1};
-            t->format = VA_RT_FORMAT_YUV420;
-            t->fourcc_output = VA_FOURCC_IMC3;
-            break;
-        case VA_FOURCC_NV12:
-            t->planes = 2;
-            t->widths = {w + (w & 1), w + (w & 1), 0};
-            t->heights = {h + (h & 1), (h + 1) >> 1, 0};
-            t->format = VA_RT_FORMAT_YUV420;
-            t->fourcc_output = VA_FOURCC_IMC3;
-            break;
-        case VA_FOURCC_UYVY:
-        case VA_FOURCC_YUY2:
-            t->planes = 1;
-            t->widths = {(w + (w & 1)) << 1, 0, 0};
-            t->heights = {h + (h & 1), 0, 0};
-            t->format = VA_RT_FORMAT_YUV422;
-            t->fourcc_output = VA_FOURCC_422H;
-            break;
-        case VA_FOURCC_422H:
-            t->planes = 3;
-            t->widths = {w + (w & 1), (w + 1) >> 1, (w + 1) >> 1};
-            t->heights = {h + (h & 1), h + (h & 1), h + (h & 1)};
-            t->format = VA_RT_FORMAT_YUV422;
-            t->fourcc_output = VA_FOURCC_422H;
-            break;
-        case VA_FOURCC_Y800:
-            t->planes = 1;
-            t->widths = {w + (w & 1), 0, 0};
-            t->heights = {h + (h & 1), 0, 0};
-            t->format = VA_RT_FORMAT_YUV400;
-            t->fourcc_output = VA_FOURCC_Y800;
+        t->image = YUVImage::create(fourcc, w, h);
+
+        if (not bool(t->image.get()))
+            return Shared();
+
+        t->picture.picture_width = t->image->width;
+        t->picture.picture_height = t->image->height;
+
+        if (VA_FOURCC_Y800 == fourcc)
             t->picture.num_components = 1;
-            break;
-        default:
-            return Shared(); // fourcc is unsupported
-        }
-
-        t->fourcc = fourcc;
-        t->picture.picture_width = ALIGN(w, 2);
-        t->picture.picture_height = ALIGN(h, 2);
-
-        for (size_t i(0); i < t->planes; ++i)
-            t->sizes[i] = t->widths[i] * t->heights[i];
-
-        for (size_t i(1); i < t->planes; ++i)
-            t->offsets[i] = t->sizes[i - 1] + t->offsets[i - 1];
-
-        // Allocate bytes. Values are arbitrary. Caller is responsible for
-        // assigning byte values as appropriate.
-        t->bytes.resize(
-            std::accumulate(std::begin(t->sizes), std::end(t->sizes), 0u));
 
         return t;
     }
 
     TestInput::TestInput()
-        : bytes()
+        : image()
         , picture(defaultPictureParameter)
         , matrix(defaultIQMatrix)
         , huffman(defaultHuffmanTable)
         , slice(defaultSliceParameter)
-        , fourcc(0)
-        , fourcc_output(0)
-        , format(0)
-        , planes(0)
-        , widths{0,0,0}
-        , heights{0,0,0}
-        , offsets{0,0,0}
-        , sizes{0,0,0}
     {
         return;
     }
 
-    const unsigned TestInput::width() const
+    const YUVImage::SharedConst TestInput::toExpectedOutput() const
     {
-        return picture.picture_width;
-    }
+        YUVImage::Shared result;
 
-    const unsigned TestInput::height() const
-    {
-        return picture.picture_height;
-    }
+        switch (image->fourcc) {
+        case VA_FOURCC_Y800:
+            return image;
+        case VA_FOURCC_I420:
+        case VA_FOURCC_NV12:
+            result = YUVImage::create(VA_FOURCC_IMC3, image->width, image->height);
+            break;
+        case VA_FOURCC_UYVY:
+        case VA_FOURCC_YUY2:
+            result = YUVImage::create(VA_FOURCC_422H, image->width, image->height);
+            break;
+        default:
+            break;
+        }
 
-    const uint8_t* TestInput::plane(const size_t i) const
-    {
-        return bytes.data() + offsets[i];
-    }
-
-    uint8_t* TestInput::begin(const size_t i)
-    {
-        return bytes.data() + offsets[i];
-    }
-
-    const uint8_t* TestInput::begin(const size_t i) const
-    {
-        return bytes.data() + offsets[i];
-    }
-
-    uint8_t* TestInput::end(const size_t i)
-    {
-        return begin(i) + sizes[i];
-    }
-
-    const uint8_t* TestInput::end(const size_t i) const
-    {
-        return begin(i) + sizes[i];
-    }
-
-    const TestInput::SharedConst TestInput::toOutputFourcc() const
-    {
-        TestInput::Shared result;
-
-        struct IsEvenIndex
-        {
-            IsEvenIndex():i(0){}
-            inline const bool operator()(const uint8_t&)
-            {
-                const bool r = (i % 2) != 1;
-                ++i;
-                return r;
-            }
-            size_t i;
-        };
-
-        struct IsOddIndex
-        {
-            IsOddIndex():i(0){}
-            inline const bool operator()(const uint8_t&)
-            {
-                const bool r = (i % 2) == 1;
-                ++i;
-                return r;
-            }
-            size_t i;
-        };
-
-        if (fourcc_output == VA_FOURCC_IMC3) {
-            if (fourcc == VA_FOURCC_I420) {
-                return shared_from_this();
-            } else if (fourcc == VA_FOURCC_NV12) {
-                result = create(VA_FOURCC_I420, width(), height());
-                // copy Y to plane 0
-                std::copy(begin(0), end(0), result->begin(0));
-                // copy U to plane 1
-                std::copy_if(begin(1), end(1), result->begin(1), IsEvenIndex());
-                // copy V to plane 2
-                std::copy_if(begin(1), end(1), result->begin(2), IsOddIndex());
-            }
-        } else if (fourcc_output == VA_FOURCC_422H) {
-            if (fourcc == VA_FOURCC_UYVY) {
-                result = create(VA_FOURCC_422H, width(), height());
-                // copy Y to plane 0
-                std::copy_if(begin(0), end(0), result->begin(0), IsOddIndex());
-                // copy UV across plane 1 and 2
-                std::copy_if(begin(0), end(0), result->begin(1), IsEvenIndex());
-                // partition U into plane 1 and V into plane 2
-                std::stable_partition(
-                    result->begin(1), result->end(2), IsEvenIndex());
-            } else if (fourcc == VA_FOURCC_YUY2) {
-                result = create(VA_FOURCC_422H, width(), height());
-                // copy Y to plane 0
-                std::copy_if(begin(0), end(0), result->begin(0), IsEvenIndex());
-                // copy UV across plane 1 and 2
-                std::copy_if(begin(0), end(0), result->begin(1), IsOddIndex());
-                // partition U into plane 1 and V into plane 2
-                std::stable_partition(
-                    result->begin(1), result->end(2), IsEvenIndex());
-            }
-        } else if (fourcc_output == VA_FOURCC_Y800) {
-            if (fourcc == VA_FOURCC_Y800) {
-                return shared_from_this();
-            }
+        if (bool(result)) {
+            result->y() = image->y();
+            result->u() = image->u();
+            result->v() = image->v();
         }
 
         return result;
@@ -964,10 +834,10 @@ namespace Encode {
     ::std::ostream& operator<<(::std::ostream& os, const TestInput& t)
     {
         return os
-            << std::string((char*)(&t.fourcc), 4)
-            << " " << t.width() << "x" << t.height()
-            << " " << t.widths << " " << t.heights
-            << " " << t.sizes << " " << t.offsets
+            << std::string((char*)(&t.image->fourcc), 4)
+            << " " << t.image->width << "x" << t.image->height
+            << " " << t.image->widths << " " << t.image->heights
+            << " " << t.image->sizes << " " << t.image->offsets
         ;
     }
 
@@ -989,7 +859,7 @@ namespace Encode {
         TestInput::Shared input(TestInput::create(fourcc, res[0], res[1]));
         if (input.get()) {
             std::generate_n(
-                std::begin(input->bytes), input->bytes.size(),
+                std::begin(input->image->bytes), input->image->bytes.size(),
                 RandomValueGenerator<uint8_t>(0x00, 0xff));
         }
         return input;
