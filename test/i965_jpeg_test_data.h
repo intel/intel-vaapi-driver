@@ -25,6 +25,8 @@
 #ifndef I965_JPEG_TEST_DATA_H
 #define I965_JPEG_TEST_DATA_H
 
+#include "i965_test_image_utils.h"
+
 #include <array>
 #include <iostream>
 #include <map>
@@ -407,40 +409,20 @@ namespace Encode {
         typedef std::shared_ptr<const TestInput> SharedConst;
 
         static Shared create(const unsigned, const unsigned, const unsigned);
-
-        const unsigned width() const;
-        const unsigned height() const;
-        const uint8_t* plane(const size_t) const;
-        const SharedConst toOutputFourcc() const;
+        const YUVImage::SharedConst toExpectedOutput() const;
 
         friend ::std::ostream& operator<<(::std::ostream&, const TestInput&);
         friend ::std::ostream& operator<<(::std::ostream&, const Shared&);
         friend ::std::ostream& operator<<(::std::ostream&, const SharedConst&);
 
-        ByteData            bytes;
+        YUVImage::Shared    image;
         PictureParameter    picture;
         IQMatrix            matrix;
         HuffmanTable        huffman;
         SliceParameter      slice;
-        unsigned            fourcc;
-        unsigned            fourcc_output;
-        unsigned            format;
-        size_t              planes;
-        std::array<size_t, 3> widths;
-        std::array<size_t, 3> heights;
-        std::array<size_t, 3> offsets;
-        std::array<size_t, 3> sizes;
 
     private:
         TestInput();
-
-        /** get pointer to beginning of plane @param i **/
-        uint8_t* begin(const size_t i);
-        const uint8_t* begin(const size_t i) const;
-
-        /** get pointer to end of plane @param i **/
-        uint8_t* end(const size_t i);
-        const uint8_t* end(const size_t i) const;
     };
 
     class TestInputCreator

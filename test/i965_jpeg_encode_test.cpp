@@ -25,6 +25,7 @@
 #include "i965_jpeg_test_data.h"
 #include "i965_streamable.h"
 #include "i965_test_fixture.h"
+#include "test_utils.h"
 
 #include <numeric>
 #include <cstring>
@@ -108,7 +109,7 @@ protected:
             << "Unhandled fourcc parameter '" << sFourcc << "'"
             << " = 0x" << std::hex << fourcc << std::dec;
 
-        ASSERT_EQ(fourcc, input->fourcc);
+        ASSERT_EQ(fourcc, input->image->fourcc);
 
         RecordProperty("test_input", toString(*input));
     }
@@ -184,83 +185,35 @@ protected:
         attributes.front().flags = VA_SURFACE_ATTRIB_SETTABLE;
         attributes.front().type = VASurfaceAttribPixelFormat;
         attributes.front().value.type = VAGenericValueTypeInteger;
-        attributes.front().value.value.i = input->fourcc;
-        surfaces = createSurfaces(input->width(), input->height(),
-            input->format, 1, attributes);
-    }
+        attributes.front().value.value.i = input->image->fourcc;
+        surfaces = createSurfaces(input->image->width, input->image->height,
+            input->image->format, 1, attributes);
 
-    void CopyInputToSurface()
-    {
-        ASSERT_FALSE(surfaces.empty());
+        ASSERT_EQ(1u, surfaces.size());
+        ASSERT_ID(surfaces.front());
 
-        VAImage image;
-        deriveImage(surfaces.front(), image);
-        if (HasFailure())
-            return;
-
-        SCOPED_TRACE(::testing::Message() << std::endl << image);
-
-        RecordProperty("input_image", toString(image));
-
-        EXPECT_EQ(input->planes, image.num_planes);
-        EXPECT_GT(image.data_size, 0u);
-        EXPECT_EQ(input->width(), image.width);
-        EXPECT_EQ(input->height(), image.height);
-        if (HasFailure()) {
-            unmapBuffer(image.buf);
-            destroyImage(image);
-            return;
-        }
-
-        uint8_t *data = mapBuffer<uint8_t>(image.buf);
-        if (HasFailure()) {
-            destroyImage(image);
-            return;
-        }
-
-        std::memset(data, 0, image.data_size);
-
-        for (size_t i(0); i < image.num_planes; ++i) {
-            size_t w = input->widths[i];
-            size_t h = input->heights[i];
-
-            EXPECT_GE(image.pitches[i], w);
-            if (HasFailure())
-                break;
-
-            const ByteData::value_type *source = input->plane(i);
-            uint8_t *dest = data + image.offsets[i];
-            for (size_t r(0); r < h; ++r) {
-                std::memcpy(dest, source, w);
-                source += w;
-                dest += image.pitches[i];
-            }
-        }
-
-        unmapBuffer(image.buf);
-        destroyImage(image);
+        input->image->toSurface(surfaces.front());
     }
 
     void SetUpConfig()
     {
         ASSERT_INVALID_ID(config);
         ConfigAttribs attributes(
-            1, {type:VAConfigAttribRTFormat, value:input->format});
+            1, {type:VAConfigAttribRTFormat, value:input->image->format});
         config = createConfig(profile, entrypoint, attributes);
     }
 
     void SetUpContext()
     {
         ASSERT_INVALID_ID(context);
-        context = createContext(config, input->width(),
-            input->height(), 0, surfaces);
+        context = createContext(config, input->image->width,
+            input->image->height, 0, surfaces);
     }
 
     void SetUpCodedBuffer()
     {
         ASSERT_INVALID_ID(coded);
-        unsigned size =
-            std::accumulate(input->sizes.begin(), input->sizes.end(), 8192u);
+        unsigned size = input->image->sizes.sum() + 8192u;
         size *= 2;
         coded = createBuffer(context, VAEncCodedBufferType, size);
     }
@@ -332,12 +285,14 @@ protected:
 
     void VerifyOutput()
     {
-        TestInput::SharedConst expect = input->toOutputFourcc();
+        YUVImage::SharedConst expect = input->toExpectedOutput();
         ASSERT_PTR(expect.get());
 
         ::JPEG::Decode::PictureData::SharedConst pd =
             ::JPEG::Decode::PictureData::make(
-                input->fourcc_output, output, input->width(), input->height());
+                expect->fourcc, output, expect->width, expect->height);
+
+        ASSERT_PTR(pd.get());
 
         ASSERT_NO_FAILURE(
             Surfaces osurfaces = createSurfaces(
@@ -393,35 +348,44 @@ protected:
         ASSERT_NO_FAILURE(endPicture(ocontext));
         ASSERT_NO_FAILURE(syncSurface(osurfaces.front()));
 
-        VAImage image;
-        ASSERT_NO_FAILURE(deriveImage(osurfaces.front(), image));
-        ASSERT_EQ(expect->planes, image.num_planes);
-        ASSERT_GT(image.data_size, 0u);
-        ASSERT_EQ(expect->width(), image.width);
-        ASSERT_EQ(expect->height(), image.height);
-        ASSERT_NO_FAILURE(uint8_t *data = mapBuffer<uint8_t>(image.buf));
+        ASSERT_NO_FAILURE(
+            YUVImage::Shared result = YUVImage::create(osurfaces.front()));
+        ASSERT_PTR(result.get());
+        ASSERT_EQ(expect->planes, result->planes);
+        ASSERT_EQ(expect->width, result->width);
+        ASSERT_EQ(expect->height, result->height);
+        ASSERT_TRUE((result->widths == expect->widths).min());
+        ASSERT_TRUE((result->heights == expect->heights).min());
+        ASSERT_TRUE((result->offsets == expect->offsets).min());
+        ASSERT_TRUE((result->sizes == expect->sizes).min());
+        ASSERT_EQ(expect->bytes.size(), result->bytes.size());
 
-        for (size_t i(0); i < image.num_planes; ++i) {
-            ASSERT_GE(image.pitches[i], expect->widths[i]);
-            std::valarray<uint8_t> source(expect->plane(i), expect->sizes[i]);
-            std::gslice result_slice(0, {expect->heights[i], expect->widths[i]},
-                {image.pitches[i], 1});
-            std::valarray<uint8_t> result = std::valarray<uint8_t>(
-                data + image.offsets[i],
-                image.pitches[i] * expect->heights[i])[result_slice];
-            std::valarray<uint8_t> signs(1, result.size());
-            signs[result > source] = -1;
-            ASSERT_EQ(source.size(), result.size());
-            EXPECT_TRUE((source * signs - result * signs).max() <= 2)
-                << "Byte(s) mismatch in plane " << i;
+        std::valarray<int16_t> rbytes(result->bytes.size());
+        std::copy(std::begin(result->bytes), std::end(result->bytes),
+            std::begin(rbytes));
+
+        std::valarray<int16_t> ebytes(expect->bytes.size());
+        std::copy(std::begin(expect->bytes), std::end(expect->bytes),
+            std::begin(ebytes));
+
+        EXPECT_TRUE(std::abs(ebytes - rbytes).max() <= 2);
+        if (HasFailure()) {
+            std::valarray<int16_t> r = std::abs(ebytes - rbytes);
+            for (size_t i(0); i < expect->planes; ++i) {
+                std::valarray<int16_t> plane = r[expect->slices[i]];
+                size_t mismatch = std::count_if(
+                    std::begin(plane), std::end(plane),
+                    [](const uint16_t& v){return v > 2;});
+                std::cout << "\tplane " << i << ": "
+                    << mismatch << " of " << plane.size()
+                    << " (" << (float(mismatch) / plane.size() * 100)
+                    << "%) mismatch" << std::endl;
+            }
         }
-
-        unmapBuffer(image.buf);
 
         for (auto id : buffers)
             destroyBuffer(id);
 
-        destroyImage(image);
         destroyContext(ocontext);
         destroyConfig(oconfig);
         destroySurfaces(osurfaces);
@@ -448,7 +412,6 @@ TEST_P(JPEGEncodeInputTest, Full)
     ASSERT_NO_FAILURE(SetUpHuffmanTables());
     ASSERT_NO_FAILURE(SetUpSlice());
     ASSERT_NO_FAILURE(SetUpHeader());
-    ASSERT_NO_FAILURE(CopyInputToSurface());
     ASSERT_NO_FAILURE(Encode());
 
     VerifyOutput();
