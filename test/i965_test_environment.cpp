@@ -24,6 +24,8 @@
 
 #include "i965_test_environment.h"
 
+#include <cstdlib>
+#include <ctime>
 #include <fcntl.h> // for O_RDWR
 #include <unistd.h> // for close()
 #include <va/va_drm.h>
@@ -44,6 +46,11 @@ I965TestEnvironment::I965TestEnvironment()
 
 void I965TestEnvironment::SetUp()
 {
+    std::time_t seed(std::time(0));
+    std::srand(seed);
+    ::testing::Test::RecordProperty("rand_seed", seed);
+    std::cout << "Seeded std::rand() with " << seed << "." << std::endl;
+
     ASSERT_EQ(-1, m_handle);
     ASSERT_PTR_NULL(m_vaDisplay);
 

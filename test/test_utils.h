@@ -26,25 +26,28 @@
 #define TEST_UTILS_H
 
 #include <chrono>
-#include <random>
+#include <cstdlib>
 
 template <typename T>
 class RandomValueGenerator
 {
 public:
     RandomValueGenerator(const T& min, const T& max)
-        : dis(min, max)
-    { }
-
-    const T operator()()
+        : minVal(min)
+        , maxVal(max)
     {
-        static std::random_device rd;
-        static std::default_random_engine gen(rd());
-        return dis(gen);
+        return;
+    }
+
+    const T operator()() const
+    {
+        return static_cast<T>(
+            std::rand() % (maxVal + 1 - minVal) + minVal);
     }
 
 private:
-    std::uniform_int_distribution<T> dis;
+    T minVal;
+    T maxVal;
 };
 
 class Timer

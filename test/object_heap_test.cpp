@@ -181,10 +181,6 @@ TEST(ObjectHeapTest, DataIntegrity)
 
     ASSERT_EQ(0, object_heap_init(&heap, sizeof(test_object), 0));
 
-    std::time_t seed = std::time(0);
-    std::srand(seed);
-    RecordProperty("seed", seed);
-
     std::vector<int> values;
 
     auto generator = [&]{
