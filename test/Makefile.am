@@ -50,6 +50,7 @@ noinst_HEADERS =							\
 	i965_jpeg_test_data.h						\
 	i965_test_environment.h						\
 	i965_test_fixture.h						\
+	i965_test_image_utils.h						\
 	test.h								\
 	test_utils.h							\
 	$(NULL)
@@ -70,6 +71,7 @@ test_i965_drv_video_SOURCES =						\
 	i965_surface_test.cpp						\
 	i965_test_environment.cpp					\
 	i965_test_fixture.cpp						\
+	i965_test_image_utils.cpp					\
 	object_heap_test.cpp						\
 	test_main.cpp							\
 	$(NULL)
