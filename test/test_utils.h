@@ -25,6 +25,7 @@
 #ifndef TEST_UTILS_H
 #define TEST_UTILS_H
 
+#include <chrono>
 #include <random>
 
 template <typename T>
@@ -44,6 +45,31 @@ public:
 
 private:
     std::uniform_int_distribution<T> dis;
+};
+
+class Timer
+{
+public:
+    typedef typename std::chrono::microseconds us;
+    typedef typename std::chrono::milliseconds ms;
+    typedef typename std::chrono::seconds       s;
+
+    Timer() { reset(); }
+
+    template <typename T = std::chrono::microseconds>
+    typename T::rep elapsed() const
+    {
+        return std::chrono::duration_cast<T>(
+            std::chrono::steady_clock::now() - start).count();
+    }
+
+    void reset()
+    {
+        start = std::chrono::steady_clock::now();
+    }
+
+private:
+    std::chrono::steady_clock::time_point start;
 };
 
 #endif // TEST_UTILS_H
