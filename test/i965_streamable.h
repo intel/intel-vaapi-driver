@@ -29,6 +29,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <valarray>
 #include <va/va.h>
 
 namespace std {
@@ -46,6 +47,30 @@ namespace std {
 
     template <const size_t S> inline std::ostream&
     operator<<(std::ostream& os, const std::array<uint8_t, S>& a)
+    {
+        os << "{" << std::hex;
+        for (const auto& s : a) {
+            if (&s != &a[0])
+                os << ",";
+            os << "0x" << std::setfill('0') << std::setw(2) << unsigned(s);
+        }
+        return os << std::dec << "}";
+    }
+
+    template <typename T> inline std::ostream&
+    operator<<(std::ostream& os, const std::valarray<T>& a)
+    {
+        os << "{";
+        for (const auto& s : a) {
+            if (&s != &a[0])
+                os << ",";
+            os << s;
+        }
+        return os << "}";
+    }
+
+    template <> inline std::ostream&
+    operator<<(std::ostream& os, const std::valarray<uint8_t>& a)
     {
         os << "{" << std::hex;
         for (const auto& s : a) {
