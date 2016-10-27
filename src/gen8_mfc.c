@@ -3358,12 +3358,12 @@ static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
                                                                                 mfc_context->brc.target_frame_size[0][SLICE_TYPE_P],
                                                                                 0);
 
-    mfc_context->hrd.buffer_size = (double)param_hrd->buffer_size;
-    mfc_context->hrd.current_buffer_fullness =
-        (double)(param_hrd->initial_buffer_fullness < mfc_context->hrd.buffer_size)?
-        param_hrd->initial_buffer_fullness: mfc_context->hrd.buffer_size/2.;
-    mfc_context->hrd.target_buffer_fullness = (double)mfc_context->hrd.buffer_size/2.;
-    mfc_context->hrd.buffer_capacity = (double)mfc_context->hrd.buffer_size/max_frame_size;
+    mfc_context->hrd.buffer_size[0] = (double)param_hrd->buffer_size;
+    mfc_context->hrd.current_buffer_fullness[0] =
+        (double)(param_hrd->initial_buffer_fullness < mfc_context->hrd.buffer_size[0])?
+        param_hrd->initial_buffer_fullness: mfc_context->hrd.buffer_size[0]/2.;
+    mfc_context->hrd.target_buffer_fullness[0] = (double)mfc_context->hrd.buffer_size[0]/2.;
+    mfc_context->hrd.buffer_capacity[0] = (double)mfc_context->hrd.buffer_size[0]/max_frame_size;
     mfc_context->hrd.violation_noted = 0;
 }
 
@@ -3395,7 +3395,7 @@ static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
     qp = mfc_context->brc.qp_prime_y[0][slicetype];
 
     target_frame_size = mfc_context->brc.target_frame_size[0][slicetype];
-    if (mfc_context->hrd.buffer_capacity < 5)
+    if (mfc_context->hrd.buffer_capacity[0] < 5)
         frame_size_alpha = 0;
     else
         frame_size_alpha = (double)mfc_context->brc.gop_nums[0][slicetype];
@@ -3432,14 +3432,14 @@ static int gen8_mfc_vp8_brc_postpack(struct encode_state *encode_state,
     sts = intel_mfc_update_hrd(encode_state, encoder_context, frame_bits);
 
     /* calculating QP delta as some function*/
-    x = mfc_context->hrd.target_buffer_fullness - mfc_context->hrd.current_buffer_fullness;
+    x = mfc_context->hrd.target_buffer_fullness[0] - mfc_context->hrd.current_buffer_fullness[0];
     if (x > 0) {
-        x /= mfc_context->hrd.target_buffer_fullness;
-        y = mfc_context->hrd.current_buffer_fullness;
+        x /= mfc_context->hrd.target_buffer_fullness[0];
+        y = mfc_context->hrd.current_buffer_fullness[0];
     }
     else {
-        x /= (mfc_context->hrd.buffer_size - mfc_context->hrd.target_buffer_fullness);
-        y = mfc_context->hrd.buffer_size - mfc_context->hrd.current_buffer_fullness;
+        x /= (mfc_context->hrd.buffer_size[0] - mfc_context->hrd.target_buffer_fullness[0]);
+        y = mfc_context->hrd.buffer_size[0] - mfc_context->hrd.current_buffer_fullness[0];
     }
     if (y < 0.01) y = 0.01;
     if (x > 1) x = 1;

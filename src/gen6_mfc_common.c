@@ -98,7 +98,7 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
     double frame_per_bits = 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
     double qp1_size = 0.1 * frame_per_bits;
     double qp51_size = 0.001 * frame_per_bits;
-    double bpf, factor;
+    double bpf, factor, hrd_factor;
     int inum = encoder_context->brc.num_iframes_in_gop,
         pnum = encoder_context->brc.num_pframes_in_gop,
         bnum = encoder_context->brc.num_bframes_in_gop; /* Gop structure: number of I, P, B frames in the Gop. */
@@ -110,12 +110,6 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 
     mfc_context->brc.mode = encoder_context->rate_control_mode;
 
-    mfc_context->hrd.buffer_size = encoder_context->brc.hrd_buffer_size;
-    mfc_context->hrd.current_buffer_fullness =
-        (double)(encoder_context->brc.hrd_initial_buffer_fullness < mfc_context->hrd.buffer_size) ?
-        encoder_context->brc.hrd_initial_buffer_fullness : mfc_context->hrd.buffer_size / 2.;
-    mfc_context->hrd.target_buffer_fullness = (double)mfc_context->hrd.buffer_size/2.;
-    mfc_context->hrd.buffer_capacity = (double)mfc_context->hrd.buffer_size/qp1_size;
     mfc_context->hrd.violation_noted = 0;
 
     for (i = 0; i < encoder_context->layer.num_layers; i++) {
@@ -135,6 +129,16 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
             factor = 1.0;
         else
             factor = (double)encoder_context->brc.framerate_per_100s[i] / encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1];
+
+        hrd_factor = (double)bitrate / encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1];
+
+        mfc_context->hrd.buffer_size[i] = (unsigned int)(encoder_context->brc.hrd_buffer_size * hrd_factor);
+        mfc_context->hrd.current_buffer_fullness[i] =
+            (double)(encoder_context->brc.hrd_initial_buffer_fullness < encoder_context->brc.hrd_buffer_size) ?
+            encoder_context->brc.hrd_initial_buffer_fullness : encoder_context->brc.hrd_buffer_size / 2.;
+        mfc_context->hrd.current_buffer_fullness[i] *= hrd_factor;
+        mfc_context->hrd.target_buffer_fullness[i] = (double)encoder_context->brc.hrd_buffer_size * hrd_factor / 2.;
+        mfc_context->hrd.buffer_capacity[i] = (double)encoder_context->brc.hrd_buffer_size * hrd_factor / qp1_size;
 
         if (encoder_context->layer.num_layers > 1) {
             if (i == 0) {
@@ -183,21 +187,22 @@ int intel_mfc_update_hrd(struct encode_state *encode_state,
                          int frame_bits)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    double prev_bf = mfc_context->hrd.current_buffer_fullness;
+    int layer_id = encoder_context->layer.curr_frame_layer_id;
+    double prev_bf = mfc_context->hrd.current_buffer_fullness[layer_id];
 
-    mfc_context->hrd.current_buffer_fullness -= frame_bits;
+    mfc_context->hrd.current_buffer_fullness[layer_id] -= frame_bits;
 
-    if (mfc_context->hrd.buffer_size > 0 && mfc_context->hrd.current_buffer_fullness <= 0.) {
-        mfc_context->hrd.current_buffer_fullness = prev_bf;
+    if (mfc_context->hrd.buffer_size[layer_id] > 0 && mfc_context->hrd.current_buffer_fullness[layer_id] <= 0.) {
+        mfc_context->hrd.current_buffer_fullness[layer_id] = prev_bf;
         return BRC_UNDERFLOW;
     }
     
-    mfc_context->hrd.current_buffer_fullness += mfc_context->brc.bits_per_frame[encoder_context->layer.curr_frame_layer_id];
-    if (mfc_context->hrd.buffer_size > 0 && mfc_context->hrd.current_buffer_fullness > mfc_context->hrd.buffer_size) {
+    mfc_context->hrd.current_buffer_fullness[layer_id] += mfc_context->brc.bits_per_frame[layer_id];
+    if (mfc_context->hrd.buffer_size[layer_id] > 0 && mfc_context->hrd.current_buffer_fullness[layer_id] > mfc_context->hrd.buffer_size[layer_id]) {
         if (mfc_context->brc.mode == VA_RC_VBR)
-            mfc_context->hrd.current_buffer_fullness = mfc_context->hrd.buffer_size;
+            mfc_context->hrd.current_buffer_fullness[layer_id] = mfc_context->hrd.buffer_size[layer_id];
         else {
-            mfc_context->hrd.current_buffer_fullness = prev_bf;
+            mfc_context->hrd.current_buffer_fullness[layer_id] = prev_bf;
             return BRC_OVERFLOW;
         }
     }
@@ -260,7 +265,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     qp = mfc_context->brc.qp_prime_y[next_frame_layer_id][slicetype];
 
     target_frame_size = mfc_context->brc.target_frame_size[next_frame_layer_id][slicetype];
-    if (mfc_context->hrd.buffer_capacity < 5)
+    if (mfc_context->hrd.buffer_capacity[next_frame_layer_id] < 5)
         frame_size_alpha = 0;
     else
         frame_size_alpha = (double)mfc_context->brc.gop_nums[next_frame_layer_id][slicetype];
@@ -293,14 +298,14 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     BRC_CLIP(qpn, 1, 51);
 
     /* calculating QP delta as some function*/
-    x = mfc_context->hrd.target_buffer_fullness - mfc_context->hrd.current_buffer_fullness;
+    x = mfc_context->hrd.target_buffer_fullness[next_frame_layer_id] - mfc_context->hrd.current_buffer_fullness[next_frame_layer_id];
     if (x > 0) {
-        x /= mfc_context->hrd.target_buffer_fullness;
-        y = mfc_context->hrd.current_buffer_fullness;
+        x /= mfc_context->hrd.target_buffer_fullness[next_frame_layer_id];
+        y = mfc_context->hrd.current_buffer_fullness[next_frame_layer_id];
     }
     else {
-        x /= (mfc_context->hrd.buffer_size - mfc_context->hrd.target_buffer_fullness);
-        y = mfc_context->hrd.buffer_size - mfc_context->hrd.current_buffer_fullness;
+        x /= (mfc_context->hrd.buffer_size[next_frame_layer_id] - mfc_context->hrd.target_buffer_fullness[next_frame_layer_id]);
+        y = mfc_context->hrd.buffer_size[next_frame_layer_id] - mfc_context->hrd.current_buffer_fullness[next_frame_layer_id];
     }
     if (y < 0.01) y = 0.01;
     if (x > 1) x = 1;
