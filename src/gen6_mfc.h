@@ -244,10 +244,10 @@ struct gen6_mfc_context
     } brc;
 
     struct {
-        double current_buffer_fullness;
-        double target_buffer_fullness;
-        double buffer_capacity;
-        unsigned int buffer_size;
+        double current_buffer_fullness[MAX_TEMPORAL_LAYERS];
+        double target_buffer_fullness[MAX_TEMPORAL_LAYERS];
+        double buffer_capacity[MAX_TEMPORAL_LAYERS];
+        unsigned int buffer_size[MAX_TEMPORAL_LAYERS];
         unsigned int violation_noted;
     } hrd;
 
