@@ -3567,7 +3567,8 @@ gen9_vdenc_avc_encode_picture(VADriverContextP ctx,
         vdenc_context->is_first_pass = (vdenc_context->current_pass == 0);
         vdenc_context->is_last_pass = (vdenc_context->current_pass == (vdenc_context->num_passes - 1));
 
-        intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
+        intel_batchbuffer_start_atomic_bcs_override(batch, 0x1000, BSD_RING0);
+
         intel_batchbuffer_emit_mi_flush(batch);
 
         if (vdenc_context->brc_enabled) {
