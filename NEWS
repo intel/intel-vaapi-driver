@@ -1,7 +1,7 @@
-libva-intel-driver NEWS -- summary of changes.  2016-11-xx
+libva-intel-driver NEWS -- summary of changes.  2016-11-10
 Copyright (C) 2009-2016 Intel Corporation
 
-Version 1.7.3 - DD.Nov.2016
+Version 1.7.3 - 10.Nov.2016
 * Add support for HEVC 10bit encoding on KBL
 * Integrate the Google Test Framework for unit testing
 * Add support for bitrate control per temporal layer for SVC-T
