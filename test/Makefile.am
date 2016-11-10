@@ -48,6 +48,7 @@ noinst_HEADERS =							\
 	i965_config_test.h						\
 	i965_internal_decl.h						\
 	i965_jpeg_test_data.h						\
+	i965_streamable.h						\
 	i965_test_environment.h						\
 	i965_test_fixture.h						\
 	i965_test_image_utils.h						\
