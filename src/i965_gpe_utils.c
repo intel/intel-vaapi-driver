@@ -2190,3 +2190,20 @@ intel_vpp_init_media_object_walker_parameter(struct intel_vpp_kernel_walker_para
         walker_param->local_inner_loop_unit.y = 1;
     }
 }
+
+void
+gen8_gpe_reset_binding_table(VADriverContextP ctx, struct i965_gpe_context *gpe_context)
+{
+    unsigned int *binding_table;
+    unsigned int binding_table_offset = gpe_context->surface_state_binding_table.binding_table_offset;
+    int i;
+
+    dri_bo_map(gpe_context->surface_state_binding_table.bo, 1);
+    binding_table = (unsigned int*)((char *)gpe_context->surface_state_binding_table.bo->virtual + binding_table_offset);
+
+    for (i = 0; i < gpe_context->surface_state_binding_table.max_entries; i++) {
+        *(binding_table + i) = gpe_context->surface_state_binding_table.surface_state_offset + i * SURFACE_STATE_PADDED_SIZE_GEN8;
+    }
+
+    dri_bo_unmap(gpe_context->surface_state_binding_table.bo);
+}
