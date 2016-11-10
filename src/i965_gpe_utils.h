@@ -527,4 +527,9 @@ intel_vpp_init_media_object_walker_parameter(struct intel_vpp_kernel_walker_para
 extern void
 gen8_gpe_reset_binding_table(VADriverContextP ctx, struct i965_gpe_context *gpe_context);
 
+extern void
+gen8_gpe_context_add_surface(struct i965_gpe_context *gpe_context,
+                             struct i965_gpe_surface *gpe_surface,
+                             int index);
+
 #endif /* _I965_GPE_UTILS_H_ */

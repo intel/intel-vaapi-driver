@@ -2207,3 +2207,220 @@ gen8_gpe_reset_binding_table(VADriverContextP ctx, struct i965_gpe_context *gpe_
 
     dri_bo_unmap(gpe_context->surface_state_binding_table.bo);
 }
+
+static void
+gen8_gpe_set_2d_surface_state(struct gen8_surface_state *ss,
+                              unsigned int vert_line_stride_offset,
+                              unsigned int vert_line_stride,
+                              unsigned int cacheability_control,
+                              unsigned int format,
+                              unsigned int tiling,
+                              unsigned int width,
+                              unsigned int height,
+                              unsigned int pitch,
+                              unsigned int base_offset,
+                              unsigned int y_offset)
+{
+    memset(ss, 0, sizeof(*ss));
+
+    ss->ss0.vert_line_stride_ofs = vert_line_stride_offset;
+    ss->ss0.vert_line_stride = vert_line_stride;
+    ss->ss0.surface_format = format;
+    ss->ss0.surface_type = I965_SURFACE_2D;
+
+    ss->ss1.surface_mocs = cacheability_control;
+
+    ss->ss2.width = width - 1;
+    ss->ss2.height = height - 1;
+
+    ss->ss3.pitch = pitch - 1;
+
+    ss->ss5.y_offset = y_offset;
+
+    ss->ss7.shader_chanel_select_a = HSW_SCS_ALPHA;
+    ss->ss7.shader_chanel_select_b = HSW_SCS_BLUE;
+    ss->ss7.shader_chanel_select_g = HSW_SCS_GREEN;
+    ss->ss7.shader_chanel_select_r = HSW_SCS_RED;
+
+    ss->ss8.base_addr = base_offset;
+
+    gen8_gpe_set_surface_tiling(ss, tiling);
+}
+
+static void
+gen8_gpe_set_adv_surface_state(struct gen8_surface_state2 *ss,
+                               unsigned int v_direction,
+                               unsigned int cacheability_control,
+                               unsigned int format,
+                               unsigned int tiling,
+                               unsigned int width,
+                               unsigned int height,
+                               unsigned int pitch,
+                               unsigned int base_offset,
+                               unsigned int y_cb_offset)
+{
+    memset(ss, 0, sizeof(*ss));
+
+    ss->ss1.cbcr_pixel_offset_v_direction = v_direction;
+    ss->ss1.width = width - 1;
+    ss->ss1.height = height - 1;
+
+    ss->ss2.surface_format = format;
+    ss->ss2.interleave_chroma = 1;
+    ss->ss2.pitch = pitch - 1;
+
+    ss->ss3.y_offset_for_cb = y_cb_offset;
+
+    ss->ss5.surface_object_mocs = cacheability_control;
+
+    ss->ss6.base_addr = base_offset;
+
+    gen8_gpe_set_surface2_tiling(ss, tiling);
+}
+
+static void
+gen8_gpe_set_buffer2_surface_state(struct gen8_surface_state *ss,
+                                   unsigned int cacheability_control,
+                                   unsigned int format,
+                                   unsigned int size,
+                                   unsigned int pitch,
+                                   unsigned int base_offset)
+{
+    memset(ss, 0, sizeof(*ss));
+
+    ss->ss0.surface_format = format;
+    ss->ss0.surface_type = I965_SURFACE_BUFFER;
+
+    ss->ss1.surface_mocs = cacheability_control;
+
+    ss->ss2.width = (size - 1) & 0x7F;
+    ss->ss2.height = ((size - 1) & 0x1FFF80) >> 7;
+
+    ss->ss3.depth = ((size - 1) & 0xFE00000) >> 21;
+    ss->ss3.pitch = pitch - 1;
+
+    ss->ss7.shader_chanel_select_a = HSW_SCS_ALPHA;
+    ss->ss7.shader_chanel_select_b = HSW_SCS_BLUE;
+    ss->ss7.shader_chanel_select_g = HSW_SCS_GREEN;
+    ss->ss7.shader_chanel_select_r = HSW_SCS_RED;
+
+    ss->ss8.base_addr = base_offset;
+}
+
+void
+gen8_gpe_context_add_surface(struct i965_gpe_context *gpe_context,
+                             struct i965_gpe_surface *gpe_surface,
+                             int index)
+{
+    char *buf;
+    unsigned int tiling, swizzle, width, height, pitch, tile_alignment, y_offset = 0;
+    unsigned int surface_state_offset = gpe_context->surface_state_binding_table.surface_state_offset +
+        index * SURFACE_STATE_PADDED_SIZE_GEN8;
+    unsigned int binding_table_offset = gpe_context->surface_state_binding_table.binding_table_offset +
+        index * 4;
+    struct i965_gpe_resource *gpe_resource = gpe_surface->gpe_resource;
+
+    dri_bo_get_tiling(gpe_resource->bo, &tiling, &swizzle);
+
+    dri_bo_map(gpe_context->surface_state_binding_table.bo, 1);
+    buf = (char *)gpe_context->surface_state_binding_table.bo->virtual;
+    *((unsigned int *)(buf + binding_table_offset)) = surface_state_offset;
+
+    if (gpe_surface->is_2d_surface) {
+        struct gen8_surface_state *ss = (struct gen8_surface_state *)(buf + surface_state_offset);
+        unsigned int target_offset;
+
+        width = gpe_resource->width;
+        height = gpe_resource->height;
+        pitch = gpe_resource->pitch;
+
+        if (gpe_surface->is_override_offset) {
+            y_offset = 0;
+            target_offset = gpe_surface->offset;
+        } else if (gpe_surface->is_uv_surface) {
+            height /= 2;
+
+            if (tiling == I915_TILING_Y) {
+                tile_alignment = 32;
+            } else if (tiling == I915_TILING_X) {
+                tile_alignment = 8;
+            } else
+                tile_alignment = 1;
+
+            y_offset = (gpe_resource->y_cb_offset % tile_alignment);
+            target_offset = ALIGN_FLOOR(gpe_resource->y_cb_offset, tile_alignment) * pitch;
+        } else {
+            y_offset = 0;
+            target_offset = 0;
+        }
+
+        if (gpe_surface->is_media_block_rw) {
+            width = (ALIGN(width, 4) >> 2);
+        }
+
+        gen8_gpe_set_2d_surface_state(ss,
+                                      gpe_surface->vert_line_stride_offset,
+                                      gpe_surface->vert_line_stride,
+                                      gpe_surface->cacheability_control,
+                                      gpe_surface->format,
+                                      tiling,
+                                      width, height, pitch,
+                                      gpe_resource->bo->offset64 + target_offset,
+                                      y_offset);
+
+        dri_bo_emit_reloc(gpe_context->surface_state_binding_table.bo,
+                          I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                          target_offset,
+                          surface_state_offset + offsetof(struct gen8_surface_state, ss8),
+                          gpe_resource->bo);
+    } else if (gpe_surface->is_adv_surface) {
+        struct gen8_surface_state2 *ss = (struct gen8_surface_state2 *)(buf + surface_state_offset);
+
+        width = gpe_resource->width;
+        height = gpe_resource->height;
+        pitch = gpe_resource->pitch;
+
+        gen8_gpe_set_adv_surface_state(ss,
+                                       gpe_surface->v_direction,
+                                       gpe_surface->cacheability_control,
+                                       MFX_SURFACE_PLANAR_420_8,
+                                       tiling,
+                                       width, height, pitch,
+                                       gpe_resource->bo->offset64,
+                                       gpe_resource->y_cb_offset);
+
+        dri_bo_emit_reloc(gpe_context->surface_state_binding_table.bo,
+                          I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                          0,
+                          surface_state_offset + offsetof(struct gen8_surface_state2, ss6),
+                          gpe_resource->bo);
+    } else {
+        struct gen8_surface_state *ss = (struct gen8_surface_state *)(buf + surface_state_offset);
+        unsigned int format;
+
+        assert(gpe_surface->is_buffer);
+
+        if (gpe_surface->is_raw_buffer) {
+            format = I965_SURFACEFORMAT_RAW;
+            pitch = 1;
+	} else {
+            format = I965_SURFACEFORMAT_R32_UINT;
+            pitch = sizeof(unsigned int);
+	}
+
+        gen8_gpe_set_buffer2_surface_state(ss,
+                                           gpe_surface->cacheability_control,
+                                           format,
+                                           gpe_surface->size,
+                                           pitch,
+                                           gpe_resource->bo->offset64 + gpe_surface->offset);
+
+        dri_bo_emit_reloc(gpe_context->surface_state_binding_table.bo,
+                          I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                          gpe_surface->offset,
+                          surface_state_offset + offsetof(struct gen8_surface_state, ss8),
+                          gpe_resource->bo);
+    }
+
+    dri_bo_unmap(gpe_context->surface_state_binding_table.bo);
+}
