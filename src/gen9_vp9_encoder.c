@@ -5679,31 +5679,31 @@ gen9_vp9_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *enc
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->bs_byte_count_offset;
     mi_store_reg_mem_param.mmio_offset = status_buffer->vp9_bs_frame_reg_offset;
-    gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = pak_context->res_brc_bitstream_size_buffer.bo;
     mi_store_reg_mem_param.offset = 0;
     mi_store_reg_mem_param.mmio_offset = status_buffer->vp9_bs_frame_reg_offset;
-    gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     /* Read HCP Image status */
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->image_status_mask_offset;
     mi_store_reg_mem_param.mmio_offset =
                                status_buffer->vp9_image_mask_reg_offset;
-    gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->image_status_ctrl_offset;
     mi_store_reg_mem_param.mmio_offset =
                                status_buffer->vp9_image_ctrl_reg_offset;
-    gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = pak_context->res_brc_bitstream_size_buffer.bo;
     mi_store_reg_mem_param.offset = 4;
     mi_store_reg_mem_param.mmio_offset =
                                status_buffer->vp9_image_ctrl_reg_offset;
-    gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
 

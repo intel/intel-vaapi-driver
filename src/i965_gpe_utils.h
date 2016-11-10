@@ -370,7 +370,7 @@ void gen8_gpe_mi_store_data_imm(VADriverContextP ctx,
                                 struct intel_batchbuffer *batch,
                                 struct gpe_mi_store_data_imm_parameter *params);
 
-void gen9_gpe_mi_store_register_mem(VADriverContextP ctx,
+void gen8_gpe_mi_store_register_mem(VADriverContextP ctx,
                                     struct intel_batchbuffer *batch,
                                     struct gpe_mi_store_register_mem_parameter *params);
 

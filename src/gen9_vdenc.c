@@ -1508,7 +1508,7 @@ gen9_vdenc_huc_store_huc_status2(VADriverContextP ctx,
     mi_store_register_mem_params.mmio_offset = VCS0_HUC_STATUS2;
     mi_store_register_mem_params.bo = vdenc_context->huc_status2_res.bo;
     mi_store_register_mem_params.offset = 4;
-    gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
 }
 
 static void
@@ -2356,7 +2356,7 @@ gen9_vdenc_huc_brc_update(VADriverContextP ctx,
     memset(&mi_store_register_mem_params, 0, sizeof(mi_store_register_mem_params));
     mi_store_register_mem_params.mmio_offset = VCS0_HUC_STATUS;
     mi_store_register_mem_params.bo = vdenc_context->huc_status_res.bo;
-    gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
 
     /* Write HUC_STATUS mask (1 << 31) */
     memset(&mi_store_data_imm_params, 0, sizeof(mi_store_data_imm_params));
@@ -3508,19 +3508,19 @@ gen9_vdenc_read_status(VADriverContextP ctx, struct intel_encoder_context *encod
     mi_store_register_mem_params.mmio_offset = MFC_BITSTREAM_BYTECOUNT_FRAME_REG; /* TODO: fix it if VDBOX2 is used */
     mi_store_register_mem_params.bo = vdenc_context->status_bffuer.res.bo;
     mi_store_register_mem_params.offset = base_offset + vdenc_context->status_bffuer.bytes_per_frame_offset;
-    gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
 
     /* Update DMEM buffer for BRC Update */
     for (i = 0; i < NUM_OF_BRC_PAK_PASSES; i++) {
         mi_store_register_mem_params.mmio_offset = MFC_BITSTREAM_BYTECOUNT_FRAME_REG; /* TODO: fix it if VDBOX2 is used */
         mi_store_register_mem_params.bo = vdenc_context->brc_update_dmem_res[i].bo;
         mi_store_register_mem_params.offset = 5 * sizeof(uint32_t);
-        gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
+        gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
 
         mi_store_register_mem_params.mmio_offset = MFC_IMAGE_STATUS_CTRL_REG; /* TODO: fix it if VDBOX2 is used */
         mi_store_register_mem_params.bo = vdenc_context->brc_update_dmem_res[i].bo;
         mi_store_register_mem_params.offset = 7 * sizeof(uint32_t);
-        gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
+        gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
     }
 }
 
