@@ -5622,7 +5622,7 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
     second_level_batch.is_second_level = 1;
     second_level_batch.bo = pak_context->res_pic_state_brc_write_hfw_read_buffer.bo;
 
-    gen9_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
     if (pic_param->pic_flags.bits.segmentation_enabled &&
         seg_param)
@@ -5644,13 +5644,13 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
     second_level_batch.offset = 0;
     second_level_batch.bo = pak_context->res_pak_uncompressed_input_buffer.bo;
 
-    gen9_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
     /* PAK_OBJECT */
     second_level_batch.is_second_level = 1;
     second_level_batch.offset = 0;
     second_level_batch.bo = pak_context->res_mb_code_surface.bo;
-    gen9_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
     return;
 }

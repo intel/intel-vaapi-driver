@@ -3459,7 +3459,7 @@ gen9_vdenc_mfx_vdenc_pipeline(VADriverContextP ctx,
         memset(&mi_batch_buffer_start_params, 0, sizeof(mi_batch_buffer_start_params));
         mi_batch_buffer_start_params.is_second_level = 1; /* Must be the second level batch buffer */
         mi_batch_buffer_start_params.bo = vdenc_context->second_level_batch_res.bo;
-        gen9_gpe_mi_batch_buffer_start(ctx, batch, &mi_batch_buffer_start_params);
+        gen8_gpe_mi_batch_buffer_start(ctx, batch, &mi_batch_buffer_start_params);
     }
 
     gen9_vdenc_mfx_avc_qm_state(ctx, encoder_context);

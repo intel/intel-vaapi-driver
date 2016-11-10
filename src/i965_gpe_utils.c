@@ -1611,7 +1611,7 @@ gen9_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
 }
 
 void
-gen9_gpe_mi_batch_buffer_start(VADriverContextP ctx,
+gen8_gpe_mi_batch_buffer_start(VADriverContextP ctx,
                                struct intel_batchbuffer *batch,
                                struct gpe_mi_batch_buffer_start_parameter *params)
 {
