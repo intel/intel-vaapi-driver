@@ -2440,3 +2440,76 @@ gen8_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
                   param->offset);
 
 }
+
+void
+gen8_gpe_pipe_control(VADriverContextP ctx,
+                      struct intel_batchbuffer *batch,
+                      struct gpe_pipe_control_parameter *param)
+{
+    int render_target_cache_flush_enable = CMD_PIPE_CONTROL_WC_FLUSH;
+    int dc_flush_enable = 0;
+    int state_cache_invalidation_enable = 0;
+    int constant_cache_invalidation_enable = 0;
+    int vf_cache_invalidation_enable = 0;
+    int instruction_cache_invalidation_enable = 0;
+    int post_sync_operation = CMD_PIPE_CONTROL_NOWRITE;
+    int use_global_gtt = CMD_PIPE_CONTROL_GLOBAL_GTT_GEN8;
+    int cs_stall_enable = !param->disable_cs_stall;
+
+    switch (param->flush_mode) {
+    case PIPE_CONTROL_FLUSH_WRITE_CACHE:
+        render_target_cache_flush_enable = CMD_PIPE_CONTROL_WC_FLUSH;
+        dc_flush_enable = CMD_PIPE_CONTROL_DC_FLUSH;
+        break;
+
+    case PIPE_CONTROL_FLUSH_READ_CACHE:
+        render_target_cache_flush_enable = 0;
+        state_cache_invalidation_enable = CMD_PIPE_CONTROL_SC_INVALIDATION_GEN8;
+        constant_cache_invalidation_enable = CMD_PIPE_CONTROL_CC_INVALIDATION_GEN8;
+        vf_cache_invalidation_enable = CMD_PIPE_CONTROL_VFC_INVALIDATION_GEN8;
+        instruction_cache_invalidation_enable = CMD_PIPE_CONTROL_IS_FLUSH;
+        break;
+
+    case PIPE_CONTROL_FLUSH_NONE:
+    default:
+        render_target_cache_flush_enable = 0;
+        break;
+    }
+
+    if (param->bo) {
+        post_sync_operation = CMD_PIPE_CONTROL_WRITE_QWORD;
+        use_global_gtt = CMD_PIPE_CONTROL_LOCAL_PGTT_GEN8;
+    } else {
+        post_sync_operation = CMD_PIPE_CONTROL_NOWRITE;
+        render_target_cache_flush_enable = CMD_PIPE_CONTROL_WC_FLUSH;
+        state_cache_invalidation_enable = CMD_PIPE_CONTROL_SC_INVALIDATION_GEN8;
+        constant_cache_invalidation_enable = CMD_PIPE_CONTROL_CC_INVALIDATION_GEN8;
+        vf_cache_invalidation_enable = CMD_PIPE_CONTROL_VFC_INVALIDATION_GEN8;
+        instruction_cache_invalidation_enable = CMD_PIPE_CONTROL_IS_FLUSH;
+    }
+
+    __OUT_BATCH(batch, CMD_PIPE_CONTROL | (6 - 2));
+    __OUT_BATCH(batch, (render_target_cache_flush_enable |
+                        dc_flush_enable |
+                        state_cache_invalidation_enable |
+                        constant_cache_invalidation_enable |
+                        vf_cache_invalidation_enable |
+                        instruction_cache_invalidation_enable |
+                        post_sync_operation |
+                        use_global_gtt |
+                        cs_stall_enable |
+                        CMD_PIPE_CONTROL_FLUSH_ENABLE));
+
+    if (param->bo)
+        __OUT_RELOC64(batch,
+                      param->bo,
+                      I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_RENDER,
+                      param->offset);
+    else {
+        __OUT_BATCH(batch, 0);
+        __OUT_BATCH(batch, 0);
+    }
+
+    __OUT_BATCH(batch, param->dw0);
+    __OUT_BATCH(batch, param->dw1);
+}

@@ -76,12 +76,18 @@
 #define CMD_PIPE_CONTROL_IS_FLUSH               (1 << 11)
 #define CMD_PIPE_CONTROL_TC_FLUSH               (1 << 10)
 #define CMD_PIPE_CONTROL_NOTIFY_ENABLE          (1 << 8)
+#define CMD_PIPE_CONTROL_FLUSH_ENABLE           (1 << 7)
 #define CMD_PIPE_CONTROL_DC_FLUSH               (1 << 5)
 #define CMD_PIPE_CONTROL_GLOBAL_GTT             (1 << 2)
 #define CMD_PIPE_CONTROL_LOCAL_PGTT             (0 << 2)
 #define CMD_PIPE_CONTROL_STALL_AT_SCOREBOARD    (1 << 1)
 #define CMD_PIPE_CONTROL_DEPTH_CACHE_FLUSH      (1 << 0)
 
+#define CMD_PIPE_CONTROL_GLOBAL_GTT_GEN8        (1 << 24)
+#define CMD_PIPE_CONTROL_LOCAL_PGTT_GEN8        (0 << 24)
+#define CMD_PIPE_CONTROL_VFC_INVALIDATION_GEN8  (1 << 4)
+#define CMD_PIPE_CONTROL_CC_INVALIDATION_GEN8   (1 << 3)
+#define CMD_PIPE_CONTROL_SC_INVALIDATION_GEN8   (1 << 2)
 
 struct intel_batchbuffer;
 

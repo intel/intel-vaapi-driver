@@ -73,6 +73,20 @@ struct gpe_dynamic_state_parameter
     unsigned int sampler_offset;
 };
 
+#define PIPE_CONTROL_FLUSH_NONE         0
+#define PIPE_CONTROL_FLUSH_WRITE_CACHE  1
+#define PIPE_CONTROL_FLUSH_READ_CACHE   2
+
+struct gpe_pipe_control_parameter
+{
+    dri_bo *bo;
+    unsigned int offset;
+    unsigned int flush_mode;
+    unsigned int disable_cs_stall;
+    unsigned int dw0;
+    unsigned int dw1;
+};
+
 struct i965_gpe_context
 {
     struct {
@@ -536,5 +550,10 @@ extern void
 gen8_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
                                          struct intel_batchbuffer *batch,
                                          struct gpe_mi_conditional_batch_buffer_end_parameter *param);
+
+extern void
+gen8_gpe_pipe_control(VADriverContextP ctx,
+                      struct intel_batchbuffer *batch,
+                      struct gpe_pipe_control_parameter *param);
 
 #endif /* _I965_GPE_UTILS_H_ */
