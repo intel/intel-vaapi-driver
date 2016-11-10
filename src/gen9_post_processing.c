@@ -608,7 +608,7 @@ gen9_run_kernel_media_object_walker(VADriverContextP ctx,
     intel_batchbuffer_emit_mi_flush(batch);
 
     gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
-    gen9_gpe_media_object_walker(ctx, gpe_context, batch, param);
+    gen8_gpe_media_object_walker(ctx, gpe_context, batch, param);
     gen8_gpe_media_state_flush(ctx, gpe_context, batch);
 
     gen9_gpe_pipeline_end(ctx, gpe_context, batch);

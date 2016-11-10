@@ -2103,7 +2103,7 @@ gen8_gpe_media_object(VADriverContextP ctx,
 }
 
 void
-gen9_gpe_media_object_walker(VADriverContextP ctx,
+gen8_gpe_media_object_walker(VADriverContextP ctx,
                              struct i965_gpe_context *gpe_context,
                              struct intel_batchbuffer *batch,
                              struct gpe_media_object_walker_parameter *param)
