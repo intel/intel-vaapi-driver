@@ -711,6 +711,8 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         if ((HAS_MPEG2_DECODING(i965) && entrypoint == VAEntrypointVLD) ||
             (HAS_MPEG2_ENCODING(i965) && entrypoint == VAEntrypointEncSlice)) {
             va_status = VA_STATUS_SUCCESS;
+        } else if (!HAS_MPEG2_DECODING(i965) && !HAS_MPEG2_ENCODING(i965)){
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
@@ -723,6 +725,9 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
             (HAS_H264_ENCODING(i965) && entrypoint == VAEntrypointEncSlice) ||
             (HAS_LP_H264_ENCODING(i965) && entrypoint == VAEntrypointEncSliceLP)) {
             va_status = VA_STATUS_SUCCESS;
+        } else if (!HAS_H264_DECODING(i965) && !HAS_H264_ENCODING(i965) &&
+                   !HAS_LP_H264_ENCODING(i965)){
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
@@ -733,6 +738,8 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
     case VAProfileVC1Advanced:
         if (HAS_VC1_DECODING(i965) && entrypoint == VAEntrypointVLD) {
             va_status = VA_STATUS_SUCCESS;
+        } else if (!HAS_VC1_DECODING(i965)) {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
@@ -741,6 +748,8 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
     case VAProfileNone:
         if (HAS_VPP(i965) && VAEntrypointVideoProc == entrypoint) {
             va_status = VA_STATUS_SUCCESS;
+        } else if (!HAS_VPP(i965)){
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
@@ -750,6 +759,8 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         if ((HAS_JPEG_DECODING(i965) && entrypoint == VAEntrypointVLD) ||
             (HAS_JPEG_ENCODING(i965) && entrypoint == VAEntrypointEncPicture)) {
             va_status = VA_STATUS_SUCCESS;
+        } else if (!HAS_JPEG_DECODING(i965) && !HAS_JPEG_ENCODING(i965)){
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
@@ -759,6 +770,8 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         if ((HAS_VP8_DECODING(i965) && entrypoint == VAEntrypointVLD) ||
             (HAS_VP8_ENCODING(i965) && entrypoint == VAEntrypointEncSlice)) {
             va_status = VA_STATUS_SUCCESS;
+        } else if (!HAS_VP8_DECODING(i965) && !HAS_VP8_ENCODING(i965)){
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
@@ -768,8 +781,12 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
     case VAProfileH264StereoHigh:
         if ((HAS_H264_MVC_DECODING_PROFILE(i965, profile) &&
              entrypoint == VAEntrypointVLD) ||
-            (HAS_H264_MVC_ENCODING(i965) && entrypoint == VAEntrypointEncSlice)) {
+            (HAS_H264_MVC_ENCODING(i965) &&
+             entrypoint == VAEntrypointEncSlice)) {
             va_status = VA_STATUS_SUCCESS;
+        } else if(!HAS_H264_MVC_DECODING_PROFILE(i965, profile) &&
+                  !HAS_H264_MVC_ENCODING(i965)) {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
         }
@@ -778,32 +795,46 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
 
     case VAProfileHEVCMain:
         if ((HAS_HEVC_DECODING(i965) && (entrypoint == VAEntrypointVLD))||
-            (HAS_HEVC_ENCODING(i965) && (entrypoint == VAEntrypointEncSlice)))
+            (HAS_HEVC_ENCODING(i965) && (entrypoint == VAEntrypointEncSlice))) {
             va_status = VA_STATUS_SUCCESS;
-        else
+        } else if (!HAS_HEVC_DECODING(i965) && !HAS_HEVC_ENCODING(i965)) {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
 
         break;
 
     case VAProfileHEVCMain10:
         if ((HAS_HEVC10_DECODING(i965) && (entrypoint == VAEntrypointVLD))||
-            (HAS_HEVC10_ENCODING(i965) && (entrypoint == VAEntrypointEncSlice)))
+            (HAS_HEVC10_ENCODING(i965) &&
+             (entrypoint == VAEntrypointEncSlice))) {
             va_status = VA_STATUS_SUCCESS;
-        else
+        } else if (!HAS_HEVC10_DECODING(i965) && !HAS_HEVC10_ENCODING(i965)) {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
 
         break;
 
     case VAProfileVP9Profile0:
     case VAProfileVP9Profile2:
-        if ((HAS_VP9_DECODING_PROFILE(i965, profile)) && (entrypoint == VAEntrypointVLD))
+        if ((HAS_VP9_DECODING_PROFILE(i965, profile)) &&
+            (entrypoint == VAEntrypointVLD)) {
             va_status = VA_STATUS_SUCCESS;
-       else if ((HAS_VP9_ENCODING(i965)) && (entrypoint == VAEntrypointEncSlice))
+        } else if ((HAS_VP9_ENCODING(i965)) &&
+                   (entrypoint == VAEntrypointEncSlice)) {
             va_status = VA_STATUS_SUCCESS;
-        else if ((profile == VAProfileVP9Profile0) && i965->wrapper_pdrvctx)
+        } else if (profile == VAProfileVP9Profile0 && i965->wrapper_pdrvctx) {
             va_status = VA_STATUS_SUCCESS;
-        else
+        } else if(!HAS_VP9_DECODING_PROFILE(i965, profile) &&
+                  !HAS_VP9_ENCODING(i965) && !i965->wrapper_pdrvctx) {
+            va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+
         break;
 
     default:
