@@ -532,4 +532,9 @@ gen8_gpe_context_add_surface(struct i965_gpe_context *gpe_context,
                              struct i965_gpe_surface *gpe_surface,
                              int index);
 
+extern void
+gen8_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
+                                         struct intel_batchbuffer *batch,
+                                         struct gpe_mi_conditional_batch_buffer_end_parameter *param);
+
 #endif /* _I965_GPE_UTILS_H_ */

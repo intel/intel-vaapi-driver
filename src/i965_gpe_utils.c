@@ -2424,3 +2424,19 @@ gen8_gpe_context_add_surface(struct i965_gpe_context *gpe_context,
 
     dri_bo_unmap(gpe_context->surface_state_binding_table.bo);
 }
+
+void
+gen8_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
+                                         struct intel_batchbuffer *batch,
+                                         struct gpe_mi_conditional_batch_buffer_end_parameter *param)
+{
+    __OUT_BATCH(batch, (MI_CONDITIONAL_BATCH_BUFFER_END |
+                        (1 << 21) |
+                        (4 - 2))); /* Always use PPGTT */
+    __OUT_BATCH(batch, param->compare_data);
+    __OUT_RELOC64(batch,
+                  param->bo,
+                  I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_INSTRUCTION, 0,
+                  param->offset);
+
+}
