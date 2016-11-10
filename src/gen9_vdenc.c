@@ -1875,7 +1875,7 @@ gen9_vdenc_huc_brc_init_reset(VADriverContextP ctx,
 
     memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
     mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
-    gen9_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
 }
 
 static void
@@ -2287,7 +2287,7 @@ gen9_vdenc_huc_brc_update(VADriverContextP ctx,
 
     memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
     mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
-    gen9_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
 
     if (!vdenc_context->brc_initted || vdenc_context->brc_need_reset) {
         struct gpe_mi_conditional_batch_buffer_end_parameter mi_conditional_batch_buffer_end_params;
@@ -2350,7 +2350,7 @@ gen9_vdenc_huc_brc_update(VADriverContextP ctx,
 
     memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
     mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
-    gen9_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
 
     /* Store HUC_STATUS */
     memset(&mi_store_register_mem_params, 0, sizeof(mi_store_register_mem_params));
@@ -3407,7 +3407,7 @@ gen9_vdenc_mfx_vdenc_avc_slices(VADriverContextP ctx,
 
     memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
     mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
-    gen9_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
 }
 
 static void
@@ -3502,7 +3502,7 @@ gen9_vdenc_read_status(VADriverContextP ctx, struct intel_encoder_context *encod
     int i;
 
     memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
-    gen9_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
 
     memset(&mi_store_register_mem_params, 0, sizeof(mi_store_register_mem_params));
     mi_store_register_mem_params.mmio_offset = MFC_BITSTREAM_BYTECOUNT_FRAME_REG; /* TODO: fix it if VDBOX2 is used */

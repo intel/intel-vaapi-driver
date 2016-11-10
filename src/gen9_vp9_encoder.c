@@ -5673,7 +5673,7 @@ gen9_vp9_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *enc
     status_buffer = &(vp9_state->status_buffer);
 
     memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
-    gen9_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
 
     memset(&mi_store_reg_mem_param, 0, sizeof(mi_store_reg_mem_param));
     mi_store_reg_mem_param.bo = status_buffer->bo;
@@ -5705,7 +5705,7 @@ gen9_vp9_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *enc
                                status_buffer->vp9_image_ctrl_reg_offset;
     gen9_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
-    gen9_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
 
     return;
 }

@@ -362,7 +362,7 @@ void *i965_map_gpe_resource(struct i965_gpe_resource *res);
 
 void i965_unmap_gpe_resource(struct i965_gpe_resource *res);
 
-void gen9_gpe_mi_flush_dw(VADriverContextP ctx,
+void gen8_gpe_mi_flush_dw(VADriverContextP ctx,
                           struct intel_batchbuffer *batch,
                           struct gpe_mi_flush_dw_parameter *params);
 
