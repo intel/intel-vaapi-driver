@@ -1087,7 +1087,7 @@ gen9_run_kernel_media_object(VADriverContextP ctx,
     mi_store_data_imm.bo = status_buffer->bo;
     mi_store_data_imm.offset = status_buffer->media_index_offset;
     mi_store_data_imm.dw0 = media_function;
-    gen9_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
+    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
 
     intel_batchbuffer_emit_mi_flush(batch);
     gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
@@ -1126,7 +1126,7 @@ gen9_run_kernel_media_object_walker(VADriverContextP ctx,
     mi_store_data_imm.bo = status_buffer->bo;
     mi_store_data_imm.offset = status_buffer->media_index_offset;
     mi_store_data_imm.dw0 = media_function;
-    gen9_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
+    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
 
     gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
     gen8_gpe_media_object_walker(ctx, gpe_context, batch, param);

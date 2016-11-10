@@ -366,7 +366,7 @@ void gen9_gpe_mi_flush_dw(VADriverContextP ctx,
                           struct intel_batchbuffer *batch,
                           struct gpe_mi_flush_dw_parameter *params);
 
-void gen9_gpe_mi_store_data_imm(VADriverContextP ctx,
+void gen8_gpe_mi_store_data_imm(VADriverContextP ctx,
                                 struct intel_batchbuffer *batch,
                                 struct gpe_mi_store_data_imm_parameter *params);
 

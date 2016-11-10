@@ -1501,7 +1501,7 @@ gen9_vdenc_huc_store_huc_status2(VADriverContextP ctx,
     mi_store_data_imm_params.bo = vdenc_context->huc_status2_res.bo;
     mi_store_data_imm_params.offset = 0;
     mi_store_data_imm_params.dw0 = (1 << 6);
-    gen9_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm_params);
+    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm_params);
 
     /* Store HUC_STATUS2 */
     memset(&mi_store_register_mem_params, 0, sizeof(mi_store_register_mem_params));
@@ -2363,7 +2363,7 @@ gen9_vdenc_huc_brc_update(VADriverContextP ctx,
     mi_store_data_imm_params.bo = vdenc_context->huc_status_res.bo;
     mi_store_data_imm_params.offset = 4;
     mi_store_data_imm_params.dw0 = (1 << 31);
-    gen9_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm_params);
+    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm_params);
 }
 
 static void
