@@ -37,6 +37,52 @@ VAStatus EntrypointNotSupported()
     return VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
 }
 
+//H264*NotSupported functions report properly if profile is not supported or
+//only entrypoint is not supported
+VAStatus H264NotSupported()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (!HAS_H264_DECODING(i965)
+        && !HAS_LP_H264_ENCODING(i965))
+        return ProfileNotSupported();
+
+    return EntrypointNotSupported();
+}
+
+VAStatus H264LPNotSupported()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (!HAS_H264_DECODING(i965)
+        && !HAS_H264_ENCODING(i965))
+        return ProfileNotSupported();
+
+    return EntrypointNotSupported();
+}
+
+VAStatus H264MVCNotSupported()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (!HAS_H264_MVC_DECODING(i965))
+        return ProfileNotSupported();
+
+    return EntrypointNotSupported();
+}
+
 VAStatus HasEncodeSupport()
 {
     I965TestEnvironment *env(I965TestEnvironment::instance());
@@ -45,8 +91,10 @@ VAStatus HasEncodeSupport()
     struct i965_driver_data *i965(*env);
     EXPECT_PTR(i965);
 
-    return HAS_H264_ENCODING(i965) ? VA_STATUS_SUCCESS :
-        EntrypointNotSupported();
+    if (HAS_H264_ENCODING(i965))
+        return VA_STATUS_SUCCESS;
+
+    return H264NotSupported();
 }
 
 VAStatus HasLPEncodeSupport()
@@ -60,8 +108,10 @@ VAStatus HasLPEncodeSupport()
     if (IS_SKL(i965->intel.device_info))
         return VA_STATUS_SUCCESS;
 
-    return HAS_LP_H264_ENCODING(i965) ? VA_STATUS_SUCCESS :
-        EntrypointNotSupported();
+    if (HAS_LP_H264_ENCODING(i965))
+        return VA_STATUS_SUCCESS;
+
+    return H264LPNotSupported();
 }
 
 VAStatus HasMVCEncodeSupport()
@@ -72,8 +122,10 @@ VAStatus HasMVCEncodeSupport()
     struct i965_driver_data *i965(*env);
     EXPECT_PTR(i965);
 
-    return HAS_H264_MVC_ENCODING(i965) ? VA_STATUS_SUCCESS :
-        EntrypointNotSupported();
+    if (HAS_H264_MVC_ENCODING(i965))
+        return VA_STATUS_SUCCESS;
+
+    return H264MVCNotSupported();
 }
 
 static const std::vector<ConfigTestInput> inputs = {
@@ -83,23 +135,23 @@ static const std::vector<ConfigTestInput> inputs = {
 
     {VAProfileH264ConstrainedBaseline, VAEntrypointEncSlice, &HasEncodeSupport},
     {VAProfileH264ConstrainedBaseline, VAEntrypointEncSliceLP, &HasLPEncodeSupport},
-    {VAProfileH264ConstrainedBaseline, VAEntrypointEncPicture, &EntrypointNotSupported},
+    {VAProfileH264ConstrainedBaseline, VAEntrypointEncPicture, &H264NotSupported},
 
     {VAProfileH264Main, VAEntrypointEncSlice, &HasEncodeSupport},
     {VAProfileH264Main, VAEntrypointEncSliceLP, &HasLPEncodeSupport},
-    {VAProfileH264Main, VAEntrypointEncPicture, &EntrypointNotSupported},
+    {VAProfileH264Main, VAEntrypointEncPicture, &H264NotSupported},
 
     {VAProfileH264High, VAEntrypointEncSlice, &HasEncodeSupport},
     {VAProfileH264High, VAEntrypointEncSliceLP, &HasLPEncodeSupport},
-    {VAProfileH264High, VAEntrypointEncPicture, &EntrypointNotSupported},
+    {VAProfileH264High, VAEntrypointEncPicture, &H264NotSupported},
 
     {VAProfileH264MultiviewHigh, VAEntrypointEncSlice, &HasMVCEncodeSupport},
-    {VAProfileH264MultiviewHigh, VAEntrypointEncSliceLP, &EntrypointNotSupported},
-    {VAProfileH264MultiviewHigh, VAEntrypointEncPicture, &EntrypointNotSupported},
+    {VAProfileH264MultiviewHigh, VAEntrypointEncSliceLP, &H264MVCNotSupported},
+    {VAProfileH264MultiviewHigh, VAEntrypointEncPicture, &H264MVCNotSupported},
 
     {VAProfileH264StereoHigh, VAEntrypointEncSlice, &HasMVCEncodeSupport},
-    {VAProfileH264StereoHigh, VAEntrypointEncSliceLP, &EntrypointNotSupported},
-    {VAProfileH264StereoHigh, VAEntrypointEncPicture, &EntrypointNotSupported},
+    {VAProfileH264StereoHigh, VAEntrypointEncSliceLP, &H264MVCNotSupported},
+    {VAProfileH264StereoHigh, VAEntrypointEncPicture, &H264MVCNotSupported},
 };
 
 INSTANTIATE_TEST_CASE_P(

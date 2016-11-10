@@ -27,6 +27,46 @@
 namespace AVC {
 namespace Decode {
 
+VAStatus ProfileNotSupported()
+{
+    return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+}
+
+VAStatus EntrypointNotSupported()
+{
+    return VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+}
+
+// H264*NotSupported functions report properly if profile is not supported or
+// only entrypoint is not supported
+VAStatus H264NotSupported()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (!HAS_H264_ENCODING(i965)
+        && !HAS_LP_H264_ENCODING(i965))
+        return ProfileNotSupported();
+
+    return EntrypointNotSupported();
+}
+
+VAStatus H264MVCNotSupported()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (!HAS_H264_MVC_ENCODING(i965))
+        return ProfileNotSupported();
+
+    return EntrypointNotSupported();
+}
 VAStatus HasDecodeSupport()
 {
     I965TestEnvironment *env(I965TestEnvironment::instance());
@@ -35,11 +75,13 @@ VAStatus HasDecodeSupport()
     struct i965_driver_data *i965(*env);
     EXPECT_PTR(i965);
 
-    return HAS_H264_DECODING(i965) ? VA_STATUS_SUCCESS :
-        VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+    if (HAS_H264_DECODING(i965))
+        return VA_STATUS_SUCCESS;
+
+    return H264NotSupported();
 }
 
-VAStatus HasMVCDecodeSupport(const VAProfile& profile)
+VAStatus HasMVCDecodeSupport()
 {
     I965TestEnvironment *env(I965TestEnvironment::instance());
     EXPECT_PTR(env);
@@ -47,22 +89,23 @@ VAStatus HasMVCDecodeSupport(const VAProfile& profile)
     struct i965_driver_data *i965(*env);
     EXPECT_PTR(i965);
 
-    return HAS_H264_MVC_DECODING_PROFILE(i965, profile) ? VA_STATUS_SUCCESS :
-        VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+    if (HAS_H264_MVC_DECODING(i965))
+        return VA_STATUS_SUCCESS;
+
+    return H264MVCNotSupported();
 }
 
 static const std::vector<ConfigTestInput> inputs = {
-    {VAProfileH264Baseline, VAEntrypointVLD,
-        []{return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;}},
+    { VAProfileH264Baseline, VAEntrypointVLD, &ProfileNotSupported },
 
-    {VAProfileH264ConstrainedBaseline, VAEntrypointVLD, &HasDecodeSupport},
-    {VAProfileH264Main, VAEntrypointVLD, &HasDecodeSupport},
-    {VAProfileH264High, VAEntrypointVLD, &HasDecodeSupport},
+    { VAProfileH264ConstrainedBaseline, VAEntrypointVLD, &HasDecodeSupport },
+    { VAProfileH264Main, VAEntrypointVLD, &HasDecodeSupport },
+    { VAProfileH264High, VAEntrypointVLD, &HasDecodeSupport },
 
-    {VAProfileH264MultiviewHigh, VAEntrypointVLD,
-        std::bind(&HasMVCDecodeSupport, VAProfileH264MultiviewHigh)},
-    {VAProfileH264StereoHigh, VAEntrypointVLD,
-        std::bind(&HasMVCDecodeSupport, VAProfileH264StereoHigh)},
+    { VAProfileH264MultiviewHigh, VAEntrypointVLD,
+      &HasMVCDecodeSupport },
+    { VAProfileH264StereoHigh, VAEntrypointVLD,
+      &HasMVCDecodeSupport },
 };
 
 INSTANTIATE_TEST_CASE_P(

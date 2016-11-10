@@ -27,9 +27,28 @@
 namespace JPEG {
 namespace Encode {
 
+VAStatus ProfileNotSupported()
+{
+    return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+}
+
 VAStatus EntrypointNotSupported()
 {
     return VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+}
+
+VAStatus NotSupported()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (!HAS_JPEG_DECODING(i965))
+        return ProfileNotSupported();
+
+    return EntrypointNotSupported();
 }
 
 VAStatus HasEncodeSupport()
@@ -40,14 +59,16 @@ VAStatus HasEncodeSupport()
     struct i965_driver_data *i965(*env);
     EXPECT_PTR(i965);
 
-    return HAS_JPEG_ENCODING(i965) ? VA_STATUS_SUCCESS :
-        EntrypointNotSupported();
+    if (HAS_JPEG_ENCODING(i965))
+        return VA_STATUS_SUCCESS;
+
+    return NotSupported();
 }
 
 static const std::vector<ConfigTestInput> inputs = {
     {VAProfileJPEGBaseline, VAEntrypointEncPicture, &HasEncodeSupport},
-    {VAProfileJPEGBaseline, VAEntrypointEncSlice, &EntrypointNotSupported},
-    {VAProfileJPEGBaseline, VAEntrypointEncSliceLP, &EntrypointNotSupported},
+    {VAProfileJPEGBaseline, VAEntrypointEncSlice, &NotSupported},
+    {VAProfileJPEGBaseline, VAEntrypointEncSliceLP, &NotSupported},
 };
 
 INSTANTIATE_TEST_CASE_P(
