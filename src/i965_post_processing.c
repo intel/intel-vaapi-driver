@@ -6034,7 +6034,8 @@ i965_proc_picture(VADriverContextP ctx,
                                      VA_RT_FORMAT_YUV420,
                                      1,
                                      &out_surface_id);
-        assert(status == VA_STATUS_SUCCESS);
+        if (status != VA_STATUS_SUCCESS)
+            goto error;
         tmp_surfaces[num_tmp_surfaces++] = out_surface_id;
         obj_surface = SURFACE(out_surface_id);
         assert(obj_surface);
@@ -6053,7 +6054,8 @@ i965_proc_picture(VADriverContextP ctx,
                                        &src_rect,
                                        &dst_surface,
                                        &dst_rect);
-        assert(status == VA_STATUS_SUCCESS);
+        if (status != VA_STATUS_SUCCESS)
+            goto error;
 
         src_surface.base = (struct object_base *)obj_surface;
         src_surface.type = I965_SURFACE_TYPE_SURFACE;

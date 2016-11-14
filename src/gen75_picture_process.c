@@ -286,7 +286,9 @@ gen75_proc_picture(VADriverContextP ctx,
         if(pipeline_param->num_filters == 0 || pipeline_param->filters == NULL ){
             /* implicity surface format coversion and scaling */
 
-            gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
+            status = gen75_vpp_fmt_cvt(ctx, profile, codec_state, hw_context);
+            if(status != VA_STATUS_SUCCESS)
+                goto error;
         }else if(pipeline_param->num_filters == 1) {
            struct object_buffer * obj_buf = BUFFER((*filter_id) + 0);
 
