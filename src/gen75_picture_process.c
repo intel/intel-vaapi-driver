@@ -53,11 +53,6 @@ gen75_vpp_fmt_cvt(VADriverContextP ctx,
     struct intel_video_process_context *proc_ctx = 
              (struct intel_video_process_context *)hw_context;
   
-    /* implicity surface format coversion and scaling */
-    if(proc_ctx->vpp_fmt_cvt_ctx == NULL){
-         proc_ctx->vpp_fmt_cvt_ctx = i965_proc_context_init(ctx, NULL);
-    }
-
     va_status = i965_proc_picture(ctx, profile, codec_state,
                                   proc_ctx->vpp_fmt_cvt_ctx);
 
@@ -146,6 +141,12 @@ gen75_proc_picture(VADriverContextP ctx,
     if (pipeline_param->num_filters && !pipeline_param->filters) {
         status = VA_STATUS_ERROR_INVALID_PARAMETER;
         goto error;
+    }
+
+    if (pipeline_param->num_filters == 0 || pipeline_param->filters == NULL ){
+        /* explicitly initialize the VPP based on Render ring */
+        if (proc_ctx->vpp_fmt_cvt_ctx == NULL)
+            proc_ctx->vpp_fmt_cvt_ctx = i965_proc_context_init(ctx, NULL);
     }
 
     if (!obj_dst_surf->bo) {
