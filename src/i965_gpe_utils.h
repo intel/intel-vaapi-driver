@@ -417,6 +417,7 @@ struct i965_gpe_surface
     unsigned int is_uv_surface:1;
     unsigned int is_media_block_rw:1;
     unsigned int is_raw_buffer:1;
+    unsigned int is_16bpp     :1;
 
     unsigned int vert_line_stride_offset;
     unsigned int vert_line_stride;

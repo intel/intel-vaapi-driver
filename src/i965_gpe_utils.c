@@ -1864,8 +1864,12 @@ gen9_gpe_context_add_surface(struct i965_gpe_context *gpe_context,
         height = gpe_resource->height / 2;
         pitch = gpe_resource->pitch;
 
-        if (gpe_surface->is_media_block_rw)
-            width = (ALIGN(width, 4) >> 2);
+        if (gpe_surface->is_media_block_rw) {
+            if (gpe_surface->is_16bpp)
+                width = (ALIGN(width * 2, 4) >> 2);
+            else
+                width = (ALIGN(width, 4) >> 2);
+        }
 
         if (tiling == I915_TILING_Y) {
             tile_alignment = 32;
@@ -1897,8 +1901,12 @@ gen9_gpe_context_add_surface(struct i965_gpe_context *gpe_context,
         height = gpe_resource->height;
         pitch = gpe_resource->pitch;
 
-        if (gpe_surface->is_media_block_rw)
-            width = (ALIGN(width, 4) >> 2);
+        if (gpe_surface->is_media_block_rw) {
+            if (gpe_surface->is_16bpp)
+                width = (ALIGN(width * 2, 4) >> 2);
+            else
+                width = (ALIGN(width, 4) >> 2);
+        }
 
         gen9_gpe_set_2d_surface_state(ss,
                                       gpe_surface->cacheability_control,
