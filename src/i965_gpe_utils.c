@@ -2082,3 +2082,51 @@ gen9_gpe_media_object_walker(VADriverContextP ctx,
 
     ADVANCE_BATCH(batch);
 }
+
+
+void
+intel_vpp_init_media_object_walker_parameter(struct intel_vpp_kernel_walker_parameter *kernel_walker_param,
+                                        struct gpe_media_object_walker_parameter *walker_param)
+{
+    memset(walker_param, 0, sizeof(*walker_param));
+
+    walker_param->use_scoreboard = kernel_walker_param->use_scoreboard;
+
+    walker_param->block_resolution.x = kernel_walker_param->resolution_x;
+    walker_param->block_resolution.y = kernel_walker_param->resolution_y;
+
+    walker_param->global_resolution.x = kernel_walker_param->resolution_x;
+    walker_param->global_resolution.y = kernel_walker_param->resolution_y;
+
+    walker_param->global_outer_loop_stride.x = kernel_walker_param->resolution_x;
+    walker_param->global_outer_loop_stride.y = 0;
+
+    walker_param->global_inner_loop_unit.x = 0;
+    walker_param->global_inner_loop_unit.y = kernel_walker_param->resolution_y;
+
+    walker_param->local_loop_exec_count = 0xFFFF;  //MAX VALUE
+    walker_param->global_loop_exec_count = 0xFFFF;  //MAX VALUE
+
+    if (kernel_walker_param->no_dependency) {
+        /* The no_dependency is used for VPP */
+        walker_param->scoreboard_mask = 0;
+        walker_param->use_scoreboard = 0;
+        // Raster scan walking pattern
+        walker_param->local_outer_loop_stride.x = 0;
+        walker_param->local_outer_loop_stride.y = 1;
+        walker_param->local_inner_loop_unit.x = 1;
+        walker_param->local_inner_loop_unit.y = 0;
+        walker_param->local_end.x = kernel_walker_param->resolution_x - 1;
+        walker_param->local_end.y = 0;
+    } else {
+        walker_param->local_end.x = 0;
+        walker_param->local_end.y = 0;
+
+        // 26 degree
+        walker_param->scoreboard_mask = 0x0F;
+        walker_param->local_outer_loop_stride.x = 1;
+        walker_param->local_outer_loop_stride.y = 0;
+        walker_param->local_inner_loop_unit.x = -2;
+        walker_param->local_inner_loop_unit.y = 1;
+    }
+}

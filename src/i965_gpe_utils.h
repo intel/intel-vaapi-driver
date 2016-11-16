@@ -508,4 +508,18 @@ gen9_gpe_media_object_walker(VADriverContextP ctx,
                              struct intel_batchbuffer *batch,
                              struct gpe_media_object_walker_parameter *param);
 
+
+struct intel_vpp_kernel_walker_parameter
+{
+    unsigned int                use_scoreboard;
+    unsigned int                scoreboard_mask;
+    unsigned int                no_dependency;
+    unsigned int                resolution_x;
+    unsigned int                resolution_y;
+};
+
+extern void
+intel_vpp_init_media_object_walker_parameter(struct intel_vpp_kernel_walker_parameter *kernel_walker_param,
+                                             struct gpe_media_object_walker_parameter *walker_param);
+
 #endif /* _I965_GPE_UTILS_H_ */
