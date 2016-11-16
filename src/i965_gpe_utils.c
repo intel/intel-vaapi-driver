@@ -1684,7 +1684,7 @@ gen8_gpe_setup_interface_data(VADriverContextP ctx,
         memset(desc, 0, sizeof(*desc));
         desc->desc0.kernel_start_pointer = kernel->kernel_offset >> 6;
         desc->desc3.sampler_count = 0;
-        desc->desc3.sampler_state_pointer = gpe_context->sampler_offset;
+        desc->desc3.sampler_state_pointer = (gpe_context->sampler_offset >> 5);
         desc->desc4.binding_table_entry_count = 0;
         desc->desc4.binding_table_pointer = (gpe_context->surface_state_binding_table.binding_table_offset >> 5);
         desc->desc5.constant_urb_entry_read_offset = 0;
