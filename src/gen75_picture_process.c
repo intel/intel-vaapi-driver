@@ -208,12 +208,20 @@ gen75_proc_picture(VADriverContextP ctx,
             intel_gpe_support_10bit_scaling(proc_ctx)) {
             struct i965_proc_context *gpe_proc_ctx;
             struct i965_surface src_surface, dst_surface;
+            unsigned int tmp_width, tmp_x;
+
 
             src_surface.base = (struct object_base *)obj_src_surf;
             src_surface.type = I965_SURFACE_TYPE_SURFACE;
             dst_surface.base = (struct object_base *)obj_dst_surf;
             dst_surface.type = I965_SURFACE_TYPE_SURFACE;
             gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
+
+            tmp_x = ALIGN_FLOOR(dst_rect.x, 2);
+            tmp_width = dst_rect.x + dst_rect.width;
+            tmp_width = tmp_width - tmp_x;
+            dst_rect.x = tmp_x;
+            dst_rect.width = tmp_width;
 
             return gen9_p010_scaling_post_processing(ctx, &gpe_proc_ctx->pp_context,
                                                      &src_surface, &src_rect,
