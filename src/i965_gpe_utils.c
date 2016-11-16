@@ -1856,7 +1856,35 @@ gen9_gpe_context_add_surface(struct i965_gpe_context *gpe_context,
     buf = (char *)gpe_context->surface_state_binding_table.bo->virtual;
     *((unsigned int *)(buf + binding_table_offset)) = surface_state_offset;
 
-    if (gpe_surface->is_2d_surface && gpe_surface->is_uv_surface) {
+    if (gpe_surface->is_2d_surface && gpe_surface->is_override_offset) {
+        struct gen9_surface_state *ss = (struct gen9_surface_state *)(buf + surface_state_offset);
+
+        width = gpe_resource->width;
+        height = gpe_resource->height;
+        pitch = gpe_resource->pitch;
+
+        if (gpe_surface->is_media_block_rw) {
+            if (gpe_surface->is_16bpp)
+                width = (ALIGN(width * 2, 4) >> 2);
+            else
+                width = (ALIGN(width, 4) >> 2);
+        }
+
+
+        gen9_gpe_set_2d_surface_state(ss,
+                                      gpe_surface->cacheability_control,
+                                      gpe_surface->format,
+                                      tiling,
+                                      width, height, pitch,
+                                      gpe_resource->bo->offset64 + gpe_surface->offset,
+                                      0);
+
+        dri_bo_emit_reloc(gpe_context->surface_state_binding_table.bo,
+                          I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                          gpe_surface->offset,
+                          surface_state_offset + offsetof(struct gen9_surface_state, ss8),
+                          gpe_resource->bo);
+    } else if (gpe_surface->is_2d_surface && gpe_surface->is_uv_surface) {
         unsigned int cbcr_offset;
         struct gen9_surface_state *ss = (struct gen9_surface_state *)(buf + surface_state_offset);
 

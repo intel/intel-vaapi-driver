@@ -1,6 +1,9 @@
 SRCDIR = $(top_srcdir)/src/shaders/post_processing/gen8
 VPATH = $(SRCDIR)
 
+INTEL_PP_PRE_G9B =		\
+	conv_p010.g9b
+
 INTEL_PP_G9B = \
 	pl2_to_pl2.g9b		\
 	pl2_to_pl3.g9b		\
@@ -70,6 +73,7 @@ CLEANFILES = $(INTEL_PP_GEN9_ASM)
 
 EXTRA_DIST = \
 	$(INTEL_PP_G9B) \
+	$(INTEL_PP_PRE_G9B)
 	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*

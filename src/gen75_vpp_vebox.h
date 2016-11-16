@@ -36,7 +36,6 @@
 #include <va/va_vpp.h>
 #include "i965_drv_video.h"
 
-#include "i965_post_processing.h"
 #include "gen75_vpp_gpe.h"
 
 #define INPUT_SURFACE  0

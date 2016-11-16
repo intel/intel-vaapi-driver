@@ -30,8 +30,14 @@
 #define __I965_POST_PROCESSING_H__
 
 #include "i965_vpp_avs.h"
+#include <drm.h>
+#include <i915_drm.h>
+#include <intel_bufmgr.h>
+#include "i965_gpe_utils.h"
 
 #define MAX_PP_SURFACES                 48
+
+struct i965_gpe_context;
 
 enum
 {
@@ -590,6 +596,10 @@ struct i965_post_processing_context
 				void * filter_param);
     void (*finalize)(VADriverContextP ctx,
         struct i965_post_processing_context *pp_context);
+
+
+    struct i965_gpe_context scaling_10bit_context;
+    int scaling_context_initialized;
 };
 
 struct i965_proc_context

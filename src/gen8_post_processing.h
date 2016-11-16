@@ -85,4 +85,13 @@ gen8_post_processing_context_common_init(VADriverContextP ctx,
                                          struct pp_module *pp_modules,
                                          int num_pp_modules,
                                          struct intel_batchbuffer *batch);
+extern VAStatus
+gen9_p010_scaling_post_processing(
+    VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
+    struct i965_surface *src_surface,
+    VARectangle *src_rect,
+    struct i965_surface *dst_surface,
+    VARectangle *dst_rect);
+
 #endif

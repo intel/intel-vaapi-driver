@@ -39,6 +39,8 @@
 #include "gen75_vpp_vebox.h"
 #include "intel_media.h"
 
+#include "i965_post_processing.h"
+
 #define PI  3.1415926
 
 extern VAStatus

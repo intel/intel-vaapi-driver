@@ -43,6 +43,7 @@
 #include "gen9_mfc.h"
 #include "intel_media.h"
 #include "gen9_vp9_encapi.h"
+#include "i965_post_processing.h"
 
 #ifdef SURFACE_STATE_PADDED_SIZE
 #undef SURFACE_STATE_PADDED_SIZE

@@ -35,7 +35,6 @@
 
 #define VA_SRC_COLOR_MASK       0x000000f0
 
-#include "i965_post_processing.h"
 
 struct i965_kernel;
 

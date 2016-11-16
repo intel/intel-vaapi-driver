@@ -48,6 +48,8 @@
 #include "i965_decoder.h"
 #include "i965_encoder.h"
 
+#include "i965_post_processing.h"
+
 #include "gen9_vp9_encapi.h"
 
 #define CONFIG_ID_OFFSET                0x01000000

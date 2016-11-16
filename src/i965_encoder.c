@@ -40,6 +40,8 @@
 #include "gen6_vme.h"
 #include "gen6_mfc.h"
 
+#include "i965_post_processing.h"
+
 static VAStatus
 clear_border(struct object_surface *obj_surface)
 {

@@ -47,6 +47,7 @@
 #include "i965_yuv_coefs.h"
 
 #include "i965_render.h"
+#include "i965_post_processing.h"
 
 #define SF_KERNEL_NUM_GRF       16
 #define SF_MAX_THREADS          1

@@ -1539,6 +1539,11 @@ static void
 gen8_post_processing_context_finalize(VADriverContextP ctx,
     struct i965_post_processing_context *pp_context)
 {
+    if (pp_context->scaling_context_initialized) {
+        gen8_gpe_context_destroy(&pp_context->scaling_10bit_context);
+        pp_context->scaling_context_initialized = 0;
+    }
+
     if(pp_context->vebox_proc_ctx){
        gen75_vebox_context_destroy(ctx,pp_context->vebox_proc_ctx);
        pp_context->vebox_proc_ctx = NULL;

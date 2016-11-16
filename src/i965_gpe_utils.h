@@ -418,6 +418,8 @@ struct i965_gpe_surface
     unsigned int is_media_block_rw:1;
     unsigned int is_raw_buffer:1;
     unsigned int is_16bpp     :1;
+    /* use the override_offset for 2d_surface */
+    unsigned int is_override_offset : 1;
 
     unsigned int vert_line_stride_offset;
     unsigned int vert_line_stride;
@@ -425,7 +427,7 @@ struct i965_gpe_surface
     unsigned int format; // 2d surface only
     unsigned int v_direction; // adv surface only
     unsigned int size; // buffer only
-    unsigned int offset; // buffer only
+    unsigned int offset;
 
     struct i965_gpe_resource *gpe_resource;
 };
