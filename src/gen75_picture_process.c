@@ -38,6 +38,7 @@
 #include "i965_drv_video.h"
 #include "i965_post_processing.h"
 #include "gen75_picture_process.h"
+#include "gen8_post_processing.h"
 
 extern struct hw_context *
 i965_proc_context_init(VADriverContextP ctx,
@@ -85,6 +86,21 @@ gen75_vpp_vebox(VADriverContextP ctx,
 
      return va_status;
 } 
+
+static int intel_gpe_support_10bit_scaling(struct intel_video_process_context *proc_ctx)
+{
+    struct i965_proc_context *gpe_proc_ctx;
+
+    if (!proc_ctx || !proc_ctx->vpp_fmt_cvt_ctx)
+        return 0;
+
+    gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
+
+    if (gpe_proc_ctx->pp_context.scaling_context_initialized)
+        return 1;
+    else
+        return 0;
+}
 
 VAStatus 
 gen75_proc_picture(VADriverContextP ctx,
@@ -160,12 +176,6 @@ gen75_proc_picture(VADriverContextP ctx,
         i965_check_alloc_surface_bo(ctx, obj_dst_surf, is_tiled, fourcc, sampling);
     }  
 
-    proc_ctx->surface_render_output_object = obj_dst_surf;
-    proc_ctx->surface_pipeline_input_object = obj_src_surf;
-    assert(pipeline_param->num_filters <= 4);
-
-    int vpp_stage1 = 0, vpp_stage2 = 1, vpp_stage3 = 0;
-
     if (pipeline_param->surface_region) {
         src_rect.x = pipeline_param->surface_region->x;
         src_rect.y = pipeline_param->surface_region->y;
@@ -189,6 +199,34 @@ gen75_proc_picture(VADriverContextP ctx,
         dst_rect.width = obj_dst_surf->orig_width;
         dst_rect.height = obj_dst_surf->orig_height;
     }
+
+    if (pipeline_param->num_filters == 0 || pipeline_param->filters == NULL ) {
+        if ((obj_src_surf->fourcc == VA_FOURCC_P010) &&
+            (obj_dst_surf->fourcc == VA_FOURCC_P010) &&
+            (src_rect.width != dst_rect.width ||
+                 src_rect.height != dst_rect.height) &&
+            intel_gpe_support_10bit_scaling(proc_ctx)) {
+            struct i965_proc_context *gpe_proc_ctx;
+            struct i965_surface src_surface, dst_surface;
+
+            src_surface.base = (struct object_base *)obj_src_surf;
+            src_surface.type = I965_SURFACE_TYPE_SURFACE;
+            dst_surface.base = (struct object_base *)obj_dst_surf;
+            dst_surface.type = I965_SURFACE_TYPE_SURFACE;
+            gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
+
+            return gen9_p010_scaling_post_processing(ctx, &gpe_proc_ctx->pp_context,
+                                                     &src_surface, &src_rect,
+                                                     &dst_surface, &dst_rect);
+        }
+    }
+
+    proc_ctx->surface_render_output_object = obj_dst_surf;
+    proc_ctx->surface_pipeline_input_object = obj_src_surf;
+    assert(pipeline_param->num_filters <= 4);
+
+    int vpp_stage1 = 0, vpp_stage2 = 1, vpp_stage3 = 0;
+
 
     if(obj_src_surf->fourcc == VA_FOURCC_P010) {
         vpp_stage1 = 1;
