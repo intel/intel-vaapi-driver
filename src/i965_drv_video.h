@@ -149,6 +149,10 @@
 #define HAS_VP9_ENCODING(ctx)          ((ctx)->codec_info->has_vp9_encoding && \
                                          (ctx)->intel.has_bsd)
 
+#define HAS_VP9_ENCODING_PROFILE(ctx, profile)                     \
+    (HAS_VP9_ENCODING(ctx) &&                                      \
+     ((ctx)->codec_info->vp9_enc_profiles & (1U << (profile - VAProfileVP9Profile0))))
+
 struct i965_surface
 {
     struct object_base *base;
@@ -452,6 +456,7 @@ struct hw_codec_info
 
     unsigned int h264_mvc_dec_profiles;
     unsigned int vp9_dec_profiles;
+    unsigned int vp9_enc_profiles;
 
     unsigned int h264_dec_chroma_formats;
     unsigned int jpeg_dec_chroma_formats;

@@ -825,7 +825,7 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         if ((HAS_VP9_DECODING_PROFILE(i965, profile)) &&
             (entrypoint == VAEntrypointVLD)) {
             va_status = VA_STATUS_SUCCESS;
-        } else if ((HAS_VP9_ENCODING(i965)) &&
+        } else if ((HAS_VP9_ENCODING_PROFILE(i965, profile)) &&
                    (entrypoint == VAEntrypointEncSlice)) {
             va_status = VA_STATUS_SUCCESS;
         } else if (profile == VAProfileVP9Profile0 && i965->wrapper_pdrvctx) {
