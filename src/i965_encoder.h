@@ -84,6 +84,12 @@ struct intel_encoder_context
         unsigned int hrd_buffer_size;
         unsigned int hrd_initial_buffer_fullness;
         unsigned int need_reset;
+
+        unsigned int num_roi;
+        unsigned int roi_max_delta_qp;
+        unsigned int roi_min_delta_qp;
+        unsigned int roi_value_is_qp_delta;
+        struct intel_roi roi[I965_MAX_NUM_ROI_REGIONS];
     } brc;
 
     void *vme_context;

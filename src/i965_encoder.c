@@ -438,6 +438,30 @@ intel_encoder_check_framerate_parameter(VADriverContextP ctx,
     }
 }
 
+static void
+intel_encoder_check_roi_parameter(VADriverContextP ctx,
+                                  struct intel_encoder_context *encoder_context,
+                                  VAEncMiscParameterBufferROI *misc)
+{
+    int i = 0;
+
+    encoder_context->brc.num_roi = MIN(misc->num_roi, I965_MAX_NUM_ROI_REGIONS);
+    encoder_context->brc.roi_max_delta_qp = misc->max_delta_qp;
+    encoder_context->brc.roi_min_delta_qp = misc->min_delta_qp;
+    encoder_context->brc.roi_value_is_qp_delta = 0;
+
+    if (encoder_context->rate_control_mode != VA_RC_CQP)
+        encoder_context->brc.roi_value_is_qp_delta = misc->roi_flags.bits.roi_value_is_qp_delta;
+
+    for (i = 0; i <  encoder_context->brc.num_roi; i++) {
+        encoder_context->brc.roi[i].left = misc->roi->roi_rectangle.x;
+        encoder_context->brc.roi[i].right = encoder_context->brc.roi[i].left + misc->roi->roi_rectangle.width;
+        encoder_context->brc.roi[i].top = misc->roi->roi_rectangle.y;
+        encoder_context->brc.roi[i].bottom = encoder_context->brc.roi[i].top + misc->roi->roi_rectangle.height;
+        encoder_context->brc.roi[i].value = misc->roi->roi_value;
+    }
+}
+
 static VAStatus
 intel_encoder_check_brc_parameter(VADriverContextP ctx,
                                   struct encode_state *encode_state,
@@ -479,6 +503,12 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
                 intel_encoder_check_hrd_parameter(ctx,
                                                   encoder_context,
                                                   (VAEncMiscParameterHRD *)misc_param->data);
+                break;
+
+            case VAEncMiscParameterTypeROI:
+                intel_encoder_check_roi_parameter(ctx,
+                                                  encoder_context,
+                                                  (VAEncMiscParameterBufferROI *)misc_param->data);
                 break;
 
             default:
@@ -1056,6 +1086,11 @@ intel_encoder_end_picture(VADriverContextP ctx,
     encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
     encoder_context->num_frames_in_sequence++;
     encoder_context->brc.need_reset = 0;
+    /*
+     * ROI is only available for the current frame, see the comment
+     * for VAEncROI in va.h
+     */
+    encoder_context->brc.num_roi = 0;
 
     return VA_STATUS_SUCCESS;
 }
