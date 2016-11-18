@@ -498,6 +498,7 @@ struct hw_codec_info
 
 
 #include "i965_render.h"
+#include "i965_gpe_utils.h"
 
 struct i965_driver_data 
 {
@@ -534,6 +535,8 @@ struct i965_driver_data
     struct va_wl_output *wl_output;
 
     VADriverContextP wrapper_pdrvctx;
+
+    struct i965_gpe_table gpe_table;
 };
 
 #define NEW_CONFIG_ID() object_heap_allocate(&i965->config_heap);

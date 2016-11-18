@@ -32,6 +32,7 @@
 #include "intel_batchbuffer.h"
 #include "intel_driver.h"
 
+#include "i965_drv_video.h"
 #include "i965_gpe_utils.h"
 
 static void
@@ -217,6 +218,14 @@ gen6_gpe_pipeline_setup(VADriverContextP ctx,
     gen6_gpe_vfe_state(ctx, gpe_context, batch);
     gen6_gpe_curbe_load(ctx, gpe_context, batch);
     gen6_gpe_idrt(ctx, gpe_context, batch);
+}
+
+static void
+gen8_gpe_pipeline_end(VADriverContextP ctx,
+                      struct i965_gpe_context *gpe_context,
+                      struct intel_batchbuffer *batch)
+{
+    /* No thing to do */
 }
 
 static void
@@ -2512,4 +2521,67 @@ gen8_gpe_pipe_control(VADriverContextP ctx,
 
     __OUT_BATCH(batch, param->dw0);
     __OUT_BATCH(batch, param->dw1);
+}
+
+bool
+i965_gpe_table_init(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
+
+    if (IS_GEN8(i965->intel.device_info)) {
+        gpe->context_init = gen8_gpe_context_init;
+        gpe->context_destroy = gen8_gpe_context_destroy;
+        gpe->context_add_surface = gen8_gpe_context_add_surface;
+        gpe->reset_binding_table = gen8_gpe_reset_binding_table;
+        gpe->load_kernels = gen8_gpe_load_kernels;
+        gpe->setup_interface_data = gen8_gpe_setup_interface_data;
+        gpe->set_dynamic_buffer = gen8_gpe_context_set_dynamic_buffer;
+        gpe->media_object = gen8_gpe_media_object;
+        gpe->media_object_walker = gen8_gpe_media_object_walker;
+        gpe->media_state_flush = gen8_gpe_media_state_flush;
+        gpe->pipe_control = gen8_gpe_pipe_control;
+        gpe->pipeline_end = gen8_gpe_pipeline_end;
+        gpe->pipeline_setup = gen8_gpe_pipeline_setup;
+        gpe->mi_conditional_batch_buffer_end = gen8_gpe_mi_conditional_batch_buffer_end;
+        gpe->mi_batch_buffer_start = gen8_gpe_mi_batch_buffer_start;
+        gpe->mi_load_register_reg = gen8_gpe_mi_load_register_reg;
+        gpe->mi_load_register_imm = gen8_gpe_mi_load_register_imm;
+        gpe->mi_load_register_mem = gen8_gpe_mi_load_register_mem;
+        gpe->mi_store_register_mem = gen8_gpe_mi_store_register_mem;
+        gpe->mi_store_data_imm =gen8_gpe_mi_store_data_imm;
+        gpe->mi_flush_dw = gen8_gpe_mi_flush_dw;
+    } else if (IS_GEN9(i965->intel.device_info)) {
+        gpe->context_init = gen8_gpe_context_init;
+        gpe->context_destroy = gen8_gpe_context_destroy;
+        gpe->context_add_surface = gen9_gpe_context_add_surface;
+        gpe->reset_binding_table = gen9_gpe_reset_binding_table;
+        gpe->load_kernels = gen8_gpe_load_kernels;
+        gpe->setup_interface_data = gen8_gpe_setup_interface_data;
+        gpe->set_dynamic_buffer = gen8_gpe_context_set_dynamic_buffer;
+        gpe->media_object = gen8_gpe_media_object;
+        gpe->media_object_walker = gen8_gpe_media_object_walker;
+        gpe->media_state_flush = gen8_gpe_media_state_flush;
+        gpe->pipe_control = gen8_gpe_pipe_control;
+        gpe->pipeline_end = gen9_gpe_pipeline_end;
+        gpe->pipeline_setup = gen9_gpe_pipeline_setup;
+        gpe->mi_conditional_batch_buffer_end = gen9_gpe_mi_conditional_batch_buffer_end;
+        gpe->mi_batch_buffer_start = gen8_gpe_mi_batch_buffer_start;
+        gpe->mi_load_register_reg = gen8_gpe_mi_load_register_reg;
+        gpe->mi_load_register_imm = gen8_gpe_mi_load_register_imm;
+        gpe->mi_load_register_mem = gen8_gpe_mi_load_register_mem;
+        gpe->mi_store_register_mem = gen8_gpe_mi_store_register_mem;
+        gpe->mi_store_data_imm =gen8_gpe_mi_store_data_imm;
+        gpe->mi_flush_dw = gen8_gpe_mi_flush_dw;
+    } else {
+        // TODO: for other platforms
+    }
+
+    return true;
+}
+
+void
+i965_gpe_table_terminate(VADriverContextP ctx)
+{
+
 }

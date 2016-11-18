@@ -33,8 +33,8 @@
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
 
-#include "i965_gpe_utils.h"
 #include "i965_encoder.h"
+#include "i965_gpe_utils.h"
 
 struct encode_state;
 

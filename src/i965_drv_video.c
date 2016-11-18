@@ -6498,6 +6498,12 @@ struct {
         VA_DISPLAY_X11,
     },
 #endif
+
+    {
+        i965_gpe_table_init,
+        i965_gpe_table_terminate,
+        0,
+    },
 };
 
 static bool
