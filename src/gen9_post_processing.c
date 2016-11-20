@@ -547,10 +547,14 @@ gen9_post_processing_context_init(VADriverContextP ctx,
     gpe_context->surface_state_binding_table.surface_state_offset = ALIGN(MAX_SCALING_SURFACES * 4, 64);
     gpe_context->surface_state_binding_table.length = ALIGN(MAX_SCALING_SURFACES * 4, 64) + ALIGN(MAX_SCALING_SURFACES * SURFACE_STATE_PADDED_SIZE_GEN9, 64);
 
-    if (i965->intel.has_bsd2)
-        gpe_context->vfe_state.max_num_threads = 300;
-    else
-        gpe_context->vfe_state.max_num_threads = 60;
+    if (i965->intel.eu_total > 0) {
+        gpe_context->vfe_state.max_num_threads = i965->intel.eu_total * 6;
+    } else {
+        if (i965->intel.has_bsd2)
+            gpe_context->vfe_state.max_num_threads = 300;
+        else
+            gpe_context->vfe_state.max_num_threads = 60;
+    }
 
     gpe_context->vfe_state.curbe_allocation_size = 37;
     gpe_context->vfe_state.urb_entry_size = 16;

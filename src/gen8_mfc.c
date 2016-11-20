@@ -4614,7 +4614,11 @@ Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     mfc_context->gpe_context.sampler.entry_size = 0;
     mfc_context->gpe_context.sampler.max_entries = 0;
 
-    mfc_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
+    if (i965->intel.eu_total > 0)
+        mfc_context->gpe_context.vfe_state.max_num_threads = 6 * i965->intel.eu_total;
+    else
+        mfc_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
+
     mfc_context->gpe_context.vfe_state.num_urb_entries = 16;
     mfc_context->gpe_context.vfe_state.gpgpu_mode = 0;
     mfc_context->gpe_context.vfe_state.urb_entry_size = 59 - 1;

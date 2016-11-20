@@ -1592,7 +1592,10 @@ gen8_post_processing_context_common_init(VADriverContextP ctx,
     struct pp_module *pp_module;
     struct i965_post_processing_context *pp_context = data;
 
-    pp_context->vfe_gpu_state.max_num_threads = 60;
+    if (i965->intel.eu_total > 0)
+        pp_context->vfe_gpu_state.max_num_threads = 6 * i965->intel.eu_total;
+    else
+        pp_context->vfe_gpu_state.max_num_threads = 60;
     pp_context->vfe_gpu_state.num_urb_entries = 59;
     pp_context->vfe_gpu_state.gpgpu_mode = 0;
     pp_context->vfe_gpu_state.urb_entry_size = 16 - 1;

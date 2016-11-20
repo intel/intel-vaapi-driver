@@ -3679,9 +3679,12 @@ gen9_vp9_mbenc_kernel(VADriverContextP ctx,
 }
 
 static void
-gen9_init_gpe_context_vp9(struct i965_gpe_context *gpe_context,
+gen9_init_gpe_context_vp9(VADriverContextP ctx,
+                          struct i965_gpe_context *gpe_context,
                           struct vp9_encoder_kernel_parameter *kernel_param)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
     gpe_context->curbe.length = kernel_param->curbe_size; // in bytes
 
     gpe_context->sampler.entry_size = 0;
@@ -3700,7 +3703,11 @@ gen9_init_gpe_context_vp9(struct i965_gpe_context *gpe_context,
     gpe_context->surface_state_binding_table.surface_state_offset = ALIGN(MAX_VP9_ENCODER_SURFACES * 4, 64);
     gpe_context->surface_state_binding_table.length = ALIGN(MAX_VP9_ENCODER_SURFACES * 4, 64) + ALIGN(MAX_VP9_ENCODER_SURFACES * SURFACE_STATE_PADDED_SIZE_GEN9, 64);
 
-    gpe_context->vfe_state.max_num_threads = 112; // 16 EU * 7 threads
+    if (i965->intel.eu_total > 0)
+        gpe_context->vfe_state.max_num_threads = 6 * i965->intel.eu_total;
+    else
+        gpe_context->vfe_state.max_num_threads = 112; // 16 EU * 7 threads
+
     gpe_context->vfe_state.curbe_allocation_size = MAX(1, ALIGN(gpe_context->curbe.length, 32) >> 5); // in registers
     gpe_context->vfe_state.urb_entry_size = MAX(1, ALIGN(kernel_param->inline_data_size, 32) >> 5); // in registers
     gpe_context->vfe_state.num_urb_entries = (MAX_URB_SIZE -
@@ -4606,7 +4613,7 @@ gen9_vme_scaling_context_init_vp9(VADriverContextP ctx,
     scoreboard_param.walkpat_flag = 0;
 
     gpe_context = &scaling_context->gpe_contexts[0];
-    gen9_init_gpe_context_vp9(gpe_context, &kernel_param);
+    gen9_init_gpe_context_vp9(ctx, gpe_context, &kernel_param);
     gen9_init_vfe_scoreboard_vp9(gpe_context, &scoreboard_param);
 
     scaling_context->scaling_4x_bti.scaling_frame_src_y = VP9_BTI_SCALING_FRAME_SRC_Y;
@@ -4632,7 +4639,7 @@ gen9_vme_scaling_context_init_vp9(VADriverContextP ctx,
     kernel_param.sampler_size = 0;
 
     gpe_context = &scaling_context->gpe_contexts[1];
-    gen9_init_gpe_context_vp9(gpe_context, &kernel_param);
+    gen9_init_gpe_context_vp9(ctx, gpe_context, &kernel_param);
     gen9_init_vfe_scoreboard_vp9(gpe_context, &scoreboard_param);
 
     memset(&scale_kernel, 0, sizeof(scale_kernel));
@@ -4674,7 +4681,7 @@ gen9_vme_me_context_init_vp9(VADriverContextP ctx,
     scoreboard_param.walkpat_flag = 0;
 
     gpe_context = &me_context->gpe_context;
-    gen9_init_gpe_context_vp9(gpe_context, &kernel_param);
+    gen9_init_gpe_context_vp9(ctx, gpe_context, &kernel_param);
     gen9_init_vfe_scoreboard_vp9(gpe_context, &scoreboard_param);
 
     memset(&scale_kernel, 0, sizeof(scale_kernel));
@@ -4722,7 +4729,7 @@ gen9_vme_mbenc_context_init_vp9(VADriverContextP ctx,
         } else
             scoreboard_param.walkpat_flag = 0;
 
-        gen9_init_gpe_context_vp9(gpe_context, &kernel_param);
+        gen9_init_gpe_context_vp9(ctx, gpe_context, &kernel_param);
         gen9_init_vfe_scoreboard_vp9(gpe_context, &scoreboard_param);
 
         memset(&scale_kernel, 0, sizeof(scale_kernel));
@@ -4762,7 +4769,7 @@ gen9_vme_brc_context_init_vp9(VADriverContextP ctx,
 
     for (i = 0; i < NUM_VP9_BRC; i++) {
         gpe_context = &brc_context->gpe_contexts[i];
-        gen9_init_gpe_context_vp9(gpe_context, &kernel_param);
+        gen9_init_gpe_context_vp9(ctx, gpe_context, &kernel_param);
         gen9_init_vfe_scoreboard_vp9(gpe_context, &scoreboard_param);
 
         memset(&scale_kernel, 0, sizeof(scale_kernel));
@@ -4801,7 +4808,7 @@ gen9_vme_dys_context_init_vp9(VADriverContextP ctx,
     scoreboard_param.walkpat_flag = 0;
 
     gpe_context = &dys_context->gpe_context;
-    gen9_init_gpe_context_vp9(gpe_context, &kernel_param);
+    gen9_init_gpe_context_vp9(ctx, gpe_context, &kernel_param);
     gen9_init_vfe_scoreboard_vp9(gpe_context, &scoreboard_param);
 
     memset(&scale_kernel, 0, sizeof(scale_kernel));

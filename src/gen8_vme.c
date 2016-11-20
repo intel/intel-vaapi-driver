@@ -1333,6 +1333,7 @@ gen8_vme_context_destroy(void *context)
 
 Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_vme_context *vme_context = NULL;
     struct i965_kernel *vme_kernel_list = NULL;
     int i965_kernel_num;
@@ -1385,7 +1386,12 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         vme_context->gpe_context.sampler.entry_size = 0;
         vme_context->gpe_context.sampler.max_entries = 0;
 
-        vme_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
+        if (i965->intel.eu_total > 0) {
+            vme_context->gpe_context.vfe_state.max_num_threads = 6 *
+                               i965->intel.eu_total;
+        } else
+            vme_context->gpe_context.vfe_state.max_num_threads = 60 - 1;
+
         vme_context->gpe_context.vfe_state.num_urb_entries = 64;
         vme_context->gpe_context.vfe_state.gpgpu_mode = 0;
         vme_context->gpe_context.vfe_state.urb_entry_size = 16;
