@@ -33,6 +33,10 @@
 #define VA_FOURCC_YVY2 VA_FOURCC('Y','V','Y','2')
 #endif
 
+#ifndef VA_FOURCC_I010
+#define VA_FOURCC_I010 VA_FOURCC('I','0','1','0')
+#endif
+
 #define I965_MAX_PLANES         4
 #define I965_MAX_COMONENTS      4
 
