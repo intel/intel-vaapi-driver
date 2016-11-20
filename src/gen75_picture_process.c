@@ -201,10 +201,49 @@ gen75_proc_picture(VADriverContextP ctx,
     }
 
     if (pipeline_param->num_filters == 0 || pipeline_param->filters == NULL ) {
-        if ((obj_src_surf->fourcc == VA_FOURCC_P010) &&
+/* The Bit 2 is used to indicate that it is 10bit or 8bit.
+ * The Bit 0/1 is used to indicate the 420/422/444 format
+ */
+#define SRC_10BIT_420    (5 << 0)
+#define SRC_10BIT_422    (6 << 0)
+#define SRC_10BIT_444    (7 << 0)
+
+/* The Bit 6 is used to indicate that it is 10bit or 8bit.
+ * The Bit 5/4 is used to indicate the 420/422/444 format
+ */
+#define DST_10BIT_420    (5 << 4)
+#define DST_10BIT_422    (6 << 4)
+#define DST_10BIT_444    (7 << 4)
+
+/* This is mainly for YUY2/RGBA. It is reserved for further */
+#define SRC_YUV_PACKED   (1 << 3)
+#define DST_YUV_PACKED   (1 << 7)
+
+#define MASK_CSC         (0xFF)
+#define SCALE_10BIT_420  (SRC_10BIT_420 | DST_10BIT_420)
+
+        unsigned int scale_flag;
+
+        scale_flag = 0;
+        if (obj_src_surf->fourcc == VA_FOURCC_P010 ||
+            obj_src_surf->fourcc == VA_FOURCC_I010)
+            scale_flag |= SRC_10BIT_420;
+
+        if (obj_dst_surf->fourcc == VA_FOURCC_P010 ||
+            obj_dst_surf->fourcc == VA_FOURCC_I010)
+            scale_flag |= DST_10BIT_420;
+
+        /* If P010 is converted without resolution change,
+         * fall back to VEBOX
+         */
+        if (i965->intel.has_vebox &&
+            (obj_src_surf->fourcc == VA_FOURCC_P010) &&
             (obj_dst_surf->fourcc == VA_FOURCC_P010) &&
-            (src_rect.width != dst_rect.width ||
-                 src_rect.height != dst_rect.height) &&
+            (src_rect.width == dst_rect.width) &&
+            (src_rect.height == dst_rect.height))
+            scale_flag = 0;
+
+        if (((scale_flag & MASK_CSC) == SCALE_10BIT_420) &&
             intel_gpe_support_10bit_scaling(proc_ctx)) {
             struct i965_proc_context *gpe_proc_ctx;
             struct i965_surface src_surface, dst_surface;
