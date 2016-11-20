@@ -50,6 +50,12 @@ uint32_t g_intel_debug_option_flags = 0;
 #define LOCAL_I915_PARAM_HAS_HUC 42
 #endif
 
+#ifdef I915_PARAM_EU_TOTAL
+#define LOCAL_I915_PARAM_EU_TOTAL I915_PARAM_EU_TOTAL
+#else
+#define LOCAL_I915_PARAM_EU_TOTAL 34
+#endif
+
 static Bool
 intel_driver_get_param(struct intel_driver_data *intel, int param, int *value)
 {
@@ -141,6 +147,11 @@ intel_driver_init(VADriverContextP ctx)
 
     if (intel_driver_get_param(intel, LOCAL_I915_PARAM_HAS_HUC, &ret_value))
         intel->has_huc = !!ret_value;
+
+    intel->eu_total = 0;
+    if (intel_driver_get_param(intel, LOCAL_I915_PARAM_EU_TOTAL, &ret_value)) {
+        intel->eu_total = ret_value;
+    }
 
     intel_driver_get_revid(intel, &intel->revision);
     return true;
