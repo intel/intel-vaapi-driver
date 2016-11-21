@@ -393,9 +393,21 @@ intel_encoder_check_rate_control_parameter(VADriverContextP ctx,
     if (temporal_id >= encoder_context->layer.num_layers)
         return;
 
-    // TODO: for VBR
+    if (misc->rc_flags.bits.reset)
+        encoder_context->brc.need_reset = 1;
+
     if (encoder_context->brc.bits_per_second[temporal_id] != misc->bits_per_second) {
         encoder_context->brc.bits_per_second[temporal_id] = misc->bits_per_second;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    if (encoder_context->brc.mb_rate_control[temporal_id] != misc->rc_flags.bits.mb_rate_control) {
+        encoder_context->brc.mb_rate_control[temporal_id] = misc->rc_flags.bits.mb_rate_control;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    if (encoder_context->brc.target_percentage[temporal_id] != misc->target_percentage) {
+        encoder_context->brc.target_percentage[temporal_id] = misc->target_percentage;
         encoder_context->brc.need_reset = 1;
     }
 }
