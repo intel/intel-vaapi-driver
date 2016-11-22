@@ -3739,10 +3739,15 @@ i965_GetDisplayAttributes(
         VADisplayAttribute *src_attrib, * const dst_attrib = &attribs[i];
 
         src_attrib = get_display_attribute(ctx, dst_attrib->type);
+
         if (src_attrib && (src_attrib->flags & VA_DISPLAY_ATTRIB_GETTABLE)) {
             dst_attrib->min_value = src_attrib->min_value;
             dst_attrib->max_value = src_attrib->max_value;
             dst_attrib->value     = src_attrib->value;
+            dst_attrib->flags     = src_attrib->flags;
+        } else if (src_attrib &&
+                (src_attrib->flags & VA_DISPLAY_ATTRIB_SETTABLE)) {
+            dst_attrib->flags     = src_attrib->flags;
         }
         else
             dst_attrib->flags = VA_DISPLAY_ATTRIB_NOT_SUPPORTED;
