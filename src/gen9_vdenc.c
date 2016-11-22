@@ -838,132 +838,49 @@ map_44_lut_value(unsigned int v, unsigned char max)
 }
 
 static void
-gen9_vdenc_update_rate_control_parameters(VADriverContextP ctx,
-                                          struct intel_encoder_context *encoder_context,
-                                          VAEncMiscParameterRateControl *misc)
-{
-    struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
-
-    vdenc_context->max_bit_rate = ALIGN(misc->bits_per_second, 1000) / 1000;
-    vdenc_context->mb_brc_enabled = 0;
-
-    if (vdenc_context->internal_rate_mode == I965_BRC_CBR) {
-        vdenc_context->min_bit_rate = vdenc_context->max_bit_rate;
-        vdenc_context->mb_brc_enabled = (misc->rc_flags.bits.mb_rate_control < 2);
-
-        if (vdenc_context->target_bit_rate != vdenc_context->max_bit_rate) {
-            vdenc_context->target_bit_rate = vdenc_context->max_bit_rate;
-            vdenc_context->brc_need_reset = 1;
-        }
-    } else if (vdenc_context->internal_rate_mode == I965_BRC_VBR) {
-        vdenc_context->min_bit_rate = vdenc_context->max_bit_rate * (2 * misc->target_percentage - 100) / 100;
-        vdenc_context->mb_brc_enabled = (misc->rc_flags.bits.mb_rate_control < 2);
-
-        if (vdenc_context->target_bit_rate != vdenc_context->max_bit_rate * misc->target_percentage / 100) {
-            vdenc_context->target_bit_rate = vdenc_context->max_bit_rate * misc->target_percentage / 100;
-            vdenc_context->brc_need_reset = 1;
-        }
-    }
-}
-
-static void
-gen9_vdenc_update_hrd_parameters(VADriverContextP ctx,
-                                 struct intel_encoder_context *encoder_context,
-                                 VAEncMiscParameterHRD *misc)
-{
-    struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
-
-    if (vdenc_context->internal_rate_mode == I965_BRC_CQP)
-        return;
-
-    vdenc_context->vbv_buffer_size_in_bit = misc->buffer_size;
-    vdenc_context->init_vbv_buffer_fullness_in_bit = misc->initial_buffer_fullness;
-}
-
-static void
-gen9_vdenc_update_framerate_parameters(VADriverContextP ctx,
-                                       struct intel_encoder_context *encoder_context,
-                                       VAEncMiscParameterFrameRate *misc)
-{
-    struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
-
-    vdenc_context->frames_per_100s = misc->framerate; /* misc->framerate is multiple of 100 */
-}
-
-static void
-gen9_vdenc_update_roi_parameters(VADriverContextP ctx,
-                                 struct intel_encoder_context *encoder_context,
-                                 VAEncMiscParameterBufferROI *misc)
-{
-    struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
-    int i;
-
-    if (!misc || !misc->roi) {
-        vdenc_context->num_roi = 0;
-        return;
-    }
-
-    vdenc_context->num_roi = MIN(misc->num_roi, 3);
-    vdenc_context->max_delta_qp = misc->max_delta_qp;
-    vdenc_context->min_delta_qp = misc->min_delta_qp;
-    vdenc_context->vdenc_streamin_enable = (vdenc_context->num_roi == 0);
-
-    for (i = 0; i < vdenc_context->num_roi; i++) {
-        vdenc_context->roi[i].left = misc->roi->roi_rectangle.x;
-        vdenc_context->roi[i].right = vdenc_context->roi[i].left + misc->roi->roi_rectangle.width;
-        vdenc_context->roi[i].top = misc->roi->roi_rectangle.y;
-        vdenc_context->roi[i].bottom = vdenc_context->roi[i].top + misc->roi->roi_rectangle.height;
-        vdenc_context->roi[i].value = misc->roi->roi_value;
-
-        vdenc_context->roi[i].left /= 16;
-        vdenc_context->roi[i].right /= 16;
-        vdenc_context->roi[i].top /= 16;
-        vdenc_context->roi[i].bottom /= 16;
-    }
-}
-
-static void
 gen9_vdenc_update_misc_parameters(VADriverContextP ctx,
                                   struct encode_state *encode_state,
                                   struct intel_encoder_context *encoder_context)
 {
+    struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     int i;
-    VAEncMiscParameterBuffer *misc_param;
 
-    for (i = 0; i < ARRAY_ELEMS(encode_state->misc_param); i++) {
-        if (!encode_state->misc_param[i][0] || !encode_state->misc_param[i][0]->buffer)
-            continue;
+    vdenc_context->gop_size = encoder_context->brc.gop_size;
+    vdenc_context->ref_dist = encoder_context->brc.num_bframes_in_gop + 1;
 
-        misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i][0]->buffer;
+    if (vdenc_context->internal_rate_mode != I965_BRC_CQP &&
+        encoder_context->brc.need_reset) {
+        /* So far, vdenc doesn't support temporal layer */
+        vdenc_context->frames_per_100s = encoder_context->brc.framerate_per_100s[0];
 
-        switch (misc_param->type) {
-        case VAEncMiscParameterTypeFrameRate:
-            gen9_vdenc_update_framerate_parameters(ctx,
-                                                   encoder_context,
-                                                   (VAEncMiscParameterFrameRate *)misc_param->data);
-            break;
+        vdenc_context->vbv_buffer_size_in_bit = encoder_context->brc.hrd_buffer_size;
+        vdenc_context->init_vbv_buffer_fullness_in_bit = encoder_context->brc.hrd_initial_buffer_fullness;
 
-        case VAEncMiscParameterTypeRateControl:
-            gen9_vdenc_update_rate_control_parameters(ctx,
-                                                      encoder_context,
-                                                      (VAEncMiscParameterRateControl *)misc_param->data);
-            break;
+        vdenc_context->max_bit_rate = ALIGN(encoder_context->brc.bits_per_second[0], 1000) / 1000;
+        vdenc_context->mb_brc_enabled = encoder_context->brc.mb_rate_control[0];
+        vdenc_context->brc_need_reset = (vdenc_context->brc_initted && encoder_context->brc.need_reset);
 
-        case VAEncMiscParameterTypeHRD:
-            gen9_vdenc_update_hrd_parameters(ctx,
-                                             encoder_context,
-                                             (VAEncMiscParameterHRD *)misc_param->data);
-            break;
-
-        case VAEncMiscParameterTypeROI:
-            gen9_vdenc_update_roi_parameters(ctx,
-                                             encoder_context,
-                                             (VAEncMiscParameterBufferROI *)misc_param->data);
-            break;
-
-        default:
-            break;
+        if (vdenc_context->internal_rate_mode == I965_BRC_CBR) {
+            vdenc_context->min_bit_rate = vdenc_context->max_bit_rate;
+            vdenc_context->target_bit_rate = vdenc_context->max_bit_rate;
+        } else {
+            assert(vdenc_context->internal_rate_mode == I965_BRC_VBR);
+            vdenc_context->min_bit_rate = vdenc_context->max_bit_rate * (2 * encoder_context->brc.target_percentage[0] - 100) / 100;
+            vdenc_context->target_bit_rate = vdenc_context->max_bit_rate * encoder_context->brc.target_percentage[0] / 100;
         }
+    }
+
+    vdenc_context->num_roi = MIN(encoder_context->brc.num_roi, 3);
+    vdenc_context->max_delta_qp = encoder_context->brc.roi_max_delta_qp;
+    vdenc_context->min_delta_qp = encoder_context->brc.roi_min_delta_qp;
+    vdenc_context->vdenc_streamin_enable = !!vdenc_context->num_roi;
+
+    for (i = 0; i < vdenc_context->num_roi; i++) {
+        vdenc_context->roi[i].left = encoder_context->brc.roi[i].left >> 4;
+        vdenc_context->roi[i].right = encoder_context->brc.roi[i].right >> 4;
+        vdenc_context->roi[i].top = encoder_context->brc.roi[i].top >> 4;
+        vdenc_context->roi[i].bottom = encoder_context->brc.roi[i].top >> 4;
+        vdenc_context->roi[i].value = encoder_context->brc.roi[i].value;
     }
 }
 
@@ -993,19 +910,6 @@ gen9_vdenc_update_parameters(VADriverContextP ctx,
     vdenc_context->down_scaled_width_4x = vdenc_context->down_scaled_width_in_mb4x * 16;
     vdenc_context->down_scaled_height_4x = ((vdenc_context->down_scaled_height_in_mb4x + 1) >> 1) * 16;
     vdenc_context->down_scaled_height_4x = ALIGN(vdenc_context->down_scaled_height_4x, 32) << 1;
-
-    if (vdenc_context->internal_rate_mode == I965_BRC_CBR) {
-        vdenc_context->target_bit_rate = ALIGN(seq_param->bits_per_second, 1000) / 1000;
-        vdenc_context->max_bit_rate = ALIGN(seq_param->bits_per_second, 1000) / 1000;
-        vdenc_context->min_bit_rate = ALIGN(seq_param->bits_per_second, 1000) / 1000;
-    }
-
-    vdenc_context->init_vbv_buffer_fullness_in_bit = seq_param->bits_per_second;
-    vdenc_context->vbv_buffer_size_in_bit = (uint64_t)seq_param->bits_per_second << 1;
-    vdenc_context->frames_per_100s = 3000; /* 30fps */
-    vdenc_context->gop_size = seq_param->intra_period;
-    vdenc_context->ref_dist = seq_param->ip_period;
-    vdenc_context->vdenc_streamin_enable = 0;
 
     gen9_vdenc_update_misc_parameters(ctx, encode_state, encoder_context);
 
