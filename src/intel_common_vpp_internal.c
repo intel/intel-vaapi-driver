@@ -21,55 +21,54 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *     Zhao Yakui <yakui.zhao@intel.com>
- *
  */
 
-#ifndef _INTEL_COMMON_VPP_INTERNAL_H_
-#define _INTEL_COMMON_VPP_INTERNAL_H_
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
-/* the below is defined for YUV420 format scaling */
-#define SRC_MSB         0x0001
-#define DST_MSB         0x0002
-#define SRC_PACKED      0x0004
-#define DST_PACKED      0x0008
-#define PACKED_MASK     0x000C
+#include "intel_batchbuffer.h"
+#include "intel_driver.h"
+#include "i965_drv_video.h"
+#include "i965_post_processing.h"
+#include "gen75_picture_process.h"
 
-#define BTI_SCALING_INPUT_Y     0
-#define BTI_SCALING_OUTPUT_Y    8
+#include "intel_gen_vppapi.h"
+#include "intel_common_vpp_internal.h"
 
-struct scaling_input_parameter {
-    unsigned int input_data[5];
+int
+intel_vpp_support_yuv420p8_scaling(struct intel_video_process_context *proc_ctx)
+{
+    struct i965_proc_context *gpe_proc_ctx;
 
-    float inv_width;
-    float inv_height;
+    if (!proc_ctx || !proc_ctx->vpp_fmt_cvt_ctx)
+        return 0;
 
-    struct {
-        unsigned int src_msb : 1;
-        unsigned int dst_msb : 1;
-        unsigned int src_packed : 1;
-        unsigned int dst_packed : 1;
-        unsigned int reserved : 28;
-    } dw7;
+    gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
 
-    int x_dst;
-    int y_dst;
-    float    x_factor; // src_rect_width / dst_rect_width / Surface_width
-    float    y_factor; // src_rect_height / dst_rect_height / Surface_height
-    float    x_orig;
-    float    y_orig;
-    unsigned int bti_input;
-    unsigned int bti_output;
-};
+    if (gpe_proc_ctx->pp_context.scaling_8bit_initialized & VPPGPE_8BIT_420)
+        return 1;
+    else
+        return 0;
+}
 
 VAStatus
-gen9_yuv420p8_scaling_post_processing(
+intel_yuv420p8_scaling_post_processing(
     VADriverContextP   ctx,
     struct i965_post_processing_context *pp_context,
     struct i965_surface *src_surface,
     VARectangle *src_rect,
     struct i965_surface *dst_surface,
-    VARectangle *dst_rect);
+    VARectangle *dst_rect)
+{
+    VAStatus va_status;
 
-#endif  // _INTEL_COMMON_VPP_INTERNAL_H_
+    va_status = gen9_yuv420p8_scaling_post_processing(ctx, pp_context,
+                                                      src_surface,
+                                                      src_rect,
+                                                      dst_surface,
+                                                      dst_rect);
+
+    return va_status;
+}

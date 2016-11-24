@@ -1544,6 +1544,11 @@ gen8_post_processing_context_finalize(VADriverContextP ctx,
         pp_context->scaling_context_initialized = 0;
     }
 
+    if (pp_context->scaling_8bit_initialized & VPPGPE_8BIT_420) {
+        gen8_gpe_context_destroy(&pp_context->scaling_yuv420p8_context);
+        pp_context->scaling_8bit_initialized &= ~(VPPGPE_8BIT_420);
+    }
+
     if(pp_context->vebox_proc_ctx){
        gen75_vebox_context_destroy(ctx,pp_context->vebox_proc_ctx);
        pp_context->vebox_proc_ctx = NULL;
