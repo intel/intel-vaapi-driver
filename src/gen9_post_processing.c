@@ -38,6 +38,8 @@
 #include "intel_media.h"
 
 #include "gen8_post_processing.h"
+#include "intel_gen_vppapi.h"
+#include "intel_common_vpp_internal.h"
 
 static const uint32_t pp_null_gen9[][4] = {
 };
@@ -106,38 +108,6 @@ static const uint32_t pp_nv12_blending_gen9[][4] = {
 #define MAX_SCALING_SURFACES    16
 
 #define DEFAULT_MOCS    0x02
-#define SRC_MSB         0x0001
-#define DST_MSB         0x0002
-#define SRC_PACKED      0x0004
-#define DST_PACKED      0x0008
-#define PACKED_MASK     0x000C
-
-#define BTI_SCALING_INPUT_Y     0
-#define BTI_SCALING_OUTPUT_Y    8
-
-struct scaling_input_parameter {
-    unsigned int input_data[5];
-
-    float inv_width;
-    float inv_height;
-
-    struct {
-        unsigned int src_msb : 1;
-        unsigned int dst_msb : 1;
-        unsigned int src_packed : 1;
-        unsigned int dst_packed : 1;
-        unsigned int reserved : 28;
-    } dw7;
-
-    int x_dst;
-    int y_dst;
-    float    x_factor; // src_rect_width / dst_rect_width / Surface_width
-    float    y_factor; // src_rect_height / dst_rect_height / Surface_height
-    float    x_orig;
-    float    y_orig;
-    unsigned int bti_input;
-    unsigned int bti_output;
-};
 
 static const uint32_t pp_10bit_scaling_gen9[][4] = {
 #include "shaders/post_processing/gen9/conv_p010.g9b"

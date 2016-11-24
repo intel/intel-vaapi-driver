@@ -39,6 +39,7 @@
 #include "i965_post_processing.h"
 #include "gen75_picture_process.h"
 #include "gen8_post_processing.h"
+#include "intel_gen_vppapi.h"
 
 extern struct hw_context *
 i965_proc_context_init(VADriverContextP ctx,
