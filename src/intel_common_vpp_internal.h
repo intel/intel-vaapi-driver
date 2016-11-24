@@ -72,4 +72,13 @@ gen9_yuv420p8_scaling_post_processing(
     struct i965_surface *dst_surface,
     VARectangle *dst_rect);
 
+VAStatus
+gen8_yuv420p8_scaling_post_processing(
+    VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
+    struct i965_surface *src_surface,
+    VARectangle *src_rect,
+    struct i965_surface *dst_surface,
+    VARectangle *dst_rect);
+
 #endif  // _INTEL_COMMON_VPP_INTERNAL_H_

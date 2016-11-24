@@ -15,7 +15,8 @@ INTEL_PP_G8B = \
 INTEL_PP_PRE_G8B =		\
 	sharpening_h_blur.g8b	\
 	sharpening_unmask.g8b	\
-	sharpening_v_blur.g8b
+	sharpening_v_blur.g8b   \
+        conv_nv12.g8b
 
 INTEL_PP_G8A = \
 	EOT.g8a				\

@@ -43,6 +43,7 @@
 #include "intel_media.h"
 
 #include "gen75_picture_process.h"
+#include "intel_common_vpp_internal.h"
 
 #define SURFACE_STATE_PADDED_SIZE               SURFACE_STATE_PADDED_SIZE_GEN8
 
@@ -317,6 +318,14 @@ static struct pp_module pp_modules_gen8[] = {
 
         gen8_pp_plx_avs_initialize,
     },
+};
+
+#define MAX_SCALING_SURFACES    16
+
+#define DEFAULT_MOCS    0
+
+static const uint32_t pp_yuv420p8_scaling_gen8[][4] = {
+#include "shaders/post_processing/gen8/conv_nv12.g8b"
 };
 
 static int
@@ -1675,8 +1684,449 @@ gen8_post_processing_context_init(VADriverContextP ctx,
                                   void *data,
                                   struct intel_batchbuffer *batch)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = data;
+    struct i965_gpe_context *gpe_context;
+    struct i965_kernel scaling_kernel;
 
     gen8_post_processing_context_common_init(ctx, data, pp_modules_gen8, ARRAY_ELEMS(pp_modules_gen8), batch);
     avs_init_state(&pp_context->pp_avs_context.state, &gen8_avs_config);
+
+    /* initialize the YUV420 8-Bit scaling context. The below is supported.
+     * NV12 ->NV12
+     * NV12 ->I420
+     * I420 ->I420
+     * I420 ->NV12
+     */
+    gpe_context = &pp_context->scaling_yuv420p8_context;
+    memset(&scaling_kernel, 0, sizeof(scaling_kernel));
+    scaling_kernel.bin = pp_yuv420p8_scaling_gen8;
+    scaling_kernel.size = sizeof(pp_yuv420p8_scaling_gen8);
+    gen8_gpe_load_kernels(ctx, gpe_context, &scaling_kernel, 1);
+    gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
+    gpe_context->idrt.max_entries = 1;
+    gpe_context->sampler.entry_size = ALIGN(sizeof(struct gen8_sampler_state), 64);
+    gpe_context->sampler.max_entries = 1;
+    gpe_context->curbe.length = ALIGN(sizeof(struct scaling_input_parameter), 32);
+
+    gpe_context->surface_state_binding_table.max_entries = MAX_SCALING_SURFACES;
+    gpe_context->surface_state_binding_table.binding_table_offset = 0;
+    gpe_context->surface_state_binding_table.surface_state_offset = ALIGN(MAX_SCALING_SURFACES * 4, 64);
+    gpe_context->surface_state_binding_table.length = ALIGN(MAX_SCALING_SURFACES * 4, 64) + ALIGN(MAX_SCALING_SURFACES * SURFACE_STATE_PADDED_SIZE_GEN8, 64);
+
+    if (i965->intel.eu_total > 0) {
+        gpe_context->vfe_state.max_num_threads = i965->intel.eu_total * 6;
+    } else {
+        if (i965->intel.has_bsd2)
+            gpe_context->vfe_state.max_num_threads = 300;
+        else
+            gpe_context->vfe_state.max_num_threads = 60;
+    }
+
+    gpe_context->vfe_state.curbe_allocation_size = 37;
+    gpe_context->vfe_state.urb_entry_size = 16;
+    if (i965->intel.has_bsd2)
+        gpe_context->vfe_state.num_urb_entries = 127;
+    else
+        gpe_context->vfe_state.num_urb_entries = 64;
+
+    gpe_context->vfe_state.gpgpu_mode = 0;
+
+    gen8_gpe_context_init(ctx, gpe_context);
+    pp_context->scaling_8bit_initialized = VPPGPE_8BIT_420;
+    return;
+}
+
+static void
+gen8_run_kernel_media_object_walker(VADriverContextP ctx,
+                                    struct intel_batchbuffer *batch,
+                                    struct i965_gpe_context *gpe_context,
+                                    struct gpe_media_object_walker_parameter *param)
+{
+    if (!batch || !gpe_context || !param)
+        return;
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+
+    intel_batchbuffer_emit_mi_flush(batch);
+
+    gen8_gpe_pipeline_setup(ctx, gpe_context, batch);
+    gen8_gpe_media_object_walker(ctx, gpe_context, batch, param);
+    gen8_gpe_media_state_flush(ctx, gpe_context, batch);
+
+
+    intel_batchbuffer_end_atomic(batch);
+
+    intel_batchbuffer_flush(batch);
+    return;
+}
+
+static void
+gen8_add_dri_buffer_2d_gpe_surface(VADriverContextP ctx,
+                                   struct i965_gpe_context *gpe_context,
+                                   dri_bo *bo,
+                                   unsigned int bo_offset,
+                                   unsigned int width,
+                                   unsigned int height,
+                                   unsigned int pitch,
+                                   int is_media_block_rw,
+                                   unsigned int format,
+                                   int index,
+                                   int is_10bit)
+{
+    struct i965_gpe_resource gpe_resource;
+    struct i965_gpe_surface gpe_surface;
+
+    i965_dri_object_to_2d_gpe_resource(&gpe_resource, bo, width, height, pitch);
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+    gpe_surface.gpe_resource = &gpe_resource;
+    gpe_surface.is_2d_surface = 1;
+    gpe_surface.is_media_block_rw = !!is_media_block_rw;
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.format = format;
+    gpe_surface.is_override_offset = 1;
+    gpe_surface.offset = bo_offset;
+    gpe_surface.is_16bpp = is_10bit;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+
+    i965_free_gpe_resource(&gpe_resource);
+}
+
+static void
+gen8_vpp_scaling_sample_state(VADriverContextP ctx,
+                               struct i965_gpe_context *gpe_context,
+                               VARectangle *src_rect,
+                               VARectangle *dst_rect)
+{
+    struct gen8_sampler_state *sampler_state;
+
+    if (gpe_context == NULL || !src_rect || !dst_rect)
+        return;
+    dri_bo_map(gpe_context->sampler.bo, 1);
+
+    if (gpe_context->sampler.bo->virtual == NULL)
+        return;
+
+    assert(gpe_context->sampler.bo->virtual);
+
+    sampler_state = (struct gen8_sampler_state *)
+       (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
+
+    memset(sampler_state, 0, sizeof(*sampler_state));
+
+    if ((src_rect->width == dst_rect->width) &&
+        (src_rect->height == dst_rect->height)) {
+        sampler_state->ss0.min_filter = I965_MAPFILTER_NEAREST;
+        sampler_state->ss0.mag_filter = I965_MAPFILTER_NEAREST;
+    } else {
+        sampler_state->ss0.min_filter = I965_MAPFILTER_LINEAR;
+        sampler_state->ss0.mag_filter = I965_MAPFILTER_LINEAR;
+    }
+
+    sampler_state->ss3.r_wrap_mode = I965_TEXCOORDMODE_CLAMP;
+    sampler_state->ss3.s_wrap_mode = I965_TEXCOORDMODE_CLAMP;
+    sampler_state->ss3.t_wrap_mode = I965_TEXCOORDMODE_CLAMP;
+
+    dri_bo_unmap(gpe_context->sampler.bo);
+}
+
+static void
+gen8_gpe_context_yuv420p8_scaling_curbe(VADriverContextP ctx,
+                               struct i965_gpe_context *gpe_context,
+                               VARectangle *src_rect,
+                               struct i965_surface *src_surface,
+                               VARectangle *dst_rect,
+                               struct i965_surface *dst_surface)
+{
+    struct scaling_input_parameter *scaling_curbe;
+    float src_width, src_height;
+    float coeff;
+    unsigned int fourcc;
+
+    if ((gpe_context == NULL) ||
+        (src_rect == NULL) || (src_surface == NULL) ||
+        (dst_rect == NULL) || (dst_surface == NULL))
+        return;
+
+    scaling_curbe = i965_gpe_context_map_curbe(gpe_context);
+
+    if (!scaling_curbe)
+        return;
+
+    memset(scaling_curbe, 0, sizeof(struct scaling_input_parameter));
+
+    scaling_curbe->bti_input = BTI_SCALING_INPUT_Y;
+    scaling_curbe->bti_output = BTI_SCALING_OUTPUT_Y;
+
+    /* As the src_rect/dst_rect is already checked, it is skipped.*/
+    scaling_curbe->x_dst     = dst_rect->x;
+    scaling_curbe->y_dst     = dst_rect->y;
+
+    src_width = src_rect->x + src_rect->width;
+    src_height = src_rect->y + src_rect->height;
+
+    scaling_curbe->inv_width = 1 / src_width;
+    scaling_curbe->inv_height = 1 / src_height;
+
+    coeff = (float) (src_rect->width) / dst_rect->width;
+    scaling_curbe->x_factor = coeff / src_width;
+    scaling_curbe->x_orig = (float)(src_rect->x) / src_width;
+
+    coeff = (float) (src_rect->height) / dst_rect->height;
+    scaling_curbe->y_factor = coeff / src_height;
+    scaling_curbe->y_orig = (float)(src_rect->y) / src_height;
+
+    fourcc = pp_get_surface_fourcc(ctx, src_surface);
+    if (fourcc == VA_FOURCC_NV12) {
+        scaling_curbe->dw7.src_packed = 1;
+    }
+
+    fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+
+    if (fourcc == VA_FOURCC_NV12) {
+        scaling_curbe->dw7.dst_packed = 1;
+    }
+
+    i965_gpe_context_unmap_curbe(gpe_context);
+}
+
+static bool
+gen8_pp_context_get_surface_conf(VADriverContextP ctx,
+                                 struct i965_surface *surface,
+                                 VARectangle *rect,
+                                 int *width,
+                                 int *height,
+                                 int *pitch,
+                                 int *bo_offset)
+{
+    unsigned int fourcc;
+    if (!rect || !surface || !width || !height || !pitch || !bo_offset)
+        return false;
+
+    if (surface->base == NULL)
+        return false;
+
+    fourcc = pp_get_surface_fourcc(ctx, surface);
+    if (surface->type == I965_SURFACE_TYPE_SURFACE) {
+        struct object_surface *obj_surface;
+
+        obj_surface = (struct object_surface *)surface->base;
+        width[0] = MIN(rect->x + rect->width, obj_surface->orig_width);
+        height[0] = MIN(rect->y + rect->height, obj_surface->orig_height);
+        pitch[0] = obj_surface->width;
+        bo_offset[0] = 0;
+
+        if (fourcc == VA_FOURCC_P010 || fourcc == VA_FOURCC_NV12) {
+            width[1] = width[0] / 2;
+            height[1] = height[0] / 2;
+            pitch[1] = obj_surface->cb_cr_pitch;
+            bo_offset[1] = obj_surface->width * obj_surface->y_cb_offset;
+        } else {
+            /* I010/I420 format */
+            width[1] = width[0] / 2;
+            height[1] = height[0] / 2;
+            pitch[1] = obj_surface->cb_cr_pitch;
+            bo_offset[1] = obj_surface->width * obj_surface->y_cb_offset;
+            width[2] = width[0] / 2;
+            height[2] = height[0] / 2;
+            pitch[2] = obj_surface->cb_cr_pitch;
+            bo_offset[2] = obj_surface->width * obj_surface->y_cr_offset;
+        }
+
+    } else {
+        struct object_image *obj_image;
+
+        obj_image = (struct object_image *)surface->base;
+
+        width[0] = MIN(rect->x + rect->width, obj_image->image.width);
+        height[0] = MIN(rect->y + rect->height, obj_image->image.height);
+        pitch[0] = obj_image->image.pitches[0];
+        bo_offset[0] = obj_image->image.offsets[0];
+
+        if (fourcc == VA_FOURCC_P010 || fourcc == VA_FOURCC_NV12) {
+            width[1] = width[0] / 2;
+            height[1] = height[0] / 2;
+            pitch[1] = obj_image->image.pitches[1];
+            bo_offset[1] = obj_image->image.offsets[1];
+        } else {
+            /* I010/I420 format */
+            /* YV12 is TBD */
+            width[1] = width[0] / 2;
+            height[1] = height[0] / 2;
+            pitch[1] = obj_image->image.pitches[1];
+            bo_offset[1] = obj_image->image.offsets[1];
+            width[2] = width[0] / 2;
+            height[2] = height[0] / 2;
+            pitch[2] = obj_image->image.pitches[2];
+            bo_offset[2] = obj_image->image.offsets[2];
+        }
+
+    }
+    return true;
+}
+
+static void
+gen8_gpe_context_yuv420p8_scaling_surfaces(VADriverContextP ctx,
+                               struct i965_gpe_context *gpe_context,
+                               VARectangle *src_rect,
+                               struct i965_surface *src_surface,
+                               VARectangle *dst_rect,
+                               struct i965_surface *dst_surface)
+{
+    unsigned int fourcc;
+    int width[3], height[3], pitch[3], bo_offset[3];
+    dri_bo *bo;
+    struct object_surface *obj_surface;
+    struct object_image *obj_image;
+    int bti;
+
+    if ((gpe_context == NULL) ||
+        (src_rect == NULL) || (src_surface == NULL) ||
+        (dst_rect == NULL) || (dst_surface == NULL))
+        return;
+
+    if (src_surface->base == NULL || dst_surface->base == NULL)
+        return;
+
+    fourcc = pp_get_surface_fourcc(ctx, src_surface);
+
+    if (src_surface->type == I965_SURFACE_TYPE_SURFACE) {
+        obj_surface = (struct object_surface *)src_surface->base;
+        bo = obj_surface->bo;
+    } else {
+        obj_image = (struct object_image *)src_surface->base;
+        bo = obj_image->bo;
+    }
+
+    bti = 0;
+    if (gen8_pp_context_get_surface_conf(ctx, src_surface, src_rect,
+                                         width, height, pitch,
+                                         bo_offset)) {
+        bti = BTI_SCALING_INPUT_Y;
+        /* Input surface */
+        gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
+                                           bo_offset[0],
+                                           width[0], height[0],
+                                           pitch[0], 0,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           bti, 0);
+        if (fourcc == VA_FOURCC_NV12) {
+            gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
+                                           bo_offset[1],
+                                           width[1], height[1],
+                                           pitch[1], 0,
+                                           I965_SURFACEFORMAT_R8G8_UNORM,
+                                           bti + 1, 0);
+        } else {
+            gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
+                                           bo_offset[1],
+                                           width[1], height[1],
+                                           pitch[1], 0,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           bti + 1, 0);
+
+            gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
+                                           bo_offset[2],
+                                           width[2], height[2],
+                                           pitch[2], 0,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           bti + 2, 0);
+        }
+    }
+
+    fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+
+    if (dst_surface->type == I965_SURFACE_TYPE_SURFACE) {
+        obj_surface = (struct object_surface *)dst_surface->base;
+        bo = obj_surface->bo;
+    } else {
+        obj_image = (struct object_image *)dst_surface->base;
+        bo = obj_image->bo;
+    }
+
+    if (gen8_pp_context_get_surface_conf(ctx, dst_surface, dst_rect,
+                                         width, height, pitch,
+                                         bo_offset)) {
+        bti = BTI_SCALING_OUTPUT_Y;
+        /* Input surface */
+        gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
+                                           bo_offset[0],
+                                           width[0], height[0],
+                                           pitch[0], 1,
+                                           I965_SURFACEFORMAT_R8_UINT,
+                                           bti, 0);
+        if (fourcc == VA_FOURCC_NV12) {
+            gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
+                                           bo_offset[1],
+                                           width[1] * 2, height[1],
+                                           pitch[1], 1,
+                                           I965_SURFACEFORMAT_R16_UINT,
+                                           bti + 1, 0);
+        } else {
+            gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
+                                           bo_offset[1],
+                                           width[1], height[1],
+                                           pitch[1], 1,
+                                           I965_SURFACEFORMAT_R8_UINT,
+                                           bti + 1, 0);
+
+            gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
+                                           bo_offset[2],
+                                           width[2], height[2],
+                                           pitch[2], 1,
+                                           I965_SURFACEFORMAT_R8_UINT,
+                                           bti + 2, 0);
+        }
+    }
+
+    return;
+}
+
+VAStatus
+gen8_yuv420p8_scaling_post_processing(
+    VADriverContextP   ctx,
+    struct i965_post_processing_context *pp_context,
+    struct i965_surface *src_surface,
+    VARectangle *src_rect,
+    struct i965_surface *dst_surface,
+    VARectangle *dst_rect)
+{
+    struct i965_gpe_context *gpe_context;
+    struct gpe_media_object_walker_parameter media_object_walker_param;
+    struct intel_vpp_kernel_walker_parameter kernel_walker_param;
+
+    if (!pp_context || !src_surface || !src_rect || !dst_surface || !dst_rect)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (!(pp_context->scaling_8bit_initialized & VPPGPE_8BIT_420))
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    gpe_context = &pp_context->scaling_yuv420p8_context;
+
+    gen8_gpe_context_init(ctx, gpe_context);
+    gen8_vpp_scaling_sample_state(ctx, gpe_context, src_rect, dst_rect);
+    gen8_gpe_reset_binding_table(ctx, gpe_context);
+    gen8_gpe_context_yuv420p8_scaling_curbe(ctx, gpe_context,
+                                        src_rect, src_surface,
+                                        dst_rect, dst_surface);
+
+    gen8_gpe_context_yuv420p8_scaling_surfaces(ctx, gpe_context,
+                                        src_rect, src_surface,
+                                        dst_rect, dst_surface);
+
+    gen8_gpe_setup_interface_data(ctx, gpe_context);
+
+    memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
+    kernel_walker_param.resolution_x = ALIGN(dst_rect->width, 16) >> 4;
+    kernel_walker_param.resolution_y = ALIGN(dst_rect->height, 16) >> 4;
+    kernel_walker_param.no_dependency = 1;
+
+    intel_vpp_init_media_object_walker_parameter(&kernel_walker_param, &media_object_walker_param);
+
+    gen8_run_kernel_media_object_walker(ctx, pp_context->batch,
+                                        gpe_context,
+                                        &media_object_walker_param);
+
+    return VA_STATUS_SUCCESS;
 }
