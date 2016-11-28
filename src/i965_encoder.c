@@ -368,6 +368,53 @@ error:
 }
 
 static VAStatus
+intel_encoder_check_brc_vp8_sequence_parameter(VADriverContextP ctx,
+                                               struct encode_state *encode_state,
+                                               struct intel_encoder_context *encoder_context)
+{
+    VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
+    unsigned int num_pframes_in_gop, bits_per_second;
+
+    if (!encoder_context->is_new_sequence)
+        return VA_STATUS_SUCCESS;
+
+    assert(seq_param);
+
+    encoder_context->brc.num_iframes_in_gop = 1;// Always 1
+    encoder_context->brc.num_bframes_in_gop = 0;// No B frame
+
+    if (seq_param->intra_period == 0) {         // E.g. IPPP... (only one I frame in the stream)
+        encoder_context->brc.gop_size = 30;     // fake
+    } else {
+        encoder_context->brc.gop_size = seq_param->intra_period;
+    }
+
+    num_pframes_in_gop = encoder_context->brc.gop_size - 1;
+    bits_per_second = seq_param->bits_per_second;       // for the highest layer
+
+    if (!encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1]) {
+        encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1] = 3000;  // for the highest layer
+        encoder_context->brc.need_reset = 1;
+    }
+
+    if (num_pframes_in_gop != encoder_context->brc.num_pframes_in_gop ||
+        bits_per_second != encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1]) {
+        encoder_context->brc.num_pframes_in_gop = num_pframes_in_gop;
+        encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] = bits_per_second;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    if (!encoder_context->brc.hrd_buffer_size ||
+        !encoder_context->brc.hrd_initial_buffer_fullness) {
+        encoder_context->brc.hrd_buffer_size = seq_param->bits_per_second << 1;
+        encoder_context->brc.hrd_initial_buffer_fullness = seq_param->bits_per_second;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
 intel_encoder_check_brc_sequence_parameter(VADriverContextP ctx,
                                            struct encode_state *encode_state,
                                            struct intel_encoder_context *encoder_context)
@@ -375,6 +422,9 @@ intel_encoder_check_brc_sequence_parameter(VADriverContextP ctx,
     if (encoder_context->codec == CODEC_H264 ||
         encoder_context->codec == CODEC_H264_MVC)
         return intel_encoder_check_brc_h264_sequence_parameter(ctx, encode_state, encoder_context);
+
+    if (encoder_context->codec == CODEC_VP8)
+        return intel_encoder_check_brc_vp8_sequence_parameter(ctx, encode_state, encoder_context);
 
     // TODO: other codecs
     return VA_STATUS_SUCCESS;
@@ -801,6 +851,7 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
+    VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     int i = 0;
@@ -852,6 +903,14 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
 
     for ( ; i < 16; i++)
         encode_state->reference_objects[i] = NULL;
+
+    encoder_context->is_new_sequence = (is_key_frame && seq_param);
+
+    if (encoder_context->is_new_sequence) {
+        encoder_context->num_frames_in_sequence = 0;
+        encoder_context->frame_width_in_pixel = seq_param->frame_width;
+        encoder_context->frame_height_in_pixel = seq_param->frame_height;
+    }
 
     return VA_STATUS_SUCCESS;
 
