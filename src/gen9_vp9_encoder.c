@@ -5921,7 +5921,7 @@ gen9_vp9_pak_pipeline(VADriverContextP ctx,
             memset(&mi_load_reg_imm, 0, sizeof(mi_load_reg_imm));
             mi_load_reg_imm.mmio_offset = status_buffer->vp9_image_ctrl_reg_offset;
             mi_load_reg_imm.data = 0;
-            gen9_gpe_mi_load_register_imm(ctx, batch, &mi_load_reg_imm);
+            gen8_gpe_mi_load_register_imm(ctx, batch, &mi_load_reg_imm);
         }
         gen9_vp9_pak_picture_level(ctx, encode_state, encoder_context);
         gen9_vp9_read_mfc_status(ctx, encoder_context);
