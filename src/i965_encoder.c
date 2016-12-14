@@ -314,18 +314,17 @@ intel_encoder_check_jpeg_yuv_surface(VADriverContextP ctx,
 static VAStatus
 intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
                                                 struct encode_state *encode_state,
-                                                struct intel_encoder_context *encoder_context)
+                                                struct intel_encoder_context *encoder_context,
+                                                unsigned int *seq_bits_per_second)
 {
     VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     struct intel_fraction framerate;
-    unsigned int bits_per_second;
     unsigned short num_pframes_in_gop, num_bframes_in_gop;
 
     if (!encoder_context->is_new_sequence)
         return VA_STATUS_SUCCESS;
 
     assert(seq_param);
-    bits_per_second = seq_param->bits_per_second; // for the highest layer
 
     if (!seq_param->num_units_in_tick || !seq_param->time_scale) {
         framerate = (struct intel_fraction) { 30, 1 };
@@ -361,12 +360,10 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
 
     if (num_pframes_in_gop != encoder_context->brc.num_pframes_in_gop ||
         num_bframes_in_gop != encoder_context->brc.num_bframes_in_gop ||
-        bits_per_second != encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] ||
         framerate.num != encoder_context->brc.framerate[encoder_context->layer.num_layers - 1].num ||
         framerate.den != encoder_context->brc.framerate[encoder_context->layer.num_layers - 1].den) {
         encoder_context->brc.num_pframes_in_gop = num_pframes_in_gop;
         encoder_context->brc.num_bframes_in_gop = num_bframes_in_gop;
-        encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] = bits_per_second;
         encoder_context->brc.framerate[encoder_context->layer.num_layers - 1] = framerate;
         encoder_context->brc.need_reset = 1;
     }
@@ -377,6 +374,8 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
         encoder_context->brc.hrd_initial_buffer_fullness = seq_param->bits_per_second;
     }
 
+    *seq_bits_per_second = seq_param->bits_per_second;
+
     return VA_STATUS_SUCCESS;
 
 error:
@@ -386,10 +385,11 @@ error:
 static VAStatus
 intel_encoder_check_brc_vp8_sequence_parameter(VADriverContextP ctx,
                                                struct encode_state *encode_state,
-                                               struct intel_encoder_context *encoder_context)
+                                               struct intel_encoder_context *encoder_context,
+                                               unsigned int *seq_bits_per_second)
 {
     VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
-    unsigned int num_pframes_in_gop, bits_per_second;
+    unsigned int num_pframes_in_gop;
 
     if (!encoder_context->is_new_sequence)
         return VA_STATUS_SUCCESS;
@@ -406,7 +406,6 @@ intel_encoder_check_brc_vp8_sequence_parameter(VADriverContextP ctx,
     }
 
     num_pframes_in_gop = encoder_context->brc.gop_size - 1;
-    bits_per_second = seq_param->bits_per_second;       // for the highest layer
 
     if (!encoder_context->brc.framerate[encoder_context->layer.num_layers - 1].num) {
         // for the highest layer
@@ -414,10 +413,8 @@ intel_encoder_check_brc_vp8_sequence_parameter(VADriverContextP ctx,
         encoder_context->brc.need_reset = 1;
     }
 
-    if (num_pframes_in_gop != encoder_context->brc.num_pframes_in_gop ||
-        bits_per_second != encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1]) {
+    if (num_pframes_in_gop != encoder_context->brc.num_pframes_in_gop) {
         encoder_context->brc.num_pframes_in_gop = num_pframes_in_gop;
-        encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] = bits_per_second;
         encoder_context->brc.need_reset = 1;
     }
 
@@ -428,13 +425,16 @@ intel_encoder_check_brc_vp8_sequence_parameter(VADriverContextP ctx,
         encoder_context->brc.need_reset = 1;
     }
 
+    *seq_bits_per_second = seq_param->bits_per_second;
+
     return VA_STATUS_SUCCESS;
 }
 
 static VAStatus
 intel_encoder_check_brc_hevc_sequence_parameter(VADriverContextP ctx,
                                                 struct encode_state *encode_state,
-                                                struct intel_encoder_context *encoder_context)
+                                                struct intel_encoder_context *encoder_context,
+                                                unsigned int *seq_bits_per_second)
 {
     VAEncSequenceParameterBufferHEVC *seq_param = (VAEncSequenceParameterBufferHEVC*)encode_state->seq_param_ext->buffer;
     struct intel_fraction framerate;
@@ -481,10 +481,7 @@ intel_encoder_check_brc_hevc_sequence_parameter(VADriverContextP ctx,
         encoder_context->brc.need_reset = 1;
     }
 
-    if (encoder_context->brc.bits_per_second[0] != seq_param->bits_per_second) {
-        encoder_context->brc.bits_per_second[0] = seq_param->bits_per_second;
-        encoder_context->brc.need_reset = 1;
-    }
+    *seq_bits_per_second = seq_param->bits_per_second;
 
     return VA_STATUS_SUCCESS;
 }
@@ -492,7 +489,8 @@ intel_encoder_check_brc_hevc_sequence_parameter(VADriverContextP ctx,
 static VAStatus
 intel_encoder_check_brc_vp9_sequence_parameter(VADriverContextP ctx,
                                                struct encode_state *encode_state,
-                                               struct intel_encoder_context *encoder_context)
+                                               struct intel_encoder_context *encoder_context,
+                                               unsigned int *seq_bits_per_second)
 {
     VAEncSequenceParameterBufferVP9 *seq_param = (VAEncSequenceParameterBufferVP9*)encode_state->seq_param_ext->buffer;
     unsigned int gop_size;
@@ -507,12 +505,12 @@ intel_encoder_check_brc_vp9_sequence_parameter(VADriverContextP ctx,
     else
         gop_size = seq_param->intra_period;
 
-    if (encoder_context->brc.bits_per_second[0] != seq_param->bits_per_second ||
-        encoder_context->brc.gop_size != gop_size) {
-        encoder_context->brc.bits_per_second[0] = seq_param->bits_per_second;
+    if (encoder_context->brc.gop_size != gop_size) {
         encoder_context->brc.gop_size = gop_size;
         encoder_context->brc.need_reset = 1;
     }
+
+    *seq_bits_per_second = seq_param->bits_per_second;
 
     return VA_STATUS_SUCCESS;
 }
@@ -520,21 +518,24 @@ intel_encoder_check_brc_vp9_sequence_parameter(VADriverContextP ctx,
 static VAStatus
 intel_encoder_check_brc_sequence_parameter(VADriverContextP ctx,
                                            struct encode_state *encode_state,
-                                           struct intel_encoder_context *encoder_context)
+                                           struct intel_encoder_context *encoder_context,
+                                           unsigned int *seq_bits_per_second)
 {
+    *seq_bits_per_second = 0;
+
     switch (encoder_context->codec) {
     case CODEC_H264:
     case CODEC_H264_MVC:
-        return intel_encoder_check_brc_h264_sequence_parameter(ctx, encode_state, encoder_context);
+        return intel_encoder_check_brc_h264_sequence_parameter(ctx, encode_state, encoder_context, seq_bits_per_second);
 
     case CODEC_VP8:
-        return intel_encoder_check_brc_vp8_sequence_parameter(ctx, encode_state, encoder_context);
+        return intel_encoder_check_brc_vp8_sequence_parameter(ctx, encode_state, encoder_context, seq_bits_per_second);
 
     case CODEC_HEVC:
-        return intel_encoder_check_brc_hevc_sequence_parameter(ctx, encode_state, encoder_context);
+        return intel_encoder_check_brc_hevc_sequence_parameter(ctx, encode_state, encoder_context, seq_bits_per_second);
 
     case CODEC_VP9:
-        return intel_encoder_check_brc_vp9_sequence_parameter(ctx, encode_state, encoder_context);
+        return intel_encoder_check_brc_vp9_sequence_parameter(ctx, encode_state, encoder_context, seq_bits_per_second);
 
     default:
         // TODO: other codecs
@@ -545,7 +546,8 @@ intel_encoder_check_brc_sequence_parameter(VADriverContextP ctx,
 static void
 intel_encoder_check_rate_control_parameter(VADriverContextP ctx,
                                            struct intel_encoder_context *encoder_context,
-                                           VAEncMiscParameterRateControl *misc)
+                                           VAEncMiscParameterRateControl *misc,
+                                           int *hl_bitrate_updated)
 {
     int temporal_id = 0;
 
@@ -577,6 +579,9 @@ intel_encoder_check_rate_control_parameter(VADriverContextP ctx,
         encoder_context->brc.window_size = misc->window_size;
         encoder_context->brc.need_reset = 1;
     }
+
+    if (temporal_id == encoder_context->layer.num_layers - 1)
+        *hl_bitrate_updated = 1;
 }
 
 static void
@@ -651,11 +656,13 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
     VAStatus ret;
     VAEncMiscParameterBuffer *misc_param;
     int i, j;
+    int hl_bitrate_updated = 0; // Indicate whether the bitrate for the highest level is changed in misc parameters
+    unsigned int seq_bits_per_second = 0;
 
     if (!(encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR)))
         return VA_STATUS_SUCCESS;
 
-    ret = intel_encoder_check_brc_sequence_parameter(ctx, encode_state, encoder_context);
+    ret = intel_encoder_check_brc_sequence_parameter(ctx, encode_state, encoder_context, &seq_bits_per_second);
 
     if (ret)
         return ret;
@@ -677,7 +684,8 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
             case VAEncMiscParameterTypeRateControl:
                 intel_encoder_check_rate_control_parameter(ctx,
                                                            encoder_context,
-                                                           (VAEncMiscParameterRateControl *)misc_param->data);
+                                                           (VAEncMiscParameterRateControl *)misc_param->data,
+                                                           &hl_bitrate_updated);
                 break;
 
             case VAEncMiscParameterTypeHRD:
@@ -696,6 +704,14 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
                 break;
             }
         }
+    }
+
+    if (!hl_bitrate_updated && seq_bits_per_second &&
+        encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] != seq_bits_per_second) {
+
+        encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] = seq_bits_per_second;
+        encoder_context->brc.need_reset = 1;
+
     }
 
     return VA_STATUS_SUCCESS;
