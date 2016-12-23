@@ -959,6 +959,7 @@
 #define VDENC_IMG_STATE                 VDENC(1, 0, 5)
 #define VDENC_CONST_QPT_STATE           VDENC(1, 0, 6)
 #define VDENC_WALKER_STATE              VDENC(1, 0, 7)
+#define VDENC_WEIGHTSOFFSETS_STATE      VDENC(1, 0, 8)
 
 #define VDENC_CODEC_AVC                 2
 

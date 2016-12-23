@@ -304,7 +304,8 @@ struct gen9_vdenc_img_state
         uint32_t bidirectional_mix_disable:1;
         uint32_t pad1:1;
         uint32_t time_budget_overflow_check:1;
-        uint32_t pad2:2;
+        uint32_t pad2:1;
+        uint32_t extended_pak_obj_cmd_enable:1;
         uint32_t transform_8x8_flag:1;
         uint32_t vdenc_l1_cache_priority:2;
         uint32_t pad3:22;
@@ -776,7 +777,9 @@ struct gen9_vdenc_context
     uint32_t    frame_type:2;
 
     uint32_t    mb_brc_enabled:1;
-    uint32_t    pad0:31;
+    uint32_t    is_frame_level_vdenc:1;
+    uint32_t    use_extended_pak_obj_cmd:1;
+    uint32_t    pad0:29;
 
     struct i965_gpe_resource brc_init_reset_dmem_res;
     struct i965_gpe_resource brc_history_buffer_res;
