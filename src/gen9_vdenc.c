@@ -870,6 +870,7 @@ gen9_vdenc_update_misc_parameters(VADriverContextP ctx,
         }
     }
 
+    vdenc_context->mb_brc_enabled = 1;
     vdenc_context->num_roi = MIN(encoder_context->brc.num_roi, 3);
     vdenc_context->max_delta_qp = encoder_context->brc.roi_max_delta_qp;
     vdenc_context->min_delta_qp = encoder_context->brc.roi_min_delta_qp;
