@@ -3324,12 +3324,8 @@ static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
-    VAEncMiscParameterBuffer* misc_param_hrd = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer;
-    VAEncMiscParameterHRD* param_hrd = (VAEncMiscParameterHRD*)misc_param_hrd->data;
-    VAEncMiscParameterBuffer* misc_param_frame_rate_buffer = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
-    VAEncMiscParameterFrameRate* param_frame_rate = (VAEncMiscParameterFrameRate*)misc_param_frame_rate_buffer->data;
-    double bitrate = seq_param->bits_per_second;
-    unsigned int frame_rate = param_frame_rate->framerate;
+    double bitrate = encoder_context->brc.bits_per_second[0];
+    double framerate = (double)encoder_context->brc.framerate[0].num / (double)encoder_context->brc.framerate[0].den;
     int inum = 1, pnum = 0;
     int intra_period = seq_param->intra_period;
     int width_in_mbs = ALIGN(seq_param->frame_width, 16) / 16;
@@ -3340,14 +3336,14 @@ static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
 
     mfc_context->brc.mode = encoder_context->rate_control_mode;
 
-    mfc_context->brc.target_frame_size[0][SLICE_TYPE_I] = (int)((double)((bitrate * intra_period)/frame_rate) /
+    mfc_context->brc.target_frame_size[0][SLICE_TYPE_I] = (int)((double)((bitrate * intra_period) / framerate) /
                                                              (double)(inum + BRC_PWEIGHT * pnum ));
     mfc_context->brc.target_frame_size[0][SLICE_TYPE_P] = BRC_PWEIGHT * mfc_context->brc.target_frame_size[0][SLICE_TYPE_I];
 
     mfc_context->brc.gop_nums[0][SLICE_TYPE_I] = inum;
     mfc_context->brc.gop_nums[0][SLICE_TYPE_P] = pnum;
 
-    mfc_context->brc.bits_per_frame[0] = bitrate/frame_rate;
+    mfc_context->brc.bits_per_frame[0] = bitrate / framerate;
 
     mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I] = gen8_mfc_vp8_qindex_estimate(encode_state,
                                                                                 mfc_context,
@@ -3358,12 +3354,17 @@ static void gen8_mfc_vp8_brc_init(struct encode_state *encode_state,
                                                                                 mfc_context->brc.target_frame_size[0][SLICE_TYPE_P],
                                                                                 0);
 
-    mfc_context->hrd.buffer_size[0] = (double)param_hrd->buffer_size;
-    mfc_context->hrd.current_buffer_fullness[0] =
-        (double)(param_hrd->initial_buffer_fullness < mfc_context->hrd.buffer_size[0])?
-        param_hrd->initial_buffer_fullness: mfc_context->hrd.buffer_size[0]/2.;
-    mfc_context->hrd.target_buffer_fullness[0] = (double)mfc_context->hrd.buffer_size[0]/2.;
-    mfc_context->hrd.buffer_capacity[0] = (double)mfc_context->hrd.buffer_size[0]/max_frame_size;
+    if (encoder_context->brc.hrd_buffer_size)
+        mfc_context->hrd.buffer_size[0] = (double)encoder_context->brc.hrd_buffer_size;
+    else
+        mfc_context->hrd.buffer_size[0] = bitrate;
+    if (encoder_context->brc.hrd_initial_buffer_fullness &&
+        encoder_context->brc.hrd_initial_buffer_fullness < mfc_context->hrd.buffer_size[0])
+        mfc_context->hrd.current_buffer_fullness[0] = (double)encoder_context->brc.hrd_initial_buffer_fullness;
+    else
+        mfc_context->hrd.current_buffer_fullness[0] = mfc_context->hrd.buffer_size[0] / 2.0;
+    mfc_context->hrd.target_buffer_fullness[0] = (double)mfc_context->hrd.buffer_size[0] / 2.0;
+    mfc_context->hrd.buffer_capacity[0] = (double)mfc_context->hrd.buffer_size[0] / max_frame_size;
     mfc_context->hrd.violation_noted = 0;
 }
 
@@ -3485,9 +3486,8 @@ static void gen8_mfc_vp8_hrd_context_init(struct encode_state *encode_state,
                                        struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    int target_bit_rate = seq_param->bits_per_second;
+    int target_bit_rate = encoder_context->brc.bits_per_second[0];
 
     // current we only support CBR mode.
     if (rate_control_mode == VA_RC_CBR) {
@@ -3509,45 +3509,6 @@ static void gen8_mfc_vp8_hrd_context_update(struct encode_state *encode_state,
     mfc_context->vui_hrd.i_frame_number++;
 }
 
-/*
- * Check whether the parameters related with CBR are updated and decide whether
- * it needs to reinitialize the configuration related with CBR.
- * Currently it will check the following parameters:
- *      bits_per_second
- *      frame_rate
- *      gop_configuration(intra_period, ip_period, intra_idr_period)
- */
-static bool gen8_mfc_vp8_brc_updated_check(struct encode_state *encode_state,
-                           struct intel_encoder_context *encoder_context)
-{
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
-    double cur_fps, cur_bitrate;
-    VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
-    VAEncMiscParameterBuffer *misc_param_frame_rate_buf = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
-    VAEncMiscParameterFrameRate *param_frame_rate = (VAEncMiscParameterFrameRate*)misc_param_frame_rate_buf->data;
-    unsigned int frame_rate = param_frame_rate->framerate;
-
-    if (rate_control_mode != VA_RC_CBR) {
-        return false;
-    }
-
-    cur_bitrate = seq_param->bits_per_second;
-    cur_fps = frame_rate;
-
-    if ((cur_bitrate == mfc_context->brc.saved_bps) &&
-        (cur_fps == mfc_context->brc.saved_fps) &&
-        (seq_param->intra_period == mfc_context->brc.saved_intra_period)) {
-        /* the parameters related with CBR are not updaetd */
-        return false;
-    }
-
-    mfc_context->brc.saved_intra_period = seq_param->intra_period;
-    mfc_context->brc.saved_fps = cur_fps;
-    mfc_context->brc.saved_bps = cur_bitrate;
-    return true;
-}
-
 static void gen8_mfc_vp8_brc_prepare(struct encode_state *encode_state,
                            struct intel_encoder_context *encoder_context)
 {
@@ -3557,7 +3518,7 @@ static void gen8_mfc_vp8_brc_prepare(struct encode_state *encode_state,
         bool brc_updated;
         assert(encoder_context->codec != CODEC_MPEG2);
 
-        brc_updated = gen8_mfc_vp8_brc_updated_check(encode_state, encoder_context);
+        brc_updated = encoder_context->brc.need_reset;
 
         /*Programing bit rate control */
         if (brc_updated) {

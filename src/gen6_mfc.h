@@ -235,12 +235,6 @@ struct gen6_mfc_context
         double qpf_rounding_accumulator[MAX_TEMPORAL_LAYERS];
         int bits_prev_frame[MAX_TEMPORAL_LAYERS];
         int prev_slice_type[MAX_TEMPORAL_LAYERS];
-
-        double saved_bps;
-        double saved_fps;
-        int saved_intra_period;
-        int saved_ip_period;
-        int saved_idr_period;
     } brc;
 
     struct {
