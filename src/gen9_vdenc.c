@@ -1860,7 +1860,8 @@ static void
 gen9_vdenc_init_mfx_avc_img_state(VADriverContextP ctx,
                                   struct encode_state *encode_state,
                                   struct intel_encoder_context *encoder_context,
-                                  struct gen9_mfx_avc_img_state *pstate)
+                                  struct gen9_mfx_avc_img_state *pstate,
+                                  int use_huc)
 {
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
@@ -1878,7 +1879,7 @@ gen9_vdenc_init_mfx_avc_img_state(VADriverContextP ctx,
     pstate->dw3.image_structure = 0;
     pstate->dw3.weighted_bipred_idc = pic_param->pic_fields.bits.weighted_bipred_idc;
     pstate->dw3.weighted_pred_flag = pic_param->pic_fields.bits.weighted_pred_flag;
-    pstate->dw3.brc_domain_rate_control_enable = 1;
+    pstate->dw3.brc_domain_rate_control_enable = !!use_huc;
     pstate->dw3.chroma_qp_offset = pic_param->chroma_qp_index_offset;
     pstate->dw3.second_chroma_qp_offset = pic_param->second_chroma_qp_index_offset;
 
@@ -2135,7 +2136,7 @@ gen9_vdenc_init_img_states(VADriverContextP ctx,
         return;
 
     mfx_img_cmd = (struct gen9_mfx_avc_img_state *)pbuffer;
-    gen9_vdenc_init_mfx_avc_img_state(ctx, encode_state, encoder_context, mfx_img_cmd);
+    gen9_vdenc_init_mfx_avc_img_state(ctx, encode_state, encoder_context, mfx_img_cmd, 1);
     pbuffer += sizeof(*mfx_img_cmd);
 
     vdenc_img_cmd = (struct gen9_vdenc_img_state *)pbuffer;
@@ -2542,7 +2543,7 @@ gen9_vdenc_mfx_avc_img_state(VADriverContextP ctx,
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen9_mfx_avc_img_state mfx_img_cmd;
 
-    gen9_vdenc_init_mfx_avc_img_state(ctx, encode_state, encoder_context, &mfx_img_cmd);
+    gen9_vdenc_init_mfx_avc_img_state(ctx, encode_state, encoder_context, &mfx_img_cmd, 0);
 
     BEGIN_BCS_BATCH(batch, (sizeof(mfx_img_cmd) >> 2));
     intel_batchbuffer_data(batch, &mfx_img_cmd, sizeof(mfx_img_cmd));
