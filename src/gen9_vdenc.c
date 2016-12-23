@@ -851,7 +851,7 @@ gen9_vdenc_update_misc_parameters(VADriverContextP ctx,
     if (vdenc_context->internal_rate_mode != I965_BRC_CQP &&
         encoder_context->brc.need_reset) {
         /* So far, vdenc doesn't support temporal layer */
-        vdenc_context->frames_per_100s = encoder_context->brc.framerate_per_100s[0];
+        vdenc_context->framerate = encoder_context->brc.framerate[0];
 
         vdenc_context->vbv_buffer_size_in_bit = encoder_context->brc.hrd_buffer_size;
         vdenc_context->init_vbv_buffer_fullness_in_bit = encoder_context->brc.hrd_initial_buffer_fullness;
@@ -927,7 +927,8 @@ gen9_vdenc_update_parameters(VADriverContextP ctx,
          !vdenc_context->vbv_buffer_size_in_bit ||
          !vdenc_context->max_bit_rate ||
          !vdenc_context->target_bit_rate ||
-         !vdenc_context->frames_per_100s))
+         !vdenc_context->framerate.num ||
+         !vdenc_context->framerate.den))
         vdenc_context->brc_enabled = 0;
 
     if (!vdenc_context->brc_enabled) {
@@ -1565,7 +1566,8 @@ gen9_vdenc_get_profile_level_max_frame(VADriverContextP ctx,
         tmpf = max_mbps / 172.0;
 
     max_byte_per_frame0 = (uint64_t)(tmpf * bits_per_mb);
-    max_byte_per_frame1 = (uint64_t)(((double)max_mbps * 100) / vdenc_context->frames_per_100s *bits_per_mb);
+    max_byte_per_frame1 = (uint64_t)(((double)max_mbps * vdenc_context->framerate.den) /
+                                     (double)vdenc_context->framerate.num * bits_per_mb);
 
     /* TODO: check VAEncMiscParameterTypeMaxFrameSize */
     ret = (unsigned int)MIN(max_byte_per_frame0, max_byte_per_frame1);
@@ -1586,12 +1588,12 @@ gen9_vdenc_calculate_initial_qp(VADriverContextP ctx,
 
     frame_size = (vdenc_context->frame_width * vdenc_context->frame_height * 3 / 2);
     qp = (int)(1.0 / 1.2 * pow(10.0,
-                               (log10(frame_size * 2.0 / 3.0 * ((float)vdenc_context->frames_per_100s) /
-                                      ((float)(vdenc_context->target_bit_rate * 1000) * 100)) - x0) *
+                               (log10(frame_size * 2.0 / 3.0 * vdenc_context->framerate.num /
+                                      ((double)vdenc_context->target_bit_rate * 1000.0 * vdenc_context->framerate.den)) - x0) *
                                (y1 - y0) / (x1 - x0) + y0) + 0.5);
     qp += 2;
-    delat_qp = (int)(9 - (vdenc_context->vbv_buffer_size_in_bit * ((float)vdenc_context->frames_per_100s) /
-                          ((float)(vdenc_context->target_bit_rate * 1000) * 100)));
+    delat_qp = (int)(9 - (vdenc_context->vbv_buffer_size_in_bit * ((double)vdenc_context->framerate.num) /
+                          ((double)vdenc_context->target_bit_rate * 1000.0 * vdenc_context->framerate.den)));
     if (delat_qp > 0)
         qp += delat_qp;
 
@@ -1615,7 +1617,8 @@ gen9_vdenc_update_huc_brc_init_dmem(VADriverContextP ctx,
     double input_bits_per_frame, bps_ratio;
     int i;
 
-    vdenc_context->brc_init_reset_input_bits_per_frame = ((double)(vdenc_context->max_bit_rate * 1000) * 100) / vdenc_context->frames_per_100s;
+    vdenc_context->brc_init_reset_input_bits_per_frame =
+        ((double)vdenc_context->max_bit_rate * 1000.0 * vdenc_context->framerate.den) / vdenc_context->framerate.num;
     vdenc_context->brc_init_current_target_buf_full_in_bits = vdenc_context->brc_init_reset_input_bits_per_frame;
     vdenc_context->brc_target_size = vdenc_context->init_vbv_buffer_fullness_in_bit;
 
@@ -1645,8 +1648,8 @@ gen9_vdenc_update_huc_brc_init_dmem(VADriverContextP ctx,
     else if (vdenc_context->internal_rate_mode == I965_BRC_VBR)
         dmem->brc_flag |= 0x20;
 
-    dmem->frame_rate_m = vdenc_context->frames_per_100s;
-    dmem->frame_rate_d = 100;
+    dmem->frame_rate_m = vdenc_context->framerate.num;
+    dmem->frame_rate_d = vdenc_context->framerate.den;
 
     dmem->profile_level_max_frame = gen9_vdenc_get_profile_level_max_frame(ctx, encoder_context, seq_param->level_idc);
 
@@ -1656,8 +1659,9 @@ gen9_vdenc_update_huc_brc_init_dmem(VADriverContextP ctx,
     dmem->min_qp = 10;
     dmem->max_qp = 51;
 
-    input_bits_per_frame = ((double)vdenc_context->max_bit_rate * 1000 * 100) / vdenc_context->frames_per_100s;
-    bps_ratio = input_bits_per_frame / ((double)vdenc_context->vbv_buffer_size_in_bit * 100 / vdenc_context->frames_per_100s);
+    input_bits_per_frame = ((double)vdenc_context->max_bit_rate * 1000.0 * vdenc_context->framerate.den) / vdenc_context->framerate.num;
+    bps_ratio = input_bits_per_frame /
+        ((double)vdenc_context->vbv_buffer_size_in_bit * vdenc_context->framerate.den / vdenc_context->framerate.num);
 
     if (bps_ratio < 0.1)
         bps_ratio = 0.1;

@@ -119,16 +119,19 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 
         if (i == 0) {
             bitrate = encoder_context->brc.bits_per_second[0];
-            framerate = (double)encoder_context->brc.framerate_per_100s[0] / 100.0;
+            framerate = (double)encoder_context->brc.framerate[0].num / (double)encoder_context->brc.framerate[0].den;
         } else {
             bitrate = (encoder_context->brc.bits_per_second[i] - encoder_context->brc.bits_per_second[i - 1]);
-            framerate = (double)(encoder_context->brc.framerate_per_100s[i] - encoder_context->brc.framerate_per_100s[i - 1]) / 100.0;
+            framerate = ((double)encoder_context->brc.framerate[i].num / (double)encoder_context->brc.framerate[i].den) -
+                ((double)encoder_context->brc.framerate[i - 1].num / (double)encoder_context->brc.framerate[i - 1].den);
         }
 
         if (i == encoder_context->layer.num_layers - 1)
             factor = 1.0;
-        else
-            factor = (double)encoder_context->brc.framerate_per_100s[i] / encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1];
+        else {
+            factor = ((double)encoder_context->brc.framerate[i].num / (double)encoder_context->brc.framerate[i].den) /
+                ((double)encoder_context->brc.framerate[i - 1].num / (double)encoder_context->brc.framerate[i - 1].den);
+        }
 
         hrd_factor = (double)bitrate / encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1];
 

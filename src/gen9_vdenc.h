@@ -741,7 +741,7 @@ struct gen9_vdenc_context
     uint32_t    min_bit_rate;           /* in kbps */
     uint64_t    init_vbv_buffer_fullness_in_bit;
     uint64_t    vbv_buffer_size_in_bit;
-    uint32_t    frames_per_100s;
+    struct intel_fraction framerate;
     uint32_t    gop_size;
     uint32_t    ref_dist;
     uint32_t    brc_target_size;

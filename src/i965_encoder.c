@@ -42,6 +42,17 @@
 
 #include "i965_post_processing.h"
 
+static struct intel_fraction
+reduce_fraction(struct intel_fraction f)
+{
+    unsigned int a = f.num, b = f.den, c;
+    while ((c = a % b)) {
+        a = b;
+        b = c;
+    }
+    return (struct intel_fraction) { f.num / b, f.den / b };
+}
+
 static VAStatus
 clear_border(struct object_surface *obj_surface)
 {
@@ -306,8 +317,9 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
                                                 struct intel_encoder_context *encoder_context)
 {
     VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+    struct intel_fraction framerate;
+    unsigned int bits_per_second;
     unsigned short num_pframes_in_gop, num_bframes_in_gop;
-    unsigned int bits_per_second, framerate_per_100s;
 
     if (!encoder_context->is_new_sequence)
         return VA_STATUS_SUCCESS;
@@ -315,10 +327,13 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
     assert(seq_param);
     bits_per_second = seq_param->bits_per_second; // for the highest layer
 
-    if (!seq_param->num_units_in_tick || !seq_param->time_scale)
-        framerate_per_100s = 3000;
-    else
-        framerate_per_100s = seq_param->time_scale * 100 / (2 * seq_param->num_units_in_tick); // for the highest layer
+    if (!seq_param->num_units_in_tick || !seq_param->time_scale) {
+        framerate = (struct intel_fraction) { 30, 1 };
+    } else {
+        // for the highest layer
+        framerate = (struct intel_fraction) { seq_param->time_scale, 2 * seq_param->num_units_in_tick };
+    }
+    framerate = reduce_fraction(framerate);
 
     encoder_context->brc.num_iframes_in_gop = 1; // Always 1
 
@@ -326,7 +341,7 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
         if (seq_param->ip_period == 0)
             goto error;
 
-        encoder_context->brc.gop_size = (unsigned int)(framerate_per_100s / 100.0 + 0.5); // fake
+        encoder_context->brc.gop_size = (framerate.num + framerate.den - 1) / framerate.den; // fake
         num_pframes_in_gop = (encoder_context->brc.gop_size +
                               seq_param->ip_period - 1) / seq_param->ip_period - 1;
     } else if (seq_param->intra_period == 1) { // E.g. IDRIII...
@@ -347,11 +362,12 @@ intel_encoder_check_brc_h264_sequence_parameter(VADriverContextP ctx,
     if (num_pframes_in_gop != encoder_context->brc.num_pframes_in_gop ||
         num_bframes_in_gop != encoder_context->brc.num_bframes_in_gop ||
         bits_per_second != encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] ||
-        framerate_per_100s != encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1]) {
+        framerate.num != encoder_context->brc.framerate[encoder_context->layer.num_layers - 1].num ||
+        framerate.den != encoder_context->brc.framerate[encoder_context->layer.num_layers - 1].den) {
         encoder_context->brc.num_pframes_in_gop = num_pframes_in_gop;
         encoder_context->brc.num_bframes_in_gop = num_bframes_in_gop;
         encoder_context->brc.bits_per_second[encoder_context->layer.num_layers - 1] = bits_per_second;
-        encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1] = framerate_per_100s;
+        encoder_context->brc.framerate[encoder_context->layer.num_layers - 1] = framerate;
         encoder_context->brc.need_reset = 1;
     }
 
@@ -392,8 +408,9 @@ intel_encoder_check_brc_vp8_sequence_parameter(VADriverContextP ctx,
     num_pframes_in_gop = encoder_context->brc.gop_size - 1;
     bits_per_second = seq_param->bits_per_second;       // for the highest layer
 
-    if (!encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1]) {
-        encoder_context->brc.framerate_per_100s[encoder_context->layer.num_layers - 1] = 3000;  // for the highest layer
+    if (!encoder_context->brc.framerate[encoder_context->layer.num_layers - 1].num) {
+        // for the highest layer
+        encoder_context->brc.framerate[encoder_context->layer.num_layers - 1] = (struct intel_fraction) { 30, 1 };
         encoder_context->brc.need_reset = 1;
     }
 
@@ -480,7 +497,7 @@ intel_encoder_check_framerate_parameter(VADriverContextP ctx,
                                         struct intel_encoder_context *encoder_context,
                                         VAEncMiscParameterFrameRate *misc)
 {
-    int framerate_per_100s;
+    struct intel_fraction framerate;
     int temporal_id = 0;
 
     if (encoder_context->layer.num_layers >= 2)
@@ -490,12 +507,14 @@ intel_encoder_check_framerate_parameter(VADriverContextP ctx,
         return;
 
     if (misc->framerate & 0xffff0000)
-        framerate_per_100s = (misc->framerate & 0xffff) * 100 / ((misc->framerate >> 16) & 0xffff);
+        framerate = (struct intel_fraction) { misc->framerate & 0xffff, misc->framerate >> 16 & 0xffff };
     else
-        framerate_per_100s = misc->framerate * 100;
+        framerate = (struct intel_fraction) { misc->framerate, 1 };
+    framerate = reduce_fraction(framerate);
 
-    if (encoder_context->brc.framerate_per_100s[temporal_id] != framerate_per_100s) {
-        encoder_context->brc.framerate_per_100s[temporal_id] = framerate_per_100s;
+    if (encoder_context->brc.framerate[temporal_id].num != framerate.num ||
+        encoder_context->brc.framerate[temporal_id].den != framerate.den) {
+        encoder_context->brc.framerate[temporal_id] = framerate;
         encoder_context->brc.need_reset = 1;
     }
 }
