@@ -3012,6 +3012,10 @@ gen9_vdenc_mfx_avc_slice_state(VADriverContextP ctx,
     int num_ref_l0 = 0, num_ref_l1 = 0;
     int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
     int slice_qp = pic_param->pic_init_qp + slice_param->slice_qp_delta; // TODO: fix for CBR&VBR */
+    int inter_rounding = 0;
+
+    if (vdenc_context->internal_rate_mode != I965_BRC_CQP)
+        inter_rounding = 3;
 
     slice_hor_pos = slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
     slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
@@ -3110,7 +3114,7 @@ gen9_vdenc_mfx_avc_slice_state(VADriverContextP ctx,
                   (grow << 0));
     OUT_BCS_BATCH(batch,
                   (1 << 31) |
-                  (3 << 28) |
+                  (inter_rounding << 28) |
                   (1 << 27) |
                   (5 << 24) |
                   (correct[5] << 20) |
