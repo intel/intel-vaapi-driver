@@ -432,19 +432,83 @@ intel_encoder_check_brc_vp8_sequence_parameter(VADriverContextP ctx,
 }
 
 static VAStatus
+intel_encoder_check_brc_hevc_sequence_parameter(VADriverContextP ctx,
+                                                struct encode_state *encode_state,
+                                                struct intel_encoder_context *encoder_context)
+{
+    VAEncSequenceParameterBufferHEVC *seq_param = (VAEncSequenceParameterBufferHEVC*)encode_state->seq_param_ext->buffer;
+    struct intel_fraction framerate;
+    unsigned int gop_size, num_iframes_in_gop, num_pframes_in_gop, num_bframes_in_gop;
+
+    if (!encoder_context->is_new_sequence)
+        return VA_STATUS_SUCCESS;
+    if (!seq_param)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (!seq_param->vui_time_scale || !seq_param->vui_num_units_in_tick)
+        framerate = (struct intel_fraction) { 30, 1 };
+    else
+        framerate = (struct intel_fraction) { seq_param->vui_time_scale, seq_param->vui_num_units_in_tick };
+    framerate = reduce_fraction(framerate);
+
+    num_iframes_in_gop = 1;
+    if (seq_param->intra_period == 0) {
+        gop_size = -1;
+        num_pframes_in_gop = -1;
+    } else if (seq_param->intra_period == 1) {
+        gop_size = 1;
+        num_pframes_in_gop = 0;
+    } else {
+        gop_size = seq_param->intra_period;
+        num_pframes_in_gop = (seq_param->intra_period + seq_param->ip_period - 1) / seq_param->ip_period - 1;
+    }
+    num_bframes_in_gop = gop_size - num_iframes_in_gop - num_pframes_in_gop;
+
+    if (encoder_context->brc.framerate[0].num != framerate.num ||
+        encoder_context->brc.framerate[0].den != framerate.den) {
+        encoder_context->brc.framerate[0] = framerate;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    if (encoder_context->brc.gop_size != gop_size ||
+        encoder_context->brc.num_iframes_in_gop != num_iframes_in_gop ||
+        encoder_context->brc.num_pframes_in_gop != num_pframes_in_gop ||
+        encoder_context->brc.num_bframes_in_gop != num_bframes_in_gop) {
+        encoder_context->brc.gop_size = gop_size;
+        encoder_context->brc.num_iframes_in_gop = num_iframes_in_gop;
+        encoder_context->brc.num_pframes_in_gop = num_pframes_in_gop;
+        encoder_context->brc.num_bframes_in_gop = num_bframes_in_gop;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    if (encoder_context->brc.bits_per_second[0] != seq_param->bits_per_second) {
+        encoder_context->brc.bits_per_second[0] = seq_param->bits_per_second;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
 intel_encoder_check_brc_sequence_parameter(VADriverContextP ctx,
                                            struct encode_state *encode_state,
                                            struct intel_encoder_context *encoder_context)
 {
-    if (encoder_context->codec == CODEC_H264 ||
-        encoder_context->codec == CODEC_H264_MVC)
+    switch (encoder_context->codec) {
+    case CODEC_H264:
+    case CODEC_H264_MVC:
         return intel_encoder_check_brc_h264_sequence_parameter(ctx, encode_state, encoder_context);
 
-    if (encoder_context->codec == CODEC_VP8)
+    case CODEC_VP8:
         return intel_encoder_check_brc_vp8_sequence_parameter(ctx, encode_state, encoder_context);
 
-    // TODO: other codecs
-    return VA_STATUS_SUCCESS;
+    case CODEC_HEVC:
+        return intel_encoder_check_brc_hevc_sequence_parameter(ctx, encode_state, encoder_context);
+
+    default:
+        // TODO: other codecs
+        return VA_STATUS_SUCCESS;
+    }
 }
 
 static void

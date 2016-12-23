@@ -524,7 +524,7 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
     int ctb_size = 1 << log2_ctb_size;
     double rawctubits = 8 * 3 * ctb_size * ctb_size / 2.0;
     int maxctubits = (int)(5 * rawctubits / 3) ;
-    double bitrate = seq_param->bits_per_second * 1.0;
+    double bitrate = (double)encoder_context->brc.bits_per_second[0];
     double framebitrate = bitrate / 32 / 8; //32 byte unit
     int minframebitrate = 0;//(int) (framebitrate * 3 / 10);
     int maxframebitrate = (int)(framebitrate * 10 / 10);
@@ -2163,15 +2163,16 @@ VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
 
 static void
 intel_hcpe_bit_rate_control_context_init(struct encode_state *encode_state,
-        struct gen9_hcpe_context *mfc_context)
+                                         struct intel_encoder_context *encoder_context)
 {
+    struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     int ctb_size = 16;
     int width_in_mbs = (pSequenceParameter->pic_width_in_luma_samples + ctb_size - 1) / ctb_size;
     int height_in_mbs = (pSequenceParameter->pic_height_in_luma_samples + ctb_size - 1) / ctb_size;
 
-    float fps =  pSequenceParameter->vui_time_scale / pSequenceParameter->vui_num_units_in_tick ;
-    double bitrate = pSequenceParameter->bits_per_second * 1.0;
+    double fps = (double)encoder_context->brc.framerate[0].num / (double)encoder_context->brc.framerate[0].den;
+    double bitrate = encoder_context->brc.bits_per_second[0];
     int inter_mb_size = bitrate * 1.0 / (fps + 4.0) / width_in_mbs / height_in_mbs;
     int intra_mb_size = inter_mb_size * 5.0;
     int i;
@@ -2214,11 +2215,9 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
 {
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
-    VAEncMiscParameterHRD* pParameterHRD = NULL;
-    VAEncMiscParameterBuffer* pMiscParamHRD = NULL;
 
-    double bitrate = pSequenceParameter->bits_per_second * 1.0;
-    double framerate = (double)pSequenceParameter->vui_time_scale / (double)pSequenceParameter->vui_num_units_in_tick;
+    double bitrate = (double)encoder_context->brc.bits_per_second[0];
+    double framerate = (double)encoder_context->brc.framerate[0].num / (double)encoder_context->brc.framerate[0].den;
     int inum = 1, pnum = 0, bnum = 0; /* Gop structure: number of I, P, B frames in the Gop. */
     int intra_period = pSequenceParameter->intra_period;
     int ip_period = pSequenceParameter->ip_period;
@@ -2238,12 +2237,6 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
     qp1_size = qp1_size * bpp;
     qp51_size = qp51_size * bpp;
 
-    if (!encode_state->misc_param[VAEncMiscParameterTypeHRD][0] || !encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer)
-        return;
-
-    pMiscParamHRD = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer;
-    pParameterHRD = (VAEncMiscParameterHRD*)pMiscParamHRD->data;
-
     if (pSequenceParameter->ip_period) {
         pnum = (intra_period + ip_period - 1) / ip_period - 1;
         bnum = intra_period - inum - pnum;
@@ -2262,7 +2255,7 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
 
     bpf = mfc_context->brc.bits_per_frame = bitrate / framerate;
 
-    if (!pParameterHRD || pParameterHRD->buffer_size <= 0)
+    if (!encoder_context->brc.hrd_buffer_size)
     {
         mfc_context->hrd.buffer_size = bitrate * ratio;
         mfc_context->hrd.current_buffer_fullness =
@@ -2270,7 +2263,7 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
             bitrate * ratio/2 : mfc_context->hrd.buffer_size / 2.;
     }else
     {
-        buffer_size = (double)pParameterHRD->buffer_size ;
+        buffer_size = (double)encoder_context->brc.hrd_buffer_size;
         if(buffer_size < bitrate * ratio_min)
         {
             buffer_size = bitrate * ratio_min;
@@ -2279,11 +2272,11 @@ static void intel_hcpe_brc_init(struct encode_state *encode_state,
             buffer_size = bitrate * ratio_max ;
         }
         mfc_context->hrd.buffer_size =buffer_size;
-        if(pParameterHRD->initial_buffer_fullness > 0)
+        if(encoder_context->brc.hrd_initial_buffer_fullness)
         {
             mfc_context->hrd.current_buffer_fullness =
-                (double)(pParameterHRD->initial_buffer_fullness < mfc_context->hrd.buffer_size) ?
-                pParameterHRD->initial_buffer_fullness : mfc_context->hrd.buffer_size / 2.;
+                (double)(encoder_context->brc.hrd_initial_buffer_fullness < mfc_context->hrd.buffer_size) ?
+                encoder_context->brc.hrd_initial_buffer_fullness : mfc_context->hrd.buffer_size / 2.;
         }else
         {
             mfc_context->hrd.current_buffer_fullness = mfc_context->hrd.buffer_size / 2.;
@@ -2468,9 +2461,8 @@ static void intel_hcpe_hrd_context_init(struct encode_state *encode_state,
                                         struct intel_encoder_context *encoder_context)
 {
     struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
-    VAEncSequenceParameterBufferHEVC *pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    int target_bit_rate = pSequenceParameter->bits_per_second;
+    unsigned int target_bit_rate = encoder_context->brc.bits_per_second[0];
 
     // current we only support CBR mode.
     if (rate_control_mode == VA_RC_CBR) {
@@ -2519,51 +2511,6 @@ int intel_hcpe_interlace_check(VADriverContextP ctx,
     return 1;
 }
 
-/*
- * Check whether the parameters related with CBR are updated and decide whether
- * it needs to reinitialize the configuration related with CBR.
- * Currently it will check the following parameters:
- *      bits_per_second
- *      frame_rate
- *      gop_configuration(intra_period, ip_period, intra_idr_period)
- */
-static bool intel_hcpe_brc_updated_check(struct encode_state *encode_state,
-        struct intel_encoder_context *encoder_context)
-{
-    /* to do */
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
-    struct gen9_hcpe_context *mfc_context = encoder_context->mfc_context;
-    double cur_fps, cur_bitrate;
-    VAEncSequenceParameterBufferHEVC *pSequenceParameter;
-
-
-    if (rate_control_mode != VA_RC_CBR) {
-        return false;
-    }
-
-    pSequenceParameter = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
-
-    cur_bitrate = pSequenceParameter->bits_per_second;
-    cur_fps = (double)pSequenceParameter->vui_time_scale /
-              (double)pSequenceParameter->vui_num_units_in_tick;
-
-    if ((cur_bitrate == mfc_context->brc.saved_bps) &&
-        (cur_fps == mfc_context->brc.saved_fps) &&
-        (pSequenceParameter->intra_period == mfc_context->brc.saved_intra_period) &&
-        (pSequenceParameter->intra_idr_period == mfc_context->brc.saved_idr_period) &&
-        (pSequenceParameter->intra_period == mfc_context->brc.saved_intra_period)) {
-        /* the parameters related with CBR are not updaetd */
-        return false;
-    }
-
-    mfc_context->brc.saved_ip_period = pSequenceParameter->ip_period;
-    mfc_context->brc.saved_intra_period = pSequenceParameter->intra_period;
-    mfc_context->brc.saved_idr_period = pSequenceParameter->intra_idr_period;
-    mfc_context->brc.saved_fps = cur_fps;
-    mfc_context->brc.saved_bps = cur_bitrate;
-    return true;
-}
-
 void intel_hcpe_brc_prepare(struct encode_state *encode_state,
                             struct intel_encoder_context *encoder_context)
 {
@@ -2574,12 +2521,12 @@ void intel_hcpe_brc_prepare(struct encode_state *encode_state,
         bool brc_updated;
         assert(encoder_context->codec != CODEC_MPEG2);
 
-        brc_updated = intel_hcpe_brc_updated_check(encode_state, encoder_context);
+        brc_updated = encoder_context->brc.need_reset;
 
         /*Programing bit rate control */
         if ((mfc_context->bit_rate_control_context[HEVC_SLICE_I].MaxSizeInWord == 0) ||
             brc_updated) {
-            intel_hcpe_bit_rate_control_context_init(encode_state, mfc_context);
+            intel_hcpe_bit_rate_control_context_init(encode_state, encoder_context);
             intel_hcpe_brc_init(encode_state, encoder_context);
         }
 

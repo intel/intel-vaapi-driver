@@ -153,12 +153,6 @@ struct gen9_hcpe_context {
         int target_frame_size[3]; // I,P,B
         double bits_per_frame;
         double qpf_rounding_accumulator;
-
-        double saved_bps;
-        double saved_fps;
-        int saved_intra_period;
-        int saved_ip_period;
-        int saved_idr_period;
     } brc;
 
     struct {
