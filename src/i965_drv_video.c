@@ -2794,7 +2794,7 @@ i965_BeginPicture(VADriverContextP ctx,
     struct object_surface *obj_surface = SURFACE(render_target);
     struct object_config *obj_config;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    int i, j;
+    int i;
 
     ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
     ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
@@ -2848,14 +2848,6 @@ i965_BeginPicture(VADriverContextP ctx,
         i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[VAEncMiscParameterTypeROI][0]);
 
         i965_release_buffer_store(&obj_context->codec_state.encode.encmb_map);
-
-        if (obj_config->profile == VAProfileVP9Profile0) {
-            for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param); i++)
-                for (j = 0; j < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param[0]); j++)
-                    i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[i][j]);
-
-            i965_release_buffer_store(&obj_context->codec_state.encode.seq_param_ext);
-        }
     } else {
         obj_context->codec_state.decode.current_render_target = render_target;
         i965_release_buffer_store(&obj_context->codec_state.decode.pic_param);

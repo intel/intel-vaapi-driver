@@ -1201,8 +1201,8 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
                                                   VP9_BRC_KBPS;
             cmd->dw9.min_bit_rate           = (vp9_state->min_bit_rate  + VP9_BRC_KBPS - 1) / VP9_BRC_KBPS *
                                                   VP9_BRC_KBPS;
-            cmd->dw10.frame_ratem           = vp9_state->frame_rate;
-            cmd->dw11.frame_rated           = 1;
+            cmd->dw10.frame_ratem           = vp9_state->framerate.num;
+            cmd->dw11.frame_rated           = vp9_state->framerate.den;
 
             cmd->dw14.avbr_accuracy         = 30;
             cmd->dw14.avbr_convergence      = 150;
@@ -1235,8 +1235,8 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
             cmd->dw17.enable_dynamic_scaling = vp9_state->dys_in_use;
             cmd->dw17.brc_overshoot_cbr_pct = 150;
 
-            dInputBitsPerFrame = (double)(cmd->dw8.max_bit_rate) / (vp9_state->frame_rate);
-            dbps_ratio         = dInputBitsPerFrame / ((double)(vp9_state->vbv_buffer_size_in_bit) / 30);
+            dInputBitsPerFrame = (double)cmd->dw8.max_bit_rate * (double)vp9_state->framerate.den / (double)vp9_state->framerate.num;
+            dbps_ratio         = dInputBitsPerFrame / ((double)vp9_state->vbv_buffer_size_in_bit / 30.0);
             if (dbps_ratio < 0.1)
                 dbps_ratio = 0.1;
             if (dbps_ratio > 3.5)
@@ -1423,7 +1423,6 @@ gen9_vp9_brc_init_reset_kernel(VADriverContextP ctx,
     brc_initreset_curbe.initbrc            = !vp9_state->brc_inited;
     brc_initreset_curbe.mbbrc_enabled      = 0;
     brc_initreset_curbe.ref_frame_flag      = vp9_state->ref_frame_flag;
-    brc_initreset_curbe.frame_rate           = vp9_state->frame_rate;
 
     vme_context->pfn_set_curbe_brc(ctx, encode_state,
                                    gpe_context,
@@ -1523,7 +1522,6 @@ gen9_vp9_brc_intra_dist_kernel(VADriverContextP ctx,
     brc_intra_dist_curbe.initbrc            = !vp9_state->brc_inited;
     brc_intra_dist_curbe.mbbrc_enabled      = 0;
     brc_intra_dist_curbe.ref_frame_flag      = vp9_state->ref_frame_flag;
-    brc_intra_dist_curbe.frame_rate           = vp9_state->frame_rate;
 
     vme_context->pfn_set_curbe_brc(ctx, encode_state,
                                    gpe_context,
@@ -3926,169 +3924,40 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
         return VA_STATUS_ERROR_UNIMPLEMENTED;
 
     if (vp9_state->brc_enabled) {
-        if (vp9_state->brc_flag_check & VP9_BRC_FAILURE) {
-            WARN_ONCE("Rate control misc_parameter is required for BRC\n");
-            return VA_STATUS_ERROR_INVALID_PARAMETER;
-        }
+        if (vp9_state->first_frame || vp9_state->picture_coding_type == KEY_FRAME) {
+            vp9_state->brc_reset = encoder_context->brc.need_reset || vp9_state->first_frame;
 
-        if (vp9_state->first_frame) {
-            unsigned int brc_flag;
-            VAEncMiscParameterBuffer *misc_param;
-
-            brc_flag = VP9_BRC_SEQ | VP9_BRC_RC;
-            if ((vp9_state->brc_flag_check & brc_flag) != brc_flag) {
-                WARN_ONCE("SPS/RC misc is required for BRC\n");
+            if (!encoder_context->brc.framerate[0].num || !encoder_context->brc.framerate[0].den ||
+                !encoder_context->brc.bits_per_second[0])
                 return VA_STATUS_ERROR_INVALID_PARAMETER;
-            }
 
-            /* check the corresponding BRC parameter for CBR and VBR */
-            if (encoder_context->rate_control_mode == VA_RC_CBR) {
-                vp9_state->target_bit_rate = seq_param->bits_per_second;
-                vp9_state->gop_size = seq_param->intra_period;
+            vp9_state->gop_size = encoder_context->brc.gop_size;
+            vp9_state->framerate = encoder_context->brc.framerate[0];
 
-                if (vp9_state->brc_flag_check & VP9_BRC_HRD) {
-                    VAEncMiscParameterHRD *misc_param_hrd;
-
-                    misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer;
-                    misc_param_hrd = (VAEncMiscParameterHRD *)misc_param->data;
-
-                    vp9_state->init_vbv_buffer_fullness_in_bit = misc_param_hrd->initial_buffer_fullness;
-                    vp9_state->vbv_buffer_size_in_bit = misc_param_hrd->buffer_size;
-                }
-
-                if (vp9_state->brc_flag_check & VP9_BRC_FR) {
-                    VAEncMiscParameterFrameRate *misc_param_fr;
-
-                    misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
-                    misc_param_fr = (VAEncMiscParameterFrameRate *)misc_param->data;
-
-                    vp9_state->frame_rate = misc_param_fr->framerate;
-                } else {
-                    /* Assign the default frame rate */
-                    vp9_state->frame_rate = 30;
-                }
-
-                /* RC misc will override HRD parameter */
-                if (vp9_state->brc_flag_check & VP9_BRC_RC) {
-                    VAEncMiscParameterRateControl *misc_param_rc;
-
-                    misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeRateControl][0]->buffer;
-                    misc_param_rc = (VAEncMiscParameterRateControl *)misc_param->data;
-
-                    vp9_state->target_bit_rate = misc_param_rc->bits_per_second;
-                    vp9_state->vbv_buffer_size_in_bit = (misc_param_rc->bits_per_second / 1000) *
-                                                 misc_param_rc->window_size;
-                    vp9_state->init_vbv_buffer_fullness_in_bit = vp9_state->vbv_buffer_size_in_bit / 2;
-                    vp9_state->window_size = misc_param_rc->window_size;
-                }
+            if (encoder_context->rate_control_mode == VA_RC_CBR ||
+                !encoder_context->brc.target_percentage[0]) {
+                vp9_state->target_bit_rate = encoder_context->brc.bits_per_second[0];
                 vp9_state->max_bit_rate = vp9_state->target_bit_rate;
                 vp9_state->min_bit_rate = vp9_state->target_bit_rate;
             } else {
-                /* VBR mode */
-                brc_flag = VP9_BRC_SEQ | VP9_BRC_RC;
-                vp9_state->target_bit_rate = seq_param->bits_per_second;
-                vp9_state->gop_size = seq_param->intra_period;
-
-                if (vp9_state->brc_flag_check & VP9_BRC_FR) {
-                    VAEncMiscParameterFrameRate *misc_param_fr;
-
-                    misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
-                    misc_param_fr = (VAEncMiscParameterFrameRate *)misc_param->data;
-
-                    vp9_state->frame_rate = misc_param_fr->framerate;
-                } else {
-                    /* Assign the default frame rate */
-                    vp9_state->frame_rate = 30;
-                }
-
-                if (vp9_state->brc_flag_check & VP9_BRC_RC) {
-                    VAEncMiscParameterRateControl *misc_param_rc;
-
-                    misc_param = (VAEncMiscParameterBuffer *)
-                        encode_state->misc_param[VAEncMiscParameterTypeRateControl][0]->buffer;
-                    misc_param_rc = (VAEncMiscParameterRateControl *)misc_param->data;
-
-                    vp9_state->max_bit_rate = misc_param_rc->bits_per_second;
-                    vp9_state->vbv_buffer_size_in_bit = (misc_param_rc->bits_per_second / 1000) *
-                                                 misc_param_rc->window_size;
-                    vp9_state->init_vbv_buffer_fullness_in_bit = vp9_state->vbv_buffer_size_in_bit / 2;
-                    vp9_state->target_bit_rate = (misc_param_rc->bits_per_second / 100) *
-                                misc_param_rc->target_percentage;
-                    vp9_state->min_bit_rate = (misc_param_rc->bits_per_second / 100) *
-                         (2 * misc_param_rc->target_percentage - 100);
-                    vp9_state->target_percentage = misc_param_rc->target_percentage;
-                    vp9_state->window_size = misc_param_rc->window_size;
-                }
-            }
-        }
-        else if (vp9_state->picture_coding_type == KEY_FRAME){
-            VAEncMiscParameterBuffer *misc_param;
-            /* update the BRC parameter only when it is key-frame */
-            /* If the parameter related with RC is changed. Reset BRC */
-            if (vp9_state->brc_flag_check & VP9_BRC_FR) {
-               VAEncMiscParameterFrameRate *misc_param_fr;
-
-               misc_param = (VAEncMiscParameterBuffer *)
-                   encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer;
-               misc_param_fr = (VAEncMiscParameterFrameRate *)misc_param->data;
-
-               if (vp9_state->frame_rate != misc_param_fr->framerate) {
-                   vp9_state->brc_reset = 1;
-                   vp9_state->frame_rate = misc_param_fr->framerate;
-               }
+                vp9_state->max_bit_rate = encoder_context->brc.bits_per_second[0];
+                vp9_state->target_bit_rate = vp9_state->max_bit_rate * encoder_context->brc.target_percentage[0] / 100;
+                if (2 * vp9_state->target_bit_rate < vp9_state->max_bit_rate)
+                    vp9_state->min_bit_rate = 0;
+                else
+                    vp9_state->min_bit_rate = 2 * vp9_state->target_bit_rate - vp9_state->max_bit_rate;
             }
 
-            /* check the GOP size. And bit_per_second in SPS is ignored */
-            if (vp9_state->brc_flag_check & VP9_BRC_SEQ) {
-                if (vp9_state->gop_size != seq_param->intra_period) {
-                    vp9_state->brc_reset = 1;
-                    vp9_state->gop_size = seq_param->intra_period;
-                }
-            }
-
-            /* update the bit_per_second */
-            if (vp9_state->brc_flag_check & VP9_BRC_RC) {
-                VAEncMiscParameterRateControl *misc_param_rc;
-
-                misc_param = (VAEncMiscParameterBuffer *)
-                    encode_state->misc_param[VAEncMiscParameterTypeRateControl][0]->buffer;
-                misc_param_rc = (VAEncMiscParameterRateControl *)misc_param->data;
-
-                if (encoder_context->rate_control_mode == VA_RC_CBR) {
-                    if (vp9_state->target_bit_rate != misc_param_rc->bits_per_second ||
-                        vp9_state->window_size != misc_param_rc->window_size) {
-                        vp9_state->target_bit_rate = misc_param_rc->bits_per_second;
-                        vp9_state->vbv_buffer_size_in_bit = (misc_param_rc->bits_per_second / 1000) *
-                                                 misc_param_rc->window_size;
-                        vp9_state->init_vbv_buffer_fullness_in_bit = vp9_state->vbv_buffer_size_in_bit * 2;
-                        vp9_state->window_size = misc_param_rc->window_size;
-                        vp9_state->max_bit_rate = vp9_state->target_bit_rate;
-                        vp9_state->min_bit_rate = vp9_state->target_bit_rate;
-                        vp9_state->brc_reset = 1;
-                    }
-                } else {
-                    /* VBR mode */
-                    if (vp9_state->max_bit_rate != misc_param_rc->bits_per_second ||
-                        vp9_state->target_percentage != misc_param_rc->target_percentage) {
-
-                        vp9_state->target_bit_rate = (misc_param_rc->bits_per_second / 100) *
-                                misc_param_rc->target_percentage;
-                        vp9_state->min_bit_rate = (misc_param_rc->bits_per_second / 100) *
-                             (2 * misc_param_rc->target_percentage - 100);
-                        vp9_state->max_bit_rate = misc_param_rc->bits_per_second;
-                        vp9_state->vbv_buffer_size_in_bit = (misc_param_rc->bits_per_second / 1000) *
-                                                 misc_param_rc->window_size;
-                        vp9_state->init_vbv_buffer_fullness_in_bit = vp9_state->vbv_buffer_size_in_bit / 2;
-                        vp9_state->target_percentage = misc_param_rc->target_percentage;
-                        vp9_state->window_size = misc_param_rc->window_size;
-                        vp9_state->brc_reset = 1;
-                    }
-                }
-            }
+            if (encoder_context->brc.hrd_buffer_size)
+                vp9_state->vbv_buffer_size_in_bit = encoder_context->brc.hrd_buffer_size;
+            else if (encoder_context->brc.window_size)
+                vp9_state->vbv_buffer_size_in_bit = (uint64_t)vp9_state->max_bit_rate * encoder_context->brc.window_size / 1000;
+            else
+                vp9_state->vbv_buffer_size_in_bit = vp9_state->max_bit_rate;
+            if (encoder_context->brc.hrd_initial_buffer_fullness)
+                vp9_state->init_vbv_buffer_fullness_in_bit = encoder_context->brc.hrd_initial_buffer_fullness;
+            else
+                vp9_state->init_vbv_buffer_fullness_in_bit = vp9_state->vbv_buffer_size_in_bit / 2;
         }
     }
 
@@ -5805,47 +5674,6 @@ static void
 gen9_vp9_pak_brc_prepare(struct encode_state *encode_state,
                           struct intel_encoder_context *encoder_context)
 {
-    struct gen9_encoder_context_vp9 *pak_context = encoder_context->mfc_context;
-    struct gen9_vp9_state *vp9_state;
-
-    vp9_state = (struct gen9_vp9_state *)(encoder_context->enc_priv_state);
-
-    if (!vp9_state || !pak_context)
-        return;
-
-    if (vp9_state->brc_enabled) {
-        /* check the buffer related with BRC */
-        vp9_state->brc_flag_check = 0;
-        if (encode_state->seq_param_ext && encode_state->seq_param_ext->buffer) {
-            vp9_state->brc_flag_check |= VP9_BRC_SEQ;
-        }
-
-        /* Frame_rate */
-        if (encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0] &&
-            encode_state->misc_param[VAEncMiscParameterTypeFrameRate][0]->buffer) {
-            vp9_state->brc_flag_check |= VP9_BRC_FR;
-        }
-
-        /* HRD */
-        if (encode_state->misc_param[VAEncMiscParameterTypeRateControl][0] &&
-            encode_state->misc_param[VAEncMiscParameterTypeRateControl][0]->buffer) {
-            vp9_state->brc_flag_check |= VP9_BRC_RC;
-        }
-
-        if (encode_state->misc_param[VAEncMiscParameterTypeHRD][0] &&
-            encode_state->misc_param[VAEncMiscParameterTypeHRD][0]->buffer) {
-            vp9_state->brc_flag_check |= VP9_BRC_HRD;
-        }
-
-        /*
-         * If user-app doesn't pass the buffer related with BRC for the first
-         * frame, the error flag is returned.
-         */
-        if (vp9_state->brc_flag_check == 0 && vp9_state->first_frame) {
-            vp9_state->brc_flag_check |= VP9_BRC_FAILURE;
-        }
-    }
-    return;
 }
 
 static void

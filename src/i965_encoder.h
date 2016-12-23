@@ -91,6 +91,7 @@ struct intel_encoder_context
         unsigned int target_percentage[MAX_TEMPORAL_LAYERS];
         unsigned int hrd_buffer_size;
         unsigned int hrd_initial_buffer_fullness;
+        unsigned int window_size;
         unsigned int need_reset;
 
         unsigned int num_roi;

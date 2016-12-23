@@ -1552,7 +1552,6 @@ struct gen9_vp9_brc_curbe_param
     int32_t   brc_num_pak_passes;
     bool      multi_ref_qp_check;
     int16_t   frame_number;
-    int32_t   frame_rate;
     VP9_MEDIA_STATE_TYPE                       media_state_type;
 };
 
@@ -1648,12 +1647,6 @@ typedef struct _vp9_frame_status_
     uint8_t frame_context_idx;
     uint8_t intra_only;
 } vp9_frame_status;
-
-#define VP9_BRC_SEQ         0x01
-#define VP9_BRC_HRD         0x02
-#define VP9_BRC_RC          0x04
-#define VP9_BRC_FR          0x08
-#define VP9_BRC_FAILURE     (1 << 31)
 
 struct gen9_hcpe_pipe_mode_select_param
 {
@@ -1925,18 +1918,15 @@ struct gen9_vp9_state {
     unsigned long init_vbv_buffer_fullness_in_bit;
     unsigned long vbv_buffer_size_in_bit;
     int      frame_number;
-    uint32_t frame_rate;
+    struct intel_fraction framerate;
     uint8_t  ref_frame_flag;
     uint8_t  dys_ref_frame_flag;
     uint8_t  picture_coding_type;
     unsigned int adaptive_transform_decision_enabled;
     int      curr_mode_decision_index;
     int      target_usage;
-    int      window_size;
-    int      target_percentage;
     unsigned int mb_data_offset;
     int      curr_pak_pass;
-    unsigned int brc_flag_check;
     bool     first_frame;
     bool     dys_enabled;
     bool     dys_in_use;

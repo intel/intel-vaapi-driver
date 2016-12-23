@@ -490,6 +490,34 @@ intel_encoder_check_brc_hevc_sequence_parameter(VADriverContextP ctx,
 }
 
 static VAStatus
+intel_encoder_check_brc_vp9_sequence_parameter(VADriverContextP ctx,
+                                               struct encode_state *encode_state,
+                                               struct intel_encoder_context *encoder_context)
+{
+    VAEncSequenceParameterBufferVP9 *seq_param = (VAEncSequenceParameterBufferVP9*)encode_state->seq_param_ext->buffer;
+    unsigned int gop_size;
+
+    if (!encoder_context->is_new_sequence)
+        return VA_STATUS_SUCCESS;
+    if (!seq_param)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (seq_param->intra_period == 0)
+        gop_size = -1; // Dummy value (infinity).
+    else
+        gop_size = seq_param->intra_period;
+
+    if (encoder_context->brc.bits_per_second[0] != seq_param->bits_per_second ||
+        encoder_context->brc.gop_size != gop_size) {
+        encoder_context->brc.bits_per_second[0] = seq_param->bits_per_second;
+        encoder_context->brc.gop_size = gop_size;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
 intel_encoder_check_brc_sequence_parameter(VADriverContextP ctx,
                                            struct encode_state *encode_state,
                                            struct intel_encoder_context *encoder_context)
@@ -504,6 +532,9 @@ intel_encoder_check_brc_sequence_parameter(VADriverContextP ctx,
 
     case CODEC_HEVC:
         return intel_encoder_check_brc_hevc_sequence_parameter(ctx, encode_state, encoder_context);
+
+    case CODEC_VP9:
+        return intel_encoder_check_brc_vp9_sequence_parameter(ctx, encode_state, encoder_context);
 
     default:
         // TODO: other codecs
@@ -539,6 +570,11 @@ intel_encoder_check_rate_control_parameter(VADriverContextP ctx,
 
     if (encoder_context->brc.target_percentage[temporal_id] != misc->target_percentage) {
         encoder_context->brc.target_percentage[temporal_id] = misc->target_percentage;
+        encoder_context->brc.need_reset = 1;
+    }
+
+    if (encoder_context->brc.window_size != misc->window_size) {
+        encoder_context->brc.window_size = misc->window_size;
         encoder_context->brc.need_reset = 1;
     }
 }
