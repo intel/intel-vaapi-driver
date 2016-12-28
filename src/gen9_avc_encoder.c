@@ -1020,3 +1020,178 @@ gen9_avc_free_resources(struct encoder_vme_mfc_context * vme_context)
     }
 
 }
+
+static void
+gen9_avc_run_kernel_media_object(VADriverContextP ctx,
+                             struct intel_encoder_context *encoder_context,
+                             struct i965_gpe_context *gpe_context,
+                             int media_function,
+                             struct gpe_media_object_parameter *param)
+{
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )vme_context->private_enc_ctx;
+
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct encoder_status_buffer_internal *status_buffer;
+    struct gpe_mi_store_data_imm_parameter mi_store_data_imm;
+
+    if (!batch)
+        return;
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+
+    status_buffer = &(avc_ctx->status_buffer);
+    memset(&mi_store_data_imm, 0, sizeof(mi_store_data_imm));
+    mi_store_data_imm.bo = status_buffer->bo;
+    mi_store_data_imm.offset = status_buffer->media_index_offset;
+    mi_store_data_imm.dw0 = media_function;
+    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
+
+    intel_batchbuffer_emit_mi_flush(batch);
+    gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
+    gen8_gpe_media_object(ctx, gpe_context, batch, param);
+    gen8_gpe_media_state_flush(ctx, gpe_context, batch);
+
+    gen9_gpe_pipeline_end(ctx, gpe_context, batch);
+
+    intel_batchbuffer_end_atomic(batch);
+
+    intel_batchbuffer_flush(batch);
+}
+
+static void
+gen9_avc_run_kernel_media_object_walker(VADriverContextP ctx,
+                                    struct intel_encoder_context *encoder_context,
+                                    struct i965_gpe_context *gpe_context,
+                                    int media_function,
+                                    struct gpe_media_object_walker_parameter *param)
+{
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )vme_context->private_enc_ctx;
+
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct encoder_status_buffer_internal *status_buffer;
+    struct gpe_mi_store_data_imm_parameter mi_store_data_imm;
+
+    if (!batch)
+        return;
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+
+    intel_batchbuffer_emit_mi_flush(batch);
+
+    status_buffer = &(avc_ctx->status_buffer);
+    memset(&mi_store_data_imm, 0, sizeof(mi_store_data_imm));
+    mi_store_data_imm.bo = status_buffer->bo;
+    mi_store_data_imm.offset = status_buffer->media_index_offset;
+    mi_store_data_imm.dw0 = media_function;
+    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
+
+    gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
+    gen8_gpe_media_object_walker(ctx, gpe_context, batch, param);
+    gen8_gpe_media_state_flush(ctx, gpe_context, batch);
+
+    gen9_gpe_pipeline_end(ctx, gpe_context, batch);
+
+    intel_batchbuffer_end_atomic(batch);
+
+    intel_batchbuffer_flush(batch);
+}
+
+static void
+gen9_init_gpe_context_avc(VADriverContextP ctx,
+                          struct i965_gpe_context *gpe_context,
+                          struct encoder_kernel_parameter *kernel_param)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    gpe_context->curbe.length = kernel_param->curbe_size; // in bytes
+
+    gpe_context->sampler.entry_size = 0;
+    gpe_context->sampler.max_entries = 0;
+
+    if (kernel_param->sampler_size) {
+        gpe_context->sampler.entry_size = ALIGN(kernel_param->sampler_size, 64);
+        gpe_context->sampler.max_entries = 1;
+    }
+
+    gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64); // 8 dws, 1 register
+    gpe_context->idrt.max_entries = NUM_KERNELS_PER_GPE_CONTEXT;
+
+    gpe_context->surface_state_binding_table.max_entries = MAX_AVC_ENCODER_SURFACES;
+    gpe_context->surface_state_binding_table.binding_table_offset = 0;
+    gpe_context->surface_state_binding_table.surface_state_offset = ALIGN(MAX_AVC_ENCODER_SURFACES * 4, 64);
+    gpe_context->surface_state_binding_table.length = ALIGN(MAX_AVC_ENCODER_SURFACES * 4, 64) + ALIGN(MAX_AVC_ENCODER_SURFACES * SURFACE_STATE_PADDED_SIZE_GEN9, 64);
+
+    if (i965->intel.eu_total > 0)
+        gpe_context->vfe_state.max_num_threads = 6 * i965->intel.eu_total;
+    else
+        gpe_context->vfe_state.max_num_threads = 112; // 16 EU * 7 threads
+
+    gpe_context->vfe_state.curbe_allocation_size = MAX(1, ALIGN(gpe_context->curbe.length, 32) >> 5); // in registers
+    gpe_context->vfe_state.urb_entry_size = MAX(1, ALIGN(kernel_param->inline_data_size, 32) >> 5); // in registers
+    gpe_context->vfe_state.num_urb_entries = (MAX_URB_SIZE -
+                                              gpe_context->vfe_state.curbe_allocation_size -
+                                              ((gpe_context->idrt.entry_size >> 5) *
+                                               gpe_context->idrt.max_entries)) / gpe_context->vfe_state.urb_entry_size;
+    gpe_context->vfe_state.num_urb_entries = CLAMP(1, 127, gpe_context->vfe_state.num_urb_entries);
+    gpe_context->vfe_state.gpgpu_mode = 0;
+}
+
+static void
+gen9_init_vfe_scoreboard_avc(struct i965_gpe_context *gpe_context,
+                             struct encoder_scoreboard_parameter *scoreboard_param)
+{
+    gpe_context->vfe_desc5.scoreboard0.mask = scoreboard_param->mask;
+    gpe_context->vfe_desc5.scoreboard0.type = scoreboard_param->type;
+    gpe_context->vfe_desc5.scoreboard0.enable = scoreboard_param->enable;
+
+    if (scoreboard_param->walkpat_flag) {
+        gpe_context->vfe_desc5.scoreboard0.mask = 0x0F;
+        gpe_context->vfe_desc5.scoreboard0.type = 1;
+
+        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0x0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0xF;
+
+        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xE;
+
+        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0x3;
+
+        gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0x1;
+    } else {
+        // Scoreboard 0
+        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0x0;
+
+        // Scoreboard 1
+        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xF;
+
+        // Scoreboard 2
+        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0x1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0xF;
+
+        // Scoreboard 3
+        gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0xF;
+
+        // Scoreboard 4
+        gpe_context->vfe_desc7.scoreboard2.delta_x4 = 0xF;
+        gpe_context->vfe_desc7.scoreboard2.delta_y4 = 0x1;
+
+        // Scoreboard 5
+        gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0x0;
+        gpe_context->vfe_desc7.scoreboard2.delta_y5 = 0xE;
+
+        // Scoreboard 6
+        gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0x1;
+        gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+
+        // Scoreboard 7
+        gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0xF;
+        gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+    }
+}
