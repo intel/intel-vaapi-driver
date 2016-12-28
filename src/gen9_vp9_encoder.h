@@ -83,16 +83,6 @@ struct vp9_encoder_kernel_parameter
     unsigned int                sampler_size;
 };
 
-struct vp9_encoder_kernel_walker_parameter
-{
-    unsigned int                walker_degree;
-    unsigned int                use_scoreboard;
-    unsigned int                scoreboard_mask;
-    unsigned int                no_dependency;
-    unsigned int                resolution_x;
-    unsigned int                resolution_y;
-};
-
 struct vp9_encoder_scoreboard_parameter
 {
     unsigned int                mask;

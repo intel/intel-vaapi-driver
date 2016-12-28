@@ -977,7 +977,10 @@
 #define VDENC_SURFACE_NV21              11
 
 #define MFC_BITSTREAM_BYTECOUNT_FRAME_REG       0x128A0
+#define MFC_BITSTREAM_BYTECOUNT_SLICE_REG       0x128D0
+#define MFC_IMAGE_STATUS_MASK_REG               0x128B4
 #define MFC_IMAGE_STATUS_CTRL_REG               0x128B8
+#define MFC_QP_STATUS_COUNT_REG                 0x128bc
 
 #define GEN9_CACHE_PTE                  0x02
 
