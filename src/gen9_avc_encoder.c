@@ -6798,3 +6798,314 @@ gen9_avc_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *enc
 
     return;
 }
+
+static void
+gen9_avc_pak_brc_prepare(struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
+
+    switch (rate_control_mode & 0x7f) {
+    case VA_RC_CBR:
+        generic_state->internal_rate_mode = INTEL_BRC_CBR;
+        break;
+
+    case VA_RC_VBR:
+        generic_state->internal_rate_mode = INTEL_BRC_VBR;//AVBR
+        break;
+
+    case VA_RC_CQP:
+    default:
+        generic_state->internal_rate_mode = INTEL_BRC_CQP;
+        break;
+    }
+
+}
+
+static VAStatus
+gen9_avc_pak_pipeline_prepare(VADriverContextP ctx,
+                     struct encode_state *encode_state,
+                     struct intel_encoder_context *encoder_context)
+{
+    VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )pak_context->private_enc_state;
+
+    struct object_surface *obj_surface;
+    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
+    VAEncSliceParameterBufferH264 *slice_param = avc_state->slice_param[0];
+
+    struct gen9_surface_avc *avc_priv_surface;
+    int i, j, enable_avc_ildb = 0;
+    unsigned int allocate_flag = 1;
+    unsigned int size;
+    unsigned int w_mb = generic_state->frame_width_in_mbs;
+    unsigned int h_mb = generic_state->frame_height_in_mbs;
+    struct avc_surface_param surface_param;
+
+    /* update the parameter and check slice parameter */
+    for (j = 0; j < encode_state->num_slice_params_ext && enable_avc_ildb == 0; j++) {
+        assert(encode_state->slice_params_ext && encode_state->slice_params_ext[j]->buffer);
+        slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j]->buffer;
+
+        for (i = 0; i < encode_state->slice_params_ext[j]->num_elements; i++) {
+            assert((slice_param->slice_type == SLICE_TYPE_I) ||
+                   (slice_param->slice_type == SLICE_TYPE_SI) ||
+                   (slice_param->slice_type == SLICE_TYPE_P) ||
+                   (slice_param->slice_type == SLICE_TYPE_SP) ||
+                   (slice_param->slice_type == SLICE_TYPE_B));
+
+            if (slice_param->disable_deblocking_filter_idc != 1) {
+                enable_avc_ildb = 1;
+                break;
+            }
+
+            slice_param++;
+        }
+    }
+    avc_state->enable_avc_ildb = enable_avc_ildb;
+
+    /* setup the all surface and buffer for PAK */
+    /* Setup current reconstruct frame */
+    obj_surface = encode_state->reconstructed_object;
+    va_status = i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+    memset(&surface_param,0,sizeof(surface_param));
+    surface_param.frame_width = generic_state->frame_width_in_pixel;
+    surface_param.frame_height = generic_state->frame_height_in_pixel;
+    va_status = gen9_avc_init_check_surfaces(ctx,
+                                             obj_surface,encoder_context,
+                                             &surface_param);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+    /* init the member of avc_priv_surface,frame_store_id,qp_value */
+    {
+       avc_priv_surface = (struct gen9_surface_avc *)obj_surface->private_data;
+       avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS-2] = 0;
+       avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS-1] = 0;
+       i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS-2]);
+       i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS-1]);
+       i965_dri_object_to_buffer_gpe_resource(&avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS-2],avc_priv_surface->dmv_top);
+       i965_dri_object_to_buffer_gpe_resource(&avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS-1],avc_priv_surface->dmv_bottom);
+       dri_bo_reference(avc_priv_surface->dmv_top);
+       dri_bo_reference(avc_priv_surface->dmv_bottom);
+       avc_priv_surface->qp_value = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+       avc_priv_surface->frame_store_id = 0;
+       avc_priv_surface->frame_idx = pic_param->CurrPic.frame_idx;
+       avc_priv_surface->top_field_order_cnt = pic_param->CurrPic.TopFieldOrderCnt;
+       avc_priv_surface->is_as_ref = pic_param->pic_fields.bits.reference_pic_flag;
+       avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS-2] = avc_priv_surface->top_field_order_cnt;
+       avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS-1] = avc_priv_surface->top_field_order_cnt + 1;
+    }
+    i965_free_gpe_resource(&avc_ctx->res_reconstructed_surface);
+    i965_free_gpe_resource(&avc_ctx->res_post_deblocking_output);
+    i965_free_gpe_resource(&avc_ctx->res_pre_deblocking_output);
+    i965_object_surface_to_2d_gpe_resource(&avc_ctx->res_reconstructed_surface, obj_surface);
+
+
+    if (avc_state->enable_avc_ildb) {
+        i965_object_surface_to_2d_gpe_resource(&avc_ctx->res_post_deblocking_output, obj_surface);
+    } else {
+        i965_object_surface_to_2d_gpe_resource(&avc_ctx->res_pre_deblocking_output, obj_surface);
+    }
+    /* input YUV surface */
+    obj_surface = encode_state->input_yuv_object;
+    va_status = i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+    i965_free_gpe_resource(&avc_ctx->res_uncompressed_input_surface);
+    i965_object_surface_to_2d_gpe_resource(&avc_ctx->res_uncompressed_input_surface, obj_surface);
+
+    /* Reference surfaces */
+    for (i = 0; i < ARRAY_ELEMS(avc_ctx->list_reference_res); i++) {
+        i965_free_gpe_resource(&avc_ctx->list_reference_res[i]);
+        i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i*2]);
+        i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i*2 + 1]);
+        obj_surface = encode_state->reference_objects[i];
+        avc_state->top_field_poc[2*i] = 0;
+        avc_state->top_field_poc[2*i+1] = 0;
+
+        if (obj_surface && obj_surface->bo) {
+            i965_object_surface_to_2d_gpe_resource(&avc_ctx->list_reference_res[i], obj_surface);
+
+            /* actually it should be handled when it is reconstructed surface */
+            va_status = gen9_avc_init_check_surfaces(ctx,
+                obj_surface,encoder_context,
+                &surface_param);
+            if (va_status != VA_STATUS_SUCCESS)
+                return va_status;
+            avc_priv_surface = (struct gen9_surface_avc *)obj_surface->private_data;
+            i965_dri_object_to_buffer_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i*2],avc_priv_surface->dmv_top);
+            i965_dri_object_to_buffer_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i*2 + 1],avc_priv_surface->dmv_bottom);
+            dri_bo_reference(avc_priv_surface->dmv_top);
+            dri_bo_reference(avc_priv_surface->dmv_bottom);
+            avc_priv_surface->frame_store_id = i;
+            avc_state->top_field_poc[2*i] = avc_priv_surface->top_field_order_cnt;
+            avc_state->top_field_poc[2*i+1] = avc_priv_surface->top_field_order_cnt+1;
+        }else
+        {
+            break;
+        }
+    }
+
+    size = w_mb * 64;
+    i965_free_gpe_resource(&avc_ctx->res_intra_row_store_scratch_buffer);
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                 &avc_ctx->res_intra_row_store_scratch_buffer,
+                                 size,
+                                "PAK Intra row store scratch buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    size = w_mb * 4 * 64;
+    i965_free_gpe_resource(&avc_ctx->res_deblocking_filter_row_store_scratch_buffer);
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                 &avc_ctx->res_deblocking_filter_row_store_scratch_buffer,
+                                 size,
+                                "PAK Deblocking filter row store scratch buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    size = w_mb * 2 * 64;
+    i965_free_gpe_resource(&avc_ctx->res_bsd_mpc_row_store_scratch_buffer);
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                 &avc_ctx->res_bsd_mpc_row_store_scratch_buffer,
+                                 size,
+                                "PAK BSD/MPC row store scratch buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    size = w_mb * h_mb * 16;
+    i965_free_gpe_resource(&avc_ctx->res_pak_mb_status_buffer);
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                 &avc_ctx->res_pak_mb_status_buffer,
+                                 size,
+                                "PAK MB status buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    return VA_STATUS_SUCCESS;
+
+failed_allocation:
+    return VA_STATUS_ERROR_ALLOCATION_FAILED;
+}
+
+static VAStatus
+gen9_avc_encode_picture(VADriverContextP ctx,
+                        VAProfile profile,
+                        struct encode_state *encode_state,
+                        struct intel_encoder_context *encoder_context)
+{
+    VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )vme_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+
+    va_status = gen9_avc_pak_pipeline_prepare(ctx, encode_state, encoder_context);
+
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    for (generic_state->curr_pak_pass = 0;
+         generic_state->curr_pak_pass < generic_state->num_pak_passes;
+         generic_state->curr_pak_pass++) {
+
+         if (i965->intel.has_bsd2)
+             intel_batchbuffer_start_atomic_bcs_override(batch, 0x1000, BSD_RING0);
+         else
+             intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
+         intel_batchbuffer_emit_mi_flush(batch);
+
+         if (generic_state->curr_pak_pass == 0) {
+             /* Initialize the avc Image Ctrl reg for the first pass,write 0 to staturs/control register, is it needed in AVC? */
+             struct gpe_mi_load_register_imm_parameter mi_load_reg_imm;
+             struct encoder_status_buffer_internal *status_buffer;
+
+             status_buffer = &(avc_ctx->status_buffer);
+             memset(&mi_load_reg_imm, 0, sizeof(mi_load_reg_imm));
+             mi_load_reg_imm.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
+             mi_load_reg_imm.data = 0;
+             gen8_gpe_mi_load_register_imm(ctx, batch, &mi_load_reg_imm);
+         }
+         gen9_avc_pak_picture_level(ctx, encode_state, encoder_context);
+         gen9_avc_pak_slice_level(ctx, encode_state, encoder_context);
+         intel_batchbuffer_emit_mi_flush(batch);
+
+         gen9_avc_read_mfc_status(ctx, encoder_context);
+         intel_batchbuffer_end_atomic(batch);
+         intel_batchbuffer_flush(batch);
+
+    }
+
+    generic_state->seq_frame_number++;
+    generic_state->total_frame_number++;
+    generic_state->first_frame = 0;
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen9_avc_pak_pipeline(VADriverContextP ctx,
+                      VAProfile profile,
+                      struct encode_state *encode_state,
+                      struct intel_encoder_context *encoder_context)
+{
+    VAStatus vaStatus;
+
+    switch (profile) {
+    case VAProfileH264ConstrainedBaseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        vaStatus = gen9_avc_encode_picture(ctx, profile, encode_state, encoder_context);
+        break;
+
+    default:
+        vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        break;
+    }
+
+    return vaStatus;
+}
+
+static void
+gen9_avc_pak_context_destroy(void * context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)context;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )pak_context->private_enc_ctx;
+
+    int i = 0;
+
+    if (!pak_context)
+        return;
+
+    // other things
+    i965_free_gpe_resource(&avc_ctx->res_reconstructed_surface);
+    i965_free_gpe_resource(&avc_ctx->res_post_deblocking_output);
+    i965_free_gpe_resource(&avc_ctx->res_pre_deblocking_output);
+    i965_free_gpe_resource(&avc_ctx->res_uncompressed_input_surface);
+
+    i965_free_gpe_resource(&avc_ctx->compressed_bitstream.res);
+    i965_free_gpe_resource(&avc_ctx->res_intra_row_store_scratch_buffer);
+    i965_free_gpe_resource(&avc_ctx->res_deblocking_filter_row_store_scratch_buffer);
+    i965_free_gpe_resource(&avc_ctx->res_bsd_mpc_row_store_scratch_buffer);
+    i965_free_gpe_resource(&avc_ctx->res_pak_mb_status_buffer);
+
+    for(i = 0 ; i < MAX_MFC_AVC_REFERENCE_SURFACES; i++)
+    {
+        i965_free_gpe_resource(&avc_ctx->list_reference_res[i]);
+    }
+
+    for(i = 0 ; i < NUM_MFC_AVC_DMV_BUFFERS; i++)
+    {
+        i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i]);
+    }
+}
