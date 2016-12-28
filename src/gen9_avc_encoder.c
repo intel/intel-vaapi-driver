@@ -6585,3 +6585,216 @@ gen9_mfc_avc_weightoffset_state(VADriverContextP ctx,
         ADVANCE_BCS_BATCH(batch);
     }
 }
+
+static void
+gen9_mfc_avc_single_slice(VADriverContextP ctx,
+                          struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context,
+                          VAEncSliceParameterBufferH264 *slice_param,
+                          VAEncSliceParameterBufferH264 *next_slice_param,
+                          int slice_index)
+{
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    struct gpe_mi_batch_buffer_start_parameter second_level_batch;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct object_surface *obj_surface;
+    struct gen9_surface_avc *avc_priv_surface;
+
+    gen9_mfc_avc_ref_idx_state(ctx, encode_state, encoder_context, slice_param);
+    gen9_mfc_avc_weightoffset_state(ctx,
+                                    encode_state,
+                                    encoder_context,
+                                    pic_param,
+                                    slice_param);
+    gen9_mfc_avc_slice_state(ctx,
+                             encode_state,
+                             encoder_context,
+                             pic_param,
+                             slice_param,
+                             next_slice_param);
+    gen9_mfc_avc_inset_headers(ctx,
+                               encode_state,
+                               encoder_context,
+                               slice_param,
+                               slice_index);
+    /* insert mb code as second levle.*/
+    obj_surface = encode_state->reconstructed_object;
+    assert(obj_surface->private_data);
+    avc_priv_surface = (struct gen9_surface_avc *)obj_surface->private_data;
+
+    memset(&second_level_batch, 0, sizeof(second_level_batch));
+    second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
+    second_level_batch.offset = slice_param->macroblock_address * 16 * 4;
+    second_level_batch.bo = avc_priv_surface->res_mb_code_surface.bo;
+    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+
+}
+
+static void
+gen9_avc_pak_slice_level(VADriverContextP ctx,
+                         struct encode_state *encode_state,
+                         struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gpe_mi_flush_dw_parameter mi_flush_dw_params;
+    VAEncSliceParameterBufferH264 *slice_param, *next_slice_param, *next_slice_group_param;
+    int i, j;
+    int slice_index = 0;
+    int is_frame_level = 1;       /* TODO: check it for SKL,now single slice per frame */
+    int has_tail = 0;             /* TODO: check it later */
+
+    for (j = 0; j < encode_state->num_slice_params_ext; j++) {
+        slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j]->buffer;
+
+        if (j == encode_state->num_slice_params_ext - 1)
+            next_slice_group_param = NULL;
+        else
+            next_slice_group_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j + 1]->buffer;
+
+        for (i = 0; i < encode_state->slice_params_ext[j]->num_elements; i++) {
+            if (i < encode_state->slice_params_ext[j]->num_elements - 1)
+                next_slice_param = slice_param + 1;
+            else
+                next_slice_param = next_slice_group_param;
+
+            gen9_mfc_avc_single_slice(ctx,
+                                      encode_state,
+                                      encoder_context,
+                                      slice_param,
+                                      next_slice_param,
+                                      slice_index);
+            slice_param++;
+            slice_index++;
+
+            if (is_frame_level)
+                break;
+            else {
+                /* TODO: remove assert(0) and add other commands here */
+                assert(0);
+            }
+        }
+
+        if (is_frame_level)
+            break;
+    }
+
+    if (has_tail) {
+        /* TODO: insert a tail if required */
+    }
+
+    memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
+    mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+}
+static void
+gen9_avc_pak_picture_level(VADriverContextP ctx,
+                           struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    struct gpe_mi_batch_buffer_start_parameter second_level_batch;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+
+    if (generic_state->brc_enabled &&
+        generic_state->curr_pak_pass) {
+        struct gpe_mi_conditional_batch_buffer_end_parameter mi_conditional_batch_buffer_end_params;
+        struct encoder_status_buffer_internal *status_buffer;
+        status_buffer = &(avc_ctx->status_buffer);
+
+        memset(&mi_conditional_batch_buffer_end_params, 0, sizeof(mi_conditional_batch_buffer_end_params));
+        mi_conditional_batch_buffer_end_params.offset = status_buffer->image_status_ctrl_offset;
+        mi_conditional_batch_buffer_end_params.bo = status_buffer->bo;
+        mi_conditional_batch_buffer_end_params.compare_data = 0;
+        mi_conditional_batch_buffer_end_params.compare_mask_mode_disabled = 1;
+        gen9_gpe_mi_conditional_batch_buffer_end(ctx, batch, &mi_conditional_batch_buffer_end_params);
+    }
+
+    gen9_mfc_avc_pipe_mode_select(ctx,encode_state,encoder_context);
+    gen9_mfc_avc_surface_state(ctx,encoder_context,&(avc_ctx->res_reconstructed_surface),0);
+    gen9_mfc_avc_surface_state(ctx,encoder_context,&(avc_ctx->res_uncompressed_input_surface),4);
+    gen9_mfc_avc_pipe_buf_addr_state(ctx,encoder_context);
+    gen9_mfc_avc_ind_obj_base_addr_state(ctx,encode_state,encoder_context);
+    gen9_mfc_avc_bsp_buf_base_addr_state(ctx,encoder_context);
+
+    if(generic_state->brc_enabled)
+    {
+        memset(&second_level_batch, 0, sizeof(second_level_batch));
+        if (generic_state->curr_pak_pass == 0) {
+            second_level_batch.offset = 0;
+        } else {
+            second_level_batch.offset = generic_state->curr_pak_pass * INTEL_AVC_IMAGE_STATE_CMD_SIZE;
+        }
+        second_level_batch.is_second_level = 1;
+        second_level_batch.bo = avc_ctx->res_brc_image_state_read_buffer.bo;
+        gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    }else
+    {
+        /*generate a new image state */
+        gen9_avc_set_image_state_non_brc(ctx,encode_state,encoder_context,&(avc_ctx->res_image_state_batch_buffer_2nd_level));
+        memset(&second_level_batch, 0, sizeof(second_level_batch));
+        second_level_batch.offset = 0;
+        second_level_batch.is_second_level = 1;
+        second_level_batch.bo = avc_ctx->res_image_state_batch_buffer_2nd_level.bo;
+        gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    }
+
+    gen9_mfc_avc_qm_state(ctx,encode_state,encoder_context);
+    gen9_mfc_avc_fqm_state(ctx,encode_state,encoder_context);
+    gen9_mfc_avc_directmode_state(ctx,encoder_context);
+
+}
+
+static void
+gen9_avc_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+
+    struct gpe_mi_store_register_mem_parameter mi_store_reg_mem_param;
+    struct gpe_mi_store_data_imm_parameter mi_store_data_imm_param;
+    struct gpe_mi_flush_dw_parameter mi_flush_dw_param;
+    struct encoder_status_buffer_internal *status_buffer;
+
+    status_buffer = &(avc_ctx->status_buffer);
+
+    memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+
+    /* read register and store into status_buffer and pak_statitistic info */
+    memset(&mi_store_reg_mem_param, 0, sizeof(mi_store_reg_mem_param));
+    mi_store_reg_mem_param.bo = status_buffer->bo;
+    mi_store_reg_mem_param.offset = status_buffer->bs_byte_count_offset;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->bs_frame_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    mi_store_reg_mem_param.bo = status_buffer->bo;
+    mi_store_reg_mem_param.offset = status_buffer->image_status_ctrl_offset;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    /*update the status in the pak_statistic_surface */
+    mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
+    mi_store_reg_mem_param.offset = 0;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->bs_frame_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    memset(&mi_store_data_imm_param, 0, sizeof(mi_store_data_imm_param));
+    mi_store_data_imm_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
+    mi_store_data_imm_param.offset = sizeof(unsigned int) * 2;
+    mi_store_data_imm_param.dw0 = (generic_state->curr_pak_pass + 1);
+    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm_param);
+
+    mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
+    mi_store_reg_mem_param.offset = sizeof(unsigned int) * (4 + generic_state->curr_pak_pass) ;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+
+    return;
+}
