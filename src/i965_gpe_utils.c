@@ -35,6 +35,8 @@
 #include "i965_drv_video.h"
 #include "i965_gpe_utils.h"
 
+#define DEFAULT_MOCS    2
+
 static void
 i965_gpe_select(VADriverContextP ctx,
                 struct i965_gpe_context *gpe_context,
@@ -1389,8 +1391,8 @@ i965_object_surface_to_2d_gpe_resource(struct i965_gpe_resource *res,
     unsigned int swizzle;
 
     res->type = I965_GPE_RESOURCE_2D;
-    res->width = obj_surface->orig_width;
-    res->height = obj_surface->orig_height;
+    res->width = ALIGN(obj_surface->orig_width,16);
+    res->height = ALIGN(obj_surface->orig_height,16);
     res->pitch = obj_surface->width;
     res->size = obj_surface->size;
     res->cb_cr_pitch = obj_surface->cb_cr_pitch;
@@ -2522,6 +2524,265 @@ gen8_gpe_pipe_control(VADriverContextP ctx,
     __OUT_BATCH(batch, param->dw0);
     __OUT_BATCH(batch, param->dw1);
 }
+
+void
+i965_init_media_object_walker_parameter(struct gpe_encoder_kernel_walker_parameter *kernel_walker_param,
+                                        struct gpe_media_object_walker_parameter *walker_param)
+{
+    memset(walker_param, 0, sizeof(*walker_param));
+
+    walker_param->use_scoreboard = kernel_walker_param->use_scoreboard;
+
+    walker_param->block_resolution.x = kernel_walker_param->resolution_x;
+    walker_param->block_resolution.y = kernel_walker_param->resolution_y;
+
+    walker_param->global_resolution.x = kernel_walker_param->resolution_x;
+    walker_param->global_resolution.y = kernel_walker_param->resolution_y;
+
+    walker_param->global_outer_loop_stride.x = kernel_walker_param->resolution_x;
+    walker_param->global_outer_loop_stride.y = 0;
+
+    walker_param->global_inner_loop_unit.x = 0;
+    walker_param->global_inner_loop_unit.y = kernel_walker_param->resolution_y;
+
+    walker_param->local_loop_exec_count = 0xFFFF;  //MAX VALUE
+    walker_param->global_loop_exec_count = 0xFFFF;  //MAX VALUE
+
+    if (kernel_walker_param->mbenc_i_frame_dist_in_use || kernel_walker_param->no_dependency) {
+        walker_param->scoreboard_mask = 0;
+        // Raster scan walking pattern
+        walker_param->local_outer_loop_stride.x = 0;
+        walker_param->local_outer_loop_stride.y = 1;
+        walker_param->local_inner_loop_unit.x = 1;
+        walker_param->local_inner_loop_unit.y = 0;
+        walker_param->local_end.x = kernel_walker_param->resolution_x - 1;
+        walker_param->local_end.y = 0;
+    } else if (kernel_walker_param->use_vertical_raster_scan) {
+        walker_param->scoreboard_mask = 0x1;
+        walker_param->use_scoreboard = 0;
+        // Raster scan walking pattern
+        walker_param->local_outer_loop_stride.x = 1;
+        walker_param->local_outer_loop_stride.y = 0;
+        walker_param->local_inner_loop_unit.x = 0;
+        walker_param->local_inner_loop_unit.y = 1;
+        walker_param->local_end.x = 0;
+        walker_param->local_end.y = kernel_walker_param->resolution_y - 1;
+    } else {
+        walker_param->local_end.x = 0;
+        walker_param->local_end.y = 0;
+
+        if (kernel_walker_param->walker_degree == WALKER_45Z_DEGREE) {
+            // 45z degree vp9
+            walker_param->scoreboard_mask = 0x0F;
+
+            walker_param->global_loop_exec_count = 0x3FF;
+            walker_param->local_loop_exec_count = 0x3FF;
+
+            walker_param->global_resolution.x = (unsigned int)(kernel_walker_param->resolution_x / 2.f) + 1;
+            walker_param->global_resolution.y = 2 * kernel_walker_param->resolution_y;
+
+            walker_param->global_start.x = 0;
+            walker_param->global_start.y = 0;
+
+            walker_param->global_outer_loop_stride.x = walker_param->global_resolution.x;
+            walker_param->global_outer_loop_stride.y = 0;
+
+            walker_param->global_inner_loop_unit.x = 0;
+            walker_param->global_inner_loop_unit.y = walker_param->global_resolution.y;
+
+            walker_param->block_resolution.x = walker_param->global_resolution.x;
+            walker_param->block_resolution.y = walker_param->global_resolution.y;
+
+            walker_param->local_start.x = 0;
+            walker_param->local_start.y = 0;
+
+            walker_param->local_outer_loop_stride.x = 1;
+            walker_param->local_outer_loop_stride.y = 0;
+
+            walker_param->local_inner_loop_unit.x = -1;
+            walker_param->local_inner_loop_unit.y = 4;
+
+            walker_param->middle_loop_extra_steps = 3;
+            walker_param->mid_loop_unit_x = 0;
+            walker_param->mid_loop_unit_y = 1;
+        } else if (kernel_walker_param->walker_degree == WALKER_45_DEGREE) {
+
+            walker_param->scoreboard_mask = 0x03;
+            // 45 order in local loop
+            walker_param->local_outer_loop_stride.x = 1;
+            walker_param->local_outer_loop_stride.y = 0;
+            walker_param->local_inner_loop_unit.x = -1;
+            walker_param->local_inner_loop_unit.y = 1;
+        } else if (kernel_walker_param->walker_degree == WALKER_26Z_DEGREE) {
+            // 26z HEVC
+            walker_param->scoreboard_mask = 0x7f;
+
+            // z order in local loop
+            walker_param->local_outer_loop_stride.x = 0;
+            walker_param->local_outer_loop_stride.y = 1;
+            walker_param->local_inner_loop_unit.x = 1;
+            walker_param->local_inner_loop_unit.y = 0;
+
+            walker_param->block_resolution.x = 2;
+            walker_param->block_resolution.y = 2;
+
+            walker_param->global_outer_loop_stride.x = 2;
+            walker_param->global_outer_loop_stride.y = 0;
+
+            walker_param->global_inner_loop_unit.x = 0xFFF - 4 + 1;
+            walker_param->global_inner_loop_unit.y = 2;
+
+        } else {
+            // 26 degree
+            walker_param->scoreboard_mask = 0x0F;
+            walker_param->local_outer_loop_stride.x = 1;
+            walker_param->local_outer_loop_stride.y = 0;
+            walker_param->local_inner_loop_unit.x = -2;
+            walker_param->local_inner_loop_unit.y = 1;
+        }
+    }
+}
+
+void
+gen9_add_2d_gpe_surface(VADriverContextP ctx,
+                        struct i965_gpe_context *gpe_context,
+                        struct object_surface *obj_surface,
+                        int is_uv_surface,
+                        int is_media_block_rw,
+                        unsigned int format,
+                        int index)
+{
+    struct i965_gpe_resource gpe_resource;
+    struct i965_gpe_surface gpe_surface;
+
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+
+    i965_object_surface_to_2d_gpe_resource(&gpe_resource, obj_surface);
+    gpe_surface.gpe_resource = &gpe_resource;
+    gpe_surface.is_2d_surface = 1;
+    gpe_surface.is_uv_surface = !!is_uv_surface;
+    gpe_surface.is_media_block_rw = !!is_media_block_rw;
+
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.format = format;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+    i965_free_gpe_resource(&gpe_resource);
+}
+
+void
+gen9_add_adv_gpe_surface(VADriverContextP ctx,
+                         struct i965_gpe_context *gpe_context,
+                         struct object_surface *obj_surface,
+                         int index)
+{
+    struct i965_gpe_resource gpe_resource;
+    struct i965_gpe_surface gpe_surface;
+
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+
+    i965_object_surface_to_2d_gpe_resource(&gpe_resource, obj_surface);
+    gpe_surface.gpe_resource = &gpe_resource;
+    gpe_surface.is_adv_surface = 1;
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.v_direction = 2;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+    i965_free_gpe_resource(&gpe_resource);
+}
+
+void
+gen9_add_buffer_gpe_surface(VADriverContextP ctx,
+                            struct i965_gpe_context *gpe_context,
+                            struct i965_gpe_resource *gpe_buffer,
+                            int is_raw_buffer,
+                            unsigned int size,
+                            unsigned int offset,
+                            int index)
+{
+    struct i965_gpe_surface gpe_surface;
+
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+
+    gpe_surface.gpe_resource = gpe_buffer;
+    gpe_surface.is_buffer = 1;
+    gpe_surface.is_raw_buffer = !!is_raw_buffer;
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.size = size;
+    gpe_surface.offset = offset;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+}
+
+void
+gen9_add_buffer_2d_gpe_surface(VADriverContextP ctx,
+                               struct i965_gpe_context *gpe_context,
+                               struct i965_gpe_resource *gpe_buffer,
+                               int is_media_block_rw,
+                               unsigned int format,
+                               int index)
+{
+    struct i965_gpe_surface gpe_surface;
+
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+
+    gpe_surface.gpe_resource = gpe_buffer;
+    gpe_surface.is_2d_surface = 1;
+    gpe_surface.is_media_block_rw = !!is_media_block_rw;
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.format = format;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+}
+
+void
+gen9_add_dri_buffer_gpe_surface(VADriverContextP ctx,
+                                struct i965_gpe_context *gpe_context,
+                                dri_bo *bo,
+                                int is_raw_buffer,
+                                unsigned int size,
+                                unsigned int offset,
+                                int index)
+{
+    struct i965_gpe_resource gpe_resource;
+
+    i965_dri_object_to_buffer_gpe_resource(&gpe_resource, bo);
+    gen9_add_buffer_gpe_surface(ctx,
+                                gpe_context,
+                                &gpe_resource,
+                                is_raw_buffer,
+                                size,
+                                offset,
+                                index);
+
+    i965_free_gpe_resource(&gpe_resource);
+}
+
+/*
+void
+gen9_add_dri_buffer_2d_gpe_surface(VADriverContextP ctx,
+                                   struct i965_gpe_context *gpe_context,
+                                   dri_bo *bo,
+                                   unsigned int width,
+                                   unsigned int height,
+                                   unsigned int pitch,
+                                   int is_media_block_rw,
+                                   unsigned int format,
+                                   int index)
+{
+    struct i965_gpe_resource gpe_resource;
+
+    i965_gpe_dri_object_to_2d_gpe_resource(&gpe_resource, bo, width, height, pitch);
+    gen9_add_buffer_2d_gpe_surface(ctx,
+                                   gpe_context,
+                                   &gpe_resource,
+                                   is_media_block_rw,
+                                   format,
+                                   index);
+
+    i965_free_gpe_resource(&gpe_resource);
+}
+*/
 
 bool
 i965_gpe_table_init(VADriverContextP ctx)
