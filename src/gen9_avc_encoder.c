@@ -3771,3 +3771,444 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
                                         &media_object_walker_param);
     return VA_STATUS_SUCCESS;
 }
+
+/*
+me kernle related function
+*/
+static void
+gen9_avc_set_curbe_me(VADriverContextP ctx,
+                      struct encode_state *encode_state,
+                      struct i965_gpe_context *gpe_context,
+                      struct intel_encoder_context *encoder_context,
+                      void * param)
+{
+    gen9_avc_me_curbe_data *curbe_cmd;
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
+
+    VAEncSliceParameterBufferH264 * slice_param = avc_state->slice_param[0];
+
+    struct me_param * curbe_param = (struct me_param *)param ;
+    unsigned char  use_mv_from_prev_step = 0;
+    unsigned char write_distortions = 0;
+    unsigned char qp_prime_y = 0;
+    unsigned char me_method = gen9_avc_p_me_method[generic_state->preset];
+    unsigned char seach_table_idx = 0;
+    unsigned char mv_shift_factor = 0, prev_mv_read_pos_factor = 0;
+    unsigned int downscaled_width_in_mb, downscaled_height_in_mb;
+    unsigned int scale_factor = 0;
+
+    qp_prime_y = avc_state->pic_param->pic_init_qp + slice_param->slice_qp_delta;
+    switch(curbe_param->hme_type)
+    {
+    case INTEL_ENC_HME_4x :
+        {
+            use_mv_from_prev_step = (generic_state->b16xme_enabled)? 1:0;
+            write_distortions = 1;
+            mv_shift_factor = 2;
+            scale_factor = 4;
+            prev_mv_read_pos_factor = 0;
+            break;
+        }
+    case INTEL_ENC_HME_16x :
+        {
+            use_mv_from_prev_step = (generic_state->b32xme_enabled)? 1:0;
+            write_distortions = 0;
+            mv_shift_factor = 2;
+            scale_factor = 16;
+            prev_mv_read_pos_factor = 1;
+            break;
+        }
+    case INTEL_ENC_HME_32x :
+        {
+            use_mv_from_prev_step = 0;
+            write_distortions = 0;
+            mv_shift_factor = 1;
+            scale_factor = 32;
+            prev_mv_read_pos_factor = 0;
+            break;
+        }
+    default:
+        assert(0);
+
+    }
+    curbe_cmd = i965_gpe_context_map_curbe(gpe_context);
+
+    if (!curbe_cmd)
+        return;
+
+    downscaled_width_in_mb = ALIGN(generic_state->frame_width_in_pixel/scale_factor,16)/16;
+    downscaled_height_in_mb = ALIGN(generic_state->frame_height_in_pixel/scale_factor,16)/16;
+
+    memcpy(curbe_cmd,gen9_avc_me_curbe_init_data,sizeof(gen9_avc_me_curbe_data));
+
+    curbe_cmd->dw3.sub_pel_mode = 3;
+    if(avc_state->field_scaling_output_interleaved)
+    {
+        /*frame set to zero,field specified*/
+        curbe_cmd->dw3.src_access = 0;
+        curbe_cmd->dw3.ref_access = 0;
+        curbe_cmd->dw7.src_field_polarity = 0;
+    }
+    curbe_cmd->dw4.picture_height_minus1 = downscaled_height_in_mb - 1;
+    curbe_cmd->dw4.picture_width = downscaled_width_in_mb;
+    curbe_cmd->dw5.qp_prime_y = qp_prime_y;
+
+    curbe_cmd->dw6.use_mv_from_prev_step = use_mv_from_prev_step;
+    curbe_cmd->dw6.write_distortions = write_distortions;
+    curbe_cmd->dw6.super_combine_dist = gen9_avc_super_combine_dist[generic_state->preset];
+    curbe_cmd->dw6.max_vmvr = i965_avc_get_max_mv_len(avc_state->seq_param->level_idc) * 4;//frame only
+
+    if(generic_state->frame_type == SLICE_TYPE_B)
+    {
+        curbe_cmd->dw1.bi_weight = 32;
+        curbe_cmd->dw13.num_ref_idx_l1_minus1 = slice_param->num_ref_idx_l1_active_minus1;
+        me_method = gen9_avc_b_me_method[generic_state->preset];
+        seach_table_idx = 1;
+    }
+
+    if(generic_state->frame_type == SLICE_TYPE_P ||
+       generic_state->frame_type == SLICE_TYPE_B )
+       curbe_cmd->dw13.num_ref_idx_l0_minus1 = slice_param->num_ref_idx_l0_active_minus1;
+
+    curbe_cmd->dw13.ref_streamin_cost = 5;
+    curbe_cmd->dw13.roi_enable = 0;
+
+    curbe_cmd->dw15.prev_mv_read_pos_factor = prev_mv_read_pos_factor;
+    curbe_cmd->dw15.mv_shift_factor = mv_shift_factor;
+
+    memcpy(&curbe_cmd->dw16,table_enc_search_path[seach_table_idx][me_method],14*sizeof(int));
+
+    curbe_cmd->dw32._4x_memv_output_data_surf_index = GEN9_AVC_ME_MV_DATA_SURFACE_INDEX;
+    curbe_cmd->dw33._16x_32x_memv_input_data_surf_index = (curbe_param->hme_type == INTEL_ENC_HME_32x)? GEN9_AVC_32XME_MV_DATA_SURFACE_INDEX:GEN9_AVC_16XME_MV_DATA_SURFACE_INDEX ;
+    curbe_cmd->dw34._4x_me_output_dist_surf_index = GEN9_AVC_ME_DISTORTION_SURFACE_INDEX;
+    curbe_cmd->dw35._4x_me_output_brc_dist_surf_index = GEN9_AVC_ME_BRC_DISTORTION_INDEX;
+    curbe_cmd->dw36.vme_fwd_inter_pred_surf_index = GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX;
+    curbe_cmd->dw37.vme_bdw_inter_pred_surf_index = GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX;
+    curbe_cmd->dw38.reserved = GEN9_AVC_ME_VDENC_STREAMIN_INDEX;
+
+    i965_gpe_context_unmap_curbe(gpe_context);
+    return;
+}
+
+static void
+gen9_avc_send_surface_me(VADriverContextP ctx,
+                         struct encode_state *encode_state,
+                         struct i965_gpe_context *gpe_context,
+                         struct intel_encoder_context *encoder_context,
+                         void * param)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )vme_context->private_enc_ctx;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
+
+    struct object_surface *obj_surface, *input_surface;
+    struct gen9_surface_avc *avc_priv_surface;
+    struct i965_gpe_resource *gpe_resource;
+    struct me_param * curbe_param = (struct me_param *)param ;
+
+    VAEncSliceParameterBufferH264 * slice_param = avc_state->slice_param[0];
+    VASurfaceID surface_id;
+    int i = 0;
+
+    /* all scaled input surface stored in reconstructed_object*/
+    obj_surface = encode_state->reconstructed_object;
+    if (!obj_surface || !obj_surface->private_data)
+        return;
+    avc_priv_surface = obj_surface->private_data;
+
+
+    switch(curbe_param->hme_type)
+    {
+    case INTEL_ENC_HME_4x :
+        {
+            /*memv output 4x*/
+            gpe_resource = &avc_ctx->s4x_memv_data_buffer;
+            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                                           gpe_resource,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           GEN9_AVC_ME_MV_DATA_SURFACE_INDEX);
+
+            /*memv input 16x*/
+            if(generic_state->b16xme_enabled)
+            {
+                gpe_resource = &avc_ctx->s16x_memv_data_buffer;
+                gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                                               gpe_resource,
+                                               1,
+                                               I965_SURFACEFORMAT_R8_UNORM,
+                                               GEN9_AVC_16XME_MV_DATA_SURFACE_INDEX);
+            }
+            /* brc distortion  output*/
+            gpe_resource = &avc_ctx->res_brc_dist_data_surface;
+            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                                           gpe_resource,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           GEN9_AVC_ME_BRC_DISTORTION_INDEX);
+           /* memv distortion output*/
+            gpe_resource = &avc_ctx->s4x_memv_distortion_buffer;
+            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                                           gpe_resource,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           GEN9_AVC_ME_DISTORTION_SURFACE_INDEX);
+            /*input current down scaled YUV surface*/
+            obj_surface = encode_state->reconstructed_object;
+            avc_priv_surface = obj_surface->private_data;
+            input_surface = avc_priv_surface->scaled_4x_surface_obj;
+            gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                     input_surface,
+                                     GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX);
+            /*input ref scaled YUV surface*/
+            for(i = 0; i < slice_param->num_ref_idx_l0_active_minus1 + 1; i++)
+            {
+                surface_id = slice_param->RefPicList0[i].picture_id;
+                obj_surface = SURFACE(surface_id);
+                if (!obj_surface || !obj_surface->private_data)
+                    break;
+                avc_priv_surface = obj_surface->private_data;
+
+                input_surface = avc_priv_surface->scaled_4x_surface_obj;
+
+                gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                         input_surface,
+                                         GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX+i*2 + 1);
+            }
+
+            obj_surface = encode_state->reconstructed_object;
+            avc_priv_surface = obj_surface->private_data;
+            input_surface = avc_priv_surface->scaled_4x_surface_obj;
+
+            gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                     input_surface,
+                                     GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX);
+
+            for(i = 0; i < slice_param->num_ref_idx_l1_active_minus1 + 1; i++)
+            {
+                surface_id = slice_param->RefPicList1[i].picture_id;
+                obj_surface = SURFACE(surface_id);
+                if (!obj_surface || !obj_surface->private_data)
+                    break;
+                avc_priv_surface = obj_surface->private_data;
+
+                input_surface = avc_priv_surface->scaled_4x_surface_obj;
+
+                gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                         input_surface,
+                                         GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX+i*2 + 1);
+            }
+            break;
+
+        }
+    case INTEL_ENC_HME_16x :
+        {
+            gpe_resource = &avc_ctx->s16x_memv_data_buffer;
+            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                                           gpe_resource,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           GEN9_AVC_ME_MV_DATA_SURFACE_INDEX);
+
+            if(generic_state->b32xme_enabled)
+            {
+                gpe_resource = &avc_ctx->s32x_memv_data_buffer;
+                gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                                               gpe_resource,
+                                               1,
+                                               I965_SURFACEFORMAT_R8_UNORM,
+                                               GEN9_AVC_32XME_MV_DATA_SURFACE_INDEX);
+            }
+
+            obj_surface = encode_state->reconstructed_object;
+            avc_priv_surface = obj_surface->private_data;
+            input_surface = avc_priv_surface->scaled_16x_surface_obj;
+            gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                     input_surface,
+                                     GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX);
+
+            for(i = 0; i < slice_param->num_ref_idx_l0_active_minus1 + 1; i++)
+            {
+                surface_id = slice_param->RefPicList0[i].picture_id;
+                obj_surface = SURFACE(surface_id);
+                if (!obj_surface || !obj_surface->private_data)
+                    break;
+                avc_priv_surface = obj_surface->private_data;
+
+                input_surface = avc_priv_surface->scaled_16x_surface_obj;
+
+                gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                         input_surface,
+                                         GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX+i*2 + 1);
+            }
+
+            obj_surface = encode_state->reconstructed_object;
+            avc_priv_surface = obj_surface->private_data;
+            input_surface = avc_priv_surface->scaled_16x_surface_obj;
+
+            gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                     input_surface,
+                                     GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX);
+
+            for(i = 0; i < slice_param->num_ref_idx_l1_active_minus1 + 1; i++)
+            {
+                surface_id = slice_param->RefPicList1[i].picture_id;
+                obj_surface = SURFACE(surface_id);
+                if (!obj_surface || !obj_surface->private_data)
+                    break;
+                avc_priv_surface = obj_surface->private_data;
+
+                input_surface = avc_priv_surface->scaled_16x_surface_obj;
+
+                gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                         input_surface,
+                                         GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX+i*2 + 1);
+            }
+            break;
+        }
+    case INTEL_ENC_HME_32x :
+        {
+            gpe_resource = &avc_ctx->s32x_memv_data_buffer;
+            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                                           gpe_resource,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           GEN9_AVC_ME_MV_DATA_SURFACE_INDEX);
+
+            obj_surface = encode_state->reconstructed_object;
+            avc_priv_surface = obj_surface->private_data;
+            input_surface = avc_priv_surface->scaled_32x_surface_obj;
+            gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                     input_surface,
+                                     GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX);
+
+            for(i = 0; i < slice_param->num_ref_idx_l0_active_minus1 + 1; i++)
+            {
+                surface_id = slice_param->RefPicList0[i].picture_id;
+                obj_surface = SURFACE(surface_id);
+                if (!obj_surface || !obj_surface->private_data)
+                    break;
+                avc_priv_surface = obj_surface->private_data;
+
+                input_surface = avc_priv_surface->scaled_32x_surface_obj;
+
+                gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                         input_surface,
+                                         GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX+i*2 + 1);
+            }
+
+            obj_surface = encode_state->reconstructed_object;
+            avc_priv_surface = obj_surface->private_data;
+            input_surface = avc_priv_surface->scaled_32x_surface_obj;
+
+            gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                     input_surface,
+                                     GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX);
+
+            for(i = 0; i < slice_param->num_ref_idx_l1_active_minus1 + 1; i++)
+            {
+                surface_id = slice_param->RefPicList1[i].picture_id;
+                obj_surface = SURFACE(surface_id);
+                if (!obj_surface || !obj_surface->private_data)
+                    break;
+                avc_priv_surface = obj_surface->private_data;
+
+                input_surface = avc_priv_surface->scaled_32x_surface_obj;
+
+                gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                         input_surface,
+                                         GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX+i*2 + 1);
+            }
+            break;
+        }
+    default:
+        assert(0);
+
+    }
+}
+
+static VAStatus
+gen9_avc_kernel_me(VADriverContextP ctx,
+                   struct encode_state *encode_state,
+                   struct intel_encoder_context *encoder_context,
+                   int hme_type)
+{
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
+    struct gen9_avc_encoder_context * avc_ctx = (struct gen9_avc_encoder_context * )vme_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
+
+    struct i965_gpe_context *gpe_context;
+    struct gpe_media_object_walker_parameter media_object_walker_param;
+    struct gpe_encoder_kernel_walker_parameter kernel_walker_param;
+    unsigned int downscaled_width_in_mb, downscaled_height_in_mb;
+    int media_function = 0;
+    int kernel_idx = 0;
+    struct me_param param ;
+    unsigned int scale_factor = 0;
+
+    switch(hme_type)
+    {
+    case INTEL_ENC_HME_4x :
+        {
+            media_function = INTEL_MEDIA_STATE_4X_ME;
+            scale_factor = 4;
+            break;
+        }
+    case INTEL_ENC_HME_16x :
+        {
+            media_function = INTEL_MEDIA_STATE_16X_ME;
+            scale_factor = 16;
+            break;
+        }
+    case INTEL_ENC_HME_32x :
+        {
+            media_function = INTEL_MEDIA_STATE_32X_ME;
+            scale_factor = 32;
+            break;
+        }
+    default:
+        assert(0);
+
+    }
+
+    downscaled_width_in_mb = ALIGN(generic_state->frame_width_in_pixel/scale_factor,16)/16;
+    downscaled_height_in_mb = ALIGN(generic_state->frame_height_in_pixel/scale_factor,16)/16;
+
+    /* I frame should not come here.*/
+    kernel_idx = (generic_state->frame_type == SLICE_TYPE_P)? GEN9_AVC_KERNEL_ME_P_IDX : GEN9_AVC_KERNEL_ME_B_IDX;
+    gpe_context = &(avc_ctx->context_me.gpe_contexts[kernel_idx]);
+
+    gen8_gpe_context_init(ctx, gpe_context);
+    gen9_gpe_reset_binding_table(ctx, gpe_context);
+
+    /*set curbe*/
+    memset(&param,0,sizeof(param));
+    param.hme_type = hme_type;
+    generic_ctx->pfn_set_curbe_me(ctx,encode_state,gpe_context,encoder_context,&param);
+
+    /*send surface*/
+    generic_ctx->pfn_send_me_surface(ctx,encode_state,gpe_context,encoder_context,&param);
+
+    gen8_gpe_setup_interface_data(ctx, gpe_context);
+
+    memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
+    /* the scaling is based on 8x8 blk level */
+    kernel_walker_param.resolution_x = downscaled_width_in_mb ;
+    kernel_walker_param.resolution_y = downscaled_height_in_mb ;
+    kernel_walker_param.no_dependency = 1;
+
+    i965_init_media_object_walker_parameter(&kernel_walker_param, &media_object_walker_param);
+
+    gen9_avc_run_kernel_media_object_walker(ctx, encoder_context,
+                                        gpe_context,
+                                        media_function,
+                                        &media_object_walker_param);
+
+    return VA_STATUS_SUCCESS;
+}
