@@ -1047,7 +1047,14 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
     struct object_buffer *obj_buffer;
     VAEncPictureParameterBufferHEVC *pic_param = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
     VAEncSliceParameterBufferHEVC *slice_param;
+    VAEncSequenceParameterBufferHEVC *seq_param;
     int i;
+
+    seq_param = NULL;
+
+    if (encode_state->seq_param_ext &&
+        encode_state->seq_param_ext->buffer)
+        seq_param = (VAEncSequenceParameterBufferHEVC *)(encode_state->seq_param_ext->buffer);
 
     assert(!(pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID));
 
@@ -1101,6 +1108,8 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
         /* TODO: add more check here */
     }
 
+    encoder_context->is_new_sequence = (pic_param->pic_fields.bits.idr_pic_flag && seq_param);
+
     return VA_STATUS_SUCCESS;
 
 error:
@@ -1114,6 +1123,7 @@ intel_encoder_check_vp9_parameter(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAEncPictureParameterBufferVP9 *pic_param;
+    VAEncSequenceParameterBufferVP9 *seq_param;
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     int i = 0;
@@ -1123,6 +1133,11 @@ intel_encoder_check_vp9_parameter(VADriverContextP ctx,
     if (encode_state->pic_param_ext == NULL ||
         encode_state->pic_param_ext->buffer == NULL)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    seq_param = NULL;
+    if (encode_state->seq_param_ext &&
+        encode_state->seq_param_ext->buffer)
+        seq_param = (VAEncSequenceParameterBufferVP9 *)(encode_state->seq_param_ext->buffer);
 
     pic_param = (VAEncPictureParameterBufferVP9 *)encode_state->pic_param_ext->buffer;
 
@@ -1168,6 +1183,8 @@ intel_encoder_check_vp9_parameter(VADriverContextP ctx,
 
     for ( ; i < 16; i++)
         encode_state->reference_objects[i] = NULL;
+
+    encoder_context->is_new_sequence = (is_key_frame && seq_param);
 
     return VA_STATUS_SUCCESS;
 
