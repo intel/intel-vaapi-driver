@@ -41,6 +41,7 @@
 #include "gen6_mfc.h"
 
 #include "i965_post_processing.h"
+#include "i965_encoder_api.h"
 
 static struct intel_fraction
 reduce_fraction(struct intel_fraction f)
@@ -789,6 +790,7 @@ intel_encoder_check_temporal_layer_structure(VADriverContextP ctx,
 
 static VAStatus
 intel_encoder_check_misc_parameter(VADriverContextP ctx,
+                                  VAProfile profile,
                                   struct encode_state *encode_state,
                                   struct intel_encoder_context *encoder_context)
 {
@@ -800,12 +802,23 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
         VAEncMiscParameterBufferQualityLevel* param_quality_level = (VAEncMiscParameterBufferQualityLevel*)pMiscParam->data;
         encoder_context->quality_level = param_quality_level->quality_level;
 
-        if (encoder_context->quality_level == 0)
-            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
-        else if (encoder_context->quality_level > encoder_context->quality_range) {
-            ret = VA_STATUS_ERROR_INVALID_PARAMETER;
-            goto out;
+        switch (profile) {
+        case VAProfileH264ConstrainedBaseline:
+        case VAProfileH264Main:
+        case VAProfileH264High:
+            if (encoder_context->quality_level == 0)
+                encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
+            break;
+        default:
+            if (encoder_context->quality_level == 0)
+                encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
+            break;
         }
+
+         if (encoder_context->quality_level > encoder_context->quality_range) {
+             ret = VA_STATUS_ERROR_INVALID_PARAMETER;
+             goto out;
+         }
     }
 
     ret = intel_encoder_check_temporal_layer_structure(ctx, encode_state, encoder_context);
@@ -1281,7 +1294,7 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
     }
 
     if (vaStatus == VA_STATUS_SUCCESS)
-        vaStatus = intel_encoder_check_misc_parameter(ctx, encode_state, encoder_context);
+        vaStatus = intel_encoder_check_misc_parameter(ctx, profile, encode_state, encoder_context);
 
 out:    
     return vaStatus;
@@ -1362,6 +1375,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
                           hw_init_func vme_context_init,
                           hw_init_func mfc_context_init)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct intel_encoder_context *encoder_context = calloc(1, sizeof(struct intel_encoder_context));
     int i;
@@ -1394,7 +1408,9 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         encoder_context->codec = CODEC_H264;
 
         if (obj_config->entrypoint == VAEntrypointEncSliceLP)
-            encoder_context->quality_range = ENCODER_LP_QUALITY_RANGE;
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
+        else if(IS_GEN9(i965->intel.device_info))
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
         else
             encoder_context->quality_range = ENCODER_QUALITY_RANGE;
         break;
@@ -1485,5 +1501,12 @@ gen8_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 struct hw_context *
 gen9_enc_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
 {
-    return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
+    switch (obj_config->profile){
+    case VAProfileH264ConstrainedBaseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        return intel_enc_hw_context_init(ctx, obj_config, gen9_avc_vme_context_init, gen9_avc_pak_context_init);
+    default:
+        return intel_enc_hw_context_init(ctx, obj_config, gen9_vme_context_init, gen9_mfc_context_init);
+    }
 }
