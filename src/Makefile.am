@@ -109,6 +109,7 @@ source_c = \
 	intel_common_vpp_internal.c           \
 	i965_encoder_const_def.c    \
 	gen9_avc_const_def.c    \
+	gen9_avc_encoder_kernels.c     \
 	$(NULL)
 
 source_h = \
@@ -168,6 +169,7 @@ source_h = \
 	i965_encoder_common.h        \
 	i965_encoder_api.h        \
 	gen9_avc_const_def.h      \
+	gen9_avc_encoder_kernels.h      \
 	$(NULL)
 
 # convenience library that can be linked by driver and tests
