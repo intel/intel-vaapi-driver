@@ -2519,8 +2519,12 @@ i965_create_buffer_internal(VADriverContextP ctx,
             buffer_store->buffer = malloc(msize * num_elements);
         assert(buffer_store->buffer);
 
-        if (data && (!wrapper_flag))
-            memcpy(buffer_store->buffer, data, size * num_elements);
+        if (!wrapper_flag) {
+            if (data)
+                memcpy(buffer_store->buffer, data, size * num_elements);
+            else
+                memset(buffer_store->buffer, 0, size * num_elements);
+        }
     }
 
     buffer_store->num_elements = obj_buffer->num_elements;
