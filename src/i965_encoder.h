@@ -92,6 +92,7 @@ struct intel_encoder_context
         unsigned int hrd_buffer_size;
         unsigned int hrd_initial_buffer_fullness;
         unsigned int window_size;
+        unsigned int min_qp;
         unsigned int need_reset;
 
         unsigned int num_roi;

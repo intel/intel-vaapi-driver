@@ -98,6 +98,7 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
     double frame_per_bits = 8 * 3 * encoder_context->frame_width_in_pixel * encoder_context->frame_height_in_pixel / 2;
     double qp1_size = 0.1 * frame_per_bits;
     double qp51_size = 0.001 * frame_per_bits;
+    int min_qp = MAX(1, encoder_context->brc.min_qp);
     double bpf, factor, hrd_factor;
     int inum = encoder_context->brc.num_iframes_in_gop,
         pnum = encoder_context->brc.num_pframes_in_gop,
@@ -179,9 +180,9 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
         mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P];
         mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I];
 
-        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I], 1, 51);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P], 1, 51);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B], 1, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I], min_qp, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P], min_qp, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B], min_qp, 51);
     }
 }
 
@@ -226,6 +227,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     int qpn; // predicted quantizer for next frame of current type in integer format
     double qpf; // predicted quantizer for next frame of current type in float format
     double delta_qp; // QP correction
+    int min_qp = MAX(1, encoder_context->brc.min_qp);
     int target_frame_size, frame_size_next;
     /* Notes:
      *  x - how far we are from HRD buffer borders
@@ -318,7 +320,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     qpn = (int)(qpn + delta_qp + 0.5);
 
     /* making sure that with QP predictions we did do not leave QPs range */
-    BRC_CLIP(qpn, 1, 51);
+    BRC_CLIP(qpn, min_qp, 51);
 
     if (sts == BRC_NO_HRD_VIOLATION) { // no HRD violation
         /* correcting QPs of slices of other types */
@@ -338,9 +340,9 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
             if (abs(qpn - BRC_I_B_QP_DIFF - qpi) > 4)
                 mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_I] += (qpn - BRC_I_B_QP_DIFF - qpi) >> 2;
         }
-        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_I], 1, 51);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_P], 1, 51);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_B], 1, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_I], min_qp, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_P], min_qp, 51);
+        BRC_CLIP(mfc_context->brc.qp_prime_y[next_frame_layer_id][SLICE_TYPE_B], min_qp, 51);
     } else if (sts == BRC_UNDERFLOW) { // underflow
         if (qpn <= qp) qpn = qp + 1;
         if (qpn > 51) {
@@ -349,8 +351,8 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
         }
     } else if (sts == BRC_OVERFLOW) {
         if (qpn >= qp) qpn = qp - 1;
-        if (qpn < 1) { // < 0 (?) overflow with minQP
-            qpn = 1;
+        if (qpn < min_qp) { // overflow with minQP
+            qpn = min_qp;
             sts = BRC_OVERFLOW_WITH_MIN_QP; // bit stuffing to be done
         }
     }
@@ -1815,6 +1817,7 @@ intel_h264_enc_roi_cbr(VADriverContextP ctx,
                        struct intel_encoder_context *encoder_context)
 {
     int nonroi_qp;
+    int min_qp = MAX(1, encoder_context->brc.min_qp);
     VAEncROI *region_roi;
     bool quickfill = 0;
 
@@ -1889,7 +1892,7 @@ intel_h264_enc_roi_cbr(VADriverContextP ctx,
         param_regions[i].height_mbs = roi_height_mbs;
 
         roi_qp = base_qp + region_roi->roi_value;
-        BRC_CLIP(roi_qp, 1, 51);
+        BRC_CLIP(roi_qp, min_qp, 51);
 
         param_regions[i].roi_qp = roi_qp;
         qstep_roi = intel_h264_qp_qstep(roi_qp);
@@ -1911,7 +1914,7 @@ intel_h264_enc_roi_cbr(VADriverContextP ctx,
         nonroi_qp = intel_h264_qstep_qp(qstep_nonroi);
     }
 
-    BRC_CLIP(nonroi_qp, 1, 51);
+    BRC_CLIP(nonroi_qp, min_qp, 51);
 
 qp_fill:
     memset(vme_context->qp_per_mb, nonroi_qp, mbs_in_picture);
@@ -1992,6 +1995,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
         VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
         VAEncSliceParameterBufferH264 *slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
         int qp;
+        int min_qp = MAX(1, encoder_context->brc.min_qp);
 
         qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
         memset(vme_context->qp_per_mb, qp, width_in_mbs * height_in_mbs);
@@ -2015,7 +2019,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
             qp_delta = region_roi->roi_value;
             qp_clip = qp + qp_delta;
 
-            BRC_CLIP(qp_clip, 1, 51);
+            BRC_CLIP(qp_clip, min_qp, 51);
 
             for (i = row_start; i < row_end; i++) {
                 qp_ptr = vme_context->qp_per_mb + (i * width_in_mbs) + col_start;
