@@ -169,16 +169,22 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 
         bpf = mfc_context->brc.bits_per_frame[i] = bitrate/framerate;
 
-        if ((bpf > qp51_size) && (bpf < qp1_size)) {
-            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 51 - 50*(bpf - qp51_size)/(qp1_size - qp51_size);
-        }
-        else if (bpf >= qp1_size)
-            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 1;
-        else if (bpf <= qp51_size)
-            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 51;
+        if (encoder_context->brc.initial_qp) {
+            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I] = encoder_context->brc.initial_qp;
+            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = encoder_context->brc.initial_qp;
+            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B] = encoder_context->brc.initial_qp;
+        } else {
+            if ((bpf > qp51_size) && (bpf < qp1_size)) {
+                mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 51 - 50*(bpf - qp51_size)/(qp1_size - qp51_size);
+            }
+            else if (bpf >= qp1_size)
+                mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 1;
+            else if (bpf <= qp51_size)
+                mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 51;
 
-        mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P];
-        mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I];
+            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P];
+            mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I];
+        }
 
         BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I], min_qp, 51);
         BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P], min_qp, 51);

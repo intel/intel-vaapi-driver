@@ -576,8 +576,10 @@ intel_encoder_check_rate_control_parameter(VADriverContextP ctx,
     }
 
     if (encoder_context->brc.window_size != misc->window_size ||
+        encoder_context->brc.initial_qp  != misc->initial_qp ||
         encoder_context->brc.min_qp      != misc->min_qp) {
         encoder_context->brc.window_size = misc->window_size;
+        encoder_context->brc.initial_qp  = misc->initial_qp;
         encoder_context->brc.min_qp      = misc->min_qp;
         encoder_context->brc.need_reset = 1;
     }
