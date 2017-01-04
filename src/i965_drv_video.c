@@ -2798,7 +2798,7 @@ i965_BeginPicture(VADriverContextP ctx,
     struct object_surface *obj_surface = SURFACE(render_target);
     struct object_config *obj_config;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    int i;
+    int i, j;
 
     ASSERT_RET(obj_context, VA_STATUS_ERROR_INVALID_CONTEXT);
     ASSERT_RET(obj_surface, VA_STATUS_ERROR_INVALID_SURFACE);
@@ -2841,15 +2841,10 @@ i965_BeginPicture(VADriverContextP ctx,
         obj_context->codec_state.encode.num_packed_header_data_ext = 0;
         obj_context->codec_state.encode.slice_index = 0;
         obj_context->codec_state.encode.vps_sps_seq_index = 0;
-        /*
-        * Based on ROI definition in va/va.h, the ROI set through this
-        * structure is applicable only to the current frame or field.
-        * That is to say: it is on-the-fly setting. If it is not set,
-        * the current frame doesn't use ROI.
-        * It is uncertain whether the other misc buffer should be released.
-        * So only release the previous ROI buffer.
-        */
-        i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[VAEncMiscParameterTypeROI][0]);
+
+        for (i = 0; i < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param); i++)
+            for (j = 0; j < ARRAY_ELEMS(obj_context->codec_state.encode.misc_param[0]); j++)
+                i965_release_buffer_store(&obj_context->codec_state.encode.misc_param[i][j]);
 
         i965_release_buffer_store(&obj_context->codec_state.encode.encmb_map);
     } else {
