@@ -1818,13 +1818,11 @@ typedef struct {
 static VAStatus
 intel_h264_enc_roi_cbr(VADriverContextP ctx,
                        int base_qp,
-                       VAEncMiscParameterBufferROI *pMiscParamROI,
                        struct encode_state *encode_state,
                        struct intel_encoder_context *encoder_context)
 {
     int nonroi_qp;
     int min_qp = MAX(1, encoder_context->brc.min_qp);
-    VAEncROI *region_roi;
     bool quickfill = 0;
 
     ROIRegionParam param_regions[I965_MAX_NUM_ROI_REGIONS];
@@ -1844,17 +1842,14 @@ intel_h264_enc_roi_cbr(VADriverContextP ctx,
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
 
-    if(pMiscParamROI != NULL)
-    {
-        num_roi = (pMiscParamROI->num_roi > I965_MAX_NUM_ROI_REGIONS) ? I965_MAX_NUM_ROI_REGIONS : pMiscParamROI->num_roi;
+    /* currently roi_value_is_qp_delta is the only supported mode of priority.
+     *
+     * qp_delta set by user is added to base_qp, which is then clapped by
+     * [base_qp-min_delta, base_qp+max_delta].
+     */
+    ASSERT_RET(encoder_context->brc.roi_value_is_qp_delta, VA_STATUS_ERROR_INVALID_PARAMETER);
 
-        /* currently roi_value_is_qp_delta is the only supported mode of priority.
-        *
-        * qp_delta set by user is added to base_qp, which is then clapped by
-        * [base_qp-min_delta, base_qp+max_delta].
-        */
-        ASSERT_RET(pMiscParamROI->roi_flags.bits.roi_value_is_qp_delta,VA_STATUS_ERROR_INVALID_PARAMETER);
-    }
+    num_roi = encoder_context->brc.num_roi;
 
     /* when the base_qp is lower than 12, the quality is quite good based
      * on the H264 test experience.
@@ -1875,12 +1870,11 @@ intel_h264_enc_roi_cbr(VADriverContextP ctx,
         int roi_qp;
         float qstep_roi;
 
-        region_roi =  (VAEncROI *)pMiscParamROI->roi + i;
+        col_start = encoder_context->brc.roi[i].left;
+        col_end = encoder_context->brc.roi[i].right;
+        row_start = encoder_context->brc.roi[i].top;
+        row_end = encoder_context->brc.roi[i].bottom;
 
-        col_start = region_roi->roi_rectangle.x;
-        col_end = col_start + region_roi->roi_rectangle.width;
-        row_start = region_roi->roi_rectangle.y;
-        row_end = row_start + region_roi->roi_rectangle.height;
         col_start = col_start / 16;
         col_end = (col_end + 15) / 16;
         row_start = row_start / 16;
@@ -1897,7 +1891,7 @@ intel_h264_enc_roi_cbr(VADriverContextP ctx,
         param_regions[i].width_mbs = roi_width_mbs;
         param_regions[i].height_mbs = roi_height_mbs;
 
-        roi_qp = base_qp + region_roi->roi_value;
+        roi_qp = base_qp + encoder_context->brc.roi[i].value;
         BRC_CLIP(roi_qp, min_qp, 51);
 
         param_regions[i].roi_qp = roi_qp;
@@ -1944,10 +1938,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
 {
     char *qp_ptr;
     int i, j;
-    VAEncROI *region_roi;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    VAEncMiscParameterBuffer* pMiscParamROI;
-    VAEncMiscParameterBufferROI *pParamROI = NULL;
     struct gen6_vme_context *vme_context = encoder_context->vme_context;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     VAEncSequenceParameterBufferH264 *pSequenceParameter = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
@@ -1962,16 +1953,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
     if (!encoder_context->context_roi || (encode_state->num_slice_params_ext > 1))
         return;
 
-    if (encode_state->misc_param[VAEncMiscParameterTypeROI][0] != NULL) {
-        pMiscParamROI = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeROI][0]->buffer;
-        pParamROI = (VAEncMiscParameterBufferROI *)pMiscParamROI->data;
-
-        /* check whether number of ROI is correct */
-        num_roi = (pParamROI->num_roi > I965_MAX_NUM_ROI_REGIONS) ? I965_MAX_NUM_ROI_REGIONS : pParamROI->num_roi;
-    }
-
-    if (num_roi > 0)
-        vme_context->roi_enabled = 1;
+    vme_context->roi_enabled = !!encoder_context->brc.num_roi;
 
     if (!vme_context->roi_enabled)
         return;
@@ -1995,7 +1977,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
         int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
         qp = mfc_context->brc.qp_prime_y[encoder_context->layer.curr_frame_layer_id][slice_type];
-        intel_h264_enc_roi_cbr(ctx, qp, pParamROI,encode_state, encoder_context);
+        intel_h264_enc_roi_cbr(ctx, qp, encode_state, encoder_context);
 
     } else if (encoder_context->rate_control_mode == VA_RC_CQP){
         VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
@@ -2010,19 +1992,17 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
         for (j = num_roi; j ; j--) {
             int qp_delta, qp_clip;
 
-            region_roi =  (VAEncROI *)pParamROI->roi + j - 1;
-
-            col_start = region_roi->roi_rectangle.x;
-            col_end = col_start + region_roi->roi_rectangle.width;
-            row_start = region_roi->roi_rectangle.y;
-            row_end = row_start + region_roi->roi_rectangle.height;
+            col_start = encoder_context->brc.roi[i].left;
+            col_end = encoder_context->brc.roi[i].right;
+            row_start = encoder_context->brc.roi[i].top;
+            row_end = encoder_context->brc.roi[i].bottom;
 
             col_start = col_start / 16;
             col_end = (col_end + 15) / 16;
             row_start = row_start / 16;
             row_end = (row_end + 15) / 16;
 
-            qp_delta = region_roi->roi_value;
+            qp_delta = encoder_context->brc.roi[i].value;
             qp_clip = qp + qp_delta;
 
             BRC_CLIP(qp_clip, min_qp, 51);
