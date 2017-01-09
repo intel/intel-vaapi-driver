@@ -1,5 +1,16 @@
-libva-intel-driver NEWS -- summary of changes.  2016-09-05
+libva-intel-driver NEWS -- summary of changes.  2016-11-10
 Copyright (C) 2009-2016 Intel Corporation
+
+Version 1.7.3 - 10.Nov.2016
+* Add support for HEVC 10bit encoding on KBL
+* Integrate the Google Test Framework for unit testing
+* Add support for bitrate control per temporal layer for SVC-T
+* Fix VA_STATUS_ERROR_UNIMPLEMENTED when sharpening with I420 surface
+  (https://bugs.freedesktop.org/show_bug.cgi?id=96987)
+* Fix crop issue when sharpening with NV12 surface
+  (https://bugs.freedesktop.org/show_bug.cgi?id=96988)
+* Fix GPU hang issue when using encoding with low power on SKL GT3+
+  (https://bugs.freedesktop.org/show_bug.cgi?id=97872)
 
 Version 1.7.2 - 05.Sep.2016
 * Update PCI IDs for KBL
