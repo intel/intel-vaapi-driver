@@ -204,6 +204,8 @@ AC_OUTPUT([
     Makefile
     src/Makefile
     src/shaders/Makefile
+    src/shaders/brc/Makefile
+    src/shaders/brc/bsw/Makefile
     src/shaders/h264/Makefile
     src/shaders/h264/ildb/Makefile
     src/shaders/h264/mc/Makefile
