@@ -1328,12 +1328,17 @@ gen8_vme_context_destroy(void *context)
     free(vme_context);
 }
 
+extern Bool i965_encoder_vp8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+
 Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen6_vme_context *vme_context = NULL;
     struct i965_kernel *vme_kernel_list = NULL;
     int i965_kernel_num;
+
+    if (IS_CHERRYVIEW(i965->intel.device_info) && encoder_context->codec == CODEC_VP8)
+        return i965_encoder_vp8_vme_context_init(ctx, encoder_context);
 
     switch (encoder_context->codec) {
     case CODEC_H264:

@@ -1417,6 +1417,8 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
     case VAProfileVP8Version0_3:
         encoder_context->codec = CODEC_VP8;
+        encoder_context->quality_range = ENCODER_QUALITY_RANGE;
+
         break;
 
     case VAProfileHEVCMain:

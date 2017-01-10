@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014-2017 Intel Corporation
+ * Copyright © 2017 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -24,7 +24,7 @@
  */
 
 /*
- * This file defines some vp8 probability tables, and
+ * This file defines some quantization tables, and
  * they are ported from libvpx (https://github.com/mrchapp/libvpx/).
  * The original copyright and licence statement as below.
  */
@@ -39,31 +39,17 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#ifndef VP8_PROBS_H
-#define VP8_PROBS_H
+#ifndef VPX_QUANT_H
+#define VPX_QUANT_H
 
-extern const unsigned char vp8_ymode_prob[4];
+extern const unsigned short quant_dc_vp8[128];
 
-extern const unsigned char vp8_kf_ymode_prob[4];
+extern const unsigned short quant_ac_vp8[128];
 
-extern const unsigned char vp8_uv_mode_prob[3];
+extern const unsigned short quant_dc2_vp8[128];
 
-extern const unsigned char vp8_kf_uv_mode_prob[3];
+extern const unsigned short quant_ac2_vp8[128];
 
-extern const unsigned char vp8_base_skip_false_prob[128];
+extern const unsigned short quant_dc_uv_vp8[128];
 
-extern const unsigned char vp8_mv_update_probs[2][19];
-
-extern const unsigned char vp8_default_mv_context[2][19];
-
-extern const unsigned char vp8_default_coef_probs[4][8][3][11];
-
-extern const int vp8_bits_per_mb[2][128];
-
-extern const unsigned short vp8_prob_cost[256];
-
-extern const unsigned char vp8_coef_update_probs[4][8][3][11];
-
-extern const unsigned char vp8_probs_update_flag[4][8][3][11];
-
-#endif /* _VP8_PROBS_H_ */
+#endif /* VPX_QUANT_H */
