@@ -1975,6 +1975,8 @@ gen9_vme_context_destroy(void *context)
     free(vme_context);
 }
 
+extern Bool i965_encoder_vp8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
+
 Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -1990,6 +1992,8 @@ Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         return True;
     } else if (encoder_context->codec == CODEC_VP9) {
         return gen9_vp9_vme_context_init(ctx, encoder_context);
+    } else if (encoder_context->codec == CODEC_VP8) {
+        return i965_encoder_vp8_vme_context_init(ctx, encoder_context);
     }
 
     vme_context = calloc(1, sizeof(struct gen6_vme_context));
