@@ -127,6 +127,9 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
                 ((double)encoder_context->brc.framerate[i - 1].num / (double)encoder_context->brc.framerate[i - 1].den);
         }
 
+        if (mfc_context->brc.mode == VA_RC_VBR && encoder_context->brc.target_percentage[i])
+            bitrate = bitrate * encoder_context->brc.target_percentage[i] / 100;
+
         if (i == encoder_context->layer.num_layers - 1)
             factor = 1.0;
         else {
@@ -219,9 +222,9 @@ int intel_mfc_update_hrd(struct encode_state *encode_state,
     return BRC_NO_HRD_VIOLATION;
 }
 
-int intel_mfc_brc_postpack(struct encode_state *encode_state,
-                           struct intel_encoder_context *encoder_context,
-                           int frame_bits)
+static int intel_mfc_brc_postpack_cbr(struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context,
+                                      int frame_bits)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     gen6_brc_status sts = BRC_NO_HRD_VIOLATION;
@@ -368,6 +371,121 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
     return sts;
 }
 
+static int intel_mfc_brc_postpack_vbr(struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context,
+                                      int frame_bits)
+{
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    gen6_brc_status sts;
+    VAEncSliceParameterBufferH264 *pSliceParameter = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[0]->buffer;
+    int slice_type = intel_avc_enc_slice_type_fixup(pSliceParameter->slice_type);
+    int *qp = mfc_context->brc.qp_prime_y[0];
+    int min_qp = MAX(1, encoder_context->brc.min_qp);
+    int qp_delta, large_frame_adjustment;
+
+    // This implements a simple reactive VBR rate control mode for single-layer H.264.  The primary
+    // aim here is to avoid the problematic behaviour that the CBR rate controller displays on
+    // scene changes, where the QP can get pushed up by a large amount in a short period and
+    // compromise the quality of following frames to a very visible degree.
+    // The main idea, then, is to try to keep the HRD buffering above the target level most of the
+    // time, so that when a large frame is generated (on a scene change or when the stream
+    // complexity increases) we have plenty of slack to be able to encode the more difficult region
+    // without compromising quality immediately on the following frames.   It is optimistic about
+    // the complexity of future frames, so even after generating one or more large frames on a
+    // significant change it will try to keep the QP at its current level until the HRD buffer
+    // bounds force a change to maintain the intended rate.
+
+    sts = intel_mfc_update_hrd(encode_state, encoder_context, frame_bits);
+
+    // This adjustment is applied to increase the QP by more than we normally would if a very
+    // large frame is encountered and we are in danger of running out of slack.
+    large_frame_adjustment = rint(2.0 * log(frame_bits / mfc_context->brc.target_frame_size[0][slice_type]));
+
+    if (sts == BRC_UNDERFLOW) {
+        // The frame is far too big and we don't have the bits available to send it, so it will
+        // have to be re-encoded at a higher QP.
+        qp_delta = +2;
+        if (frame_bits > mfc_context->brc.target_frame_size[0][slice_type])
+            qp_delta += large_frame_adjustment;
+    } else if (sts == BRC_OVERFLOW) {
+        // The frame is very small and we are now overflowing the HRD buffer.  Currently this case
+        // does not occur because we ignore overflow in VBR mode.
+        assert(0 && "Overflow in VBR mode");
+    } else if (frame_bits <= mfc_context->brc.target_frame_size[0][slice_type]) {
+        // The frame is smaller than the average size expected for this frame type.
+        if (mfc_context->hrd.current_buffer_fullness[0] >
+            (mfc_context->hrd.target_buffer_fullness[0] + mfc_context->hrd.buffer_size[0]) / 2.0) {
+            // We currently have lots of bits available, so decrease the QP slightly for the next
+            // frame.
+            qp_delta = -1;
+        } else {
+            // The HRD buffer fullness is increasing, so do nothing.  (We may be under the target
+            // level here, but are moving in the right direction.)
+            qp_delta = 0;
+        }
+    } else {
+        // The frame is larger than the average size expected for this frame type.
+        if (mfc_context->hrd.current_buffer_fullness[0] > mfc_context->hrd.target_buffer_fullness[0]) {
+            // We are currently over the target level, so do nothing.
+            qp_delta = 0;
+        } else if (mfc_context->hrd.current_buffer_fullness[0] > mfc_context->hrd.target_buffer_fullness[0] / 2.0) {
+            // We are under the target level, but not critically.  Increase the QP by one step if
+            // continuing like this would underflow soon (currently within one second).
+            if (mfc_context->hrd.current_buffer_fullness[0] /
+                (double)(frame_bits - mfc_context->brc.target_frame_size[0][slice_type] + 1) <
+                ((double)encoder_context->brc.framerate[0].num / (double)encoder_context->brc.framerate[0].den))
+                qp_delta = +1;
+            else
+                qp_delta = 0;
+        } else {
+            // We are a long way under the target level.  Always increase the QP, possibly by a
+            // larger amount dependent on how big the frame we just made actually was.
+            qp_delta = +1 + large_frame_adjustment;
+        }
+    }
+
+    switch (slice_type) {
+    case SLICE_TYPE_I:
+        qp[SLICE_TYPE_I] += qp_delta;
+        qp[SLICE_TYPE_P]  = qp[SLICE_TYPE_I] + BRC_I_P_QP_DIFF;
+        qp[SLICE_TYPE_B]  = qp[SLICE_TYPE_I] + BRC_I_B_QP_DIFF;
+        break;
+    case SLICE_TYPE_P:
+        qp[SLICE_TYPE_P] += qp_delta;
+        qp[SLICE_TYPE_I]  = qp[SLICE_TYPE_P] - BRC_I_P_QP_DIFF;
+        qp[SLICE_TYPE_B]  = qp[SLICE_TYPE_P] + BRC_P_B_QP_DIFF;
+        break;
+    case SLICE_TYPE_B:
+        qp[SLICE_TYPE_B] += qp_delta;
+        qp[SLICE_TYPE_I]  = qp[SLICE_TYPE_B] - BRC_I_B_QP_DIFF;
+        qp[SLICE_TYPE_P]  = qp[SLICE_TYPE_B] - BRC_P_B_QP_DIFF;
+        break;
+    }
+    BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_I], min_qp, 51);
+    BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_P], min_qp, 51);
+    BRC_CLIP(mfc_context->brc.qp_prime_y[0][SLICE_TYPE_B], min_qp, 51);
+
+    if (sts == BRC_UNDERFLOW && qp[slice_type] == 51)
+        sts = BRC_UNDERFLOW_WITH_MAX_QP;
+    if (sts == BRC_OVERFLOW && qp[slice_type] == min_qp)
+        sts = BRC_OVERFLOW_WITH_MIN_QP;
+
+    return sts;
+}
+
+int intel_mfc_brc_postpack(struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context,
+                           int frame_bits)
+{
+    switch (encoder_context->rate_control_mode) {
+    case VA_RC_CBR:
+        return intel_mfc_brc_postpack_cbr(encode_state, encoder_context, frame_bits);
+    case VA_RC_VBR:
+        return intel_mfc_brc_postpack_vbr(encode_state, encoder_context, frame_bits);
+    }
+    assert(0 && "Invalid RC mode");
+}
+
 static void intel_mfc_hrd_context_init(struct encode_state *encode_state,
                                        struct intel_encoder_context *encoder_context)
 {
@@ -427,7 +545,7 @@ void intel_mfc_brc_prepare(struct encode_state *encode_state,
         encoder_context->codec != CODEC_H264_MVC)
         return;
 
-    if (rate_control_mode == VA_RC_CBR) {
+    if (rate_control_mode != VA_RC_CQP) {
         /*Programing bit rate control */
         if (encoder_context->brc.need_reset) {
             intel_mfc_bit_rate_control_context_init(encode_state, encoder_context);

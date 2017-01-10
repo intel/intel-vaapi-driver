@@ -798,7 +798,7 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     int qp_mb;
 
     qp_slice = qp;
-    if (rate_control_mode == VA_RC_CBR) {
+    if (rate_control_mode != VA_RC_CQP) {
         qp = mfc_context->brc.qp_prime_y[encoder_context->layer.curr_frame_layer_id][slice_type];
         if (encode_state->slice_header_index[slice_index] == 0) {
             pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
@@ -816,7 +816,7 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                              pPicParameter,
                              pSliceParameter,
                              encode_state, encoder_context,
-                             (rate_control_mode == VA_RC_CBR), qp_slice, slice_batch);
+                             (rate_control_mode != VA_RC_CQP), qp_slice, slice_batch);
 
     if ( slice_index == 0) 
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
@@ -1188,7 +1188,7 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
     int qp_slice;
 
     qp_slice = qp;
-    if (rate_control_mode == VA_RC_CBR) {
+    if (rate_control_mode != VA_RC_CQP) {
         qp = mfc_context->brc.qp_prime_y[encoder_context->layer.curr_frame_layer_id][slice_type];
         if (encode_state->slice_header_index[slice_index] == 0) {
             pSliceParameter->slice_qp_delta = qp - pPicParameter->pic_init_qp;
@@ -1209,7 +1209,7 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                              pSliceParameter,
                              encode_state,
                              encoder_context,
-                             (rate_control_mode == VA_RC_CBR),
+                             (rate_control_mode != VA_RC_CQP),
                              qp_slice,
                              slice_batch);
 
@@ -1368,7 +1368,7 @@ gen6_mfc_avc_encode_picture(VADriverContextP ctx,
         /*Programing bcs pipeline*/
         gen6_mfc_avc_pipeline_programing(ctx, encode_state, encoder_context);	//filling the pipeline
         gen6_mfc_run(ctx, encode_state, encoder_context);
-        if (rate_control_mode == VA_RC_CBR /*|| rate_control_mode == VA_RC_VBR*/) {
+        if (rate_control_mode == VA_RC_CBR || rate_control_mode == VA_RC_VBR) {
             gen6_mfc_stop(ctx, encode_state, encoder_context, &current_frame_bits_size);
             sts = intel_mfc_brc_postpack(encode_state, encoder_context, current_frame_bits_size);
             if (sts == BRC_NO_HRD_VIOLATION) {
