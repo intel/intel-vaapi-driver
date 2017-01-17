@@ -1562,7 +1562,7 @@ gen8_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
     intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
-    intel_batchbuffer_align(slice_batch, 16); /* aligned by an Oword */
+    intel_batchbuffer_align(slice_batch, 64); /* aligned by an Cache-line */
     head_offset = intel_batchbuffer_used_size(slice_batch);
 
     slice_batch->ptr += pSliceParameter->num_macroblocks * AVC_PAK_LEN_IN_BYTE;
@@ -1576,7 +1576,7 @@ gen8_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
 
 
     /* Aligned for tail */
-    intel_batchbuffer_align(slice_batch, 16); /* aligned by an Oword */
+    intel_batchbuffer_align(slice_batch, 64); /* aligned by Cache-line */
     if (last_slice) {    
         mfc_context->insert_object(ctx,
                                    encoder_context,
@@ -1637,6 +1637,9 @@ gen8_mfc_avc_batchbuffer_pipeline(VADriverContextP ctx,
         OUT_BATCH(batch, CMD_MEDIA_STATE_FLUSH);
         OUT_BATCH(batch, 0);
         ADVANCE_BATCH(batch);
+
+        intel_batchbuffer_free(slice_batch);
+        mfc_context->aux_batchbuffer = NULL;
     }
 
     intel_batchbuffer_end_atomic(batch);
