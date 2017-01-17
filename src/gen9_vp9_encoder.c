@@ -58,6 +58,7 @@
 #define BRC_KERNEL_AVBR                 0x0040
 #define BRC_KERNEL_CQL                  0x0080
 
+#define DEFAULT_MOCS                      0x02
 #define VP9_PIC_STATE_BUFFER_SIZE 192
 
 typedef struct _intel_kernel_header_
@@ -841,7 +842,7 @@ gen9_vp9_free_resources(struct gen9_encoder_context_vp9 *vme_context)
 
 static void
 gen9_init_media_object_walker_parameter(struct intel_encoder_context *encoder_context,
-                                        struct gpe_encoder_kernel_walker_parameter *kernel_walker_param,
+                                        struct vp9_encoder_kernel_walker_parameter *kernel_walker_param,
                                         struct gpe_media_object_walker_parameter *walker_param)
 {
     memset(walker_param, 0, sizeof(*walker_param));
@@ -921,6 +922,147 @@ gen9_init_media_object_walker_parameter(struct intel_encoder_context *encoder_co
         }
     }
 }
+
+static void
+gen9_add_2d_gpe_surface(VADriverContextP ctx,
+                        struct i965_gpe_context *gpe_context,
+                        struct object_surface *obj_surface,
+                        int is_uv_surface,
+                        int is_media_block_rw,
+                        unsigned int format,
+                        int index)
+{
+    struct i965_gpe_resource gpe_resource;
+    struct i965_gpe_surface gpe_surface;
+
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+
+    i965_object_surface_to_2d_gpe_resource(&gpe_resource, obj_surface);
+    gpe_surface.gpe_resource = &gpe_resource;
+    gpe_surface.is_2d_surface = 1;
+    gpe_surface.is_uv_surface = !!is_uv_surface;
+    gpe_surface.is_media_block_rw = !!is_media_block_rw;
+
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.format = format;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+    i965_free_gpe_resource(&gpe_resource);
+}
+
+static void
+gen9_add_adv_gpe_surface(VADriverContextP ctx,
+                         struct i965_gpe_context *gpe_context,
+                         struct object_surface *obj_surface,
+                         int index)
+{
+    struct i965_gpe_resource gpe_resource;
+    struct i965_gpe_surface gpe_surface;
+
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+
+    i965_object_surface_to_2d_gpe_resource(&gpe_resource, obj_surface);
+    gpe_surface.gpe_resource = &gpe_resource;
+    gpe_surface.is_adv_surface = 1;
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.v_direction = 2;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+    i965_free_gpe_resource(&gpe_resource);
+}
+
+static void
+gen9_add_buffer_gpe_surface(VADriverContextP ctx,
+                            struct i965_gpe_context *gpe_context,
+                            struct i965_gpe_resource *gpe_buffer,
+                            int is_raw_buffer,
+                            unsigned int size,
+                            unsigned int offset,
+                            int index)
+{
+    struct i965_gpe_surface gpe_surface;
+
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+
+    gpe_surface.gpe_resource = gpe_buffer;
+    gpe_surface.is_buffer = 1;
+    gpe_surface.is_raw_buffer = !!is_raw_buffer;
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.size = size;
+    gpe_surface.offset = offset;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+}
+
+static void
+gen9_add_buffer_2d_gpe_surface(VADriverContextP ctx,
+                               struct i965_gpe_context *gpe_context,
+                               struct i965_gpe_resource *gpe_buffer,
+                               int is_media_block_rw,
+                               unsigned int format,
+                               int index)
+{
+    struct i965_gpe_surface gpe_surface;
+
+    memset(&gpe_surface, 0, sizeof(gpe_surface));
+
+    gpe_surface.gpe_resource = gpe_buffer;
+    gpe_surface.is_2d_surface = 1;
+    gpe_surface.is_media_block_rw = !!is_media_block_rw;
+    gpe_surface.cacheability_control = DEFAULT_MOCS;
+    gpe_surface.format = format;
+
+    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+}
+
+static void
+gen9_add_dri_buffer_gpe_surface(VADriverContextP ctx,
+                                struct i965_gpe_context *gpe_context,
+                                dri_bo *bo,
+                                int is_raw_buffer,
+                                unsigned int size,
+                                unsigned int offset,
+                                int index)
+{
+    struct i965_gpe_resource gpe_resource;
+
+    i965_dri_object_to_buffer_gpe_resource(&gpe_resource, bo);
+    gen9_add_buffer_gpe_surface(ctx,
+                                gpe_context,
+                                &gpe_resource,
+                                is_raw_buffer,
+                                size,
+                                offset,
+                                index);
+
+    i965_free_gpe_resource(&gpe_resource);
+}
+
+/*
+static void
+gen9_add_dri_buffer_2d_gpe_surface(VADriverContextP ctx,
+                                   struct i965_gpe_context *gpe_context,
+                                   dri_bo *bo,
+                                   unsigned int width,
+                                   unsigned int height,
+                                   unsigned int pitch,
+                                   int is_media_block_rw,
+                                   unsigned int format,
+                                   int index)
+{
+    struct i965_gpe_resource gpe_resource;
+
+    i965_dri_object_to_2d_gpe_resource(&gpe_resource, bo, width, height, pitch);
+    gen9_add_buffer_2d_gpe_surface(ctx,
+                                   gpe_context,
+                                   &gpe_resource,
+                                   is_media_block_rw,
+                                   format,
+                                   index);
+
+    i965_free_gpe_resource(&gpe_resource);
+}
+*/
 
 static void
 gen9_run_kernel_media_object(VADriverContextP ctx,
@@ -1349,7 +1491,7 @@ gen9_vp9_brc_intra_dist_kernel(VADriverContextP ctx,
     VAEncPictureParameterBufferVP9 *pic_param;
     struct gen9_vp9_state *vp9_state;
     struct gpe_media_object_walker_parameter media_object_walker_param;
-    struct gpe_encoder_kernel_walker_parameter kernel_walker_param;
+    struct vp9_encoder_kernel_walker_parameter kernel_walker_param;
 
     vp9_state = (struct gen9_vp9_state *) encoder_context->enc_priv_state;
 
@@ -2189,7 +2331,7 @@ gen9_vp9_me_kernel(VADriverContextP ctx,
     struct gen9_vp9_me_curbe_param me_curbe_param;
     struct gen9_vp9_state *vp9_state;
     struct gpe_media_object_walker_parameter media_object_walker_param;
-    struct gpe_encoder_kernel_walker_parameter kernel_walker_param;
+    struct vp9_encoder_kernel_walker_parameter kernel_walker_param;
 
     vp9_state = (struct gen9_vp9_state *) encoder_context->enc_priv_state;
     if (!vp9_state || !vp9_state->pic_param)
@@ -2329,7 +2471,7 @@ gen9_vp9_scaling_kernel(VADriverContextP ctx,
     struct gen9_vp9_state *vp9_state;
     VAEncPictureParameterBufferVP9  *pic_param;
     struct gpe_media_object_walker_parameter media_object_walker_param;
-    struct gpe_encoder_kernel_walker_parameter kernel_walker_param;
+    struct vp9_encoder_kernel_walker_parameter kernel_walker_param;
     struct object_surface *obj_surface;
     struct object_surface *input_surface, *output_surface;
     struct gen9_surface_vp9 *vp9_priv_surface;
@@ -2596,7 +2738,7 @@ gen9_vp9_dys_kernel(VADriverContextP ctx,
     struct gen9_vp9_dys_curbe_param                 curbe_param;
     struct gen9_vp9_dys_surface_param               surface_param;
     struct gpe_media_object_walker_parameter        media_object_walker_param;
-    struct gpe_encoder_kernel_walker_parameter      kernel_walker_param;
+    struct vp9_encoder_kernel_walker_parameter      kernel_walker_param;
     unsigned int                                    resolution_x, resolution_y;
 
     media_function = VP9_MEDIA_STATE_DYS;
@@ -3384,7 +3526,7 @@ gen9_vp9_mbenc_kernel(VADriverContextP ctx,
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
     struct i965_gpe_context *gpe_context, *tx_gpe_context;
     struct gpe_media_object_walker_parameter        media_object_walker_param;
-    struct gpe_encoder_kernel_walker_parameter      kernel_walker_param;
+    struct vp9_encoder_kernel_walker_parameter      kernel_walker_param;
     unsigned int    resolution_x, resolution_y;
     struct gen9_vp9_state *vp9_state;
     VAEncPictureParameterBufferVP9  *pic_param;
