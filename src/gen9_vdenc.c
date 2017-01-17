@@ -778,7 +778,7 @@ const int vdenc_hme_cost[8][52] = {
 
 #define OUT_BUFFER_3DW(batch, bo, is_target, delta, attr)  do { \
         OUT_BUFFER_2DW(batch, bo, is_target, delta);            \
-        OUT_BCS_BATCH(batch, attr);                             \
+        OUT_BCS_BATCH(batch, i965->intel.mocs_state);                             \
     } while (0)
 
 #define ALLOC_VDENC_BUFFER_RESOURCE(buffer, bfsize, des) do {   \
@@ -1312,6 +1312,7 @@ gen9_vdenc_huc_dmem_state(VADriverContextP ctx,
                           struct intel_encoder_context *encoder_context,
                           struct huc_dmem_state_parameter *params)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 6);
@@ -1345,6 +1346,7 @@ gen9_vdenc_huc_virtual_addr_state(VADriverContextP ctx,
                                   struct intel_encoder_context *encoder_context,
                                   struct huc_virtual_addr_parameter *params)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     int i;
 
@@ -1369,6 +1371,7 @@ gen9_vdenc_huc_ind_obj_base_addr_state(VADriverContextP ctx,
                                        struct intel_encoder_context *encoder_context,
                                        struct huc_ind_obj_base_addr_parameter *params)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 11);
@@ -2344,6 +2347,7 @@ gen9_vdenc_mfx_surface_state(VADriverContextP ctx,
 static void
 gen9_vdenc_mfx_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     int i;
@@ -2399,6 +2403,7 @@ gen9_vdenc_mfx_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_co
 static void
 gen9_vdenc_mfx_ind_obj_base_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
@@ -2440,6 +2445,7 @@ gen9_vdenc_mfx_ind_obj_base_addr_state(VADriverContextP ctx, struct intel_encode
 static void
 gen9_vdenc_mfx_bsp_buf_base_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
@@ -2636,6 +2642,7 @@ gen9_vdenc_vdenc_pipe_buf_addr_state(VADriverContextP ctx,
                                      struct encode_state *encode_state,
                                      struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 

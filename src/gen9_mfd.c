@@ -53,7 +53,7 @@
         }                                                               \
         OUT_BCS_BATCH(batch, 0);                                        \
         if (ma)                                                         \
-            OUT_BCS_BATCH(batch, 0);                                    \
+            OUT_BCS_BATCH(batch, i965->intel.mocs_state);                                    \
     } while (0)
 
 #define OUT_BUFFER_MA_TARGET(buf_bo)       OUT_BUFFER(buf_bo, 1, 1)
@@ -269,6 +269,7 @@ gen9_hcpd_pipe_buf_addr_state(VADriverContextP ctx,
                               struct decode_state *decode_state,
                               struct gen9_hcpd_context *gen9_hcpd_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     struct object_surface *obj_surface;
     GenHevcSurface *gen9_hevc_surface;
@@ -338,6 +339,7 @@ gen9_hcpd_ind_obj_base_addr_state(VADriverContextP ctx,
                                   dri_bo *slice_data_bo,
                                   struct gen9_hcpd_context *gen9_hcpd_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
 
     BEGIN_BCS_BATCH(batch, 14);
@@ -1396,6 +1398,7 @@ gen9_hcpd_vp9_pipe_buf_addr_state(VADriverContextP ctx,
                               struct decode_state *decode_state,
                               struct gen9_hcpd_context *gen9_hcpd_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     struct object_surface *obj_surface;
     int i=0;

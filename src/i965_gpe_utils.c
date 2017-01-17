@@ -1264,6 +1264,7 @@ gen9_gpe_state_base_address(VADriverContextP ctx,
                             struct i965_gpe_context *gpe_context,
                             struct intel_batchbuffer *batch)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     BEGIN_BATCH(batch, 19);
 
     OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (19 - 2));
@@ -1273,13 +1274,14 @@ gen9_gpe_state_base_address(VADriverContextP ctx,
     OUT_BATCH(batch, 0);
 
 	/*DW4 Surface state base address */
-    OUT_RELOC64(batch, gpe_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
+    OUT_RELOC64(batch, gpe_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY | (i965->intel.mocs_state << 4)); /* Surface state base address */
 
 	/*DW6. Dynamic state base address */
     if (gpe_context->dynamic_state.bo)
         OUT_RELOC64(batch, gpe_context->dynamic_state.bo,
                   I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
-                  I915_GEM_DOMAIN_RENDER, BASE_ADDRESS_MODIFY);
+                  I915_GEM_DOMAIN_RENDER,
+                  BASE_ADDRESS_MODIFY | (i965->intel.mocs_state << 4));
     else {
         OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
         OUT_BATCH(batch, 0);
@@ -1290,7 +1292,7 @@ gen9_gpe_state_base_address(VADriverContextP ctx,
     if (gpe_context->indirect_state.bo)
         OUT_RELOC64(batch, gpe_context->indirect_state.bo,
                   I915_GEM_DOMAIN_SAMPLER,
-                  0, BASE_ADDRESS_MODIFY);
+                  0, BASE_ADDRESS_MODIFY | (i965->intel.mocs_state << 4));
     else {
         OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
         OUT_BATCH(batch, 0);
@@ -1301,7 +1303,7 @@ gen9_gpe_state_base_address(VADriverContextP ctx,
     if (gpe_context->instruction_state.bo)
         OUT_RELOC64(batch, gpe_context->instruction_state.bo,
                   I915_GEM_DOMAIN_INSTRUCTION,
-                  0, BASE_ADDRESS_MODIFY);
+                  0, BASE_ADDRESS_MODIFY | (i965->intel.mocs_state << 4));
     else {
         OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
         OUT_BATCH(batch, 0);

@@ -2292,12 +2292,13 @@ void skl_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
 void
 skl_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = proc_ctx->batch;
 
     BEGIN_VEB_BATCH(batch, 0x10);
     OUT_VEB_BATCH(batch, VEB_STATE | (0x10 - 2));
     OUT_VEB_BATCH(batch,
-                  0 << 25 |       // state surface control bits
+                  ((i965->intel.mocs_state) << 25) |       // state surface control bits
                   0 << 23 |       // reserved.
                   0 << 22 |       // gamut expansion position
                   0 << 15 |       // reserved.

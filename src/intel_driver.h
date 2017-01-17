@@ -192,6 +192,7 @@ struct intel_driver_data
     int eu_total;
 
     const struct intel_device_info *device_info;
+    unsigned int mocs_state;
 };
 
 bool intel_driver_init(VADriverContextP ctx);

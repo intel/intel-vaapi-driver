@@ -4944,6 +4944,7 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
                                  struct encode_state *encode_state,
                                  struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen9_encoder_context_vp9 *pak_context = encoder_context->mfc_context;
     struct gen9_vp9_state *vp9_state;
@@ -4968,49 +4969,49 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
                 obj_surface->bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 4..6 deblocking line */
     OUT_RELOC64(batch,
                 pak_context->res_deblocking_filter_line_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 7..9 deblocking tile line */
     OUT_RELOC64(batch,
                 pak_context->res_deblocking_filter_tile_line_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 10..12 deblocking tile col */
     OUT_RELOC64(batch,
                 pak_context->res_deblocking_filter_tile_col_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 13..15 metadata line */
     OUT_RELOC64(batch,
                 pak_context->res_metadata_line_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 16..18 metadata tile line */
     OUT_RELOC64(batch,
                 pak_context->res_metadata_tile_line_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 19..21 metadata tile col */
     OUT_RELOC64(batch,
                 pak_context->res_metadata_tile_col_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 22..30 SAO is not used for VP9 */
     OUT_BCS_BATCH(batch, 0);
@@ -5028,7 +5029,7 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
                 pak_context->res_mv_temporal_buffer[vp9_state->curr_mv_temporal_index].bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 34..36 Not used */
     OUT_BCS_BATCH(batch, 0);
@@ -5058,14 +5059,14 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
         OUT_BCS_BATCH(batch, 0);
     }
 
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 54..56 for source input */
     OUT_RELOC64(batch,
                 pak_context->uncompressed_picture_source.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, 0,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 57..59 StreamOut is not used */
     OUT_BCS_BATCH(batch, 0);
@@ -5098,7 +5099,7 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
     }
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 83..85 VP9 prob buffer */
     OUT_RELOC64(batch,
@@ -5106,7 +5107,7 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
 
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 86..88 Segment id buffer */
     if (pak_context->res_segmentid_buffer.bo) {
@@ -5118,21 +5119,21 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
     }
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 89..91 HVD line rowstore buffer */
     OUT_RELOC64(batch,
                 pak_context->res_hvd_line_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 92..94 HVD tile line rowstore buffer */
     OUT_RELOC64(batch,
                 pak_context->res_hvd_tile_line_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 95..97 SAO streamout. Not used for VP9 */
     OUT_BCS_BATCH(batch, 0);
@@ -5157,6 +5158,7 @@ gen9_pak_vp9_ind_obj_base_addr_state(VADriverContextP ctx,
                                      struct encode_state *encode_state,
                                      struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gen9_encoder_context_vp9 *pak_context = encoder_context->mfc_context;
     struct gen9_vp9_state *vp9_state;
@@ -5182,14 +5184,14 @@ gen9_pak_vp9_ind_obj_base_addr_state(VADriverContextP ctx,
                 I915_GEM_DOMAIN_INSTRUCTION, 0,   /* No write domain */
                 vp9_state->mb_data_offset);
     /* default attribute */
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 9..11, PAK-BSE */
     OUT_RELOC64(batch,
                   pak_context->indirect_pak_bse_object.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   pak_context->indirect_pak_bse_object.offset);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 12..13 upper bound */
     OUT_RELOC64(batch,
@@ -5202,35 +5204,35 @@ gen9_pak_vp9_ind_obj_base_addr_state(VADriverContextP ctx,
                 pak_context->res_compressed_input_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, 0,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 17..19 prob counter streamout */
     OUT_RELOC64(batch,
                 pak_context->res_prob_counter_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 20..22 prob delta streamin */
     OUT_RELOC64(batch,
                 pak_context->res_prob_delta_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 23..25 Tile record streamout */
     OUT_RELOC64(batch,
                 pak_context->res_tile_record_streamout_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 26..28 CU record streamout */
     OUT_RELOC64(batch,
                 pak_context->res_cu_stat_streamout_buffer.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 0);
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     ADVANCE_BCS_BATCH(batch);
 }
