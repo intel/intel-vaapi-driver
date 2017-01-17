@@ -1642,11 +1642,12 @@ gen8_mfc_avc_batchbuffer_pipeline(VADriverContextP ctx,
         mfc_context->aux_batchbuffer = NULL;
     }
 
+    if (IS_GEN9(i965->intel.device_info))
+        gen9_gpe_pipeline_end(ctx, &mfc_context->gpe_context, batch);
+
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
 
-    if (IS_GEN9(i965->intel.device_info))
-        gen9_gpe_pipeline_end(ctx, &mfc_context->gpe_context, batch);
 }
 
 static void
