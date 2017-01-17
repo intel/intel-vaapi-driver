@@ -43,15 +43,15 @@
 
 #define OUT_BUFFER(buf_bo, is_target, ma)  do {                         \
         if (buf_bo) {                                                   \
-            OUT_BCS_RELOC(batch,                                        \
+            OUT_BCS_RELOC64(batch,                                        \
                           buf_bo,                                       \
                           I915_GEM_DOMAIN_RENDER,                       \
                           is_target ? I915_GEM_DOMAIN_RENDER : 0,       \
                           0);                                           \
         } else {                                                        \
             OUT_BCS_BATCH(batch, 0);                                    \
+            OUT_BCS_BATCH(batch, 0);                                    \
         }                                                               \
-        OUT_BCS_BATCH(batch, 0);                                        \
         if (ma)                                                         \
             OUT_BCS_BATCH(batch, i965->intel.mocs_state);                                    \
     } while (0)

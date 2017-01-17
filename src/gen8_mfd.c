@@ -187,24 +187,26 @@ gen8_mfd_pipe_buf_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (61 - 2));
 	/* Pre-deblock 1-3 */
     if (gen7_mfd_context->pre_deblocking_output.valid)
-        OUT_BCS_RELOC(batch, gen7_mfd_context->pre_deblocking_output.bo,
+        OUT_BCS_RELOC64(batch, gen7_mfd_context->pre_deblocking_output.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-    else
+    else {
         OUT_BCS_BATCH(batch, 0);
 
 	OUT_BCS_BATCH(batch, 0);
+    }
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
 	/* Post-debloing 4-6 */
     if (gen7_mfd_context->post_deblocking_output.valid)
-        OUT_BCS_RELOC(batch, gen7_mfd_context->post_deblocking_output.bo,
+        OUT_BCS_RELOC64(batch, gen7_mfd_context->post_deblocking_output.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-    else
+    else {
         OUT_BCS_BATCH(batch, 0);
 
 	OUT_BCS_BATCH(batch, 0);
+    }
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
 	/* uncompressed-video & stream out 7-12 */
@@ -217,23 +219,25 @@ gen8_mfd_pipe_buf_addr_state(VADriverContextP ctx,
 
 	/* intra row-store scratch 13-15 */
     if (gen7_mfd_context->intra_row_store_scratch_buffer.valid)
-        OUT_BCS_RELOC(batch, gen7_mfd_context->intra_row_store_scratch_buffer.bo,
+        OUT_BCS_RELOC64(batch, gen7_mfd_context->intra_row_store_scratch_buffer.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-    else
+    else {
         OUT_BCS_BATCH(batch, 0);
 
 	OUT_BCS_BATCH(batch, 0);
+    }
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
 	/* deblocking-filter-row-store 16-18 */
     if (gen7_mfd_context->deblocking_filter_row_store_scratch_buffer.valid)
-        OUT_BCS_RELOC(batch, gen7_mfd_context->deblocking_filter_row_store_scratch_buffer.bo,
+        OUT_BCS_RELOC64(batch, gen7_mfd_context->deblocking_filter_row_store_scratch_buffer.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-    else
+    else {
         OUT_BCS_BATCH(batch, 0);
 	OUT_BCS_BATCH(batch, 0);
+    }
 
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
@@ -246,14 +250,14 @@ gen8_mfd_pipe_buf_addr_state(VADriverContextP ctx,
             gen7_mfd_context->reference_surface[i].obj_surface->bo) {
             obj_surface = gen7_mfd_context->reference_surface[i].obj_surface;
 
-            OUT_BCS_RELOC(batch, obj_surface->bo,
+            OUT_BCS_RELOC64(batch, obj_surface->bo,
                           I915_GEM_DOMAIN_INSTRUCTION, 0,
                           0);
         } else {
             OUT_BCS_BATCH(batch, 0);
+            OUT_BCS_BATCH(batch, 0);
         }
         
-        OUT_BCS_BATCH(batch, 0);
     }
     
     /* reference property 51 */
@@ -287,8 +291,7 @@ gen8_mfd_ind_obj_base_addr_state(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 26);
     OUT_BCS_BATCH(batch, MFX_IND_OBJ_BASE_ADDR_STATE | (26 - 2));
 	/* MFX In BS 1-5 */
-    OUT_BCS_RELOC(batch, slice_data_bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0); /* MFX Indirect Bitstream Object Base Address */
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_RELOC64(batch, slice_data_bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0); /* MFX Indirect Bitstream Object Base Address */
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 	/* Upper bound 4-5 */	
     OUT_BCS_BATCH(batch, 0);
@@ -338,33 +341,36 @@ gen8_mfd_bsp_buf_base_addr_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_BSP_BUF_BASE_ADDR_STATE | (10 - 2));
 
     if (gen7_mfd_context->bsd_mpc_row_store_scratch_buffer.valid)
-        OUT_BCS_RELOC(batch, gen7_mfd_context->bsd_mpc_row_store_scratch_buffer.bo,
+        OUT_BCS_RELOC64(batch, gen7_mfd_context->bsd_mpc_row_store_scratch_buffer.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-	else
+	else {
     		OUT_BCS_BATCH(batch, 0);
+		OUT_BCS_BATCH(batch, 0);
+    }
 		
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 	/* MPR Row Store Scratch buffer 4-6 */
     if (gen7_mfd_context->mpr_row_store_scratch_buffer.valid)
-        OUT_BCS_RELOC(batch, gen7_mfd_context->mpr_row_store_scratch_buffer.bo,
+        OUT_BCS_RELOC64(batch, gen7_mfd_context->mpr_row_store_scratch_buffer.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-    else
+    else {
         OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
 	/* Bitplane 7-9 */ 
     if (gen7_mfd_context->bitplane_read_buffer.valid)
-        OUT_BCS_RELOC(batch, gen7_mfd_context->bitplane_read_buffer.bo,
+        OUT_BCS_RELOC64(batch, gen7_mfd_context->bitplane_read_buffer.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, 0,
                       0);
-    else
+    else {
     	OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
+	OUT_BCS_BATCH(batch, 0);
+    }
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
     ADVANCE_BCS_BATCH(batch);
 }
@@ -535,10 +541,9 @@ gen8_mfd_avc_directmode_state(VADriverContextP ctx,
             obj_surface = gen7_mfd_context->reference_surface[i].obj_surface;
             gen7_avc_surface = obj_surface->private_data;
 
-            OUT_BCS_RELOC(batch, gen7_avc_surface->dmv_top,
+            OUT_BCS_RELOC64(batch, gen7_avc_surface->dmv_top,
                           I915_GEM_DOMAIN_INSTRUCTION, 0,
                           0);
-            OUT_BCS_BATCH(batch, 0);
         } else {
             OUT_BCS_BATCH(batch, 0);
             OUT_BCS_BATCH(batch, 0);
@@ -553,11 +558,10 @@ gen8_mfd_avc_directmode_state(VADriverContextP ctx,
     assert(obj_surface->bo && obj_surface->private_data);
     gen7_avc_surface = obj_surface->private_data;
 
-    OUT_BCS_RELOC(batch, gen7_avc_surface->dmv_top,
+    OUT_BCS_RELOC64(batch, gen7_avc_surface->dmv_top,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);
 
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* POC List */
@@ -1740,23 +1744,25 @@ gen8_mfd_vc1_directmode_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_VC1_DIRECTMODE_STATE | (7 - 2));
 
     if (dmv_write_buffer)
-        OUT_BCS_RELOC(batch, dmv_write_buffer,
+        OUT_BCS_RELOC64(batch, dmv_write_buffer,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-    else
+    else {
         OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     if (dmv_read_buffer)
-        OUT_BCS_RELOC(batch, dmv_read_buffer,
+        OUT_BCS_RELOC64(batch, dmv_read_buffer,
                       I915_GEM_DOMAIN_INSTRUCTION, 0,
                       0);
-    else
+    else {
         OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
     
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
                   
     ADVANCE_BCS_BATCH(batch);
@@ -2311,11 +2317,10 @@ gen8_jpeg_wa_pipe_buf_addr_state(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 61);
     OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (61 - 2));
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   obj_surface->bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);
-	OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
     
 
@@ -2332,11 +2337,10 @@ gen8_jpeg_wa_pipe_buf_addr_state(VADriverContextP ctx,
 	OUT_BCS_BATCH(batch, 0);
 
 	/* the DW 13-15 is for intra row store scratch */
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   intra_bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);
-	OUT_BCS_BATCH(batch, 0);
 
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
@@ -2390,19 +2394,17 @@ gen8_jpeg_wa_bsp_buf_base_addr_state(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 10);
     OUT_BCS_BATCH(batch, MFX_BSP_BUF_BASE_ADDR_STATE | (10 - 2));
 
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   bsd_mpc_bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);
 
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   mpr_bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     OUT_BCS_BATCH(batch, 0);
@@ -2513,11 +2515,10 @@ gen8_jpeg_wa_ind_obj_base_addr_state(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 11);
     OUT_BCS_BATCH(batch, MFX_IND_OBJ_BASE_ADDR_STATE | (11 - 2));
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   gen7_mfd_context->jpeg_wa_slice_data_bo,
                   I915_GEM_DOMAIN_INSTRUCTION, 0,
                   0);
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0); /* ignore for VLD mode */
@@ -2899,10 +2900,9 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
 
     /* CoeffProbability table for non-key frame, DW16-DW18 */
     if (probs_bo) {
-        OUT_BCS_RELOC(batch, probs_bo,
+        OUT_BCS_RELOC64(batch, probs_bo,
                       0, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-        OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, i965->intel.mocs_state);
     } else {
         OUT_BCS_BATCH(batch, 0);
@@ -2957,10 +2957,9 @@ gen8_mfd_vp8_pic_state(VADriverContextP ctx,
 
     /* segmentation id stream base address, DW35-DW37 */
     if (enable_segmentation) {
-        OUT_BCS_RELOC(batch, gen7_mfd_context->segmentation_buffer.bo,
+        OUT_BCS_RELOC64(batch, gen7_mfd_context->segmentation_buffer.bo,
                       0, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-        OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, i965->intel.mocs_state);
     }
     else {

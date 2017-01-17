@@ -1882,29 +1882,22 @@ void bdw_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *pro
                   0 << 1  |       // ColorGamutCompressionEnable
                   0 ) ;           // ColorGamutExpansionEnable.
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->dndi_state_table.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
 
-    OUT_VEB_BATCH(batch, 0);
-
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->iecp_state_table.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
 
-    OUT_VEB_BATCH(batch, 0);
-
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->gamut_state_table.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
 
-    OUT_VEB_BATCH(batch, 0);
-
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->vertex_state_table.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
 
-    OUT_VEB_BATCH(batch, 0);
 
     OUT_VEB_BATCH(batch, 0);/*caputre pipe state pointer*/
     OUT_VEB_BATCH(batch, 0);
@@ -1927,45 +1920,37 @@ void bdw_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context 
     OUT_VEB_BATCH(batch, VEB_DNDI_IECP_STATE | (0x14 - 2));//DWord 0
     OUT_VEB_BATCH(batch, (width64 - 1));
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 2
-    OUT_VEB_BATCH(batch,0);//DWord 3
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->frame_store[FRAME_IN_PREVIOUS].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 4
-    OUT_VEB_BATCH(batch,0);//DWord 5
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->frame_store[FRAME_IN_STMM].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 6
-    OUT_VEB_BATCH(batch,0);//DWord 7
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->frame_store[FRAME_OUT_STMM].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 8
-    OUT_VEB_BATCH(batch,0);//DWord 9
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 10
-    OUT_VEB_BATCH(batch,0);//DWord 11
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 12
-    OUT_VEB_BATCH(batch,0);//DWord 13
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->frame_store[FRAME_OUT_PREVIOUS].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 14
-    OUT_VEB_BATCH(batch,0);//DWord 15
 
-    OUT_RELOC(batch,
+    OUT_RELOC64(batch,
               proc_ctx->frame_store[FRAME_OUT_STATISTIC].obj_surface->bo,
               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 16
-    OUT_VEB_BATCH(batch,0);//DWord 17
 
     OUT_VEB_BATCH(batch,0);//DWord 18
     OUT_VEB_BATCH(batch,0);//DWord 19

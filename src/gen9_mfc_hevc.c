@@ -83,15 +83,15 @@ typedef enum _gen6_brc_status {
 
 #define OUT_BUFFER_X(buf_bo, is_target, ma)  do {                         \
         if (buf_bo) {                                                   \
-            OUT_BCS_RELOC(batch,                                        \
+            OUT_BCS_RELOC64(batch,                                        \
                           buf_bo,                                       \
                           I915_GEM_DOMAIN_INSTRUCTION,                       \
                           is_target ? I915_GEM_DOMAIN_INSTRUCTION : 0,       \
                           0);                                           \
         } else {                                                        \
             OUT_BCS_BATCH(batch, 0);                                    \
+            OUT_BCS_BATCH(batch, 0);                                    \
         }                                                               \
-        OUT_BCS_BATCH(batch, 0);                                        \
         if (ma)                                                         \
             OUT_BCS_BATCH(batch, i965->intel.mocs_state);                                    \
     } while (0)
@@ -330,17 +330,15 @@ gen9_hcpe_ind_obj_base_addr_state(VADriverContextP ctx,
     OUT_BUFFER_NMA_REFERENCE(NULL);                /* DW 4..5, Upper Bound */
     OUT_BUFFER_MA_TARGET(mfc_context->hcp_indirect_cu_object.bo);                 /* DW 6..8, CU */
     /* DW 9..11, PAK-BSE */
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   mfc_context->hcp_indirect_pak_bse_object.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   mfc_context->hcp_indirect_pak_bse_object.offset);
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   mfc_context->hcp_indirect_pak_bse_object.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   mfc_context->hcp_indirect_pak_bse_object.end_offset);
-    OUT_BCS_BATCH(batch, 0);
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -1966,11 +1964,10 @@ gen9_hcpe_hevc_pipeline_programing(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 3);
     OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   slice_batch_bo,
                   I915_GEM_DOMAIN_COMMAND, 0,
                   0);
-    OUT_BCS_BATCH(batch, 0);
     ADVANCE_BCS_BATCH(batch);
 
     // end programing

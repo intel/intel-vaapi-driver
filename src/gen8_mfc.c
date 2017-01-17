@@ -249,11 +249,10 @@ gen8_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
 
     /* the DW4-5 is the MFX upper bound */
     if (encoder_context->codec == CODEC_VP8) {
-        OUT_BCS_RELOC(batch,
+        OUT_BCS_RELOC64(batch,
                 mfc_context->mfc_indirect_pak_bse_object.bo,
                 I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                 mfc_context->mfc_indirect_pak_bse_object.end_offset);
-        OUT_BCS_BATCH(batch, 0);
     } else {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
@@ -262,11 +261,9 @@ gen8_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
     if(encoder_context->codec != CODEC_JPEG) {
         vme_size = vme_context->vme_output.size_block * vme_context->vme_output.num_blocks;
         /* the DW6-10 is for MFX Indirect MV Object Base Address */
-        OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
-        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_RELOC64(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
         OUT_BCS_BATCH(batch, i965->intel.mocs_state);
-        OUT_BCS_RELOC(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
-        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_RELOC64(batch, vme_context->vme_output.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, vme_size);
     } else {
         /* No VME for JPEG */
         OUT_BCS_BATCH(batch, 0);
@@ -292,18 +289,16 @@ gen8_mfc_ind_obj_base_addr_state(VADriverContextP ctx,
 
     /* the DW21-25 is for MFC Indirect PAK-BSE Object Base Address for Encoder*/	
     bse_offset = (encoder_context->codec == CODEC_JPEG) ? (mfc_context->mfc_indirect_pak_bse_object.offset) : 0;
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   mfc_context->mfc_indirect_pak_bse_object.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   bse_offset);
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 	
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   mfc_context->mfc_indirect_pak_bse_object.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   mfc_context->mfc_indirect_pak_bse_object.end_offset);
-    OUT_BCS_BATCH(batch, 0);
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -654,79 +649,76 @@ gen8_mfc_pipe_buf_addr_state(VADriverContextP ctx,
 
     /* the DW1-3 is for pre_deblocking */
     if (mfc_context->pre_deblocking_output.bo)
-        OUT_BCS_RELOC(batch, mfc_context->pre_deblocking_output.bo,
+        OUT_BCS_RELOC64(batch, mfc_context->pre_deblocking_output.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);
-    else
+    else {
+        OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);											/* pre output addr   */
 
-    OUT_BCS_BATCH(batch, 0);
+    }
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
     /* the DW4-6 is for the post_deblocking */
 
     if (mfc_context->post_deblocking_output.bo)
-        OUT_BCS_RELOC(batch, mfc_context->post_deblocking_output.bo,
+        OUT_BCS_RELOC64(batch, mfc_context->post_deblocking_output.bo,
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                       0);											/* post output addr  */	
-    else
+    else {
         OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
     
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* the DW7-9 is for the uncompressed_picture */
-    OUT_BCS_RELOC(batch, mfc_context->uncompressed_picture_source.bo,
+    OUT_BCS_RELOC64(batch, mfc_context->uncompressed_picture_source.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0); /* uncompressed data */
 
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* the DW10-12 is for the mb status */
-    OUT_BCS_RELOC(batch, mfc_context->macroblock_status_buffer.bo,
+    OUT_BCS_RELOC64(batch, mfc_context->macroblock_status_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0); /* StreamOut data*/
     
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* the DW13-15 is for the intra_row_store_scratch */
-    OUT_BCS_RELOC(batch, mfc_context->intra_row_store_scratch_buffer.bo,
+    OUT_BCS_RELOC64(batch, mfc_context->intra_row_store_scratch_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);	
 
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* the DW16-18 is for the deblocking filter */
-    OUT_BCS_RELOC(batch, mfc_context->deblocking_filter_row_store_scratch_buffer.bo,
+    OUT_BCS_RELOC64(batch, mfc_context->deblocking_filter_row_store_scratch_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);
 
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* the DW 19-50 is for Reference pictures*/
     for (i = 0; i < ARRAY_ELEMS(mfc_context->reference_surfaces); i++) {
         if ( mfc_context->reference_surfaces[i].bo != NULL) {
-            OUT_BCS_RELOC(batch, mfc_context->reference_surfaces[i].bo,
+            OUT_BCS_RELOC64(batch, mfc_context->reference_surfaces[i].bo,
                           I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                           0);			
         } else {
             OUT_BCS_BATCH(batch, 0);
+            OUT_BCS_BATCH(batch, 0);
         }
 
-	OUT_BCS_BATCH(batch, 0);
     }
 
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* The DW 52-54 is for the MB status buffer */
-    OUT_BCS_RELOC(batch, mfc_context->macroblock_status_buffer.bo,
+    OUT_BCS_RELOC64(batch, mfc_context->macroblock_status_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);											/* Macroblock status buffer*/
 	
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* the DW 55-57 is the ILDB buffer */
@@ -760,10 +752,9 @@ gen8_mfc_avc_directmode_state(VADriverContextP ctx,
     /* the DW1-32 is for the direct MV for reference */
     for(i = 0; i < NUM_MFC_DMV_BUFFERS - 2; i += 2) {
         if ( mfc_context->direct_mv_buffers[i].bo != NULL) { 
-            OUT_BCS_RELOC(batch, mfc_context->direct_mv_buffers[i].bo,
+            OUT_BCS_RELOC64(batch, mfc_context->direct_mv_buffers[i].bo,
                           I915_GEM_DOMAIN_INSTRUCTION, 0,
                           0);
-            OUT_BCS_BATCH(batch, 0);
         } else {
             OUT_BCS_BATCH(batch, 0);
             OUT_BCS_BATCH(batch, 0);
@@ -773,11 +764,10 @@ gen8_mfc_avc_directmode_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* the DW34-36 is the MV for the current reference */
-    OUT_BCS_RELOC(batch, mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 2].bo,
+    OUT_BCS_RELOC64(batch, mfc_context->direct_mv_buffers[NUM_MFC_DMV_BUFFERS - 2].bo,
                   I915_GEM_DOMAIN_INSTRUCTION, 0,
                   0);
 
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* POL list */
@@ -802,10 +792,9 @@ gen8_mfc_bsp_buf_base_addr_state(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 10);
 
     OUT_BCS_BATCH(batch, MFX_BSP_BUF_BASE_ADDR_STATE | (10 - 2));
-    OUT_BCS_RELOC(batch, mfc_context->bsd_mpc_row_store_scratch_buffer.bo,
+    OUT_BCS_RELOC64(batch, mfc_context->bsd_mpc_row_store_scratch_buffer.bo,
                   I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
                   0);
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 	
     /* the DW4-6 is for MPR Row Store Scratch Buffer Base Address */
@@ -1707,11 +1696,10 @@ gen8_mfc_avc_pipeline_programing(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 3);
     OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   slice_batch_bo,
                   I915_GEM_DOMAIN_COMMAND, 0, 
                   0);
-    OUT_BCS_BATCH(batch, 0);
     ADVANCE_BCS_BATCH(batch);
 
     // end programing
@@ -2393,11 +2381,10 @@ gen8_mfc_mpeg2_pipeline_programing(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 4);
     OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   slice_batch_bo,
                   I915_GEM_DOMAIN_COMMAND, 0, 
                   0);
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     ADVANCE_BCS_BATCH(batch);
 
@@ -4060,13 +4047,14 @@ gen8_mfc_vp8_pic_state(VADriverContextP ctx,
 
 #define OUT_VP8_BUFFER(bo, offset)                                      \
     if (bo)                                                             \
-        OUT_BCS_RELOC(batch,                                            \
+        OUT_BCS_RELOC64(batch,                                            \
                       bo,                                               \
                       I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION, \
                       offset);                                           \
-    else                                                                \
+    else  {                                                               \
         OUT_BCS_BATCH(batch, 0);                                        \
-    OUT_BCS_BATCH(batch, 0);                                            \
+        OUT_BCS_BATCH(batch, 0);                                        \
+    }                                                                   \
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
 static void 
@@ -4370,11 +4358,10 @@ gen8_mfc_vp8_pipeline_programing(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 4);
     OUT_BCS_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
-    OUT_BCS_RELOC(batch,
+    OUT_BCS_RELOC64(batch,
                   slice_batch_bo,
                   I915_GEM_DOMAIN_COMMAND, 0,
                   0);
-    OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     ADVANCE_BCS_BATCH(batch);
 

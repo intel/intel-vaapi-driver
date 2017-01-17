@@ -1481,9 +1481,8 @@ gen8_pp_object_walker(VADriverContextP ctx,
 
     BEGIN_BATCH(batch, 3);
     OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
-    OUT_RELOC(batch, command_buffer,
+    OUT_RELOC64(batch, command_buffer,
               I915_GEM_DOMAIN_COMMAND, 0, 0);
-    OUT_BATCH(batch, 0);
     ADVANCE_BATCH(batch);
 
     dri_bo_unreference(command_buffer);
