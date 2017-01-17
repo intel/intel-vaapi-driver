@@ -5613,6 +5613,8 @@ gen9_vp9_pak_pipeline_prepare(VADriverContextP ctx,
     obj_surface = encode_state->reconstructed_object;
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
+    dri_bo_unreference(pak_context->reconstructed_object.bo);
+
     pak_context->reconstructed_object.bo = obj_surface->bo;
     dri_bo_reference(pak_context->reconstructed_object.bo);
 
