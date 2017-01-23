@@ -28,7 +28,6 @@ before_install:
   - sudo apt-get install -y libx11-dev
   - sudo apt-get install -y libxext-dev
   - sudo apt-get install -y libxfixes-dev
-  - sudo apt-get install -y libvda-dev
   - sudo apt-get install -y intel-gpu-tools
  
 install:
