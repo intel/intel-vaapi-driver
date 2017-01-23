@@ -1,3 +1,8 @@
+[![Stories in Ready](https://badge.waffle.io/01org/intel-vaapi-driver.png?label=ready&title=Ready)](http://waffle.io/01org/intel-vaapi-driver)
+[![Build Status](https://travis-ci.org/01org/intel-vaapi-driver.svg?branch=master)](https://travis-ci.org/01org/intel-vaapi-driver)
+[![Coverage Status](https://coveralls.io/repos/github/01org/intel-vaapi-driver/badge.svg?branch=master)](https://coveralls.io/github/01org/intel-vaapi-driver?branch=master)
+
+
 #Intel-vaapi-driver Project
 
 VA-API (Video Acceleration API) user mode driver for Intel GEN Graphics family
