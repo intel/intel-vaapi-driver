@@ -17,7 +17,7 @@ The current video driver backend provides a bridge to the GEN GPUs through the p
 commands to be sent to the i915 driver for exercising both hardware and shader functionality for video
 decode, encode, and processing.
 
-If you would like to contribute to libva, check our [Contributing
+If you would like to contribute to intel-vaapi-driver, check our [Contributing
 guide](https://github.com/01org/intel-vaapi-driver/blob/master/CONTRIBUTING.md).
 
 We also recommend taking a look at the ['janitorial'
@@ -27,6 +27,6 @@ extensive knowledge of intel-vaapi-driver.
 
 We would love to help you start contributing!
 
-The libva development team can be reached via our [mailing
+The intel-vaapi-driver development team can be reached via our [mailing
 list](http://lists.freedesktop.org/mailman/listinfo/libva) and on IRC
 in channel #intel-media on [Freenode](https://freenode.net/kb/answer/chat).
