@@ -27,6 +27,6 @@ extensive knowledge of intel-vaapi-driver.
 
 We would love to help you start contributing!
 
-The intel-vaapi-driver development team can be reached via our [mailing
-list](http://lists.freedesktop.org/mailman/listinfo/libva) and on IRC
-in channel #intel-media on [Freenode](https://freenode.net/kb/answer/chat).
+The intel vaapi media development team can be reached via our [mailing
+list](https://lists.01.org/mailman/listinfo/intel-vaapi-media) and on IRC
+in channel ##intel-media on [Freenode](https://freenode.net/kb/answer/chat).
