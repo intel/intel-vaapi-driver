@@ -48,11 +48,11 @@ Once you've finished making your changes push them to your fork and send the PR 
 
 If you have a problem, please let us know.  IRC is a perfectly fine place
 to quickly informally bring something up, if you get a response.  The
-[mailing list](http://lists.freedesktop.org/mailman/listinfo/libva)
+[mailing list](https://lists.01.org/mailman/listinfo/intel-vaapi-media)
 is a more durable communication channel.
 
 If it's a bug not already documented, by all means please [open an
-issue in github](https://github.com/01org/libva/issues/new) so we all get visibility
+issue in github](https://github.com/01org/intel-vaapi-driver/issues/new) so we all get visibility
 to the problem and can work towards a resolution.
 
 For feature requests we're also using github issues, with the label
