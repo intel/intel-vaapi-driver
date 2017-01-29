@@ -59,7 +59,7 @@ For feature requests we're also using github issues, with the label
 "enhancement".
 
 Our github bug/enhancement backlog and work queue are tracked in a
-[Libva waffle.io kanban](https://waffle.io/01org/intel-vaapi-driver).
+[Intel vaapi driver waffle.io kanban](https://waffle.io/01org/intel-vaapi-driver).
 
 ## Closing issues
 
