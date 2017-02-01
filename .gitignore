@@ -29,5 +29,3 @@ config.sub
 configure
 depcomp
 TAGS
-/debian.upstream/changelog
-/debian.upstream/control
