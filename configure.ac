@@ -200,7 +200,6 @@ AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
 
 AC_OUTPUT([
     Makefile
-    debian.upstream/Makefile 
     src/Makefile
     src/shaders/Makefile
     src/shaders/h264/Makefile
