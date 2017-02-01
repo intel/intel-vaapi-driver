@@ -2,7 +2,7 @@
 Overview
 --------
 
-The libva-intel-driver uses the Google Test Framework (gtest) for testing the
+The intel-vaapi-driver uses the Google Test Framework (gtest) for testing the
 driver.  Documentation for gtest can be found in the test/gtest/doc/
 subdirectory.  The original, upstream gtest project can be found at
 https://github.com/google/googletest.
@@ -20,16 +20,16 @@ Google Test Framework Integration
 ---------------------------------
 
 Google Test recommends it be custom compiled for each project that uses it.
-Therefore, the libva-intel-driver project tracks a subset copy of the Google
+Therefore, the intel-vaapi-driver project tracks a subset copy of the Google
 Test Framework source code at release 1.8.0 (initially) in a test/gtest/
-subdirectory of the project source tree.  The libva-intel-driver copy of gtest
+subdirectory of the project source tree.  The intel-vaapi-driver copy of gtest
 will only be updated to new upstream releases (or critical upstream fixes) of
 gtest, only if it is necessary.  As of this writing, the last release (1.8.0)
 was August 2016, about three years after its previous release.  Thus, there
-should be minimal need to update or maintain gtest within the intel-driver
+should be minimal need to update or maintain gtest within the intel-vaapi-driver
 project.
 
-Libva-intel-driver tests or other project code should *not* be intermixed within
+Intel-vaapi-driver tests or other project code should *not* be intermixed within
 the test/gtest/ subdirectory.  The test/gtest/ subdirectory should only contain
 source from the upstream Google Test project to make upgrades simpler.
 
@@ -38,8 +38,8 @@ Building Google Test Framework Library
 --------------------------------------
 
 The Google Test Framework is compiled as a convenience library (libgtest.la)
-within the libva-intel-driver source tree.  The rules to build libgtest.la are
-maintained in a custom makefile in the libva-intel-driver project tree
+within the intel-vaapi-driver source tree.  The rules to build libgtest.la are
+maintained in a custom makefile in the intel-vaapi-driver project tree
 (see test/Makefile.am).  The libgtest.la library will be automatically compiled
 if the tests are enabled by configuration.
 
@@ -61,7 +61,7 @@ single test/test_i965_drv_video executable.  Hence...
 Writing Driver Tests
 --------------------
 
-Libva-intel-driver tests are defined in the test/ subdirectory using the Google
+Intel-vaapi-driver tests are defined in the test/ subdirectory using the Google
 Test Framework.  All driver tests that need a VADriverContextP, VADisplay and
 etc. should define a test fixture that inherits from the I965TestFixture class
 and then use the gtest test fixture macro (TEST_F) to define the test case.  The
@@ -141,6 +141,6 @@ these options).
 Distribution
 ------------
 
-A libva-intel-driver source distribution is generated during `make dist` and
+An intel-vaapi-driver source distribution is generated during `make dist` and
 includes the necessary Google Test Framework source code and makefile rules
 along with the driver test source code.
