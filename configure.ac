@@ -1,12 +1,12 @@
-# intel-driver package version number
-m4_define([intel_driver_major_version], [1])
-m4_define([intel_driver_minor_version], [8])
-m4_define([intel_driver_micro_version], [0])
-m4_define([intel_driver_pre_version],   [1])
-m4_define([intel_driver_version],
-          [intel_driver_major_version.intel_driver_minor_version.intel_driver_micro_version])
-m4_if(intel_driver_pre_version, [0], [], [
-m4_append([intel_driver_version], intel_driver_pre_version, [.pre])
+# intel-vaapi-driver package version number
+m4_define([intel_vaapi_driver_major_version], [1])
+m4_define([intel_vaapi_driver_minor_version], [8])
+m4_define([intel_vaapi_driver_micro_version], [0])
+m4_define([intel_vaapi_driver_pre_version],   [1])
+m4_define([intel_vaapi_driver_version],
+          [intel_vaapi_driver_major_version.intel_vaapi_driver_minor_version.intel_vaapi_driver_micro_version])
+m4_if(intel_vaapi_driver_pre_version, [0], [], [
+m4_append([intel_vaapi_driver_version], intel_vaapi_driver_pre_version, [.pre])
 ])
 
 # libva minimum version requirement
@@ -17,20 +17,23 @@ m4_define([libva_package_version], [1.7.3])
 m4_define([libdrm_version], [2.4.52])
 
 AC_PREREQ([2.57])
-AC_INIT([intel_driver], [intel_driver_version], [haihao.xiang@intel.com],
-        [intel-vaapi-driver])
+AC_INIT([intel_vaapi_driver],
+        [intel_vaapi_driver_version],
+        [https://github.com/01org/intel-vaapi-driver/issues/new],
+        [intel_vaapi_driver],
+        [https://github.com/01org/intel-vaapi-driver])
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_INIT_AUTOMAKE([1.9 tar-ustar])
 
 AC_CONFIG_HEADERS([src/config.h])
 
-INTEL_DRIVER_MAJOR_VERSION=intel_driver_major_version
-INTEL_DRIVER_MINOR_VERSION=intel_driver_minor_version
-INTEL_DRIVER_MICRO_VERSION=intel_driver_micro_version
-AC_DEFINE([INTEL_DRIVER_MAJOR_VERSION], [intel_driver_major_version], [Major version of the driver])
-AC_DEFINE([INTEL_DRIVER_MINOR_VERSION], [intel_driver_minor_version], [Minor version of the driver])
-AC_DEFINE([INTEL_DRIVER_MICRO_VERSION], [intel_driver_micro_version], [Micro version of the driver])
-AC_DEFINE([INTEL_DRIVER_PRE_VERSION], [intel_driver_pre_version], [Preversion of the driver])
+INTEL_DRIVER_MAJOR_VERSION=intel_vaapi_driver_major_version
+INTEL_DRIVER_MINOR_VERSION=intel_vaapi_driver_minor_version
+INTEL_DRIVER_MICRO_VERSION=intel_vaapi_driver_micro_version
+AC_DEFINE([INTEL_DRIVER_MAJOR_VERSION], [intel_vaapi_driver_major_version], [Major version of the driver])
+AC_DEFINE([INTEL_DRIVER_MINOR_VERSION], [intel_vaapi_driver_minor_version], [Minor version of the driver])
+AC_DEFINE([INTEL_DRIVER_MICRO_VERSION], [intel_vaapi_driver_micro_version], [Micro version of the driver])
+AC_DEFINE([INTEL_DRIVER_PRE_VERSION], [intel_vaapi_driver_pre_version], [Preversion of the driver])
 
 INTEL_DRIVER_LT_LDFLAGS="-avoid-version"
 AC_SUBST(INTEL_DRIVER_LT_LDFLAGS)
