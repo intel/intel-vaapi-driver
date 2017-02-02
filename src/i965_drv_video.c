@@ -6720,6 +6720,7 @@ i965_Terminate(VADriverContextP ctx)
     int i;
 
     if (i965) {
+#if HAVE_HYBRID_CODEC
         if (i965->wrapper_pdrvctx) {
             VADriverContextP pdrvctx;
             pdrvctx = i965->wrapper_pdrvctx;
@@ -6732,6 +6733,7 @@ i965_Terminate(VADriverContextP ctx)
             free(pdrvctx);
             i965->wrapper_pdrvctx = NULL;
         }
+#endif
 
         for (i = ARRAY_ELEMS(i965_sub_ops); i > 0; i--)
             if (i965_sub_ops[i - 1].display_type == 0 ||
