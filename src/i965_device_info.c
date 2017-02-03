@@ -824,6 +824,7 @@ static void gen6_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
  */
 const static char *gen7_cpu_hook_list[] =  {
 "Intel(R)Celeron(R)CPU1007U",
+"Intel(R)Celeron(R)CPU1037U",
 "Intel(R)Pentium(R)CPUG2130",
 };
 
