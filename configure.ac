@@ -188,6 +188,8 @@ if test "$enable_wayland" = "yes"; then
 
     if test "$USE_WAYLAND" = "yes"; then
 
+        PKG_CHECK_MODULES([WAYLAND_CLIENT], [wayland-client],
+        [INCLUDES="$INCLUDES $WAYLAND_CLIENT_CFLAGS"], [:])
         WAYLAND_PREFIX=`$PKG_CONFIG --variable=prefix wayland-client`
         AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner],,
                      [${WAYLAND_PREFIX}/bin$PATH_SEPARATOR$PATH])
