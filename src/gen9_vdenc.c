@@ -152,7 +152,7 @@ static const int8_t buf_rate_adj_tab_b_vbr[72] = {
     64, 48, 28,  20,  16,  12,   8,   4,
 };
 
-static struct huc_brc_update_constant_data
+static const struct huc_brc_update_constant_data
 gen9_brc_update_constant_data = {
     .global_rate_qp_adj_tab_i = {
         48, 40, 32,  24,  16,   8,   0,  -8,
@@ -419,7 +419,7 @@ gen9_brc_update_constant_data = {
 };
 
 /* 11 DWs */
-static uint8_t vdenc_const_qp_lambda[44] = {
+static const uint8_t vdenc_const_qp_lambda[44] = {
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x02, 0x02, 0x02,
     0x02, 0x03, 0x03, 0x03, 0x04, 0x04, 0x05, 0x05, 0x06, 0x07,
     0x07, 0x08, 0x09, 0x0a, 0x0c, 0x0d, 0x0f, 0x11, 0x13, 0x15,
@@ -428,33 +428,33 @@ static uint8_t vdenc_const_qp_lambda[44] = {
 };
 
 /* 14 DWs */
-static uint16_t vdenc_const_skip_threshold[28] = {
+static const uint16_t vdenc_const_skip_threshold[28] = {
 
 };
 
 /* 14 DWs */
-static uint16_t vdenc_const_sic_forward_transform_coeff_threshold_0[28] = {
+static const uint16_t vdenc_const_sic_forward_transform_coeff_threshold_0[28] = {
 
 };
 
 /* 7 DWs */
-static uint8_t vdenc_const_sic_forward_transform_coeff_threshold_1[28] = {
+static const uint8_t vdenc_const_sic_forward_transform_coeff_threshold_1[28] = {
 
 };
 
 /* 7 DWs */
-static uint8_t vdenc_const_sic_forward_transform_coeff_threshold_2[28] = {
+static const uint8_t vdenc_const_sic_forward_transform_coeff_threshold_2[28] = {
 
 };
 
 /* 7 DWs */
-static uint8_t vdenc_const_sic_forward_transform_coeff_threshold_3[28] = {
+static const uint8_t vdenc_const_sic_forward_transform_coeff_threshold_3[28] = {
 
 };
 
 /* P frame */
 /* 11 DWs */
-static uint8_t vdenc_const_qp_lambda_p[44] = {
+static const uint8_t vdenc_const_qp_lambda_p[44] = {
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x02, 0x02, 0x02,
     0x02, 0x03, 0x03, 0x03, 0x04, 0x04, 0x05, 0x05, 0x06, 0x07,
     0x07, 0x08, 0x09, 0x0a, 0x0c, 0x0d, 0x0f, 0x11, 0x13, 0x15,
@@ -463,7 +463,7 @@ static uint8_t vdenc_const_qp_lambda_p[44] = {
 };
 
 /* 14 DWs */
-static uint16_t vdenc_const_skip_threshold_p[28] = {
+static const uint16_t vdenc_const_skip_threshold_p[28] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0002, 0x0004, 0x0007, 0x000b,
     0x0011, 0x0019, 0x0023, 0x0032, 0x0044, 0x005b, 0x0077, 0x0099,
     0x00c2, 0x00f1, 0x0128, 0x0168, 0x01b0, 0x0201, 0x025c, 0x02c2,
@@ -471,28 +471,28 @@ static uint16_t vdenc_const_skip_threshold_p[28] = {
 };
 
 /* 14 DWs */
-static uint16_t vdenc_const_sic_forward_transform_coeff_threshold_0_p[28] = {
+static const uint16_t vdenc_const_sic_forward_transform_coeff_threshold_0_p[28] = {
     0x02, 0x02, 0x03, 0x04, 0x04, 0x05, 0x07, 0x09, 0x0b, 0x0e,
     0x12, 0x14, 0x18, 0x1d, 0x20, 0x25, 0x2a, 0x34, 0x39, 0x3f,
     0x4e, 0x51, 0x5b, 0x63, 0x6f, 0x7f, 0x00, 0x00
 };
 
 /* 7 DWs */
-static uint8_t vdenc_const_sic_forward_transform_coeff_threshold_1_p[28] = {
+static const uint8_t vdenc_const_sic_forward_transform_coeff_threshold_1_p[28] = {
     0x03, 0x04, 0x05, 0x05, 0x07, 0x09, 0x0b, 0x0e, 0x12, 0x17,
     0x1c, 0x21, 0x27, 0x2c, 0x33, 0x3b, 0x41, 0x51, 0x5c, 0x1a,
     0x1e, 0x21, 0x22, 0x26, 0x2c, 0x30, 0x00, 0x00
 };
 
 /* 7 DWs */
-static uint8_t vdenc_const_sic_forward_transform_coeff_threshold_2_p[28] = {
+static const uint8_t vdenc_const_sic_forward_transform_coeff_threshold_2_p[28] = {
     0x02, 0x02, 0x03, 0x04, 0x04, 0x05, 0x07, 0x09, 0x0b, 0x0e,
     0x12, 0x14, 0x18, 0x1d, 0x20, 0x25, 0x2a, 0x34, 0x39, 0x0f,
     0x13, 0x14, 0x16, 0x18, 0x1b, 0x1f, 0x00, 0x00
 };
 
 /* 7 DWs */
-static uint8_t vdenc_const_sic_forward_transform_coeff_threshold_3_p[28] = {
+static const uint8_t vdenc_const_sic_forward_transform_coeff_threshold_3_p[28] = {
     0x04, 0x05, 0x06, 0x09, 0x0b, 0x0d, 0x12, 0x16, 0x1b, 0x23,
     0x2c, 0x33, 0x3d, 0x45, 0x4f, 0x5b, 0x66, 0x7f, 0x8e, 0x2a,
     0x2f, 0x32, 0x37, 0x3c, 0x45, 0x4c, 0x00, 0x00
@@ -537,7 +537,7 @@ vdenc_brc_start_global_adjust_div[5] = { 40, 5, 5, 3, 1 };
 static const int8_t
 vdenc_brc_global_rate_ratio_threshold_qp[8] = { -3, -2, -1, 0, 1, 1, 2, 3 };
 
-const int vdenc_mode_const[2][12][52] = {
+static const int vdenc_mode_const[2][12][52] = {
     //INTRASLICE
     {
         //LUTMODE_INTRA_NONPRED
@@ -698,12 +698,12 @@ const int vdenc_mode_const[2][12][52] = {
     },
 };
 
-const int vdenc_mv_cost_skipbias_qpel[8] = {
+static const int vdenc_mv_cost_skipbias_qpel[8] = {
     //PREDSLICE
     0, 6, 6, 9, 10, 13, 14, 16
 };
 
-const int vdenc_hme_cost[8][52] = {
+static const int vdenc_hme_cost[8][52] = {
     //mv=0
     {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     //QP=[0 ~12]
@@ -2162,23 +2162,25 @@ gen9_vdenc_huc_brc_update_constant_data(VADriverContextP ctx,
                                         struct intel_encoder_context *encoder_context)
 {
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
-    char *pbuffer;
+    struct huc_brc_update_constant_data *brc_buffer;
 
-    pbuffer = i965_map_gpe_resource(&vdenc_context->brc_constant_data_res);
+    brc_buffer = (struct huc_brc_update_constant_data *)
+        i965_map_gpe_resource(&vdenc_context->brc_constant_data_res);
 
-    if (!pbuffer)
+    if (!brc_buffer)
         return;
 
+    memcpy(brc_buffer, &gen9_brc_update_constant_data, sizeof(gen9_brc_update_constant_data));
+
     if (vdenc_context->internal_rate_mode == I965_BRC_VBR) {
-        memcpy(gen9_brc_update_constant_data.dist_qp_adj_tab_i, dist_qp_adj_tab_i_vbr, sizeof(dist_qp_adj_tab_i_vbr));
-        memcpy(gen9_brc_update_constant_data.dist_qp_adj_tab_p, dist_qp_adj_tab_p_vbr, sizeof(dist_qp_adj_tab_p_vbr));
-        memcpy(gen9_brc_update_constant_data.dist_qp_adj_tab_b, dist_qp_adj_tab_b_vbr, sizeof(dist_qp_adj_tab_b_vbr));
-        memcpy(gen9_brc_update_constant_data.buf_rate_adj_tab_i, buf_rate_adj_tab_i_vbr, sizeof(buf_rate_adj_tab_i_vbr));
-        memcpy(gen9_brc_update_constant_data.buf_rate_adj_tab_p, buf_rate_adj_tab_p_vbr, sizeof(buf_rate_adj_tab_p_vbr));
-        memcpy(gen9_brc_update_constant_data.buf_rate_adj_tab_b, buf_rate_adj_tab_b_vbr, sizeof(buf_rate_adj_tab_b_vbr));
+        memcpy(brc_buffer->dist_qp_adj_tab_i, dist_qp_adj_tab_i_vbr, sizeof(dist_qp_adj_tab_i_vbr));
+        memcpy(brc_buffer->dist_qp_adj_tab_p, dist_qp_adj_tab_p_vbr, sizeof(dist_qp_adj_tab_p_vbr));
+        memcpy(brc_buffer->dist_qp_adj_tab_b, dist_qp_adj_tab_b_vbr, sizeof(dist_qp_adj_tab_b_vbr));
+        memcpy(brc_buffer->buf_rate_adj_tab_i, buf_rate_adj_tab_i_vbr, sizeof(buf_rate_adj_tab_i_vbr));
+        memcpy(brc_buffer->buf_rate_adj_tab_p, buf_rate_adj_tab_p_vbr, sizeof(buf_rate_adj_tab_p_vbr));
+        memcpy(brc_buffer->buf_rate_adj_tab_b, buf_rate_adj_tab_b_vbr, sizeof(buf_rate_adj_tab_b_vbr));
     }
 
-    memcpy(pbuffer, &gen9_brc_update_constant_data, sizeof(gen9_brc_update_constant_data));
 
     i965_unmap_gpe_resource(&vdenc_context->brc_constant_data_res);
 }
@@ -2702,46 +2704,49 @@ gen9_vdenc_vdenc_const_qpt_state(VADriverContextP ctx,
 
     if (vdenc_context->frame_type == VDENC_FRAME_I) {
         /* DW1-DW11 */
-        intel_batchbuffer_data(batch, vdenc_const_qp_lambda, sizeof(vdenc_const_qp_lambda));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_qp_lambda, sizeof(vdenc_const_qp_lambda));
 
         /* DW12-DW25 */
-        intel_batchbuffer_data(batch, vdenc_const_skip_threshold, sizeof(vdenc_const_skip_threshold));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_skip_threshold, sizeof(vdenc_const_skip_threshold));
 
         /* DW26-DW39 */
-        intel_batchbuffer_data(batch, vdenc_const_sic_forward_transform_coeff_threshold_0, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_0));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_sic_forward_transform_coeff_threshold_0, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_0));
 
         /* DW40-DW46 */
-        intel_batchbuffer_data(batch, vdenc_const_sic_forward_transform_coeff_threshold_1, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_1));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_sic_forward_transform_coeff_threshold_1, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_1));
 
         /* DW47-DW53 */
-        intel_batchbuffer_data(batch, vdenc_const_sic_forward_transform_coeff_threshold_2, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_2));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_sic_forward_transform_coeff_threshold_2, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_2));
 
         /* DW54-DW60 */
-        intel_batchbuffer_data(batch, vdenc_const_sic_forward_transform_coeff_threshold_3, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_3));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_sic_forward_transform_coeff_threshold_3, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_3));
     } else {
         int i;
+        uint16_t tmp_vdenc_skip_threshold_p[28];
+
+        memcpy(&tmp_vdenc_skip_threshold_p, vdenc_const_skip_threshold_p, sizeof(vdenc_const_skip_threshold_p));
 
         for (i = 0; i < 28; i++) {
-            vdenc_const_skip_threshold_p[i] *= 3;
+            tmp_vdenc_skip_threshold_p[i] *= 3;
         }
 
         /* DW1-DW11 */
-        intel_batchbuffer_data(batch, vdenc_const_qp_lambda_p, sizeof(vdenc_const_qp_lambda_p));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_qp_lambda_p, sizeof(vdenc_const_qp_lambda_p));
 
         /* DW12-DW25 */
-        intel_batchbuffer_data(batch, vdenc_const_skip_threshold_p, sizeof(vdenc_const_skip_threshold_p));
+        intel_batchbuffer_data(batch, (void *)tmp_vdenc_skip_threshold_p, sizeof(vdenc_const_skip_threshold_p));
 
         /* DW26-DW39 */
-        intel_batchbuffer_data(batch, vdenc_const_sic_forward_transform_coeff_threshold_0_p, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_0_p));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_sic_forward_transform_coeff_threshold_0_p, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_0_p));
 
         /* DW40-DW46 */
-        intel_batchbuffer_data(batch, vdenc_const_sic_forward_transform_coeff_threshold_1_p, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_1_p));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_sic_forward_transform_coeff_threshold_1_p, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_1_p));
 
         /* DW47-DW53 */
-        intel_batchbuffer_data(batch, vdenc_const_sic_forward_transform_coeff_threshold_2_p, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_2_p));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_sic_forward_transform_coeff_threshold_2_p, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_2_p));
 
         /* DW54-DW60 */
-        intel_batchbuffer_data(batch, vdenc_const_sic_forward_transform_coeff_threshold_3_p, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_3_p));
+        intel_batchbuffer_data(batch, (void *)vdenc_const_sic_forward_transform_coeff_threshold_3_p, sizeof(vdenc_const_sic_forward_transform_coeff_threshold_3_p));
     }
 
     ADVANCE_BCS_BATCH(batch);
