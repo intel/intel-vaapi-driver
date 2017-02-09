@@ -5845,7 +5845,8 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             }
         } else if (obj_config->entrypoint == VAEntrypointEncSlice ||  /* encode */
                    obj_config->entrypoint == VAEntrypointVideoProc ||
-                   obj_config->entrypoint == VAEntrypointEncSliceLP) {
+                   obj_config->entrypoint == VAEntrypointEncSliceLP ||
+                   obj_config->entrypoint == VAEntrypointEncPicture) {
 
             if (obj_config->profile == VAProfileHEVCMain10) {
                 attribs[i].type = VASurfaceAttribPixelFormat;
