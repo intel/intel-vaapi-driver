@@ -2815,11 +2815,11 @@ gen95_vdenc_vdenc_walker_state(VADriverContextP ctx,
     int luma_log2_weight_denom, weighted_pred_idc;
 
     slice_hor_pos = slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
-    slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
+    slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_width_in_mbs;
 
     if (next_slice_param) {
         next_slice_hor_pos = next_slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
-        next_slice_ver_pos = next_slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
+        next_slice_ver_pos = next_slice_param->macroblock_address / vdenc_context->frame_width_in_mbs;
     } else {
         next_slice_hor_pos = 0;
         next_slice_ver_pos = vdenc_context->frame_height_in_mbs;
@@ -3159,11 +3159,11 @@ gen9_vdenc_mfx_avc_slice_state(VADriverContextP ctx,
         inter_rounding = 3;
 
     slice_hor_pos = slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
-    slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
+    slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_width_in_mbs;
 
     if (next_slice_param) {
         next_slice_hor_pos = next_slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
-        next_slice_ver_pos = next_slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
+        next_slice_ver_pos = next_slice_param->macroblock_address / vdenc_context->frame_width_in_mbs;
     } else {
         next_slice_hor_pos = 0;
         next_slice_ver_pos = vdenc_context->frame_height_in_mbs;
