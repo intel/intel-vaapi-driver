@@ -913,6 +913,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                          VAConfigAttrib *attrib_list,  /* in/out */
                          int num_attribs)
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     VAStatus va_status;
     int i;
 
@@ -1005,8 +1006,14 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 attrib_list[i].value = 1;
                 if (profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
-                    profile == VAProfileH264High )
-                    attrib_list[i].value = ENCODER_QUALITY_RANGE;
+                    profile == VAProfileH264High ){
+                        attrib_list[i].value = ENCODER_QUALITY_RANGE;
+                        if(entrypoint == VAEntrypointEncSlice){
+                            if (IS_SKL(i965->intel.device_info)||
+                                IS_BXT(i965->intel.device_info))
+                                attrib_list[i].value = ENCODER_QUALITY_RANGE_AVC;
+                        }
+                }
                 break;
             }
             break;
