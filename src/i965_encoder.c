@@ -41,6 +41,7 @@
 #include "gen6_mfc.h"
 
 #include "i965_post_processing.h"
+#include "i965_encoder_api.h"
 
 static struct intel_fraction
 reduce_fraction(struct intel_fraction f)
@@ -1369,6 +1370,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
                           hw_init_func vme_context_init,
                           hw_init_func mfc_context_init)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct intel_encoder_context *encoder_context = calloc(1, sizeof(struct intel_encoder_context));
     int i;
@@ -1401,13 +1403,23 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         encoder_context->codec = CODEC_H264;
 
         if (obj_config->entrypoint == VAEntrypointEncSliceLP)
-            encoder_context->quality_range = ENCODER_LP_QUALITY_RANGE;
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE;
+        else if(IS_SKL(i965->intel.device_info)||
+                IS_BXT(i965->intel.device_info)){
+            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
+        }
         else
             encoder_context->quality_range = ENCODER_QUALITY_RANGE;
         break;
 
     case VAProfileH264StereoHigh:
     case VAProfileH264MultiviewHigh:
+        if(IS_SKL(i965->intel.device_info)||
+           IS_BXT(i965->intel.device_info)){
+            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
+        }
         encoder_context->codec = CODEC_H264_MVC;
         break;
         
