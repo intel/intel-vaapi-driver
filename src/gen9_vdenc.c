@@ -2815,11 +2815,11 @@ gen95_vdenc_vdenc_walker_state(VADriverContextP ctx,
     int luma_log2_weight_denom, weighted_pred_idc;
 
     slice_hor_pos = slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
-    slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
+    slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_width_in_mbs;
 
     if (next_slice_param) {
         next_slice_hor_pos = next_slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
-        next_slice_ver_pos = next_slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
+        next_slice_ver_pos = next_slice_param->macroblock_address / vdenc_context->frame_width_in_mbs;
     } else {
         next_slice_hor_pos = 0;
         next_slice_ver_pos = vdenc_context->frame_height_in_mbs;
@@ -2895,14 +2895,16 @@ static void
 gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
                                             struct encode_state *encode_state,
                                             struct intel_encoder_context *encoder_context,
-                                            int slice_index,
-                                            unsigned int insert_one_zero_byte)
+                                            int slice_index)
 {
+    struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAEncPackedHeaderParameterBuffer *param = NULL;
     unsigned int length_in_bits;
     unsigned int *header_data = NULL;
     int count, i, start_index;
     int slice_header_index;
+    unsigned int insert_one_zero_byte = 0;
 
     if (encode_state->slice_header_index[slice_index] == 0)
         slice_header_index = -1;
@@ -2941,7 +2943,10 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
                                          !param->has_emulation_bytes,
                                          0);
 
-        insert_one_zero_byte = 0;
+    }
+
+    if (!vdenc_context->is_frame_level_vdenc) {
+        insert_one_zero_byte = 1;
     }
 
     /* Insert one zero byte before the slice header if no any other NAL unit is inserted, required on KBL */
@@ -2963,15 +2968,28 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
         VAEncSliceParameterBufferH264 *slice_params = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[slice_index]->buffer;
         unsigned char *slice_header = NULL, *slice_header1 = NULL;
         int slice_header_length_in_bits = 0;
+        uint32_t saved_macroblock_address = 0;
 
         /* No slice header data is passed. And the driver needs to generate it */
         /* For the Normal H264 */
+
+        if (slice_index &&
+            IS_KBL(i965->intel.device_info)) {
+            saved_macroblock_address = slice_params->macroblock_address;
+            slice_params->macroblock_address = 0;
+        }
+
         slice_header_length_in_bits = build_avc_slice_header(seq_param,
                                                              pic_param,
                                                              slice_params,
                                                              &slice_header);
 
         slice_header1 = slice_header;
+
+        if (slice_index &&
+            IS_KBL(i965->intel.device_info)) {
+            slice_params->macroblock_address = saved_macroblock_address;
+        }
 
         if (insert_one_zero_byte) {
             slice_header1 += 1;
@@ -2991,6 +3009,11 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
     } else {
         unsigned int skip_emul_byte_cnt;
         unsigned char *slice_header1 = NULL;
+
+        if (slice_index &&
+            IS_KBL(i965->intel.device_info)) {
+            slice_header_index = (encode_state->slice_header_index[0] & SLICE_PACKED_DATA_INDEX_MASK);
+        }
 
         header_data = (unsigned int *)encode_state->packed_header_data_ext[slice_header_index]->buffer;
 
@@ -3038,10 +3061,8 @@ gen9_vdenc_mfx_avc_inset_headers(VADriverContextP ctx,
     int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
     unsigned int internal_rate_mode = vdenc_context->internal_rate_mode;
     unsigned int skip_emul_byte_cnt;
-    unsigned int insert_one_zero_byte = 0;
 
     if (slice_index == 0) {
-        insert_one_zero_byte = 1;
 
         if (encode_state->packed_header_data[idx]) {
             VAEncPackedHeaderParameterBuffer *param = NULL;
@@ -3064,7 +3085,6 @@ gen9_vdenc_mfx_avc_inset_headers(VADriverContextP ctx,
                                              !param->has_emulation_bytes,
                                              0);
 
-            insert_one_zero_byte = 0;
         }
 
         idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_PPS);
@@ -3091,7 +3111,6 @@ gen9_vdenc_mfx_avc_inset_headers(VADriverContextP ctx,
                                              !param->has_emulation_bytes,
                                              0);
 
-            insert_one_zero_byte = 0;
         }
 
         idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SEI);
@@ -3117,20 +3136,15 @@ gen9_vdenc_mfx_avc_inset_headers(VADriverContextP ctx,
                                              !param->has_emulation_bytes,
                                              0);
 
-            insert_one_zero_byte = 0;
         } else if (internal_rate_mode == I965_BRC_CBR) {
             /* TODO: insert others */
         }
     }
 
-    if (vdenc_context->is_frame_level_vdenc)
-        insert_one_zero_byte = 0;
-
     gen9_vdenc_mfx_avc_insert_slice_packed_data(ctx,
                                                 encode_state,
                                                 encoder_context,
-                                                slice_index,
-                                                insert_one_zero_byte);
+                                                slice_index);
 }
 
 static void
@@ -3139,7 +3153,8 @@ gen9_vdenc_mfx_avc_slice_state(VADriverContextP ctx,
                                struct intel_encoder_context *encoder_context,
                                VAEncPictureParameterBufferH264 *pic_param,
                                VAEncSliceParameterBufferH264 *slice_param,
-                               VAEncSliceParameterBufferH264 *next_slice_param)
+                               VAEncSliceParameterBufferH264 *next_slice_param,
+                               int slice_index)
 {
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
@@ -3159,11 +3174,11 @@ gen9_vdenc_mfx_avc_slice_state(VADriverContextP ctx,
         inter_rounding = 3;
 
     slice_hor_pos = slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
-    slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
+    slice_ver_pos = slice_param->macroblock_address / vdenc_context->frame_width_in_mbs;
 
     if (next_slice_param) {
         next_slice_hor_pos = next_slice_param->macroblock_address % vdenc_context->frame_width_in_mbs;
-        next_slice_ver_pos = next_slice_param->macroblock_address / vdenc_context->frame_height_in_mbs;
+        next_slice_ver_pos = next_slice_param->macroblock_address / vdenc_context->frame_width_in_mbs;
     } else {
         next_slice_hor_pos = 0;
         next_slice_ver_pos = vdenc_context->frame_height_in_mbs;
@@ -3244,6 +3259,7 @@ gen9_vdenc_mfx_avc_slice_state(VADriverContextP ctx,
                   (1 << 16) |	        /* SliceData PresentFlag */
                   (0 << 15) |	        /* TailPresentFlag, TODO: check it on VDEnc  */
                   (1 << 13) |	        /* RBSP NAL TYPE */
+                  (slice_index << 4) |
                   (1 << 12));           /* CabacZeroWordInsertionEnable */
 
     OUT_BCS_BATCH(batch, vdenc_context->compressed_bitstream.start_offset);
@@ -3388,7 +3404,8 @@ gen9_vdenc_mfx_avc_single_slice(VADriverContextP ctx,
                                    encoder_context,
                                    pic_param,
                                    slice_param,
-                                   next_slice_param);
+                                   next_slice_param,
+                                   slice_index);
     gen9_vdenc_mfx_avc_inset_headers(ctx,
                                      encode_state,
                                      encoder_context,
@@ -3451,10 +3468,10 @@ gen9_vdenc_mfx_vdenc_avc_slices(VADriverContextP ctx,
                 memset(&pipeline_flush_params, 0, sizeof(pipeline_flush_params));
 
                 if (next_slice_group_param) {
-                    pipeline_flush_params.mfx_pipeline_done = 0;
+                    pipeline_flush_params.mfx_pipeline_done = 1;
                     insert_mi_flush = 1;
                 } else if (i < encode_state->slice_params_ext[j]->num_elements - 1) {
-                    pipeline_flush_params.mfx_pipeline_done = 0;
+                    pipeline_flush_params.mfx_pipeline_done = 1;
                     insert_mi_flush = 1;
                 } else {
                     pipeline_flush_params.mfx_pipeline_done = !has_tail;
@@ -3468,7 +3485,7 @@ gen9_vdenc_mfx_vdenc_avc_slices(VADriverContextP ctx,
 
                 if (insert_mi_flush) {
                     memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
-                    mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
+                    mi_flush_dw_params.video_pipeline_cache_invalidate = 0;
                     gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
                 }
             }
