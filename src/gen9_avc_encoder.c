@@ -5728,6 +5728,1596 @@ gen9_avc_kernel_init(VADriverContextP ctx,
     generic_ctx->pfn_send_wp_surface = gen9_avc_send_surface_wp;
 } 
 
+
+/*
+PAK pipeline related function
+*/
+extern int
+intel_avc_enc_slice_type_fixup(int slice_type);
+
+static void
+gen9_mfc_avc_pipe_mode_select(VADriverContextP ctx,
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 5);
+
+    OUT_BCS_BATCH(batch, MFX_PIPE_MODE_SELECT | (5 - 2));
+    OUT_BCS_BATCH(batch,
+                  (0 << 29) |
+                  (MFX_LONG_MODE << 17) |       /* Must be long format for encoder */
+                  (MFD_MODE_VLD << 15) |
+                  (0 << 13) |                   /* Non-VDEnc mode  is 0*/
+                  ((generic_state->curr_pak_pass != (generic_state->num_pak_passes -1)) << 10) |                   /* Stream-Out Enable */
+                  ((!!avc_ctx->res_post_deblocking_output.bo) << 9)  |    /* Post Deblocking Output */
+                  ((!!avc_ctx->res_pre_deblocking_output.bo) << 8)  |     /* Pre Deblocking Output */
+                  (0 << 7)  |                   /* Scaled surface enable */
+                  (0 << 6)  |                   /* Frame statistics stream out enable */
+                  (0 << 5)  |                   /* not in stitch mode */
+                  (1 << 4)  |                   /* encoding mode */
+                  (MFX_FORMAT_AVC << 0));
+    OUT_BCS_BATCH(batch,
+                  (0 << 7)  | /* expand NOA bus flag */
+                  (0 << 6)  | /* disable slice-level clock gating */
+                  (0 << 5)  | /* disable clock gating for NOA */
+                  (0 << 4)  | /* terminate if AVC motion and POC table error occurs */
+                  (0 << 3)  | /* terminate if AVC mbdata error occurs */
+                  (0 << 2)  | /* terminate if AVC CABAC/CAVLC decode error occurs */
+                  (0 << 1)  |
+                  (0 << 0));
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_avc_surface_state(VADriverContextP ctx,
+                           struct intel_encoder_context *encoder_context,
+                           struct i965_gpe_resource *gpe_resource,
+                           int id)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 6);
+
+    OUT_BCS_BATCH(batch, MFX_SURFACE_STATE | (6 - 2));
+    OUT_BCS_BATCH(batch, id);
+    OUT_BCS_BATCH(batch,
+                  ((gpe_resource->height - 1) << 18) |
+                  ((gpe_resource->width - 1) << 4));
+    OUT_BCS_BATCH(batch,
+                  (MFX_SURFACE_PLANAR_420_8 << 28) |    /* 420 planar YUV surface */
+                  (1 << 27) |                           /* must be 1 for interleave U/V, hardware requirement */
+                  ((gpe_resource->pitch - 1) << 3) |    /* pitch */
+                  (0 << 2)  |                           /* must be 0 for interleave U/V */
+                  (1 << 1)  |                           /* must be tiled */
+                  (I965_TILEWALK_YMAJOR << 0));         /* tile walk, TILEWALK_YMAJOR */
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) | 			        /* must be 0 for interleave U/V */
+                  (gpe_resource->y_cb_offset));         /* y offset for U(cb) */
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) | 			        /* must be 0 for interleave U/V */
+                  (gpe_resource->y_cb_offset));         /* y offset for U(cb) */
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_avc_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    int i;
+
+    BEGIN_BCS_BATCH(batch, 65);
+
+    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (65 - 2));
+
+    /* the DW1-3 is for pre_deblocking */
+    OUT_BUFFER_3DW(batch, avc_ctx->res_pre_deblocking_output.bo, 1, 0, i965->intel.mocs_state);
+
+    /* the DW4-6 is for the post_deblocking */
+    OUT_BUFFER_3DW(batch, avc_ctx->res_post_deblocking_output.bo, 1, 0, i965->intel.mocs_state);
+
+    /* the DW7-9 is for the uncompressed_picture */
+    OUT_BUFFER_3DW(batch, generic_ctx->res_uncompressed_input_surface.bo, 0, 0, i965->intel.mocs_state);
+
+    /* the DW10-12 is for PAK information (write) */
+    OUT_BUFFER_3DW(batch, avc_ctx->res_pak_mb_status_buffer.bo, 1, 0, i965->intel.mocs_state);//?
+
+    /* the DW13-15 is for the intra_row_store_scratch */
+    OUT_BUFFER_3DW(batch, avc_ctx->res_intra_row_store_scratch_buffer.bo, 1, 0, i965->intel.mocs_state);
+
+    /* the DW16-18 is for the deblocking filter */
+    OUT_BUFFER_3DW(batch, avc_ctx->res_deblocking_filter_row_store_scratch_buffer.bo, 1, 0, i965->intel.mocs_state);
+
+    /* the DW 19-50 is for Reference pictures*/
+    for (i = 0; i < ARRAY_ELEMS(avc_ctx->list_reference_res); i++) {
+        OUT_BUFFER_2DW(batch, avc_ctx->list_reference_res[i].bo, 0, 0);
+    }
+
+    /* DW 51, reference picture attributes */
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
+
+    /* The DW 52-54 is for PAK information (read) */
+    OUT_BUFFER_3DW(batch, avc_ctx->res_pak_mb_status_buffer.bo, 1, 0, i965->intel.mocs_state);
+
+    /* the DW 55-57 is the ILDB buffer */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* the DW 58-60 is the second ILDB buffer */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW 61, memory compress enable & mode */
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW 62-64 is the buffer */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_avc_ind_obj_base_addr_state(VADriverContextP ctx,
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct object_surface *obj_surface;
+    struct gen9_surface_avc *avc_priv_surface;
+    unsigned int size = 0;
+    unsigned int w_mb = generic_state->frame_width_in_mbs;
+    unsigned int h_mb = generic_state->frame_height_in_mbs;
+
+    obj_surface = encode_state->reconstructed_object;
+
+    if (!obj_surface || !obj_surface->private_data)
+        return;
+    avc_priv_surface = obj_surface->private_data;
+
+    BEGIN_BCS_BATCH(batch, 26);
+
+    OUT_BCS_BATCH(batch, MFX_IND_OBJ_BASE_ADDR_STATE | (26 - 2));
+    /* The DW1-5 is for the MFX indirect bistream offset */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+    OUT_BUFFER_2DW(batch, NULL, 0, 0);
+
+    /* the DW6-10 is for MFX Indirect MV Object Base Address */
+    size = w_mb * h_mb * 32 * 4;
+    OUT_BUFFER_3DW(batch,
+                   avc_priv_surface->res_mv_data_surface.bo,
+                   1,
+                   0,
+                   i965->intel.mocs_state);
+    OUT_BUFFER_2DW(batch,
+                   avc_priv_surface->res_mv_data_surface.bo,
+                   1,
+                   ALIGN(size,0x1000));
+
+    /* The DW11-15 is for MFX IT-COFF. Not used on encoder */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+    OUT_BUFFER_2DW(batch, NULL, 0, 0);
+
+    /* The DW16-20 is for MFX indirect DBLK. Not used on encoder */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+    OUT_BUFFER_2DW(batch, NULL, 0, 0);
+
+    /* The DW21-25 is for MFC Indirect PAK-BSE Object Base Address for Encoder
+     * Note: an offset is specified in MFX_AVC_SLICE_STATE
+     */
+    OUT_BUFFER_3DW(batch,
+                   generic_ctx->compressed_bitstream.res.bo,
+                   1,
+                   0,
+                   i965->intel.mocs_state);
+    OUT_BUFFER_2DW(batch,
+                   generic_ctx->compressed_bitstream.res.bo,
+                   1,
+                   generic_ctx->compressed_bitstream.end_offset);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_avc_bsp_buf_base_addr_state(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 10);
+
+    OUT_BCS_BATCH(batch, MFX_BSP_BUF_BASE_ADDR_STATE | (10 - 2));
+
+    /* The DW1-3 is for bsd/mpc row store scratch buffer */
+    OUT_BUFFER_3DW(batch, avc_ctx->res_bsd_mpc_row_store_scratch_buffer.bo, 1, 0, i965->intel.mocs_state);
+
+    /* The DW4-6 is for MPR Row Store Scratch Buffer Base Address, ignore for encoder */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* The DW7-9 is for Bitplane Read Buffer Base Address, ignore for encoder */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_avc_directmode_state(VADriverContextP ctx,
+                              struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )pak_context->private_enc_state;
+
+    int i;
+
+    BEGIN_BCS_BATCH(batch, 71);
+
+    OUT_BCS_BATCH(batch, MFX_AVC_DIRECTMODE_STATE | (71 - 2));
+
+    /* Reference frames and Current frames */
+    /* the DW1-32 is for the direct MV for reference */
+    for(i = 0; i < NUM_MFC_AVC_DMV_BUFFERS - 2; i += 2) {
+        if ( avc_ctx->res_direct_mv_buffersr[i].bo != NULL) {
+            OUT_BCS_RELOC64(batch, avc_ctx->res_direct_mv_buffersr[i].bo,
+                          I915_GEM_DOMAIN_INSTRUCTION, 0,
+                          0);
+        } else {
+            OUT_BCS_BATCH(batch, 0);
+            OUT_BCS_BATCH(batch, 0);
+        }
+    }
+
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
+
+    /* the DW34-36 is the MV for the current frame */
+    OUT_BCS_RELOC64(batch, avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS - 2].bo,
+                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                  0);
+
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
+
+    /* POL list */
+    for(i = 0; i < 32; i++) {
+        OUT_BCS_BATCH(batch, avc_state->top_field_poc[i]);
+    }
+    OUT_BCS_BATCH(batch, avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS - 2]);
+    OUT_BCS_BATCH(batch, avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS - 1]);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_qm_state(VADriverContextP ctx,
+                  int qm_type,
+                  const unsigned int *qm,
+                  int qm_length,
+                  struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    unsigned int qm_buffer[16];
+
+    assert(qm_length <= 16);
+    assert(sizeof(*qm) == 4);
+    memset(qm_buffer,0,16*4);
+    memcpy(qm_buffer, qm, qm_length * 4);
+
+    BEGIN_BCS_BATCH(batch, 18);
+    OUT_BCS_BATCH(batch, MFX_QM_STATE | (18 - 2));
+    OUT_BCS_BATCH(batch, qm_type << 0);
+    intel_batchbuffer_data(batch, qm_buffer, 16 * 4);
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_avc_qm_state(VADriverContextP ctx,
+                      struct encode_state *encode_state,
+                      struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )pak_context->private_enc_state;
+    VAEncSequenceParameterBufferH264  *seq_param = avc_state->seq_param;
+    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
+
+
+    const unsigned int *qm_4x4_intra;
+    const unsigned int *qm_4x4_inter;
+    const unsigned int *qm_8x8_intra;
+    const unsigned int *qm_8x8_inter;
+
+    if (!seq_param->seq_fields.bits.seq_scaling_matrix_present_flag
+        && !pic_param->pic_fields.bits.pic_scaling_matrix_present_flag) {
+        qm_4x4_intra = qm_4x4_inter = qm_8x8_intra = qm_8x8_inter = qm_flat;
+    } else {
+        VAIQMatrixBufferH264 *qm;
+        assert(encode_state->q_matrix && encode_state->q_matrix->buffer);
+        qm = (VAIQMatrixBufferH264 *)encode_state->q_matrix->buffer;
+        qm_4x4_intra = (unsigned int *)qm->ScalingList4x4[0];
+        qm_4x4_inter = (unsigned int *)qm->ScalingList4x4[3];
+        qm_8x8_intra = (unsigned int *)qm->ScalingList8x8[0];
+        qm_8x8_inter = (unsigned int *)qm->ScalingList8x8[1];
+    }
+
+    gen9_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, qm_4x4_intra, 12, encoder_context);
+    gen9_mfc_qm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, qm_4x4_inter, 12, encoder_context);
+    gen9_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, qm_8x8_intra, 16, encoder_context);
+    gen9_mfc_qm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, qm_8x8_inter, 16, encoder_context);
+}
+
+static void
+gen9_mfc_fqm_state(VADriverContextP ctx,
+                   int fqm_type,
+                   const unsigned int *fqm,
+                   int fqm_length,
+                   struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    unsigned int fqm_buffer[32];
+
+    assert(fqm_length <= 32);
+    assert(sizeof(*fqm) == 4);
+    memset(fqm_buffer,0,32*4);
+    memcpy(fqm_buffer, fqm, fqm_length * 4);
+
+    BEGIN_BCS_BATCH(batch, 34);
+    OUT_BCS_BATCH(batch, MFX_FQM_STATE | (34 - 2));
+    OUT_BCS_BATCH(batch, fqm_type << 0);
+    intel_batchbuffer_data(batch, fqm_buffer, 32 * 4);
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_fill_fqm(uint8_t *qm, uint16_t *fqm, int len)
+{
+    int i, j;
+    for (i = 0; i < len; i++)
+       for (j = 0; j < len; j++)
+       {
+           assert(qm[j * len + i]);
+           fqm[i * len + j] = (1 << 16) / qm[j * len + i];
+       }
+}
+
+static void
+gen9_mfc_avc_fqm_state(VADriverContextP ctx,
+                      struct encode_state *encode_state,
+                      struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )pak_context->private_enc_state;
+    VAEncSequenceParameterBufferH264  *seq_param = avc_state->seq_param;
+    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
+
+    if (!seq_param->seq_fields.bits.seq_scaling_matrix_present_flag
+        && !pic_param->pic_fields.bits.pic_scaling_matrix_present_flag) {
+        gen9_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, fqm_flat, 24, encoder_context);
+        gen9_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, fqm_flat, 24, encoder_context);
+        gen9_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, fqm_flat, 32, encoder_context);
+        gen9_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, fqm_flat, 32, encoder_context);
+    } else {
+        int i;
+        uint32_t fqm[32];
+        VAIQMatrixBufferH264 *qm;
+        assert(encode_state->q_matrix && encode_state->q_matrix->buffer);
+        qm = (VAIQMatrixBufferH264 *)encode_state->q_matrix->buffer;
+
+        for (i = 0; i < 3; i++)
+            gen9_mfc_fill_fqm(qm->ScalingList4x4[i], (uint16_t *)fqm + 16 * i, 4);
+        gen9_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTRA_MATRIX, fqm, 24, encoder_context);
+
+        for (i = 3; i < 6; i++)
+            gen9_mfc_fill_fqm(qm->ScalingList4x4[i], (uint16_t *)fqm + 16 * (i - 3), 4);
+        gen9_mfc_fqm_state(ctx, MFX_QM_AVC_4X4_INTER_MATRIX, fqm, 24, encoder_context);
+
+        gen9_mfc_fill_fqm(qm->ScalingList8x8[0], (uint16_t *)fqm, 8);
+        gen9_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTRA_MATRIX, fqm, 32, encoder_context);
+
+        gen9_mfc_fill_fqm(qm->ScalingList8x8[1], (uint16_t *)fqm, 8);
+        gen9_mfc_fqm_state(ctx, MFX_QM_AVC_8x8_INTER_MATRIX, fqm, 32, encoder_context);
+    }
+}
+
+static void
+gen9_mfc_avc_insert_object(VADriverContextP ctx,
+                           struct intel_encoder_context *encoder_context,
+                           unsigned int *insert_data, int lenght_in_dws, int data_bits_in_last_dw,
+                           int skip_emul_byte_count, int is_last_header, int is_end_of_slice, int emulation_flag,
+                           int slice_header_indicator,
+                           struct intel_batchbuffer *batch)
+{
+    if (data_bits_in_last_dw == 0)
+	data_bits_in_last_dw = 32;
+
+    BEGIN_BCS_BATCH(batch, lenght_in_dws + 2);
+
+    OUT_BCS_BATCH(batch, MFX_INSERT_OBJECT | (lenght_in_dws));
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) |   /* always start at offset 0 */
+                  (slice_header_indicator << 14) |
+                  (data_bits_in_last_dw << 8) |
+                  (skip_emul_byte_count << 4) |
+                  (!!emulation_flag << 3) |
+                  ((!!is_last_header) << 2) |
+                  ((!!is_end_of_slice) << 1) |
+                  (0 << 0));    /* check this flag */
+    intel_batchbuffer_data(batch, insert_data, lenght_in_dws * 4);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen9_mfc_avc_insert_slice_packed_data(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context,
+                                      int slice_index,
+                                      struct intel_batchbuffer *batch)
+{
+    VAEncPackedHeaderParameterBuffer *param = NULL;
+    unsigned int length_in_bits;
+    unsigned int *header_data = NULL;
+    int count, i, start_index;
+    int slice_header_index;
+
+    if (encode_state->slice_header_index[slice_index] == 0)
+        slice_header_index = -1;
+    else
+        slice_header_index = (encode_state->slice_header_index[slice_index] & SLICE_PACKED_DATA_INDEX_MASK);
+
+    count = encode_state->slice_rawdata_count[slice_index];
+    start_index = (encode_state->slice_rawdata_index[slice_index] & SLICE_PACKED_DATA_INDEX_MASK);
+
+    for (i = 0; i < count; i++) {
+        unsigned int skip_emul_byte_cnt;
+
+        header_data = (unsigned int *)encode_state->packed_header_data_ext[start_index + i]->buffer;
+
+        param = (VAEncPackedHeaderParameterBuffer *)(encode_state->packed_header_params_ext[start_index + i]->buffer);
+
+        /* skip the slice header packed data type as it is lastly inserted */
+        if (param->type == VAEncPackedHeaderSlice)
+            continue;
+
+        length_in_bits = param->bit_length;
+
+        skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+
+        /* as the slice header is still required, the last header flag is set to
+         * zero.
+         */
+        gen9_mfc_avc_insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   skip_emul_byte_cnt,
+                                   0,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   0,
+                                   batch);
+    }
+
+    if (slice_header_index == -1) {
+        VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
+        VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+        VAEncSliceParameterBufferH264 *slice_params = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[slice_index]->buffer;
+        unsigned char *slice_header = NULL;
+        int slice_header_length_in_bits = 0;
+
+        /* No slice header data is passed. And the driver needs to generate it */
+        /* For the Normal H264 */
+        slice_header_length_in_bits = build_avc_slice_header(seq_param,
+                                                             pic_param,
+                                                             slice_params,
+                                                             &slice_header);
+        gen9_mfc_avc_insert_object(ctx,
+                                   encoder_context,
+                                   (unsigned int *)slice_header,
+                                   ALIGN(slice_header_length_in_bits, 32) >> 5,
+                                   slice_header_length_in_bits & 0x1f,
+                                   5,  /* first 5 bytes are start code + nal unit type */
+                                   1, 0, 1,
+                                   1,
+                                   batch);
+
+        free(slice_header);
+    } else {
+        unsigned int skip_emul_byte_cnt;
+
+        header_data = (unsigned int *)encode_state->packed_header_data_ext[slice_header_index]->buffer;
+
+        param = (VAEncPackedHeaderParameterBuffer *)(encode_state->packed_header_params_ext[slice_header_index]->buffer);
+        length_in_bits = param->bit_length;
+
+        /* as the slice header is the last header data for one slice,
+         * the last header flag is set to one.
+         */
+        skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+
+        gen9_mfc_avc_insert_object(ctx,
+                                   encoder_context,
+                                   header_data,
+                                   ALIGN(length_in_bits, 32) >> 5,
+                                   length_in_bits & 0x1f,
+                                   skip_emul_byte_cnt,
+                                   1,
+                                   0,
+                                   !param->has_emulation_bytes,
+                                   1,
+                                   batch);
+    }
+
+    return;
+}
+
+static void
+gen9_mfc_avc_inset_headers(VADriverContextP ctx,
+                           struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context,
+                           VAEncSliceParameterBufferH264 *slice_param,
+                           int slice_index,
+                           struct intel_batchbuffer *batch)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
+    unsigned int internal_rate_mode = generic_state->internal_rate_mode;
+    unsigned int skip_emul_byte_cnt;
+
+    if (slice_index == 0) {
+        if (encode_state->packed_header_data[idx]) {
+            VAEncPackedHeaderParameterBuffer *param = NULL;
+            unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+            unsigned int length_in_bits;
+
+            assert(encode_state->packed_header_param[idx]);
+            param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+            length_in_bits = param->bit_length;
+
+            skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+            gen9_mfc_avc_insert_object(ctx,
+                                       encoder_context,
+                                       header_data,
+                                       ALIGN(length_in_bits, 32) >> 5,
+                                       length_in_bits & 0x1f,
+                                       skip_emul_byte_cnt,
+                                       0,
+                                       0,
+                                       !param->has_emulation_bytes,
+                                       0,
+                                       batch);
+        }
+
+        idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_PPS);
+
+        if (encode_state->packed_header_data[idx]) {
+            VAEncPackedHeaderParameterBuffer *param = NULL;
+            unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+            unsigned int length_in_bits;
+
+            assert(encode_state->packed_header_param[idx]);
+            param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+            length_in_bits = param->bit_length;
+
+            skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+
+            gen9_mfc_avc_insert_object(ctx,
+                                       encoder_context,
+                                       header_data,
+                                       ALIGN(length_in_bits, 32) >> 5,
+                                       length_in_bits & 0x1f,
+                                       skip_emul_byte_cnt,
+                                       0,
+                                       0,
+                                       !param->has_emulation_bytes,
+                                       0,
+                                       batch);
+        }
+
+        idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SEI);
+
+        if (encode_state->packed_header_data[idx]) {
+            VAEncPackedHeaderParameterBuffer *param = NULL;
+            unsigned int *header_data = (unsigned int *)encode_state->packed_header_data[idx]->buffer;
+            unsigned int length_in_bits;
+
+            assert(encode_state->packed_header_param[idx]);
+            param = (VAEncPackedHeaderParameterBuffer *)encode_state->packed_header_param[idx]->buffer;
+            length_in_bits = param->bit_length;
+
+            skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+            gen9_mfc_avc_insert_object(ctx,
+                                       encoder_context,
+                                       header_data,
+                                       ALIGN(length_in_bits, 32) >> 5,
+                                       length_in_bits & 0x1f,
+                                       skip_emul_byte_cnt,
+                                       0,
+                                       0,
+                                       !param->has_emulation_bytes,
+                                       0,
+                                       batch);
+        } else if (internal_rate_mode == VA_RC_CBR) {
+            /* insert others */
+        }
+    }
+
+    gen9_mfc_avc_insert_slice_packed_data(ctx,
+                                          encode_state,
+                                          encoder_context,
+                                          slice_index,
+                                          batch);
+}
+
+static void
+gen9_mfc_avc_slice_state(VADriverContextP ctx,
+                         struct encode_state *encode_state,
+                         struct intel_encoder_context *encoder_context,
+                         VAEncPictureParameterBufferH264 *pic_param,
+                         VAEncSliceParameterBufferH264 *slice_param,
+                         VAEncSliceParameterBufferH264 *next_slice_param,
+                         struct intel_batchbuffer *batch)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )pak_context->private_enc_state;
+    unsigned int luma_log2_weight_denom = slice_param->luma_log2_weight_denom;
+    unsigned int chroma_log2_weight_denom = slice_param->chroma_log2_weight_denom;
+    unsigned char correct[6], grow, shrink;
+    int slice_hor_pos, slice_ver_pos, next_slice_hor_pos, next_slice_ver_pos;
+    int max_qp_n, max_qp_p;
+    int i;
+    int weighted_pred_idc = 0;
+    int num_ref_l0 = 0, num_ref_l1 = 0;
+    int slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+    int slice_qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+    unsigned int rc_panic_enable = 0;
+    unsigned int rate_control_counter_enable = 0;
+    unsigned int rounding_value = 0;
+    unsigned int rounding_inter_enable = 0;
+
+    //check the inter rounding
+    if(generic_state->frame_type == SLICE_TYPE_P)
+    {
+        if(avc_state->rounding_inter_p == AVC_INVALID_ROUNDING_VALUE)
+        {
+            if(avc_state->adaptive_rounding_inter_enable && !(generic_state->brc_enabled))
+            {
+                if(generic_state->gop_ref_distance == 1)
+                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_p_without_b[slice_qp];
+                else
+                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_p[slice_qp];
+            }
+            else
+            {
+                avc_state->rounding_value = gen9_avc_inter_rounding_p[generic_state->preset];
+            }
+
+        }else
+        {
+            avc_state->rounding_value = avc_state->rounding_inter_p;
+        }
+    }else if(generic_state->frame_type == SLICE_TYPE_B)
+    {
+        if(pic_param->pic_fields.bits.reference_pic_flag)
+        {
+            if(avc_state->rounding_inter_b_ref == AVC_INVALID_ROUNDING_VALUE)
+                avc_state->rounding_value = gen9_avc_inter_rounding_b_ref[generic_state->preset];
+            else
+                avc_state->rounding_value = avc_state->rounding_inter_b_ref;
+        }
+        else
+        {
+            if(avc_state->rounding_inter_b == AVC_INVALID_ROUNDING_VALUE)
+            {
+                if(avc_state->adaptive_rounding_inter_enable && !(generic_state->brc_enabled))
+                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_b[slice_qp];
+                else
+                    avc_state->rounding_value = gen9_avc_inter_rounding_b[generic_state->preset];
+            }else
+            {
+                avc_state->rounding_value = avc_state->rounding_inter_b;
+            }
+        }
+    }
+
+    slice_hor_pos = slice_param->macroblock_address % generic_state->frame_width_in_mbs;
+    slice_ver_pos = slice_param->macroblock_address / generic_state->frame_width_in_mbs;
+
+    if (next_slice_param) {
+        next_slice_hor_pos = next_slice_param->macroblock_address % generic_state->frame_width_in_mbs;
+        next_slice_ver_pos = next_slice_param->macroblock_address / generic_state->frame_width_in_mbs;
+    } else {
+        next_slice_hor_pos = 0;
+        next_slice_ver_pos = generic_state->frame_height_in_mbs;
+    }
+
+    if (slice_type == SLICE_TYPE_I) {
+        luma_log2_weight_denom = 0;
+        chroma_log2_weight_denom = 0;
+    } else if (slice_type == SLICE_TYPE_P) {
+        weighted_pred_idc = pic_param->pic_fields.bits.weighted_pred_flag;
+        num_ref_l0 = pic_param->num_ref_idx_l0_active_minus1 + 1;
+        rounding_inter_enable = avc_state->rounding_inter_enable;
+        rounding_value = avc_state->rounding_value;
+
+        if (slice_param->num_ref_idx_active_override_flag)
+            num_ref_l0 = slice_param->num_ref_idx_l0_active_minus1 + 1;
+    } else if (slice_type == SLICE_TYPE_B) {
+        weighted_pred_idc = pic_param->pic_fields.bits.weighted_bipred_idc;
+        num_ref_l0 = pic_param->num_ref_idx_l0_active_minus1 + 1;
+        num_ref_l1 = pic_param->num_ref_idx_l1_active_minus1 + 1;
+        rounding_inter_enable = avc_state->rounding_inter_enable;
+        rounding_value = avc_state->rounding_value;
+
+        if (slice_param->num_ref_idx_active_override_flag) {
+            num_ref_l0 = slice_param->num_ref_idx_l0_active_minus1 + 1;
+            num_ref_l1 = slice_param->num_ref_idx_l1_active_minus1 + 1;
+        }
+
+        if (weighted_pred_idc == 2) {
+            /* 8.4.3 - Derivation process for prediction weights (8-279) */
+            luma_log2_weight_denom = 5;
+            chroma_log2_weight_denom = 5;
+        }
+    }
+
+    max_qp_n = 0;
+    max_qp_p = 0;
+    grow = 0;
+    shrink = 0;
+
+    rate_control_counter_enable = (generic_state->brc_enabled && (generic_state->curr_pak_pass != 0));
+    rc_panic_enable = (avc_state->rc_panic_enable &&
+                      (!avc_state->min_max_qp_enable) &&
+                      (encoder_context->rate_control_mode != VA_RC_CQP) &&
+                      (generic_state->curr_pak_pass == (generic_state->num_pak_passes - 1)));
+
+    for (i = 0; i < 6; i++)
+        correct[i] = 0;
+
+    BEGIN_BCS_BATCH(batch, 11);
+
+    OUT_BCS_BATCH(batch, MFX_AVC_SLICE_STATE | (11 - 2) );
+    OUT_BCS_BATCH(batch, slice_type);
+    OUT_BCS_BATCH(batch,
+                  (num_ref_l1 << 24) |
+                  (num_ref_l0 << 16) |
+                  (chroma_log2_weight_denom << 8) |
+                  (luma_log2_weight_denom << 0));
+    OUT_BCS_BATCH(batch,
+                  (weighted_pred_idc << 30) |
+                  (((slice_type == SLICE_TYPE_B)?slice_param->direct_spatial_mv_pred_flag:0) << 29) |
+                  (slice_param->disable_deblocking_filter_idc << 27) |
+                  (slice_param->cabac_init_idc << 24) |
+                  (slice_qp << 16) |
+                  ((slice_param->slice_beta_offset_div2 & 0xf) << 8) |
+                  ((slice_param->slice_alpha_c0_offset_div2 & 0xf) << 0));
+
+    OUT_BCS_BATCH(batch,
+                  slice_ver_pos << 24 |
+                  slice_hor_pos << 16 |
+                  slice_param->macroblock_address);
+    OUT_BCS_BATCH(batch,
+                  next_slice_ver_pos << 16 |
+                  next_slice_hor_pos);
+
+    OUT_BCS_BATCH(batch,
+                  (rate_control_counter_enable << 31) |
+                  (1 << 30) |           /* ResetRateControlCounter */
+                  (2 << 28) |           /* Loose Rate Control */
+                  (0 << 24) |           /* RC Stable Tolerance */
+                  (rc_panic_enable << 23) |           /* RC Panic Enable */
+                  (1 << 22) |           /* CBP mode */
+                  (0 << 21) |           /* MB Type Direct Conversion, 0: Enable, 1: Disable */
+                  (0 << 20) |           /* MB Type Skip Conversion, 0: Enable, 1: Disable */
+                  (!next_slice_param << 19) |                   /* Is Last Slice */
+                  (0 << 18) | 	        /* BitstreamOutputFlag Compressed BitStream Output Disable Flag 0:enable 1:disable */
+                  (1 << 17) |	        /* HeaderPresentFlag */
+                  (1 << 16) |	        /* SliceData PresentFlag */
+                  (0 << 15) |	        /* TailPresentFlag  */
+                  (1 << 13) |	        /* RBSP NAL TYPE */
+                  (1 << 12));           /* CabacZeroWordInsertionEnable */
+
+    OUT_BCS_BATCH(batch, generic_ctx->compressed_bitstream.start_offset);
+
+    OUT_BCS_BATCH(batch,
+                  (max_qp_n << 24) |     /*Target QP - 24 is lowest QP*/
+                  (max_qp_p << 16) |     /*Target QP + 20 is highest QP*/
+                  (shrink << 8) |
+                  (grow << 0));
+    OUT_BCS_BATCH(batch,
+                  (rounding_inter_enable << 31) |
+                  (rounding_value << 28) |
+                  (1 << 27) |
+                  (5 << 24) |
+                  (correct[5] << 20) |
+                  (correct[4] << 16) |
+                  (correct[3] << 12) |
+                  (correct[2] << 8) |
+                  (correct[1] << 4) |
+                  (correct[0] << 0));
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static uint8_t
+gen9_mfc_avc_get_ref_idx_state(VAPictureH264 *va_pic, unsigned int frame_store_id)
+{
+    unsigned int is_long_term =
+        !!(va_pic->flags & VA_PICTURE_H264_LONG_TERM_REFERENCE);
+    unsigned int is_top_field =
+        !!(va_pic->flags & VA_PICTURE_H264_TOP_FIELD);
+    unsigned int is_bottom_field =
+        !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD);
+
+    return ((is_long_term                         << 6) |
+            (0 << 5) |
+            (frame_store_id                       << 1) |
+            ((is_top_field ^ 1) & is_bottom_field));
+}
+
+static void
+gen9_mfc_avc_ref_idx_state(VADriverContextP ctx,
+                                 struct encode_state *encode_state,
+                                 struct intel_encoder_context *encoder_context,
+                                 VAEncSliceParameterBufferH264 *slice_param,
+                                 struct intel_batchbuffer *batch)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )pak_context->private_enc_state;
+    VAPictureH264 *ref_pic;
+    int i, slice_type, ref_idx_shift;
+    unsigned int fwd_ref_entry;
+    unsigned int bwd_ref_entry;
+
+    /* max 4 ref frames are allowed for l0 and l1 */
+    fwd_ref_entry = 0x80808080;
+    slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+    if ((slice_type == SLICE_TYPE_P) ||
+        (slice_type == SLICE_TYPE_B)) {
+          for (i = 0; i < MIN(avc_state->num_refs[0],4); i++) {
+              ref_pic = &slice_param->RefPicList0[i];
+              ref_idx_shift = i * 8;
+
+              fwd_ref_entry &= ~(0xFF << ref_idx_shift);
+              fwd_ref_entry += (gen9_mfc_avc_get_ref_idx_state(ref_pic, avc_state->list_ref_idx[0][i]) << ref_idx_shift);
+          }
+    }
+
+    bwd_ref_entry = 0x80808080;
+    if (slice_type == SLICE_TYPE_B) {
+        for (i = 0; i < MIN(avc_state->num_refs[1],4); i++) {
+            ref_pic = &slice_param->RefPicList1[i];
+            ref_idx_shift = i * 8;
+
+            bwd_ref_entry &= ~(0xFF << ref_idx_shift);
+            bwd_ref_entry += (gen9_mfc_avc_get_ref_idx_state(ref_pic, avc_state->list_ref_idx[1][i]) << ref_idx_shift);
+        }
+    }
+
+    if ((slice_type == SLICE_TYPE_P) ||
+        (slice_type == SLICE_TYPE_B)) {
+        BEGIN_BCS_BATCH(batch, 10);
+        OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
+        OUT_BCS_BATCH(batch, 0);                        // L0
+        OUT_BCS_BATCH(batch, fwd_ref_entry);
+
+        for (i = 0; i < 7; i++) {
+            OUT_BCS_BATCH(batch, 0x80808080);
+        }
+
+        ADVANCE_BCS_BATCH(batch);
+    }
+
+    if (slice_type == SLICE_TYPE_B) {
+        BEGIN_BCS_BATCH(batch, 10);
+        OUT_BCS_BATCH(batch, MFX_AVC_REF_IDX_STATE | 8);
+        OUT_BCS_BATCH(batch, 1);                  //Select L1
+        OUT_BCS_BATCH(batch, bwd_ref_entry);      //max 4 reference allowed
+        for(i = 0; i < 7; i++) {
+            OUT_BCS_BATCH(batch, 0x80808080);
+        }
+        ADVANCE_BCS_BATCH(batch);
+    }
+}
+
+static void
+gen9_mfc_avc_weightoffset_state(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context,
+                                VAEncPictureParameterBufferH264 *pic_param,
+                                VAEncSliceParameterBufferH264 *slice_param,
+                                struct intel_batchbuffer *batch)
+{
+    int i, slice_type;
+    short weightoffsets[32 * 6];
+
+    slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
+
+    if (slice_type == SLICE_TYPE_P &&
+        pic_param->pic_fields.bits.weighted_pred_flag == 1) {
+        memset(weightoffsets,0,32*6 * sizeof(short));
+        for (i = 0; i < 32; i++) {
+            weightoffsets[i * 6 + 0] = slice_param->luma_weight_l0[i];
+            weightoffsets[i * 6 + 1] = slice_param->luma_offset_l0[i];
+            weightoffsets[i * 6 + 2] = slice_param->chroma_weight_l0[i][0];
+            weightoffsets[i * 6 + 3] = slice_param->chroma_offset_l0[i][0];
+            weightoffsets[i * 6 + 4] = slice_param->chroma_weight_l0[i][1];
+            weightoffsets[i * 6 + 5] = slice_param->chroma_offset_l0[i][1];
+        }
+
+        BEGIN_BCS_BATCH(batch, 98);
+        OUT_BCS_BATCH(batch, MFX_AVC_WEIGHTOFFSET_STATE | (98 - 2));
+        OUT_BCS_BATCH(batch, 0);
+        intel_batchbuffer_data(batch, weightoffsets, sizeof(weightoffsets));
+
+        ADVANCE_BCS_BATCH(batch);
+    }
+
+    if (slice_type == SLICE_TYPE_B &&
+        (pic_param->pic_fields.bits.weighted_bipred_idc == 1)) {
+        memset(weightoffsets,0,32*6 * sizeof(short));
+        for (i = 0; i < 32; i++) {
+            weightoffsets[i * 6 + 0] = slice_param->luma_weight_l0[i];
+            weightoffsets[i * 6 + 1] = slice_param->luma_offset_l0[i];
+            weightoffsets[i * 6 + 2] = slice_param->chroma_weight_l0[i][0];
+            weightoffsets[i * 6 + 3] = slice_param->chroma_offset_l0[i][0];
+            weightoffsets[i * 6 + 4] = slice_param->chroma_weight_l0[i][1];
+            weightoffsets[i * 6 + 5] = slice_param->chroma_offset_l0[i][1];
+        }
+
+        BEGIN_BCS_BATCH(batch, 98);
+        OUT_BCS_BATCH(batch, MFX_AVC_WEIGHTOFFSET_STATE | (98 - 2));
+        OUT_BCS_BATCH(batch, 0);
+        intel_batchbuffer_data(batch, weightoffsets, sizeof(weightoffsets));
+        ADVANCE_BCS_BATCH(batch);
+
+        memset(weightoffsets,0,32*6 * sizeof(short));
+        for (i = 0; i < 32; i++) {
+            weightoffsets[i * 6 + 0] = slice_param->luma_weight_l1[i];
+            weightoffsets[i * 6 + 1] = slice_param->luma_offset_l1[i];
+            weightoffsets[i * 6 + 2] = slice_param->chroma_weight_l1[i][0];
+            weightoffsets[i * 6 + 3] = slice_param->chroma_offset_l1[i][0];
+            weightoffsets[i * 6 + 4] = slice_param->chroma_weight_l1[i][1];
+            weightoffsets[i * 6 + 5] = slice_param->chroma_offset_l1[i][1];
+        }
+
+        BEGIN_BCS_BATCH(batch, 98);
+        OUT_BCS_BATCH(batch, MFX_AVC_WEIGHTOFFSET_STATE | (98 - 2));
+        OUT_BCS_BATCH(batch, 1);
+        intel_batchbuffer_data(batch, weightoffsets, sizeof(weightoffsets));
+        ADVANCE_BCS_BATCH(batch);
+    }
+}
+
+static void
+gen9_mfc_avc_single_slice(VADriverContextP ctx,
+                          struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context,
+                          VAEncSliceParameterBufferH264 *slice_param,
+                          VAEncSliceParameterBufferH264 *next_slice_param,
+                          int slice_index)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )pak_context->private_enc_state;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct intel_batchbuffer *slice_batch = avc_ctx->pres_slice_batch_buffer_2nd_level;
+    VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+    struct gpe_mi_batch_buffer_start_parameter second_level_batch;
+    struct object_surface *obj_surface;
+    struct gen9_surface_avc *avc_priv_surface;
+
+    unsigned int slice_offset = 0;
+
+    if(generic_state->curr_pak_pass == 0)
+    {
+        slice_offset = intel_batchbuffer_used_size(slice_batch);
+        avc_state->slice_batch_offset[slice_index] = slice_offset;
+        gen9_mfc_avc_ref_idx_state(ctx, encode_state, encoder_context, slice_param,slice_batch);
+        gen9_mfc_avc_weightoffset_state(ctx,
+                                        encode_state,
+                                        encoder_context,
+                                        pic_param,
+                                        slice_param,
+                                        slice_batch);
+        gen9_mfc_avc_slice_state(ctx,
+                                 encode_state,
+                                 encoder_context,
+                                 pic_param,
+                                 slice_param,
+                                 next_slice_param,
+                                 slice_batch);
+        gen9_mfc_avc_inset_headers(ctx,
+                                   encode_state,
+                                   encoder_context,
+                                   slice_param,
+                                   slice_index,
+                                   slice_batch);
+
+        BEGIN_BCS_BATCH(slice_batch, 2);
+        OUT_BCS_BATCH(slice_batch, 0);
+        OUT_BCS_BATCH(slice_batch, MI_BATCH_BUFFER_END);
+        ADVANCE_BCS_BATCH(slice_batch);
+
+    }else
+    {
+        slice_offset = avc_state->slice_batch_offset[slice_index];
+    }
+    /* insert slice as second levle.*/
+    memset(&second_level_batch, 0, sizeof(second_level_batch));
+    second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
+    second_level_batch.offset = slice_offset;
+    second_level_batch.bo = slice_batch->buffer;
+    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+
+    /* insert mb code as second levle.*/
+    obj_surface = encode_state->reconstructed_object;
+    assert(obj_surface->private_data);
+    avc_priv_surface = (struct gen9_surface_avc *)obj_surface->private_data;
+
+    memset(&second_level_batch, 0, sizeof(second_level_batch));
+    second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
+    second_level_batch.offset = slice_param->macroblock_address * 16 * 4;
+    second_level_batch.bo = avc_priv_surface->res_mb_code_surface.bo;
+    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+
+}
+
+static void
+gen9_avc_pak_slice_level(VADriverContextP ctx,
+                         struct encode_state *encode_state,
+                         struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gpe_mi_flush_dw_parameter mi_flush_dw_params;
+    VAEncSliceParameterBufferH264 *slice_param, *next_slice_param, *next_slice_group_param;
+    int i, j;
+    int slice_index = 0;
+    int is_frame_level = 1;       /* check it for SKL,now single slice per frame */
+    int has_tail = 0;             /* check it later */
+
+    for (j = 0; j < encode_state->num_slice_params_ext; j++) {
+        slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j]->buffer;
+
+        if (j == encode_state->num_slice_params_ext - 1)
+            next_slice_group_param = NULL;
+        else
+            next_slice_group_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j + 1]->buffer;
+
+        for (i = 0; i < encode_state->slice_params_ext[j]->num_elements; i++) {
+            if (i < encode_state->slice_params_ext[j]->num_elements - 1)
+                next_slice_param = slice_param + 1;
+            else
+                next_slice_param = next_slice_group_param;
+
+            gen9_mfc_avc_single_slice(ctx,
+                                      encode_state,
+                                      encoder_context,
+                                      slice_param,
+                                      next_slice_param,
+                                      slice_index);
+            slice_param++;
+            slice_index++;
+
+            if (is_frame_level)
+                break;
+            else {
+                /* remove assert(0) and add other commands here */
+                assert(0);
+            }
+        }
+
+        if (is_frame_level)
+            break;
+    }
+
+    if (has_tail) {
+        /* insert a tail if required */
+    }
+
+    memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
+    mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+}
+static void
+gen9_avc_pak_picture_level(VADriverContextP ctx,
+                           struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    struct gpe_mi_batch_buffer_start_parameter second_level_batch;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+
+    if (generic_state->brc_enabled &&
+        generic_state->curr_pak_pass) {
+        struct gpe_mi_conditional_batch_buffer_end_parameter mi_conditional_batch_buffer_end_params;
+        struct encoder_status_buffer_internal *status_buffer;
+        status_buffer = &(avc_ctx->status_buffer);
+
+        memset(&mi_conditional_batch_buffer_end_params, 0, sizeof(mi_conditional_batch_buffer_end_params));
+        mi_conditional_batch_buffer_end_params.offset = status_buffer->image_status_mask_offset;
+        mi_conditional_batch_buffer_end_params.bo = status_buffer->bo;
+        mi_conditional_batch_buffer_end_params.compare_data = 0;
+        mi_conditional_batch_buffer_end_params.compare_mask_mode_disabled = 0;
+        gen9_gpe_mi_conditional_batch_buffer_end(ctx, batch, &mi_conditional_batch_buffer_end_params);
+    }
+
+    gen9_mfc_avc_pipe_mode_select(ctx,encode_state,encoder_context);
+    gen9_mfc_avc_surface_state(ctx,encoder_context,&(generic_ctx->res_reconstructed_surface),0);
+    gen9_mfc_avc_surface_state(ctx,encoder_context,&(generic_ctx->res_uncompressed_input_surface),4);
+    gen9_mfc_avc_pipe_buf_addr_state(ctx,encoder_context);
+    gen9_mfc_avc_ind_obj_base_addr_state(ctx,encode_state,encoder_context);
+    gen9_mfc_avc_bsp_buf_base_addr_state(ctx,encoder_context);
+
+    if(generic_state->brc_enabled)
+    {
+        memset(&second_level_batch, 0, sizeof(second_level_batch));
+        if (generic_state->curr_pak_pass == 0) {
+            second_level_batch.offset = 0;
+        } else {
+            second_level_batch.offset = generic_state->curr_pak_pass * INTEL_AVC_IMAGE_STATE_CMD_SIZE;
+        }
+        second_level_batch.is_second_level = 1;
+        second_level_batch.bo = avc_ctx->res_brc_image_state_read_buffer.bo;
+        gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    }else
+    {
+        /*generate a new image state */
+        gen9_avc_set_image_state_non_brc(ctx,encode_state,encoder_context,&(avc_ctx->res_image_state_batch_buffer_2nd_level));
+        memset(&second_level_batch, 0, sizeof(second_level_batch));
+        second_level_batch.offset = 0;
+        second_level_batch.is_second_level = 1;
+        second_level_batch.bo = avc_ctx->res_image_state_batch_buffer_2nd_level.bo;
+        gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    }
+
+    gen9_mfc_avc_qm_state(ctx,encode_state,encoder_context);
+    gen9_mfc_avc_fqm_state(ctx,encode_state,encoder_context);
+    gen9_mfc_avc_directmode_state(ctx,encoder_context);
+
+}
+
+static void
+gen9_avc_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+
+    struct gpe_mi_store_register_mem_parameter mi_store_reg_mem_param;
+    struct gpe_mi_store_data_imm_parameter mi_store_data_imm_param;
+    struct gpe_mi_flush_dw_parameter mi_flush_dw_param;
+    struct encoder_status_buffer_internal *status_buffer;
+
+    status_buffer = &(avc_ctx->status_buffer);
+
+    memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+
+    /* read register and store into status_buffer and pak_statitistic info */
+    memset(&mi_store_reg_mem_param, 0, sizeof(mi_store_reg_mem_param));
+    mi_store_reg_mem_param.bo = status_buffer->bo;
+    mi_store_reg_mem_param.offset = status_buffer->bs_byte_count_frame_offset;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    mi_store_reg_mem_param.bo = status_buffer->bo;
+    mi_store_reg_mem_param.offset = status_buffer->image_status_mask_offset;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->image_status_mask_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    /*update the status in the pak_statistic_surface */
+    mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
+    mi_store_reg_mem_param.offset = 0;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
+    mi_store_reg_mem_param.offset = 4;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_nh_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    memset(&mi_store_data_imm_param, 0, sizeof(mi_store_data_imm_param));
+    mi_store_data_imm_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
+    mi_store_data_imm_param.offset = sizeof(unsigned int) * 2;
+    mi_store_data_imm_param.dw0 = (generic_state->curr_pak_pass + 1);
+    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm_param);
+
+    mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
+    mi_store_reg_mem_param.offset = sizeof(unsigned int) * (4 + generic_state->curr_pak_pass) ;
+    mi_store_reg_mem_param.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
+    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+
+    memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
+    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+
+    return;
+}
+
+static void
+gen9_avc_pak_brc_prepare(struct encode_state *encode_state,
+                          struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    unsigned int rate_control_mode = encoder_context->rate_control_mode;
+
+    switch (rate_control_mode & 0x7f) {
+    case VA_RC_CBR:
+        generic_state->internal_rate_mode = VA_RC_CBR;
+        break;
+
+    case VA_RC_VBR:
+        generic_state->internal_rate_mode = VA_RC_VBR;//AVBR
+        break;
+
+    case VA_RC_CQP:
+    default:
+        generic_state->internal_rate_mode = VA_RC_CQP;
+        break;
+    }
+
+    if (encoder_context->quality_level == 0)
+        encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
+}
+
+static VAStatus
+gen9_avc_pak_pipeline_prepare(VADriverContextP ctx,
+                     struct encode_state *encode_state,
+                     struct intel_encoder_context *encoder_context)
+{
+    VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )pak_context->private_enc_state;
+
+    struct object_surface *obj_surface;
+    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
+    VAEncSliceParameterBufferH264 *slice_param = avc_state->slice_param[0];
+
+    struct gen9_surface_avc *avc_priv_surface;
+    int i, j, enable_avc_ildb = 0;
+    unsigned int allocate_flag = 1;
+    unsigned int size;
+    unsigned int w_mb = generic_state->frame_width_in_mbs;
+    unsigned int h_mb = generic_state->frame_height_in_mbs;
+    struct avc_surface_param surface_param;
+
+    /* update the parameter and check slice parameter */
+    for (j = 0; j < encode_state->num_slice_params_ext && enable_avc_ildb == 0; j++) {
+        assert(encode_state->slice_params_ext && encode_state->slice_params_ext[j]->buffer);
+        slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j]->buffer;
+
+        for (i = 0; i < encode_state->slice_params_ext[j]->num_elements; i++) {
+            assert((slice_param->slice_type == SLICE_TYPE_I) ||
+                   (slice_param->slice_type == SLICE_TYPE_SI) ||
+                   (slice_param->slice_type == SLICE_TYPE_P) ||
+                   (slice_param->slice_type == SLICE_TYPE_SP) ||
+                   (slice_param->slice_type == SLICE_TYPE_B));
+
+            if (slice_param->disable_deblocking_filter_idc != 1) {
+                enable_avc_ildb = 1;
+                break;
+            }
+
+            slice_param++;
+        }
+    }
+    avc_state->enable_avc_ildb = enable_avc_ildb;
+
+    /* setup the all surface and buffer for PAK */
+    /* Setup current reconstruct frame */
+    obj_surface = encode_state->reconstructed_object;
+    va_status = i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    memset(&surface_param,0,sizeof(surface_param));
+    surface_param.frame_width = generic_state->frame_width_in_pixel;
+    surface_param.frame_height = generic_state->frame_height_in_pixel;
+    va_status = gen9_avc_init_check_surfaces(ctx,
+                                             obj_surface,encoder_context,
+                                             &surface_param);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+    /* init the member of avc_priv_surface,frame_store_id,qp_value */
+    {
+       avc_priv_surface = (struct gen9_surface_avc *)obj_surface->private_data;
+       avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS-2] = 0;
+       avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS-1] = 0;
+       i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS-2]);
+       i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS-1]);
+       i965_dri_object_to_buffer_gpe_resource(&avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS-2],avc_priv_surface->dmv_top);
+       i965_dri_object_to_buffer_gpe_resource(&avc_ctx->res_direct_mv_buffersr[NUM_MFC_AVC_DMV_BUFFERS-1],avc_priv_surface->dmv_bottom);
+       avc_priv_surface->qp_value = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+       avc_priv_surface->frame_store_id = 0;
+       avc_priv_surface->frame_idx = pic_param->CurrPic.frame_idx;
+       avc_priv_surface->top_field_order_cnt = pic_param->CurrPic.TopFieldOrderCnt;
+       avc_priv_surface->is_as_ref = pic_param->pic_fields.bits.reference_pic_flag;
+       avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS-2] = avc_priv_surface->top_field_order_cnt;
+       avc_state->top_field_poc[NUM_MFC_AVC_DMV_BUFFERS-1] = avc_priv_surface->top_field_order_cnt + 1;
+    }
+    i965_free_gpe_resource(&generic_ctx->res_reconstructed_surface);
+    i965_free_gpe_resource(&avc_ctx->res_post_deblocking_output);
+    i965_free_gpe_resource(&avc_ctx->res_pre_deblocking_output);
+    i965_object_surface_to_2d_gpe_resource_with_align(&generic_ctx->res_reconstructed_surface, obj_surface,GPE_RESOURCE_ALIGNMENT);
+
+
+    if (avc_state->enable_avc_ildb) {
+        i965_object_surface_to_2d_gpe_resource_with_align(&avc_ctx->res_post_deblocking_output, obj_surface,GPE_RESOURCE_ALIGNMENT);
+    } else {
+        i965_object_surface_to_2d_gpe_resource_with_align(&avc_ctx->res_pre_deblocking_output, obj_surface,GPE_RESOURCE_ALIGNMENT);
+    }
+    /* input YUV surface */
+    obj_surface = encode_state->input_yuv_object;
+    va_status = i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+    i965_free_gpe_resource(&generic_ctx->res_uncompressed_input_surface);
+    i965_object_surface_to_2d_gpe_resource_with_align(&generic_ctx->res_uncompressed_input_surface, obj_surface,GPE_RESOURCE_ALIGNMENT);
+
+    /* Reference surfaces */
+    for (i = 0; i < ARRAY_ELEMS(avc_ctx->list_reference_res); i++) {
+        i965_free_gpe_resource(&avc_ctx->list_reference_res[i]);
+        i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i*2]);
+        i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i*2 + 1]);
+        obj_surface = encode_state->reference_objects[i];
+        avc_state->top_field_poc[2*i] = 0;
+        avc_state->top_field_poc[2*i+1] = 0;
+
+        if (obj_surface && obj_surface->bo) {
+            i965_object_surface_to_2d_gpe_resource_with_align(&avc_ctx->list_reference_res[i], obj_surface,GPE_RESOURCE_ALIGNMENT);
+
+            /* actually it should be handled when it is reconstructed surface */
+            va_status = gen9_avc_init_check_surfaces(ctx,
+                obj_surface,encoder_context,
+                &surface_param);
+            if (va_status != VA_STATUS_SUCCESS)
+                return va_status;
+            avc_priv_surface = (struct gen9_surface_avc *)obj_surface->private_data;
+            i965_dri_object_to_buffer_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i*2],avc_priv_surface->dmv_top);
+            i965_dri_object_to_buffer_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i*2 + 1],avc_priv_surface->dmv_bottom);
+            avc_priv_surface->frame_store_id = i;
+            avc_state->top_field_poc[2*i] = avc_priv_surface->top_field_order_cnt;
+            avc_state->top_field_poc[2*i+1] = avc_priv_surface->top_field_order_cnt+1;
+        }else
+        {
+            break;
+        }
+    }
+
+    if (avc_ctx->pres_slice_batch_buffer_2nd_level)
+    {
+        intel_batchbuffer_free(avc_ctx->pres_slice_batch_buffer_2nd_level);
+        avc_ctx->pres_slice_batch_buffer_2nd_level = NULL;
+    }
+
+    avc_ctx->pres_slice_batch_buffer_2nd_level =
+        intel_batchbuffer_new(&i965->intel, I915_EXEC_BSD,
+                              4096 *
+                              encode_state->num_slice_params_ext);
+    if (!avc_ctx->pres_slice_batch_buffer_2nd_level)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+    for (i = 0;i < MAX_AVC_SLICE_NUM;i++) {
+        avc_state->slice_batch_offset[i] = 0;
+    }
+
+
+    size = w_mb * 64;
+    i965_free_gpe_resource(&avc_ctx->res_intra_row_store_scratch_buffer);
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                 &avc_ctx->res_intra_row_store_scratch_buffer,
+                                 size,
+                                "PAK Intra row store scratch buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    size = w_mb * 4 * 64;
+    i965_free_gpe_resource(&avc_ctx->res_deblocking_filter_row_store_scratch_buffer);
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                 &avc_ctx->res_deblocking_filter_row_store_scratch_buffer,
+                                 size,
+                                "PAK Deblocking filter row store scratch buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    size = w_mb * 2 * 64;
+    i965_free_gpe_resource(&avc_ctx->res_bsd_mpc_row_store_scratch_buffer);
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                 &avc_ctx->res_bsd_mpc_row_store_scratch_buffer,
+                                 size,
+                                "PAK BSD/MPC row store scratch buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    size = w_mb * h_mb * 16;
+    i965_free_gpe_resource(&avc_ctx->res_pak_mb_status_buffer);
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                 &avc_ctx->res_pak_mb_status_buffer,
+                                 size,
+                                "PAK MB status buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    return VA_STATUS_SUCCESS;
+
+failed_allocation:
+    return VA_STATUS_ERROR_ALLOCATION_FAILED;
+}
+
+static VAStatus
+gen9_avc_encode_picture(VADriverContextP ctx,
+                        VAProfile profile,
+                        struct encode_state *encode_state,
+                        struct intel_encoder_context *encoder_context)
+{
+    VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+
+    va_status = gen9_avc_pak_pipeline_prepare(ctx, encode_state, encoder_context);
+
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    if (i965->intel.has_bsd2)
+        intel_batchbuffer_start_atomic_bcs_override(batch, 0x1000, BSD_RING0);
+    else
+        intel_batchbuffer_start_atomic_bcs(batch, 0x1000);
+    intel_batchbuffer_emit_mi_flush(batch);
+
+    for (generic_state->curr_pak_pass = 0;
+         generic_state->curr_pak_pass < generic_state->num_pak_passes;
+         generic_state->curr_pak_pass++) {
+
+         if (generic_state->curr_pak_pass == 0) {
+             /* Initialize the avc Image Ctrl reg for the first pass,write 0 to staturs/control register, is it needed in AVC? */
+             struct gpe_mi_load_register_imm_parameter mi_load_reg_imm;
+             struct encoder_status_buffer_internal *status_buffer;
+
+             status_buffer = &(avc_ctx->status_buffer);
+             memset(&mi_load_reg_imm, 0, sizeof(mi_load_reg_imm));
+             mi_load_reg_imm.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
+             mi_load_reg_imm.data = 0;
+             gen8_gpe_mi_load_register_imm(ctx, batch, &mi_load_reg_imm);
+         }
+         gen9_avc_pak_picture_level(ctx, encode_state, encoder_context);
+         gen9_avc_pak_slice_level(ctx, encode_state, encoder_context);
+         gen9_avc_read_mfc_status(ctx, encoder_context);
+
+    }
+
+    if (avc_ctx->pres_slice_batch_buffer_2nd_level)
+    {
+        intel_batchbuffer_free(avc_ctx->pres_slice_batch_buffer_2nd_level);
+        avc_ctx->pres_slice_batch_buffer_2nd_level = NULL;
+    }
+
+    intel_batchbuffer_end_atomic(batch);
+    intel_batchbuffer_flush(batch);
+
+    generic_state->seq_frame_number++;
+    generic_state->total_frame_number++;
+    generic_state->first_frame = 0;
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus
+gen9_avc_pak_pipeline(VADriverContextP ctx,
+                      VAProfile profile,
+                      struct encode_state *encode_state,
+                      struct intel_encoder_context *encoder_context)
+{
+    VAStatus vaStatus;
+
+    switch (profile) {
+    case VAProfileH264ConstrainedBaseline:
+    case VAProfileH264Main:
+    case VAProfileH264High:
+        vaStatus = gen9_avc_encode_picture(ctx, profile, encode_state, encoder_context);
+        break;
+
+    default:
+        vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
+        break;
+    }
+
+    return vaStatus;
+}
+
+static void
+gen9_avc_pak_context_destroy(void * context)
+{
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)context;
+    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
+
+    int i = 0;
+
+    if (!pak_context)
+        return;
+
+    // other things
+    i965_free_gpe_resource(&generic_ctx->res_reconstructed_surface);
+    i965_free_gpe_resource(&avc_ctx->res_post_deblocking_output);
+    i965_free_gpe_resource(&avc_ctx->res_pre_deblocking_output);
+    i965_free_gpe_resource(&generic_ctx->res_uncompressed_input_surface);
+
+    i965_free_gpe_resource(&generic_ctx->compressed_bitstream.res);
+    i965_free_gpe_resource(&avc_ctx->res_intra_row_store_scratch_buffer);
+    i965_free_gpe_resource(&avc_ctx->res_deblocking_filter_row_store_scratch_buffer);
+    i965_free_gpe_resource(&avc_ctx->res_bsd_mpc_row_store_scratch_buffer);
+    i965_free_gpe_resource(&avc_ctx->res_pak_mb_status_buffer);
+
+    for(i = 0 ; i < MAX_MFC_AVC_REFERENCE_SURFACES; i++)
+    {
+        i965_free_gpe_resource(&avc_ctx->list_reference_res[i]);
+    }
+
+    for(i = 0 ; i < NUM_MFC_AVC_DMV_BUFFERS; i++)
+    {
+        i965_free_gpe_resource(&avc_ctx->res_direct_mv_buffersr[i]);
+    }
+
+    if (avc_ctx->pres_slice_batch_buffer_2nd_level)
+    {
+        intel_batchbuffer_free(avc_ctx->pres_slice_batch_buffer_2nd_level);
+        avc_ctx->pres_slice_batch_buffer_2nd_level = NULL;
+    }
+
+}
+
+static VAStatus
+gen9_avc_get_coded_status(VADriverContextP ctx,
+                          struct intel_encoder_context *encoder_context,
+                          struct i965_coded_buffer_segment *coded_buf_seg)
+{
+    struct encoder_status *avc_encode_status;
+
+    if (!encoder_context || !coded_buf_seg)
+        return VA_STATUS_ERROR_INVALID_BUFFER;
+
+    avc_encode_status = (struct encoder_status *)coded_buf_seg->codec_private_data;
+    coded_buf_seg->base.size = avc_encode_status->bs_byte_count_frame;
+
+    return VA_STATUS_SUCCESS;
+}
+
 Bool
 gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
@@ -5997,4 +7587,21 @@ allocate_structure_failed:
     free(generic_state);
     free(avc_state);
     return false;
+}
+
+Bool
+gen9_avc_pak_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    /* VME & PAK share the same context */
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+
+    if (!pak_context)
+        return false;
+
+    encoder_context->mfc_context = pak_context;
+    encoder_context->mfc_context_destroy = gen9_avc_pak_context_destroy;
+    encoder_context->mfc_pipeline = gen9_avc_pak_pipeline;
+    encoder_context->mfc_brc_prepare = gen9_avc_pak_brc_prepare;
+    encoder_context->get_status = gen9_avc_get_coded_status;
+    return true;
 }
