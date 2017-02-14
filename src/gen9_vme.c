@@ -1852,7 +1852,7 @@ static VAStatus gen9_intel_hevc_input_check(VADriverContextP ctx,
     int i;
     int fourcc;
 
-    obj_surface = SURFACE(encode_state->current_render_target);
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
     assert(obj_surface && obj_surface->bo);
     hevc_encoder_surface = (GenHevcSurface *) obj_surface->private_data;
     if(hevc_encoder_surface)
