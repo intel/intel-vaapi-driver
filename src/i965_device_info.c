@@ -384,6 +384,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .render_init = gen9_render_init,
     .post_processing_context_init = gen9_post_processing_context_init,
     .max_resolution = gen9_max_resolution,
+    .preinit_hw_codec = gen9_hw_codec_preinit,
 
     .max_width = 4096,  /* default. See max_resolution */
     .max_height = 4096, /* default. See max_resolution */
@@ -440,6 +441,7 @@ static struct hw_codec_info kbl_hw_codec_info = {
     .render_init = gen9_render_init,
     .post_processing_context_init = gen9_post_processing_context_init,
     .max_resolution = gen9_max_resolution,
+    .preinit_hw_codec = gen9_hw_codec_preinit,
 
     .max_width = 4096,   /* default. See max_resolution */
     .max_height = 4096,  /* default. See max_resolution */
