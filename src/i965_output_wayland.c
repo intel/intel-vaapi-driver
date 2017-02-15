@@ -36,7 +36,10 @@
 #include "i965_defines.h"
 #include "dso_utils.h"
 
-#define LIBEGL_NAME             "libEGL.so.1"
+/* We need mesa's libEGL, first try the soname of a glvnd enabled mesa build */
+#define LIBEGL_NAME             "libEGL_mesa.so.0"
+/* Then fallback to plain libEGL.so.1 (which might not be mesa) */
+#define LIBEGL_NAME_FALLBACK    "libEGL.so.1"
 #define LIBWAYLAND_CLIENT_NAME  "libwayland-client.so.0"
 
 typedef uint32_t (*wl_display_get_global_func)(struct wl_display *display,
@@ -380,8 +383,11 @@ i965_output_wayland_init(VADriverContextP ctx)
         goto error;
 
     i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME);
-    if (!i965->wl_output->libegl_handle)
-        goto error;
+    if (!i965->wl_output->libegl_handle) {
+        i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME_FALLBACK);
+        if (!i965->wl_output->libegl_handle)
+            goto error;
+    }
 
     dso_handle = i965->wl_output->libegl_handle;
     wl_vtable  = &i965->wl_output->vtable;
