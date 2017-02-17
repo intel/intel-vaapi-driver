@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <assert.h>
 #include <va/va_backend.h>
 #include <va/va_backend_wayland.h>
 #include <wayland-client.h>
@@ -283,7 +282,6 @@ va_GetSurfaceBufferWl(
             drm_format = WL_DRM_FORMAT_YUV444;
             break;
         default:
-            assert(0 && "unsupported subsampling");
             return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
         }
         offsets[0] = 0;
@@ -294,7 +292,6 @@ va_GetSurfaceBufferWl(
         pitches[2] = obj_surface->cb_cr_pitch;
         break;
     default:
-        assert(0 && "unsupported format");
         return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
     }
 
