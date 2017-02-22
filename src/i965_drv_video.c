@@ -5936,6 +5936,34 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                   i++;
                 }
             }
+
+            /* Additional support for jpeg encoder */
+            if (obj_config->profile == VAProfileJPEGBaseline
+                    && obj_config->entrypoint == VAEntrypointEncPicture) {
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC_YUY2;
+                i++;
+
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC_UYVY;
+                i++;
+
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC_YV16;
+                i++;
+
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC_Y800;
+                i++;
+            }
         }
     }
 
