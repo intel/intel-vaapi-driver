@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <assert.h>
 #include <va/va_backend.h>
 #include <va/va_backend_wayland.h>
 #include <wayland-client.h>
@@ -36,7 +35,10 @@
 #include "i965_defines.h"
 #include "dso_utils.h"
 
-#define LIBEGL_NAME             "libEGL.so.1"
+/* We need mesa's libEGL, first try the soname of a glvnd enabled mesa build */
+#define LIBEGL_NAME             "libEGL_mesa.so.0"
+/* Then fallback to plain libEGL.so.1 (which might not be mesa) */
+#define LIBEGL_NAME_FALLBACK    "libEGL.so.1"
 #define LIBWAYLAND_CLIENT_NAME  "libwayland-client.so.0"
 
 typedef uint32_t (*wl_display_get_global_func)(struct wl_display *display,
@@ -280,7 +282,6 @@ va_GetSurfaceBufferWl(
             drm_format = WL_DRM_FORMAT_YUV444;
             break;
         default:
-            assert(0 && "unsupported subsampling");
             return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
         }
         offsets[0] = 0;
@@ -291,7 +292,6 @@ va_GetSurfaceBufferWl(
         pitches[2] = obj_surface->cb_cr_pitch;
         break;
     default:
-        assert(0 && "unsupported format");
         return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
     }
 
@@ -380,8 +380,11 @@ i965_output_wayland_init(VADriverContextP ctx)
         goto error;
 
     i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME);
-    if (!i965->wl_output->libegl_handle)
-        goto error;
+    if (!i965->wl_output->libegl_handle) {
+        i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME_FALLBACK);
+        if (!i965->wl_output->libegl_handle)
+            goto error;
+    }
 
     dso_handle = i965->wl_output->libegl_handle;
     wl_vtable  = &i965->wl_output->vtable;

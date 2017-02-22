@@ -4179,8 +4179,11 @@ i965_check_alloc_surface_bo(VADriverContextP ctx,
             obj_surface->y_cb_offset = obj_surface->height;
             obj_surface->y_cr_offset = obj_surface->height;
             obj_surface->cb_cr_width = obj_surface->orig_width / 2;
+            obj_surface->width = ALIGN(obj_surface->cb_cr_width * 2, i965->codec_info->min_linear_wpitch) *
+                                 bpp_1stplane;
             obj_surface->cb_cr_height = obj_surface->orig_height / 2;
             obj_surface->cb_cr_pitch = obj_surface->width;
+            region_width = obj_surface->width;
             region_height = obj_surface->height + obj_surface->height / 2;
             break;
 

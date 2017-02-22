@@ -2382,7 +2382,7 @@ gen9_vdenc_mfx_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_co
     }
 
     /* DW 51, reference picture attributes */
-    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* The DW 52-54 is for PAK information (read) */
     OUT_BUFFER_3DW(batch, vdenc_context->pak_statistics_res.bo, 0, 0, 0);
@@ -2397,7 +2397,7 @@ gen9_vdenc_mfx_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_co
     OUT_BCS_BATCH(batch, 0);
 
     /* the DW 62-64 is the 4x Down Scaling surface */
-    OUT_BUFFER_3DW(batch, vdenc_context->scaled_4x_recon_surface_res.bo, 0, 0, 0);
+    OUT_BUFFER_3DW(batch, vdenc_context->scaled_4x_recon_surface_res.bo, 1, 0, 0);
 
     ADVANCE_BCS_BATCH(batch);
 }

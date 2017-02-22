@@ -981,4 +981,14 @@
 
 #define GEN9_CACHE_PTE                  0x02
 
+#define I965_VDIRECTION_TOP_FIELD               1
+#define I965_VDIRECTION_FULL_FRAME              2
+#define I965_VDIRECTION_BOTTOM_FIELD            3
+
+#define VP8_REF_FLAG_NONE                       0
+#define VP8_REF_FLAG_LAST                       1
+#define VP8_REF_FLAG_GOLDEN                     2
+#define VP8_REF_FLAG_ALT                        4
+#define VP8_REF_FLAG_ALL                        (VP8_REF_FLAG_LAST | VP8_REF_FLAG_GOLDEN | VP8_REF_FLAG_ALT)
+
 #endif /* _I965_DEFINES_H_ */

@@ -116,6 +116,8 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     struct object_surface *obj_surface;
     VAStatus status;
     VARectangle rect;
+    int format = VA_RT_FORMAT_YUV420;
+    unsigned int fourcc = VA_FOURCC_NV12;
 
     /* releae the temporary surface */
     if (encoder_context->is_tmp_id) {
@@ -148,6 +150,11 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
         }
     }
 
+    if (VAProfileHEVCMain10 == profile) {
+        format = VA_RT_FORMAT_YUV420_10BPP;
+        fourcc = VA_FOURCC_P010;
+    }
+
     rect.x = 0;
     rect.y = 0;
     rect.width = obj_surface->orig_width;
@@ -160,7 +167,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     status = i965_CreateSurfaces(ctx,
                                  obj_surface->orig_width,
                                  obj_surface->orig_height,
-                                 VA_RT_FORMAT_YUV420,
+                                 format,
                                  1,
                                  &encoder_context->input_yuv_surface);
     ASSERT_RET(status == VA_STATUS_SUCCESS, status);
@@ -168,7 +175,7 @@ intel_encoder_check_yuv_surface(VADriverContextP ctx,
     obj_surface = SURFACE(encoder_context->input_yuv_surface);
     encode_state->input_yuv_object = obj_surface;
     assert(obj_surface);
-    i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+    i965_check_alloc_surface_bo(ctx, obj_surface, 1, fourcc, SUBSAMPLE_YUV420);
     
     dst_surface.base = (struct object_base *)obj_surface;
     dst_surface.type = I965_SURFACE_TYPE_SURFACE;
@@ -1410,6 +1417,8 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
     case VAProfileVP8Version0_3:
         encoder_context->codec = CODEC_VP8;
+        encoder_context->quality_range = ENCODER_QUALITY_RANGE;
+
         break;
 
     case VAProfileHEVCMain:

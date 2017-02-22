@@ -59,9 +59,11 @@ source_c = \
 	gen7_mfd.c		\
 	gen75_mfd.c		\
 	gen75_mfc.c		\
+	gen8_encoder_vp8.c 	\
 	gen8_mfc.c		\
 	gen8_mfd.c		\
 	gen8_vme.c		\
+	gen9_encoder_vp8.c 	\
 	gen9_vme.c		\
 	gen9_mfc.c		\
 	gen9_mfc_hevc.c		\
@@ -80,6 +82,7 @@ source_c = \
 	i965_drv_video.c	\
 	i965_encoder.c		\
 	i965_encoder_utils.c	\
+	i965_encoder_vp8.c	\
 	i965_media.c		\
 	i965_media_h264.c	\
 	i965_media_mpeg2.c	\
@@ -97,7 +100,9 @@ source_c = \
 	intel_memman.c		\
 	object_heap.c		\
 	intel_media_common.c		\
+	vp8_probs.c		\
 	vp9_probs.c             \
+	vpx_quant.c		\
 	gen9_vp9_encoder_kernels.c      \
 	gen9_vp9_const_def.c      \
 	gen9_vp9_encoder.c      \
@@ -126,6 +131,7 @@ source_h = \
 	i965_drv_video.h        \
 	i965_encoder.h		\
 	i965_encoder_utils.h	\
+	i965_encoder_vp8.h	\
 	i965_media.h            \
 	i965_media_h264.h	\
 	i965_media_mpeg2.h      \
@@ -147,6 +153,7 @@ source_h = \
 	object_heap.h           \
 	vp8_probs.h             \
 	vp9_probs.h             \
+	vpx_quant.h		\
 	sysdeps.h		\
 	va_backend_compat.h	\
 	i965_fourcc.h           \
