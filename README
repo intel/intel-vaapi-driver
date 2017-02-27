@@ -43,7 +43,9 @@ VP8     E   CHV+/BSW+
 HEVC    D   CHV+/BSW+
 HEVC    E   SKL+
 VP9     D   BXT+
+VP9     E   KBL+
 HEVC 10bit     D       BXT+
+HEVC 10bit     E       KBL+
 VP9 10bit      D       KBL+
 
 Requirements
