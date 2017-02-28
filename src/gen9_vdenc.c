@@ -3316,9 +3316,9 @@ gen9_vdenc_mfx_avc_ref_idx_state(VADriverContextP ctx,
     fwd_ref_entry = 0x80808080;
     slice_type = intel_avc_enc_slice_type_fixup(slice_param->slice_type);
 
-    for (i = 0; i < MAX(vdenc_context->num_refs[0], 2); i++) {
+    for (i = 0; i < MAX(vdenc_context->num_refs[0], 3); i++) {
         ref_pic = &slice_param->RefPicList0[i];
-        ref_idx_shift = vdenc_context->list_ref_idx[0][i] * 8;
+        ref_idx_shift = i * 8;
 
         fwd_ref_entry &= ~(0xFF << ref_idx_shift);
         fwd_ref_entry += (gen9_vdenc_mfx_get_ref_idx_state(ref_pic, vdenc_context->list_ref_idx[0][i]) << ref_idx_shift);
