@@ -1403,7 +1403,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         encoder_context->codec = CODEC_H264;
 
         if (obj_config->entrypoint == VAEntrypointEncSliceLP)
-            encoder_context->quality_range = ENCODER_QUALITY_RANGE;
+            encoder_context->quality_range = ENCODER_LP_QUALITY_RANGE;
         else if(IS_SKL(i965->intel.device_info)||
                 IS_BXT(i965->intel.device_info)){
             encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
