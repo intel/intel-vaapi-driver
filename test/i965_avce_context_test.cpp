@@ -61,6 +61,10 @@ protected:
         struct i965_driver_data *i965(*this);
         if (not i965) return NULL;
 
+        if (IS_SKL(i965->intel.device_info)||
+            IS_BXT(i965->intel.device_info))
+            is_skl_bxt = true;
+
         struct object_context const *obj_context = CONTEXT(context);
         if (not obj_context) return NULL;
 
@@ -72,6 +76,7 @@ protected:
     VAEntrypoint    entrypoint;
     VAConfigID      config = VA_INVALID_ID;
     VAContextID     context = VA_INVALID_ID;
+    bool            is_skl_bxt = false;
 };
 
 TEST_P(AVCEContextTest, RateControl)
@@ -218,17 +223,6 @@ TEST_P(AVCEContextTest, QualityRange)
         return;
     }
 
-    const std::map<VAProfile, unsigned> qranges = {
-        {VAProfileH264ConstrainedBaseline, entrypoint == VAEntrypointEncSliceLP
-            ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE},
-        {VAProfileH264Main, entrypoint == VAEntrypointEncSliceLP
-            ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE},
-        {VAProfileH264High, entrypoint == VAEntrypointEncSliceLP
-            ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE},
-        {VAProfileH264MultiviewHigh, 1u},
-        {VAProfileH264StereoHigh, 1u},
-    };
-
     ASSERT_NO_FAILURE(
         config = createConfig(profile, entrypoint);
         context = createContext(config, 1, 1);
@@ -236,6 +230,31 @@ TEST_P(AVCEContextTest, QualityRange)
 
     struct intel_encoder_context const *hw_context(*this);
     ASSERT_PTR(hw_context);
+
+    std::map<VAProfile, unsigned> qranges;
+    if(is_skl_bxt) {
+        qranges = {
+            {VAProfileH264ConstrainedBaseline, entrypoint == VAEntrypointEncSliceLP
+                ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE_AVC},
+            {VAProfileH264Main, entrypoint == VAEntrypointEncSliceLP
+                ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE_AVC},
+            {VAProfileH264High, entrypoint == VAEntrypointEncSliceLP
+                ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE_AVC},
+            {VAProfileH264MultiviewHigh, ENCODER_QUALITY_RANGE_AVC},
+            {VAProfileH264StereoHigh, ENCODER_QUALITY_RANGE_AVC},
+        };
+    }else {
+        qranges = {
+            {VAProfileH264ConstrainedBaseline, entrypoint == VAEntrypointEncSliceLP
+                ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE},
+            {VAProfileH264Main, entrypoint == VAEntrypointEncSliceLP
+                ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE},
+            {VAProfileH264High, entrypoint == VAEntrypointEncSliceLP
+                ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE},
+            {VAProfileH264MultiviewHigh, 1u},
+            {VAProfileH264StereoHigh, 1u},
+        };
+    }
 
     EXPECT_EQ(qranges.at(profile), hw_context->quality_range);
 }
