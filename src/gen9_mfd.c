@@ -194,7 +194,8 @@ gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
 
     assert((codec == HCP_CODEC_HEVC) || (codec == HCP_CODEC_VP9));
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         BEGIN_BCS_BATCH(batch, 6);
 
@@ -213,7 +214,8 @@ gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         if(codec == HCP_CODEC_VP9)
             OUT_BCS_BATCH(batch, 1<<6);

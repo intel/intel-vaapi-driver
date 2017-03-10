@@ -166,6 +166,7 @@ struct intel_device_info
     unsigned int is_skylake     : 1; /* gen9 */
     unsigned int is_broxton     : 1; /* gen9 */
     unsigned int is_kabylake    : 1; /* gen9p5 */
+    unsigned int is_glklake     : 1; /* gen9p5 lp*/
 };
 
 struct intel_driver_data 
@@ -236,5 +237,7 @@ struct intel_region
 #define IS_BXT(device_info)             (device_info->is_broxton)
 
 #define IS_KBL(device_info)             (device_info->is_kabylake)
+
+#define IS_GLK(device_info)             (device_info->is_glklake)
 
 #endif /* _INTEL_DRIVER_H_ */
