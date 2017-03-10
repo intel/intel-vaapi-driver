@@ -157,7 +157,8 @@ gen9_hcpe_pipe_mode_select(VADriverContextP ctx,
 
     assert(standard_select == HCP_CODEC_HEVC);
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         BEGIN_BCS_BATCH(batch, 6);
 
@@ -177,7 +178,8 @@ gen9_hcpe_pipe_mode_select(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
@@ -243,7 +245,8 @@ gen9_hcpe_pipe_buf_addr_state(VADriverContextP ctx, struct encode_state *encode_
     dri_bo *bo;
     unsigned int i;
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         BEGIN_BCS_BATCH(batch, 104);
 
@@ -305,7 +308,8 @@ gen9_hcpe_pipe_buf_addr_state(VADriverContextP ctx, struct encode_state *encode_
     OUT_BUFFER_MA_TARGET(NULL);    /* DW 89..91, ignore for HEVC */
     OUT_BUFFER_MA_TARGET(NULL);    /* DW 92..94, ignore for HEVC */
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         for(i = 0;i < 9;i++)
             OUT_BCS_BATCH(batch, 0);
@@ -546,7 +550,8 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
     /* set zero for encoder */
     loop_filter_across_tiles_enabled_flag = 0;
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         BEGIN_BCS_BATCH(batch, 31);
 
@@ -574,7 +579,8 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
                   seq_param->log2_min_luma_coding_block_size_minus3);
     OUT_BCS_BATCH(batch, 0); /* DW 3, ignored */
     OUT_BCS_BATCH(batch,
-                  (IS_KBL(i965->intel.device_info)? 1 : 0) << 27 | /* CU packet structure is 0 for SKL */
+                  ((IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) ?
+				      1 : 0) << 27 | /* CU packet structure is 0 for SKL */
                   seq_param->seq_fields.bits.strong_intra_smoothing_enabled_flag << 26 |
                   pic_param->pic_fields.bits.transquant_bypass_enabled_flag << 25 |
                   seq_param->seq_fields.bits.amp_enabled_flag << 23 |
@@ -628,7 +634,8 @@ gen9_hcpe_hevc_pic_state(VADriverContextP ctx, struct encode_state *encode_state
                   0 << 30 |
                   minframesize);    /* DW 18, min frame size units */
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         int i = 0;
 
@@ -810,7 +817,8 @@ gen9_hcpe_hevc_slice_state(VADriverContextP ctx,
         }
     }
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         BEGIN_BCS_BATCH(batch, 11);
 
@@ -866,7 +874,8 @@ gen9_hcpe_hevc_slice_state(VADriverContextP ctx,
                   0);        /* Ignored for decoding */
     OUT_BCS_BATCH(batch, 0); /* PAK-BSE data start offset */
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
@@ -1176,7 +1185,8 @@ gen9_hcpe_hevc_pak_object(VADriverContextP ctx, int lcu_x, int lcu_y, int isLast
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     int len_in_dwords = 3;
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
         len_in_dwords = 5;
 
     if (batch == NULL)
@@ -1192,7 +1202,8 @@ gen9_hcpe_hevc_pak_object(VADriverContextP ctx, int lcu_x, int lcu_y, int isLast
 
     OUT_BCS_BATCH(batch, (lcu_y << 16) | lcu_x);        /* LCU  for Y*/
 
-    if(IS_KBL(i965->intel.device_info))
+    if(IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info))
     {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
