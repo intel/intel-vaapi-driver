@@ -1722,6 +1722,9 @@ void gen9_avc_set_image_state(VADriverContextP ctx,
 
     pdata = i965_map_gpe_resource(gpe_resource);
 
+    if (!pdata)
+        return;
+
     gen9_avc_init_mfx_avc_img_state(ctx,encode_state,encoder_context,&cmd);
     for(i = 0; i < generic_state->num_pak_passes;i++)
     {
@@ -1761,6 +1764,9 @@ void gen9_avc_set_image_state_non_brc(VADriverContextP ctx,
     struct gen9_mfx_avc_img_state cmd;
 
     pdata = i965_map_gpe_resource(gpe_resource);
+
+    if (!pdata)
+        return;
 
     gen9_avc_init_mfx_avc_img_state(ctx,encode_state,encoder_context,&cmd);
 
@@ -2064,6 +2070,9 @@ gen9_avc_set_curbe_brc_init_reset(VADriverContextP ctx,
 
     cmd = i965_gpe_context_map_curbe(gpe_context);
 
+    if (!cmd)
+        return;
+
     memcpy(cmd,&gen9_avc_brc_init_reset_curbe_init_data,sizeof(gen9_avc_brc_init_reset_curbe_data));
 
     memset(&common_param,0,sizeof(common_param));
@@ -2288,6 +2297,9 @@ gen9_avc_set_curbe_brc_frame_update(VADriverContextP ctx,
     avc_priv_surface = obj_surface->private_data;
 
     cmd = i965_gpe_context_map_curbe(gpe_context);
+
+    if (!cmd)
+        return;
 
     memcpy(cmd,&gen9_avc_frame_brc_update_curbe_init_data,sizeof(gen9_avc_frame_brc_update_curbe_data));
 
@@ -2612,6 +2624,10 @@ gen9_avc_set_curbe_brc_mb_update(VADriverContextP ctx,
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
 
     cmd = i965_gpe_context_map_curbe(gpe_context);
+
+    if (!cmd)
+        return;
+
     memset(cmd,0,sizeof(gen9_avc_mb_brc_curbe_data));
 
     cmd->dw0.cur_frame_type = generic_state->frame_type;
@@ -2990,6 +3006,10 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
     qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
 
     cmd = (gen9_avc_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
+
+    if (!cmd)
+        return;
+
     memset(cmd,0,sizeof(gen9_avc_mbenc_curbe_data));
 
     if(mbenc_i_frame_dist_in_use)
@@ -5673,13 +5693,18 @@ static void
 gen9_avc_vme_context_destroy(void * context)
 {
     struct encoder_vme_mfc_context *vme_context = (struct encoder_vme_mfc_context *)context;
-    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
-    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
-    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
-    struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
+    struct generic_encoder_context *generic_ctx;
+    struct i965_avc_encoder_context *avc_ctx;
+    struct generic_enc_codec_state *generic_state;
+    struct avc_enc_state *avc_state;
 
     if (!vme_context)
         return;
+
+    generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
+    avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
+    generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
+    avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
 
     gen9_avc_kernel_destroy(vme_context);
 
@@ -7264,13 +7289,15 @@ static void
 gen9_avc_pak_context_destroy(void * context)
 {
     struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)context;
-    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
-    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
-
+    struct generic_encoder_context * generic_ctx;
+    struct i965_avc_encoder_context * avc_ctx;
     int i = 0;
 
     if (!pak_context)
         return;
+
+    generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
+    avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
 
     // other things
     i965_free_gpe_resource(&generic_ctx->res_reconstructed_surface);
