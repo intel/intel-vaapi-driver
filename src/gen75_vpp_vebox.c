@@ -68,7 +68,7 @@ vpp_surface_convert(VADriverContextP ctx, struct object_surface *src_obj_surf,
     src_rect.x = dst_rect.x = 0;
     src_rect.y = dst_rect.y = 0; 
     src_rect.width  = dst_rect.width  = src_obj_surf->orig_width; 
-    src_rect.height = dst_rect.height = dst_obj_surf->orig_height;
+    src_rect.height = dst_rect.height = src_obj_surf->orig_height;
 
     struct i965_surface src_surface, dst_surface;
     src_surface.base  = (struct object_base *)src_obj_surf;
