@@ -54,8 +54,8 @@ void I965TestEnvironment::SetUp()
     ASSERT_EQ(-1, m_handle);
     ASSERT_PTR_NULL(m_vaDisplay);
 
-    m_handle = open("/dev/dri/renderD128", O_RDWR);
-    if (m_handle < 0)
+//    m_handle = open("/dev/dri/renderD128", O_RDWR);
+    //if (m_handle < 0)
         m_handle = open("/dev/dri/card0", O_RDWR);
 
     m_vaDisplay = vaGetDisplayDRM(m_handle);

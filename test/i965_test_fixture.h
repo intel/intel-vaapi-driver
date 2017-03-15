@@ -29,12 +29,22 @@
 
 #include <string>
 #include <vector>
+#include <va/va.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#ifdef IN_LIBVA
+# include "va/drm/va_drm.h"
+#else
+# include <va/va_drm.h>
+#endif
+#include "intel_bufmgr.h"
 
-typedef std::vector<VASurfaceID> Surfaces;
-typedef std::vector<VASurfaceAttrib> SurfaceAttribs;
 typedef std::vector<VAConfigAttrib> ConfigAttribs;
 typedef std::vector<VABufferID> Buffers;
 
+typedef std::vector<VASurfaceID> Surfaces;
+typedef std::vector<VASurfaceAttrib> SurfaceAttribs;
 /**
  * This test fixture defines various operators to make it implicitly convertible
  * to a VADriverContextP, VADisplay, VADisplayContextP, and i965_driver_data*.
