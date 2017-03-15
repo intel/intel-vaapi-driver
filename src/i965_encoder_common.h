@@ -69,6 +69,8 @@ struct intel_encoder_context;
 
 #define INTEL_VME_MIN_ALLOWED_WIDTH_HEIGHT           48
 
+#define INTEL_ROI_NUM				     4
+
 extern const unsigned int table_enc_search_path[2][8][16];
 
 // BRC Flag in BRC Init Kernel
@@ -456,7 +458,7 @@ struct generic_enc_codec_state {
     uint32_t num_roi;
     uint32_t max_delta_qp;
     uint32_t min_delta_qp;
-    struct intel_roi roi[3];
+    struct intel_roi roi[INTEL_ROI_NUM];
 
 };
 
