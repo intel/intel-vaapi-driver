@@ -14,6 +14,7 @@ Version 1.8.0 - DD.Mar.2017
 * Fix the EU number in media pipeline
 * Fix the wrong bit shift in H.264 encoder
 * Fix the 48bit graphics address on BSW+
+* Fix building on NetBSD
 
 Version 1.7.3 - 10.Nov.2016
 * Add support for HEVC 10bit encoding on KBL
