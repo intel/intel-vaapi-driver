@@ -161,6 +161,14 @@ typedef enum _INTEL_MEDIA_STATE_TYPE
     INTEL_NUM_MEDIA_STATES                               = 61
 } INTEL_MEDIA_STATE_TYPE;
 
+typedef enum
+{
+    INTEL_ROLLING_I_DISABLED  = 0,
+    INTEL_ROLLING_I_COLUMN    = 1,
+    INTEL_ROLLING_I_ROW       = 2,
+    INTEL_ROLLING_I_SQUARE    = 3
+} INTEL_ROLLING_I_SETTING;
+
 struct encoder_kernel_parameter
 {
     unsigned int curbe_size;

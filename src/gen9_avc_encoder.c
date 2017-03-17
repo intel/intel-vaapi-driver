@@ -901,8 +901,8 @@ gen9_avc_allocate_resources(VADriverContextP ctx,
         if (!allocate_flag)
             goto failed_allocation;
 
-        width = ALIGN(64,64);
-        height= 44;
+        width = ALIGN(avc_state->brc_const_data_surface_width,64);
+        height= avc_state->brc_const_data_surface_height;
         i965_free_gpe_resource(&avc_ctx->res_brc_const_data_buffer);
         allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                      &avc_ctx->res_brc_const_data_buffer,
@@ -957,7 +957,7 @@ gen9_avc_allocate_resources(VADriverContextP ctx,
             goto failed_allocation;
 
         i965_free_gpe_resource(&avc_ctx->res_mbbrc_const_data_buffer);
-        size = 16 * 52 * 4;
+        size = 16 * AVC_QP_MAX * 4;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
                                  &avc_ctx->res_mbbrc_const_data_buffer,
                                  ALIGN(size,0x1000),
@@ -965,6 +965,18 @@ gen9_avc_allocate_resources(VADriverContextP ctx,
         if (!allocate_flag)
             goto failed_allocation;
 
+        if(avc_state->decouple_mbenc_curbe_from_brc_enable)
+        {
+            i965_free_gpe_resource(&avc_ctx->res_mbenc_brc_buffer);
+            size = avc_state->mbenc_brc_buffer_size;
+            allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                     &avc_ctx->res_mbenc_brc_buffer,
+                                     ALIGN(size,0x1000),
+                                     "mbenc brc buffer");
+            if (!allocate_flag)
+                goto failed_allocation;
+            i965_zero_gpe_resource(&avc_ctx->res_mbenc_brc_buffer);
+        }
         generic_state->brc_allocated = 1;
     }
 
@@ -1115,6 +1127,7 @@ gen9_avc_free_resources(struct encoder_vme_mfc_context * vme_context)
     i965_free_gpe_resource(&avc_ctx->res_brc_dist_data_surface);
     i965_free_gpe_resource(&avc_ctx->res_mbbrc_roi_surface);
     i965_free_gpe_resource(&avc_ctx->res_mbbrc_mb_qp_data_surface);
+    i965_free_gpe_resource(&avc_ctx->res_mbenc_brc_buffer);
     i965_free_gpe_resource(&avc_ctx->res_mb_qp_data_surface);
     i965_free_gpe_resource(&avc_ctx->res_mbbrc_const_data_buffer);
     i965_free_gpe_resource(&avc_ctx->res_mbenc_slice_map_surface);
@@ -1143,6 +1156,8 @@ gen9_avc_run_kernel_media_object(VADriverContextP ctx,
                              int media_function,
                              struct gpe_media_object_parameter *param)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
 
@@ -1161,13 +1176,13 @@ gen9_avc_run_kernel_media_object(VADriverContextP ctx,
     mi_store_data_imm.bo = status_buffer->bo;
     mi_store_data_imm.offset = status_buffer->media_index_offset;
     mi_store_data_imm.dw0 = media_function;
-    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
+    gpe->mi_store_data_imm(ctx, batch, &mi_store_data_imm);
 
-    gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
-    gen8_gpe_media_object(ctx, gpe_context, batch, param);
-    gen8_gpe_media_state_flush(ctx, gpe_context, batch);
+    gpe->pipeline_setup(ctx, gpe_context, batch);
+    gpe->media_object(ctx, gpe_context, batch, param);
+    gpe->media_state_flush(ctx, gpe_context, batch);
 
-    gen9_gpe_pipeline_end(ctx, gpe_context, batch);
+    gpe->pipeline_end(ctx, gpe_context, batch);
 
     intel_batchbuffer_end_atomic(batch);
 
@@ -1181,6 +1196,8 @@ gen9_avc_run_kernel_media_object_walker(VADriverContextP ctx,
                                     int media_function,
                                     struct gpe_media_object_walker_parameter *param)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
 
@@ -1200,13 +1217,13 @@ gen9_avc_run_kernel_media_object_walker(VADriverContextP ctx,
     mi_store_data_imm.bo = status_buffer->bo;
     mi_store_data_imm.offset = status_buffer->media_index_offset;
     mi_store_data_imm.dw0 = media_function;
-    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
+    gpe->mi_store_data_imm(ctx, batch, &mi_store_data_imm);
 
-    gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
-    gen8_gpe_media_object_walker(ctx, gpe_context, batch, param);
-    gen8_gpe_media_state_flush(ctx, gpe_context, batch);
+    gpe->pipeline_setup(ctx, gpe_context, batch);
+    gpe->media_object_walker(ctx, gpe_context, batch, param);
+    gpe->media_state_flush(ctx, gpe_context, batch);
 
-    gen9_gpe_pipeline_end(ctx, gpe_context, batch);
+    gpe->pipeline_end(ctx, gpe_context, batch);
 
     intel_batchbuffer_end_atomic(batch);
 
@@ -1358,6 +1375,47 @@ gen9_avc_set_curbe_scaling4x(VADriverContextP ctx,
 }
 
 static void
+gen95_avc_set_curbe_scaling4x(VADriverContextP ctx,
+                           struct encode_state *encode_state,
+                           struct i965_gpe_context *gpe_context,
+                           struct intel_encoder_context *encoder_context,
+                           void *param)
+{
+    gen95_avc_scaling4x_curbe_data *curbe_cmd;
+    struct scaling_param *surface_param = (struct scaling_param *)param;
+
+    curbe_cmd = i965_gpe_context_map_curbe(gpe_context);
+
+    if (!curbe_cmd)
+        return;
+
+    memset(curbe_cmd, 0, sizeof(gen95_avc_scaling4x_curbe_data));
+
+    curbe_cmd->dw0.input_picture_width  = surface_param->input_frame_width;
+    curbe_cmd->dw0.input_picture_height = surface_param->input_frame_height;
+
+    curbe_cmd->dw1.input_y_bti_frame = GEN9_AVC_SCALING_FRAME_SRC_Y_INDEX;
+    curbe_cmd->dw2.output_y_bti_frame = GEN9_AVC_SCALING_FRAME_DST_Y_INDEX;
+
+    if(surface_param->enable_mb_flatness_check)
+        curbe_cmd->dw5.flatness_threshold = 128;
+    curbe_cmd->dw6.enable_mb_flatness_check = surface_param->enable_mb_flatness_check;
+    curbe_cmd->dw6.enable_mb_variance_output = surface_param->enable_mb_variance_output;
+    curbe_cmd->dw6.enable_mb_pixel_average_output = surface_param->enable_mb_pixel_average_output;
+    curbe_cmd->dw6.enable_block8x8_statistics_output = surface_param->blk8x8_stat_enabled;
+
+    if (curbe_cmd->dw6.enable_mb_flatness_check ||
+        curbe_cmd->dw6.enable_mb_variance_output ||
+        curbe_cmd->dw6.enable_mb_pixel_average_output)
+    {
+        curbe_cmd->dw8.mbv_proc_stat_bti_frame = GEN9_AVC_SCALING_FRAME_MBVPROCSTATS_DST_INDEX;
+    }
+
+    i965_gpe_context_unmap_curbe(gpe_context);
+    return;
+}
+
+static void
 gen9_avc_set_curbe_scaling2x(VADriverContextP ctx,
                            struct encode_state *encode_state,
                            struct i965_gpe_context *gpe_context,
@@ -1442,6 +1500,8 @@ gen9_avc_kernel_scaling(VADriverContextP ctx,
                         struct intel_encoder_context *encoder_context,
                         int hme_type)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -1547,8 +1607,8 @@ gen9_avc_kernel_scaling(VADriverContextP ctx,
 
     gpe_context = &(avc_ctx->context_scaling.gpe_contexts[kernel_idx]);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     if(surface_param.use_32x_scaling)
     {
@@ -1587,7 +1647,7 @@ gen9_avc_kernel_scaling(VADriverContextP ctx,
     generic_ctx->pfn_send_scaling_surface(ctx,encode_state,gpe_context,encoder_context,&surface_param);
 
     /* setup the interface data */
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
     if(surface_param.use_32x_scaling)
@@ -1793,6 +1853,96 @@ void gen9_avc_set_image_state_non_brc(VADriverContextP ctx,
 }
 
 static void
+gen95_avc_calc_lambda_table(VADriverContextP ctx,
+                            struct encode_state *encode_state,
+                            struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
+    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
+    unsigned int value,inter,intra;
+    unsigned int rounding_value = 0;
+    unsigned int size = 0;
+    int i = 0;
+    int col = 0;
+    unsigned int * lambda_table = (unsigned int *)(avc_state->lamda_value_lut);
+
+    value = 0;
+    inter = 0;
+    intra = 0;
+
+    size = AVC_QP_MAX * 2 * sizeof(unsigned int);
+    switch(generic_state->frame_type)
+    {
+    case SLICE_TYPE_I:
+        memcpy((unsigned char *)lambda_table,(unsigned char *)&gen95_avc_tq_lambda_i_frame[0][0],size * sizeof(unsigned char));
+        break;
+    case SLICE_TYPE_P:
+        memcpy((unsigned char *)lambda_table,(unsigned char *)&gen95_avc_tq_lambda_p_frame[0][0],size * sizeof(unsigned char));
+        break;
+    case SLICE_TYPE_B:
+        memcpy((unsigned char *)lambda_table,(unsigned char *)&gen95_avc_tq_lambda_b_frame[0][0],size * sizeof(unsigned char));
+        break;
+    default:
+        assert(0);
+        break;
+    }
+
+    for(i = 0; i < AVC_QP_MAX ; i++)
+    {
+        for(col = 0; col < 2; col++)
+        {
+            value = *(lambda_table + i * 2 + col);
+            intra = value >> 16;
+
+            if(intra < GEN95_AVC_MAX_LAMBDA)
+            {
+                if(intra == 0xfffa)
+                {
+                    intra = 0xf000 + GEN95_AVC_DEFAULT_TRELLIS_QUANT_INTRA_ROUNDING;
+                }
+            }
+
+            intra = intra << 16;
+            inter = value & 0xffff;
+
+            if(inter < GEN95_AVC_MAX_LAMBDA)
+            {
+                if(inter == 0xffef)
+                {
+                    if(generic_state->frame_type == SLICE_TYPE_P)
+                    {
+                        if(avc_state->rounding_inter_p == AVC_INVALID_ROUNDING_VALUE)
+                            rounding_value = gen9_avc_inter_rounding_p[generic_state->preset];
+                        else
+                            rounding_value = avc_state->rounding_inter_p;
+                    }else if(generic_state->frame_type == SLICE_TYPE_B)
+                    {
+                        if(pic_param->pic_fields.bits.reference_pic_flag)
+                        {
+                            if(avc_state->rounding_inter_b_ref == AVC_INVALID_ROUNDING_VALUE)
+                                rounding_value = gen9_avc_inter_rounding_b_ref[generic_state->preset];
+                            else
+                                rounding_value = avc_state->rounding_inter_b_ref;
+                        }
+                        else
+                        {
+                            if(avc_state->rounding_inter_b == AVC_INVALID_ROUNDING_VALUE)
+                                rounding_value = gen9_avc_inter_rounding_b[generic_state->preset];
+                            else
+                                rounding_value = avc_state->rounding_inter_b;
+                        }
+                    }
+                }
+                inter = 0xf000 + rounding_value;
+            }
+            *(lambda_table + i *2 + col) = intra + inter;
+        }
+    }
+}
+
+static void
 gen9_avc_init_brc_const_data(VADriverContextP ctx,
                              struct encode_state *encode_state,
                              struct intel_encoder_context *encoder_context)
@@ -1850,7 +2000,7 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
 
     if((generic_state->frame_type != SLICE_TYPE_I) && avc_state->non_ftq_skip_threshold_lut_input_enable)
     {
-        for(i = 0; i< 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data + 1 + (i * 2)) = (unsigned char)i965_avc_calc_skip_value(block_based_skip_enable,transform_8x8_mode_flag,avc_state->non_ftq_skip_threshold_lut[i]);
         }
@@ -1911,7 +2061,7 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
 
     if(avc_state->old_mode_cost_enable)
     {   data_tmp = data;
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data_tmp +3) = (unsigned int)gen9_avc_old_intra_mode_cost[i];
             data_tmp += 16;
@@ -1920,7 +2070,7 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
 
     if(avc_state->ftq_skip_threshold_lut_input_enable)
     {
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data + (i * 32) + 24) =
             *(data + (i * 32) + 25) =
@@ -1943,11 +2093,24 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
     size = 64;
     if(avc_state->adaptive_intra_scaling_enable)
     {
-        memcpy(data,(unsigned char *)&gen9_avc_adaptive_intra_scaling_factor,size * sizeof(unsigned char));
+        memcpy(data,(unsigned char *)gen9_avc_adaptive_intra_scaling_factor,size * sizeof(unsigned char));
     }else
     {
-        memcpy(data,(unsigned char *)&gen9_avc_intra_scaling_factor,size * sizeof(unsigned char));
+        memcpy(data,(unsigned char *)gen9_avc_intra_scaling_factor,size * sizeof(unsigned char));
     }
+
+    if (IS_KBL(i965->intel.device_info))
+    {
+        data += size;
+
+        size = 512;
+        memcpy(data,(unsigned char *)gen95_avc_lambda_data,size * sizeof(unsigned char));
+        data += size;
+
+        size = 64;
+        memcpy(data,(unsigned char *)gen95_avc_ftq25,size * sizeof(unsigned char));
+    }
+
     i965_unmap_gpe_resource(gpe_resource);
 }
 
@@ -2004,7 +2167,7 @@ gen9_avc_init_brc_const_data_old(VADriverContextP ctx,
 
     if((generic_state->frame_type != SLICE_TYPE_I) && avc_state->non_ftq_skip_threshold_lut_input_enable)
     {
-        for(i = 0; i< 52 ; i++)
+        for(i = 0; i< AVC_QP_MAX ; i++)
         {
             *(data + 1 + (i * 2)) = (unsigned char)i965_avc_calc_skip_value(block_based_skip_enable,transform_8x8_mode_flag,avc_state->non_ftq_skip_threshold_lut[i]);
         }
@@ -2023,7 +2186,7 @@ gen9_avc_init_brc_const_data_old(VADriverContextP ctx,
 
     if(avc_state->old_mode_cost_enable)
     {   data_tmp = data;
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data_tmp +3) = (unsigned int)gen9_avc_old_intra_mode_cost[i];
             data_tmp += 16;
@@ -2032,7 +2195,7 @@ gen9_avc_init_brc_const_data_old(VADriverContextP ctx,
 
     if(avc_state->ftq_skip_threshold_lut_input_enable)
     {
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data + (i * 32) + 24) =
             *(data + (i * 32) + 25) =
@@ -2234,6 +2397,8 @@ gen9_avc_kernel_brc_init_reset(VADriverContextP ctx,
                                struct encode_state *encode_state,
                                struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -2252,14 +2417,14 @@ gen9_avc_kernel_brc_init_reset(VADriverContextP ctx,
 
     gpe_context = &(avc_ctx->context_brc.gpe_contexts[kernel_idx]);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     generic_ctx->pfn_set_curbe_brc_init_reset(ctx,encode_state,gpe_context,encoder_context,NULL);
 
     generic_ctx->pfn_send_brc_init_reset_surface(ctx,encode_state,gpe_context,encoder_context,NULL);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&media_object_param, 0, sizeof(media_object_param));
     memset(&media_object_inline_data, 0, sizeof(media_object_inline_data));
@@ -2398,11 +2563,19 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                        struct intel_encoder_context *encoder_context,
                                        void * param_brc)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct brc_param * param = (struct brc_param *)param_brc ;
     struct i965_gpe_context * gpe_context_mbenc = param->gpe_context_mbenc;
+    struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
+    unsigned char is_g95 = 0;
 
+    if (IS_SKL(i965->intel.device_info)||
+        IS_BXT(i965->intel.device_info))
+        is_g95 = 0;
+    else if (IS_KBL(i965->intel.device_info))
+        is_g95 = 1;
 
     /* brc history buffer*/
     gen9_add_buffer_gpe_surface(ctx,
@@ -2411,7 +2584,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 0,
                                 avc_ctx->res_brc_history_buffer.size,
                                 0,
-                                GEN9_AVC_FRAME_BRC_UPDATE_HISTORY_INDEX);
+                                (is_g95?GEN95_AVC_FRAME_BRC_UPDATE_HISTORY_INDEX:GEN9_AVC_FRAME_BRC_UPDATE_HISTORY_INDEX));
 
     /* previous pak buffer*/
     gen9_add_buffer_gpe_surface(ctx,
@@ -2420,7 +2593,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 0,
                                 avc_ctx->res_brc_pre_pak_statistics_output_buffer.size,
                                 0,
-                                GEN9_AVC_FRAME_BRC_UPDATE_PAK_STATISTICS_OUTPUT_INDEX);
+                                (is_g95?GEN95_AVC_FRAME_BRC_UPDATE_PAK_STATISTICS_OUTPUT_INDEX:GEN9_AVC_FRAME_BRC_UPDATE_PAK_STATISTICS_OUTPUT_INDEX));
 
     /* image state command buffer read only*/
     gen9_add_buffer_gpe_surface(ctx,
@@ -2429,7 +2602,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 0,
                                 avc_ctx->res_brc_image_state_read_buffer.size,
                                 0,
-                                GEN9_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_READ_INDEX);
+                                (is_g95?GEN95_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_READ_INDEX:GEN9_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_READ_INDEX));
 
     /* image state command buffer write only*/
     gen9_add_buffer_gpe_surface(ctx,
@@ -2438,24 +2611,37 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 0,
                                 avc_ctx->res_brc_image_state_write_buffer.size,
                                 0,
-                                GEN9_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_WRITE_INDEX);
+                                (is_g95?GEN95_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_WRITE_INDEX:GEN9_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_WRITE_INDEX));
 
-    /*  Mbenc curbe input buffer */
-    gen9_add_dri_buffer_gpe_surface(ctx,
+    if(avc_state->mbenc_brc_buffer_size > 0)
+    {
+        gen9_add_buffer_gpe_surface(ctx,
                                     gpe_context,
-                                    gpe_context_mbenc->dynamic_state.bo,
+                                    &(avc_ctx->res_mbenc_brc_buffer),
                                     0,
-                                    ALIGN(gpe_context_mbenc->curbe.length, 64),
-                                    gpe_context_mbenc->curbe.offset,
-                                    GEN9_AVC_FRAME_BRC_UPDATE_MBENC_CURBE_READ_INDEX);
-    /* Mbenc curbe output buffer */
-    gen9_add_dri_buffer_gpe_surface(ctx,
-                                    gpe_context,
-                                    gpe_context_mbenc->dynamic_state.bo,
+                                    avc_ctx->res_mbenc_brc_buffer.size,
                                     0,
-                                    ALIGN(gpe_context_mbenc->curbe.length, 64),
-                                    gpe_context_mbenc->curbe.offset,
-                                    GEN9_AVC_FRAME_BRC_UPDATE_MBENC_CURBE_WRITE_INDEX);
+                                    GEN95_AVC_FRAME_BRC_UPDATE_MBENC_CURBE_WRITE_INDEX);
+    }
+    else
+    {
+        /*  Mbenc curbe input buffer */
+        gen9_add_dri_buffer_gpe_surface(ctx,
+                                        gpe_context,
+                                        gpe_context_mbenc->dynamic_state.bo,
+                                        0,
+                                        ALIGN(gpe_context_mbenc->curbe.length, 64),
+                                        gpe_context_mbenc->curbe.offset,
+                                        GEN9_AVC_FRAME_BRC_UPDATE_MBENC_CURBE_READ_INDEX);
+        /* Mbenc curbe output buffer */
+        gen9_add_dri_buffer_gpe_surface(ctx,
+                                        gpe_context,
+                                        gpe_context_mbenc->dynamic_state.bo,
+                                        0,
+                                        ALIGN(gpe_context_mbenc->curbe.length, 64),
+                                        gpe_context_mbenc->curbe.offset,
+                                        GEN9_AVC_FRAME_BRC_UPDATE_MBENC_CURBE_WRITE_INDEX);
+    }
 
     /* AVC_ME Distortion 2D surface buffer,input/output. is it res_brc_dist_data_surface*/
     gen9_add_buffer_2d_gpe_surface(ctx,
@@ -2463,7 +2649,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                    &avc_ctx->res_brc_dist_data_surface,
                                    1,
                                    I965_SURFACEFORMAT_R8_UNORM,
-                                   GEN9_AVC_FRAME_BRC_UPDATE_DISTORTION_INDEX);
+                                   (is_g95?GEN95_AVC_FRAME_BRC_UPDATE_DISTORTION_INDEX:GEN9_AVC_FRAME_BRC_UPDATE_DISTORTION_INDEX));
 
     /* BRC const data 2D surface buffer */
     gen9_add_buffer_2d_gpe_surface(ctx,
@@ -2471,7 +2657,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                    &avc_ctx->res_brc_const_data_buffer,
                                    1,
                                    I965_SURFACEFORMAT_R8_UNORM,
-                                   GEN9_AVC_FRAME_BRC_UPDATE_CONSTANT_DATA_INDEX);
+                                   (is_g95?GEN95_AVC_FRAME_BRC_UPDATE_CONSTANT_DATA_INDEX:GEN9_AVC_FRAME_BRC_UPDATE_CONSTANT_DATA_INDEX));
 
     /* MB statistical data surface*/
     gen9_add_buffer_gpe_surface(ctx,
@@ -2480,7 +2666,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 0,
                                 avc_ctx->res_mb_status_buffer.size,
                                 0,
-                                GEN9_AVC_FRAME_BRC_UPDATE_MB_STATUS_INDEX);
+                                (is_g95?GEN95_AVC_FRAME_BRC_UPDATE_MB_STATUS_INDEX:GEN9_AVC_FRAME_BRC_UPDATE_MB_STATUS_INDEX));
 
     return;
 }
@@ -2491,13 +2677,15 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
                                  struct intel_encoder_context *encoder_context)
 
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
 
-    struct i965_gpe_context *gpe_context;
+    struct i965_gpe_context *gpe_context = NULL;
     struct gpe_media_object_parameter media_object_param;
     struct gpe_media_object_inline_data media_object_inline_data;
     int media_function = 0;
@@ -2554,7 +2742,7 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
     }
 
     gpe_context = &(avc_ctx->context_mbenc.gpe_contexts[kernel_idx]);
-    gen8_gpe_context_init(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
 
     memset(&curbe_mbenc_param,0,sizeof(struct mbenc_param));
 
@@ -2566,8 +2754,9 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
 
     /* set curbe mbenc*/
     generic_ctx->pfn_set_curbe_mbenc(ctx,encode_state,gpe_context,encoder_context,&curbe_mbenc_param);
-    avc_state->mbenc_curbe_set_in_brc_update = 1;
 
+    // gen95 set curbe out of the brc. gen9 do it here
+    avc_state->mbenc_curbe_set_in_brc_update = !avc_state->decouple_mbenc_curbe_from_brc_enable;
     /*begin brc frame update*/
     memset(&curbe_brc_param,0,sizeof(struct brc_param));
     curbe_brc_param.gpe_context_mbenc = gpe_context;
@@ -2576,8 +2765,8 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
     gpe_context = &(avc_ctx->context_brc.gpe_contexts[kernel_idx]);
     curbe_brc_param.gpe_context_brc_frame_update = gpe_context;
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
     /*brc copy ignored*/
 
     /* set curbe frame update*/
@@ -2597,7 +2786,7 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
     generic_ctx->pfn_send_brc_frame_update_surface(ctx,encode_state,gpe_context,encoder_context,&curbe_brc_param);
 
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&media_object_param, 0, sizeof(media_object_param));
     memset(&media_object_inline_data, 0, sizeof(media_object_inline_data));
@@ -2707,6 +2896,8 @@ gen9_avc_kernel_brc_mb_update(VADriverContextP ctx,
                               struct intel_encoder_context *encoder_context)
 
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -2722,8 +2913,8 @@ gen9_avc_kernel_brc_mb_update(VADriverContextP ctx,
     kernel_idx = GEN9_AVC_KERNEL_BRC_MB_UPDATE;
     gpe_context = &(avc_ctx->context_brc.gpe_contexts[kernel_idx]);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     /* set curbe brc mb update*/
     generic_ctx->pfn_set_curbe_brc_mb_update(ctx,encode_state,gpe_context,encoder_context,NULL);
@@ -2733,7 +2924,7 @@ gen9_avc_kernel_brc_mb_update(VADriverContextP ctx,
     generic_ctx->pfn_send_brc_mb_update_surface(ctx,encode_state,gpe_context,encoder_context,NULL);
 
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
     /* the scaling is based on 8x8 blk level */
@@ -2908,7 +3099,7 @@ gen9_avc_load_mb_brc_const_data(VADriverContextP ctx,
     switch(generic_state->frame_type)
     {
     case SLICE_TYPE_I:
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             if(avc_state->old_mode_cost_enable)
                 *data = (unsigned int)gen9_avc_old_intra_mode_cost[i];
@@ -2917,7 +3108,7 @@ gen9_avc_load_mb_brc_const_data(VADriverContextP ctx,
         break;
     case SLICE_TYPE_P:
     case SLICE_TYPE_B:
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             if(generic_state->frame_type == SLICE_TYPE_P)
             {
@@ -2952,7 +3143,7 @@ gen9_avc_load_mb_brc_const_data(VADriverContextP ctx,
     }
 
     data = data_tmp;
-    for(i = 0; i < 52 ; i++)
+    for(i = 0; i < AVC_QP_MAX ; i++)
     {
         if(avc_state->ftq_skip_threshold_lut_input_enable)
         {
@@ -2985,7 +3176,7 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
                          void * param)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
-    gen9_avc_mbenc_curbe_data *cmd;
+    union { gen9_avc_mbenc_curbe_data *g9; gen95_avc_mbenc_curbe_data *g95;} cmd;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
@@ -3000,166 +3191,210 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
     unsigned char me_method = 0;
     unsigned int mbenc_i_frame_dist_in_use = curbe_param->mbenc_i_frame_dist_in_use;
     unsigned int table_idx = 0;
+    unsigned char is_g9 = 0;
+    unsigned char is_g95 = 0;
+    unsigned int curbe_size = 0;
 
     unsigned int preset = generic_state->preset;
-    me_method = (generic_state->frame_type == SLICE_TYPE_B)? gen9_avc_b_me_method[preset]:gen9_avc_p_me_method[preset];
-    qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
-
-    cmd = (gen9_avc_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
-
-    if (!cmd)
-        return;
-
-    memset(cmd,0,sizeof(gen9_avc_mbenc_curbe_data));
-
-    if(mbenc_i_frame_dist_in_use)
+    if (IS_SKL(i965->intel.device_info)||
+        IS_BXT(i965->intel.device_info))
     {
-        memcpy(cmd,gen9_avc_mbenc_curbe_i_frame_dist_init_data,sizeof(gen9_avc_mbenc_curbe_data));
+        cmd.g9 = (gen9_avc_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
+        if(!cmd.g9)
+            return;
+        is_g9 = 1;
+        curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+        memset(cmd.g9,0,curbe_size);
 
-    }else
-    {
-        switch(generic_state->frame_type)
+        if(mbenc_i_frame_dist_in_use)
         {
-        case SLICE_TYPE_I:
-            memcpy(cmd,gen9_avc_mbenc_curbe_normal_i_frame_init_data,sizeof(gen9_avc_mbenc_curbe_data));
-            break;
-        case SLICE_TYPE_P:
-            memcpy(cmd,gen9_avc_mbenc_curbe_normal_p_frame_init_data,sizeof(gen9_avc_mbenc_curbe_data));
-            break;
-        case SLICE_TYPE_B:
-            memcpy(cmd,gen9_avc_mbenc_curbe_normal_b_frame_init_data,sizeof(gen9_avc_mbenc_curbe_data));
-            break;
-        default:
-            assert(0);
-        }
-
-    }
-    cmd->dw0.adaptive_enable = gen9_avc_enable_adaptive_search[preset];
-    cmd->dw37.adaptive_enable = gen9_avc_enable_adaptive_search[preset];
-    cmd->dw0.t8x8_flag_for_inter_enable = pic_param->pic_fields.bits.transform_8x8_mode_flag;
-    cmd->dw37.t8x8_flag_for_inter_enable = pic_param->pic_fields.bits.transform_8x8_mode_flag;
-
-    cmd->dw2.max_len_sp = gen9_avc_max_len_sp[preset];
-    cmd->dw38.max_len_sp = 0;
-
-    cmd->dw3.src_access = 0;
-    cmd->dw3.ref_access = 0;
-
-    if(avc_state->ftq_enable && (generic_state->frame_type != SLICE_TYPE_I))
-    {
-        if(avc_state->ftq_override)
-        {
-            cmd->dw3.ftq_enable = avc_state->ftq_enable;
+            memcpy(cmd.g9,gen9_avc_mbenc_curbe_i_frame_dist_init_data,curbe_size);
 
         }else
         {
+            switch(generic_state->frame_type)
+            {
+            case SLICE_TYPE_I:
+                memcpy(cmd.g9,gen9_avc_mbenc_curbe_normal_i_frame_init_data,curbe_size);
+                break;
+            case SLICE_TYPE_P:
+                memcpy(cmd.g9,gen9_avc_mbenc_curbe_normal_p_frame_init_data,curbe_size);
+                break;
+            case SLICE_TYPE_B:
+                memcpy(cmd.g9,gen9_avc_mbenc_curbe_normal_b_frame_init_data,curbe_size);
+                break;
+            default:
+                assert(0);
+            }
+
+        }
+    }
+    else if (IS_KBL(i965->intel.device_info))
+    {
+        cmd.g95 = (gen95_avc_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
+        if(!cmd.g95)
+            return;
+        is_g95 = 1;
+        curbe_size = sizeof(gen95_avc_mbenc_curbe_data);
+        memset(cmd.g9,0,curbe_size);
+
+        if(mbenc_i_frame_dist_in_use)
+        {
+            memcpy(cmd.g95,gen95_avc_mbenc_curbe_i_frame_dist_init_data,curbe_size);
+
+        }else
+        {
+            switch(generic_state->frame_type)
+            {
+            case SLICE_TYPE_I:
+                memcpy(cmd.g95,gen95_avc_mbenc_curbe_normal_i_frame_init_data,curbe_size);
+                break;
+            case SLICE_TYPE_P:
+                memcpy(cmd.g95,gen95_avc_mbenc_curbe_normal_p_frame_init_data,curbe_size);
+                break;
+            case SLICE_TYPE_B:
+                memcpy(cmd.g95,gen95_avc_mbenc_curbe_normal_b_frame_init_data,curbe_size);
+                break;
+            default:
+                assert(0);
+            }
+
+        }
+    }
+
+    me_method = (generic_state->frame_type == SLICE_TYPE_B)? gen9_avc_b_me_method[preset]:gen9_avc_p_me_method[preset];
+    qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+
+    cmd.g9->dw0.adaptive_enable = gen9_avc_enable_adaptive_search[preset];
+    cmd.g9->dw37.adaptive_enable = gen9_avc_enable_adaptive_search[preset];
+    cmd.g9->dw0.t8x8_flag_for_inter_enable = pic_param->pic_fields.bits.transform_8x8_mode_flag;
+    cmd.g9->dw37.t8x8_flag_for_inter_enable = pic_param->pic_fields.bits.transform_8x8_mode_flag;
+
+    cmd.g9->dw2.max_len_sp = gen9_avc_max_len_sp[preset];
+    cmd.g9->dw38.max_len_sp = 0;
+
+    if(is_g95)
+        cmd.g95->dw1.extended_mv_cost_range = avc_state->extended_mv_cost_range_enable;
+
+    cmd.g9->dw3.src_access = 0;
+    cmd.g9->dw3.ref_access = 0;
+
+    if(avc_state->ftq_enable && (generic_state->frame_type != SLICE_TYPE_I))
+    {
+        //disable ftq_override by now.
+        if(avc_state->ftq_override)
+        {
+            cmd.g9->dw3.ftq_enable = avc_state->ftq_enable;
+
+        }else
+        {
+            // both gen9 and gen95 come here by now
             if(generic_state->frame_type == SLICE_TYPE_P)
             {
-                cmd->dw3.ftq_enable = gen9_avc_max_ftq_based_skip[preset] & 0x01;
+                cmd.g9->dw3.ftq_enable = gen9_avc_max_ftq_based_skip[preset] & 0x01;
 
             }else
             {
-                cmd->dw3.ftq_enable = (gen9_avc_max_ftq_based_skip[preset] >> 1) & 0x01;
+                cmd.g9->dw3.ftq_enable = (gen9_avc_max_ftq_based_skip[preset] >> 1) & 0x01;
             }
         }
     }else
     {
-        cmd->dw3.ftq_enable = 0;
+        cmd.g9->dw3.ftq_enable = 0;
     }
 
     if(avc_state->disable_sub_mb_partion)
-        cmd->dw3.sub_mb_part_mask = 0x7;
+        cmd.g9->dw3.sub_mb_part_mask = 0x7;
 
     if(mbenc_i_frame_dist_in_use)
     {
-        cmd->dw2.pitch_width = generic_state->downscaled_width_4x_in_mb;
-        cmd->dw4.picture_height_minus1 = generic_state->downscaled_height_4x_in_mb - 1;
-        cmd->dw5.slice_mb_height = (avc_state->slice_height + 4 - 1)/4;
-        cmd->dw6.batch_buffer_end = 0;
-        cmd->dw31.intra_compute_type = 1;
+        cmd.g9->dw2.pitch_width = generic_state->downscaled_width_4x_in_mb;
+        cmd.g9->dw4.picture_height_minus1 = generic_state->downscaled_height_4x_in_mb - 1;
+        cmd.g9->dw5.slice_mb_height = (avc_state->slice_height + 4 - 1)/4;
+        cmd.g9->dw6.batch_buffer_end = 0;
+        cmd.g9->dw31.intra_compute_type = 1;
 
     }else
     {
-        cmd->dw2.pitch_width = generic_state->frame_width_in_mbs;
-        cmd->dw4.picture_height_minus1 = generic_state->frame_height_in_mbs - 1;
-        cmd->dw5.slice_mb_height = (avc_state->arbitrary_num_mbs_in_slice)?generic_state->frame_height_in_mbs:avc_state->slice_height;
+        cmd.g9->dw2.pitch_width = generic_state->frame_width_in_mbs;
+        cmd.g9->dw4.picture_height_minus1 = generic_state->frame_height_in_mbs - 1;
+        cmd.g9->dw5.slice_mb_height = (avc_state->arbitrary_num_mbs_in_slice)?generic_state->frame_height_in_mbs:avc_state->slice_height;
 
         {
-            memcpy(&(cmd->dw8),gen9_avc_mode_mv_cost_table[slice_type_kernel[generic_state->frame_type]][qp],8*sizeof(unsigned int));
+            memcpy(&(cmd.g9->dw8),gen9_avc_mode_mv_cost_table[slice_type_kernel[generic_state->frame_type]][qp],8*sizeof(unsigned int));
             if((generic_state->frame_type == SLICE_TYPE_I) && avc_state->old_mode_cost_enable)
             {
-                //cmd->dw8 = gen9_avc_old_intra_mode_cost[qp];
+                //cmd.g9->dw8 = gen9_avc_old_intra_mode_cost[qp];
             }else if(avc_state->skip_bias_adjustment_enable)
             {
                 /* Load different MvCost for P picture when SkipBiasAdjustment is enabled
                 // No need to check for P picture as the flag is only enabled for P picture */
-                cmd->dw11.value = gen9_avc_mv_cost_p_skip_adjustment[qp];
+                cmd.g9->dw11.value = gen9_avc_mv_cost_p_skip_adjustment[qp];
 
             }
         }
 
         table_idx = (generic_state->frame_type == SLICE_TYPE_B)?1:0;
-        memcpy(&(cmd->dw16),table_enc_search_path[table_idx][me_method],16*sizeof(unsigned int));
+        memcpy(&(cmd.g9->dw16),table_enc_search_path[table_idx][me_method],16*sizeof(unsigned int));
     }
-    cmd->dw4.enable_fbr_bypass = avc_state->fbr_bypass_enable;
-    cmd->dw4.enable_intra_cost_scaling_for_static_frame = avc_state->sfd_enable && generic_state->hme_enabled;
-    cmd->dw4.field_parity_flag = 0;//bottom field
-    cmd->dw4.enable_cur_fld_idr = 0;//field realted
-    cmd->dw4.contrained_intra_pred_flag = pic_param->pic_fields.bits.constrained_intra_pred_flag;
-    cmd->dw4.hme_enable = generic_state->hme_enabled;
-    cmd->dw4.picture_type = slice_type_kernel[generic_state->frame_type];
-    cmd->dw4.use_actual_ref_qp_value = generic_state->hme_enabled && (gen9_avc_mr_disable_qp_check[preset] == 0);
+    cmd.g9->dw4.enable_fbr_bypass = avc_state->fbr_bypass_enable;
+    cmd.g9->dw4.enable_intra_cost_scaling_for_static_frame = avc_state->sfd_enable && generic_state->hme_enabled;
+    cmd.g9->dw4.field_parity_flag = 0;//bottom field
+    cmd.g9->dw4.enable_cur_fld_idr = 0;//field realted
+    cmd.g9->dw4.contrained_intra_pred_flag = pic_param->pic_fields.bits.constrained_intra_pred_flag;
+    cmd.g9->dw4.hme_enable = generic_state->hme_enabled;
+    cmd.g9->dw4.picture_type = slice_type_kernel[generic_state->frame_type];
+    cmd.g9->dw4.use_actual_ref_qp_value = generic_state->hme_enabled && (gen9_avc_mr_disable_qp_check[preset] == 0);
 
 
-    cmd->dw7.intra_part_mask = pic_param->pic_fields.bits.transform_8x8_mode_flag?0:0x02;
-    cmd->dw7.src_field_polarity = 0;//field related
+    cmd.g9->dw7.intra_part_mask = pic_param->pic_fields.bits.transform_8x8_mode_flag?0:0x02;
+    cmd.g9->dw7.src_field_polarity = 0;//field related
 
     /*ftq_skip_threshold_lut set,dw14 /15*/
 
     /*r5 disable NonFTQSkipThresholdLUT*/
     if(generic_state->frame_type == SLICE_TYPE_P)
     {
-        cmd->dw32.skip_val = gen9_avc_skip_value_p[avc_state->block_based_skip_enable][pic_param->pic_fields.bits.transform_8x8_mode_flag][qp];
+        cmd.g9->dw32.skip_val = gen9_avc_skip_value_p[avc_state->block_based_skip_enable][pic_param->pic_fields.bits.transform_8x8_mode_flag][qp];
 
     }else if(generic_state->frame_type == SLICE_TYPE_B)
     {
-        cmd->dw32.skip_val = gen9_avc_skip_value_b[avc_state->block_based_skip_enable][pic_param->pic_fields.bits.transform_8x8_mode_flag][qp];
+        cmd.g9->dw32.skip_val = gen9_avc_skip_value_b[avc_state->block_based_skip_enable][pic_param->pic_fields.bits.transform_8x8_mode_flag][qp];
 
     }
 
-    cmd->dw13.qp_prime_y = qp;
-    cmd->dw13.qp_prime_cb = qp;
-    cmd->dw13.qp_prime_cr = qp;
-    cmd->dw13.target_size_in_word = 0xff;//hardcode for brc disable
-
+    cmd.g9->dw13.qp_prime_y = qp;
+    cmd.g9->dw13.qp_prime_cb = qp;
+    cmd.g9->dw13.qp_prime_cr = qp;
+    cmd.g9->dw13.target_size_in_word = 0xff;//hardcode for brc disable
 
     if((generic_state->frame_type != SLICE_TYPE_I)&& avc_state->multi_pre_enable)
     {
         switch(gen9_avc_multi_pred[preset])
         {
         case 0:
-            cmd->dw32.mult_pred_l0_disable = 128;
-            cmd->dw32.mult_pred_l1_disable = 128;
+            cmd.g9->dw32.mult_pred_l0_disable = 128;
+            cmd.g9->dw32.mult_pred_l1_disable = 128;
             break;
         case 1:
-            cmd->dw32.mult_pred_l0_disable = (generic_state->frame_type == SLICE_TYPE_P)?1:128;
-            cmd->dw32.mult_pred_l1_disable = 128;
+            cmd.g9->dw32.mult_pred_l0_disable = (generic_state->frame_type == SLICE_TYPE_P)?1:128;
+            cmd.g9->dw32.mult_pred_l1_disable = 128;
             break;
         case 2:
-            cmd->dw32.mult_pred_l0_disable = (generic_state->frame_type == SLICE_TYPE_B)?1:128;
-            cmd->dw32.mult_pred_l1_disable = (generic_state->frame_type == SLICE_TYPE_B)?1:128;
+            cmd.g9->dw32.mult_pred_l0_disable = (generic_state->frame_type == SLICE_TYPE_B)?1:128;
+            cmd.g9->dw32.mult_pred_l1_disable = (generic_state->frame_type == SLICE_TYPE_B)?1:128;
             break;
         case 3:
-            cmd->dw32.mult_pred_l0_disable = 1;
-            cmd->dw32.mult_pred_l1_disable = (generic_state->frame_type == SLICE_TYPE_B)?1:128;
+            cmd.g9->dw32.mult_pred_l0_disable = 1;
+            cmd.g9->dw32.mult_pred_l1_disable = (generic_state->frame_type == SLICE_TYPE_B)?1:128;
             break;
 
         }
 
     }else
     {
-        cmd->dw32.mult_pred_l0_disable = 128;
-        cmd->dw32.mult_pred_l1_disable = 128;
+        cmd.g9->dw32.mult_pred_l0_disable = 128;
+        cmd.g9->dw32.mult_pred_l1_disable = 128;
     }
 
     /*field setting for dw33 34, ignored*/
@@ -3168,110 +3403,131 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
     {
         if(generic_state->frame_type != SLICE_TYPE_I)
         {
-            cmd->dw34.enable_adaptive_tx_decision = 1;
+            cmd.g9->dw34.enable_adaptive_tx_decision = 1;
+            if(is_g95)
+            {
+                cmd.g95->dw60.mb_texture_threshold = 1024;
+                cmd.g95->dw60.tx_decision_threshold = 128;
+            }
+
         }
 
-        cmd->dw58.mb_texture_threshold = 1024;
-        cmd->dw58.tx_decision_threshold = 128;
+        if(is_g9)
+        {
+            cmd.g9->dw58.mb_texture_threshold = 1024;
+            cmd.g9->dw58.tx_decision_threshold = 128;
+        }
     }
 
 
     if(generic_state->frame_type == SLICE_TYPE_B)
     {
-        cmd->dw34.list1_ref_id0_frm_field_parity = 0; //frame only
-        cmd->dw34.list1_ref_id0_frm_field_parity = 0;
-        cmd->dw34.b_direct_mode = slice_param->direct_spatial_mv_pred_flag;
+        cmd.g9->dw34.list1_ref_id0_frm_field_parity = 0; //frame only
+        cmd.g9->dw34.list1_ref_id0_frm_field_parity = 0;
+        cmd.g9->dw34.b_direct_mode = slice_param->direct_spatial_mv_pred_flag;
     }
-    cmd->dw34.b_original_bff = 0; //frame only
-    cmd->dw34.enable_mb_flatness_check_optimization = avc_state->flatness_check_enable;
-    cmd->dw34.roi_enable_flag = curbe_param->roi_enabled;
-    cmd->dw34.mad_enable_falg = avc_state->mad_enable;
-    cmd->dw34.mb_brc_enable = avc_state->mb_qp_data_enable || generic_state->mb_brc_enabled;
-    cmd->dw34.arbitray_num_mbs_per_slice = avc_state->arbitrary_num_mbs_in_slice;
-    cmd->dw34.force_non_skip_check = avc_state->mb_disable_skip_map_enable;
 
-    if(cmd->dw34.force_non_skip_check)
+    cmd.g9->dw34.b_original_bff = 0; //frame only
+    cmd.g9->dw34.enable_mb_flatness_check_optimization = avc_state->flatness_check_enable;
+    cmd.g9->dw34.roi_enable_flag = curbe_param->roi_enabled;
+    cmd.g9->dw34.mad_enable_falg = avc_state->mad_enable;
+    cmd.g9->dw34.mb_brc_enable = avc_state->mb_qp_data_enable || generic_state->mb_brc_enabled;
+    cmd.g9->dw34.arbitray_num_mbs_per_slice = avc_state->arbitrary_num_mbs_in_slice;
+    if(is_g95)
     {
-       cmd->dw34.disable_enc_skip_check = avc_state->skip_check_disable;
+        cmd.g95->dw34.tq_enable = avc_state->tq_enable;
+        cmd.g95->dw34.cqp_flag = !generic_state->brc_enabled;
     }
 
-    cmd->dw36.check_all_fractional_enable = avc_state->caf_enable;
-    cmd->dw38.ref_threshold = 400;
-    cmd->dw39.hme_ref_windows_comb_threshold = (generic_state->frame_type == SLICE_TYPE_B)?gen9_avc_hme_b_combine_len[preset]:gen9_avc_hme_combine_len[preset];
+    if(is_g9)
+    {
+        cmd.g9->dw34.force_non_skip_check = avc_state->mb_disable_skip_map_enable;
+
+        if(cmd.g9->dw34.force_non_skip_check)
+        {
+            cmd.g9->dw34.disable_enc_skip_check = avc_state->skip_check_disable;
+        }
+    }
+
+
+    cmd.g9->dw36.check_all_fractional_enable = avc_state->caf_enable;
+    cmd.g9->dw38.ref_threshold = 400;
+    cmd.g9->dw39.hme_ref_windows_comb_threshold = (generic_state->frame_type == SLICE_TYPE_B)?gen9_avc_hme_b_combine_len[preset]:gen9_avc_hme_combine_len[preset];
 
     /* Default:2 used for MBBRC (MB QP Surface width and height are 4x downscaled picture in MB unit * 4  bytes)
        0 used for MBQP data surface (MB QP Surface width and height are same as the input picture size in MB unit * 1bytes)
        starting GEN9, BRC use split kernel, MB QP surface is same size as input picture */
-    cmd->dw47.mb_qp_read_factor = (avc_state->mb_qp_data_enable || generic_state->mb_brc_enabled)?0:2;
+    cmd.g9->dw47.mb_qp_read_factor = (avc_state->mb_qp_data_enable || generic_state->mb_brc_enabled)?0:2;
 
     if(mbenc_i_frame_dist_in_use)
     {
-        cmd->dw13.qp_prime_y = 0;
-        cmd->dw13.qp_prime_cb = 0;
-        cmd->dw13.qp_prime_cr = 0;
-        cmd->dw33.intra_16x16_nondc_penalty = 0;
-        cmd->dw33.intra_8x8_nondc_penalty = 0;
-        cmd->dw33.intra_4x4_nondc_penalty = 0;
+        cmd.g9->dw13.qp_prime_y = 0;
+        cmd.g9->dw13.qp_prime_cb = 0;
+        cmd.g9->dw13.qp_prime_cr = 0;
+        cmd.g9->dw33.intra_16x16_nondc_penalty = 0;
+        cmd.g9->dw33.intra_8x8_nondc_penalty = 0;
+        cmd.g9->dw33.intra_4x4_nondc_penalty = 0;
 
     }
-    if(cmd->dw4.use_actual_ref_qp_value)
+    if(cmd.g9->dw4.use_actual_ref_qp_value)
     {
-        cmd->dw44.actual_qp_value_for_ref_id0_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,0);
-        cmd->dw44.actual_qp_value_for_ref_id1_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,1);
-        cmd->dw44.actual_qp_value_for_ref_id2_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,2);
-        cmd->dw44.actual_qp_value_for_ref_id3_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,3);
-        cmd->dw45.actual_qp_value_for_ref_id4_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,4);
-        cmd->dw45.actual_qp_value_for_ref_id5_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,5);
-        cmd->dw45.actual_qp_value_for_ref_id6_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,6);
-        cmd->dw45.actual_qp_value_for_ref_id7_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,7);
-        cmd->dw46.actual_qp_value_for_ref_id0_list1 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,1,0);
-        cmd->dw46.actual_qp_value_for_ref_id1_list1 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,1,1);
+        cmd.g9->dw44.actual_qp_value_for_ref_id0_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,0);
+        cmd.g9->dw44.actual_qp_value_for_ref_id1_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,1);
+        cmd.g9->dw44.actual_qp_value_for_ref_id2_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,2);
+        cmd.g9->dw44.actual_qp_value_for_ref_id3_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,3);
+        cmd.g9->dw45.actual_qp_value_for_ref_id4_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,4);
+        cmd.g9->dw45.actual_qp_value_for_ref_id5_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,5);
+        cmd.g9->dw45.actual_qp_value_for_ref_id6_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,6);
+        cmd.g9->dw45.actual_qp_value_for_ref_id7_list0 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,0,7);
+        cmd.g9->dw46.actual_qp_value_for_ref_id0_list1 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,1,0);
+        cmd.g9->dw46.actual_qp_value_for_ref_id1_list1 =  gen9_avc_get_qp_from_ref_list(ctx,slice_param,1,1);
     }
 
     table_idx = slice_type_kernel[generic_state->frame_type];
-    cmd->dw46.ref_cost = gen9_avc_ref_cost[table_idx][qp];
+    cmd.g9->dw46.ref_cost = gen9_avc_ref_cost[table_idx][qp];
 
     if(generic_state->frame_type == SLICE_TYPE_I)
     {
-        cmd->dw0.skip_mode_enable = 0;
-        cmd->dw37.skip_mode_enable = 0;
-        cmd->dw36.hme_combine_overlap = 0;
-        cmd->dw47.intra_cost_sf = 16;
-        cmd->dw34.enable_direct_bias_adjustment = 0;
-        cmd->dw34.enable_global_motion_bias_adjustment = 0;
+        cmd.g9->dw0.skip_mode_enable = 0;
+        cmd.g9->dw37.skip_mode_enable = 0;
+        cmd.g9->dw36.hme_combine_overlap = 0;
+        cmd.g9->dw47.intra_cost_sf = 16;
+        cmd.g9->dw34.enable_direct_bias_adjustment = 0;
+        if(is_g9)
+            cmd.g9->dw34.enable_global_motion_bias_adjustment = 0;
 
     }else if(generic_state->frame_type == SLICE_TYPE_P)
     {
-        cmd->dw1.max_num_mvs = i965_avc_get_max_mv_per_2mb(avc_state->seq_param->level_idc)/2;
-        cmd->dw3.bme_disable_fbr = 1;
-        cmd->dw5.ref_width = gen9_avc_search_x[preset];
-        cmd->dw5.ref_height = gen9_avc_search_y[preset];
-        cmd->dw7.non_skip_zmv_added = 1;
-        cmd->dw7.non_skip_mode_added = 1;
-        cmd->dw7.skip_center_mask = 1;
-        cmd->dw47.intra_cost_sf = (avc_state->adaptive_intra_scaling_enable)?gen9_avc_adaptive_intra_scaling_factor[qp]:gen9_avc_intra_scaling_factor[qp];
-        cmd->dw47.max_vmv_r = i965_avc_get_max_mv_len(avc_state->seq_param->level_idc) * 4;//frame onlys
-        cmd->dw36.hme_combine_overlap = 1;
-        cmd->dw36.num_ref_idx_l0_minus_one = (avc_state->multi_pre_enable)?slice_param->num_ref_idx_l0_active_minus1:0;
-        cmd->dw39.ref_width = gen9_avc_search_x[preset];
-        cmd->dw39.ref_height = gen9_avc_search_y[preset];
-        cmd->dw34.enable_direct_bias_adjustment = 0;
-        cmd->dw34.enable_global_motion_bias_adjustment = avc_state->global_motion_bias_adjustment_enable;
-        if(avc_state->global_motion_bias_adjustment_enable)
-            cmd->dw59.hme_mv_cost_scaling_factor = avc_state->hme_mv_cost_scaling_factor;
+        cmd.g9->dw1.max_num_mvs = i965_avc_get_max_mv_per_2mb(avc_state->seq_param->level_idc)/2;
+        cmd.g9->dw3.bme_disable_fbr = 1;
+        cmd.g9->dw5.ref_width = gen9_avc_search_x[preset];
+        cmd.g9->dw5.ref_height = gen9_avc_search_y[preset];
+        cmd.g9->dw7.non_skip_zmv_added = 1;
+        cmd.g9->dw7.non_skip_mode_added = 1;
+        cmd.g9->dw7.skip_center_mask = 1;
+        cmd.g9->dw47.intra_cost_sf = (avc_state->adaptive_intra_scaling_enable)?gen9_avc_adaptive_intra_scaling_factor[qp]:gen9_avc_intra_scaling_factor[qp];
+        cmd.g9->dw47.max_vmv_r = i965_avc_get_max_mv_len(avc_state->seq_param->level_idc) * 4;//frame onlys
+        cmd.g9->dw36.hme_combine_overlap = 1;
+        cmd.g9->dw36.num_ref_idx_l0_minus_one = (avc_state->multi_pre_enable)?slice_param->num_ref_idx_l0_active_minus1:0;
+        cmd.g9->dw39.ref_width = gen9_avc_search_x[preset];
+        cmd.g9->dw39.ref_height = gen9_avc_search_y[preset];
+        cmd.g9->dw34.enable_direct_bias_adjustment = 0;
+        cmd.g9->dw34.enable_global_motion_bias_adjustment = avc_state->global_motion_bias_adjustment_enable;
+        if(is_g9 && avc_state->global_motion_bias_adjustment_enable)
+            cmd.g9->dw59.hme_mv_cost_scaling_factor = avc_state->hme_mv_cost_scaling_factor;
 
     }else
     {
-        cmd->dw1.max_num_mvs = i965_avc_get_max_mv_per_2mb(avc_state->seq_param->level_idc)/2;
-        cmd->dw1.bi_weight = avc_state->bi_weight;
-        cmd->dw3.search_ctrl = 7;
-        cmd->dw3.skip_type = 1;
-        cmd->dw5.ref_width = gen9_avc_b_search_x[preset];
-        cmd->dw5.ref_height = gen9_avc_b_search_y[preset];
-        cmd->dw7.skip_center_mask = 0xff;
-        cmd->dw47.intra_cost_sf = (avc_state->adaptive_intra_scaling_enable)?gen9_avc_adaptive_intra_scaling_factor[qp]:gen9_avc_intra_scaling_factor[qp];
-        cmd->dw47.max_vmv_r = i965_avc_get_max_mv_len(avc_state->seq_param->level_idc) * 4;//frame only
-        cmd->dw36.hme_combine_overlap = 1;
+        cmd.g9->dw1.max_num_mvs = i965_avc_get_max_mv_per_2mb(avc_state->seq_param->level_idc)/2;
+        cmd.g9->dw1.bi_weight = avc_state->bi_weight;
+        cmd.g9->dw3.search_ctrl = 7;
+        cmd.g9->dw3.skip_type = 1;
+        cmd.g9->dw5.ref_width = gen9_avc_b_search_x[preset];
+        cmd.g9->dw5.ref_height = gen9_avc_b_search_y[preset];
+        cmd.g9->dw7.skip_center_mask = 0xff;
+        cmd.g9->dw47.intra_cost_sf = (avc_state->adaptive_intra_scaling_enable)?gen9_avc_adaptive_intra_scaling_factor[qp]:gen9_avc_intra_scaling_factor[qp];
+        cmd.g9->dw47.max_vmv_r = i965_avc_get_max_mv_len(avc_state->seq_param->level_idc) * 4;//frame only
+        cmd.g9->dw36.hme_combine_overlap = 1;
         surface_id = slice_param->RefPicList1[0].picture_id;
         obj_surface = SURFACE(surface_id);
         if (!obj_surface)
@@ -3279,115 +3535,206 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
             WARN_ONCE("Invalid backward reference frame\n");
             return;
         }
-        cmd->dw36.is_fwd_frame_short_term_ref = !!( slice_param->RefPicList1[0].flags & VA_PICTURE_H264_SHORT_TERM_REFERENCE);
+        cmd.g9->dw36.is_fwd_frame_short_term_ref = !!( slice_param->RefPicList1[0].flags & VA_PICTURE_H264_SHORT_TERM_REFERENCE);
 
-        cmd->dw36.num_ref_idx_l0_minus_one = (avc_state->multi_pre_enable)?slice_param->num_ref_idx_l0_active_minus1:0;
-        cmd->dw36.num_ref_idx_l1_minus_one = (avc_state->multi_pre_enable)?slice_param->num_ref_idx_l1_active_minus1:0;
-        cmd->dw39.ref_width = gen9_avc_b_search_x[preset];
-        cmd->dw39.ref_height = gen9_avc_b_search_y[preset];
-        cmd->dw40.dist_scale_factor_ref_id0_list0 = avc_state->dist_scale_factor_list0[0];
-        cmd->dw40.dist_scale_factor_ref_id1_list0 = avc_state->dist_scale_factor_list0[1];
-        cmd->dw41.dist_scale_factor_ref_id2_list0 = avc_state->dist_scale_factor_list0[2];
-        cmd->dw41.dist_scale_factor_ref_id3_list0 = avc_state->dist_scale_factor_list0[3];
-        cmd->dw42.dist_scale_factor_ref_id4_list0 = avc_state->dist_scale_factor_list0[4];
-        cmd->dw42.dist_scale_factor_ref_id5_list0 = avc_state->dist_scale_factor_list0[5];
-        cmd->dw43.dist_scale_factor_ref_id6_list0 = avc_state->dist_scale_factor_list0[6];
-        cmd->dw43.dist_scale_factor_ref_id7_list0 = avc_state->dist_scale_factor_list0[7];
+        cmd.g9->dw36.num_ref_idx_l0_minus_one = (avc_state->multi_pre_enable)?slice_param->num_ref_idx_l0_active_minus1:0;
+        cmd.g9->dw36.num_ref_idx_l1_minus_one = (avc_state->multi_pre_enable)?slice_param->num_ref_idx_l1_active_minus1:0;
+        cmd.g9->dw39.ref_width = gen9_avc_b_search_x[preset];
+        cmd.g9->dw39.ref_height = gen9_avc_b_search_y[preset];
+        cmd.g9->dw40.dist_scale_factor_ref_id0_list0 = avc_state->dist_scale_factor_list0[0];
+        cmd.g9->dw40.dist_scale_factor_ref_id1_list0 = avc_state->dist_scale_factor_list0[1];
+        cmd.g9->dw41.dist_scale_factor_ref_id2_list0 = avc_state->dist_scale_factor_list0[2];
+        cmd.g9->dw41.dist_scale_factor_ref_id3_list0 = avc_state->dist_scale_factor_list0[3];
+        cmd.g9->dw42.dist_scale_factor_ref_id4_list0 = avc_state->dist_scale_factor_list0[4];
+        cmd.g9->dw42.dist_scale_factor_ref_id5_list0 = avc_state->dist_scale_factor_list0[5];
+        cmd.g9->dw43.dist_scale_factor_ref_id6_list0 = avc_state->dist_scale_factor_list0[6];
+        cmd.g9->dw43.dist_scale_factor_ref_id7_list0 = avc_state->dist_scale_factor_list0[7];
 
-        cmd->dw34.enable_direct_bias_adjustment = avc_state->direct_bias_adjustment_enable;
-        if(cmd->dw34.enable_direct_bias_adjustment)
+        cmd.g9->dw34.enable_direct_bias_adjustment = avc_state->direct_bias_adjustment_enable;
+        if(cmd.g9->dw34.enable_direct_bias_adjustment)
         {
-            cmd->dw7.non_skip_zmv_added = 1;
-            cmd->dw7.non_skip_mode_added = 1;
+            cmd.g9->dw7.non_skip_zmv_added = 1;
+            cmd.g9->dw7.non_skip_mode_added = 1;
         }
 
-        cmd->dw34.enable_global_motion_bias_adjustment = avc_state->global_motion_bias_adjustment_enable;
-        if(avc_state->global_motion_bias_adjustment_enable)
-            cmd->dw59.hme_mv_cost_scaling_factor = avc_state->hme_mv_cost_scaling_factor;
+        cmd.g9->dw34.enable_global_motion_bias_adjustment = avc_state->global_motion_bias_adjustment_enable;
+        if(is_g9 && avc_state->global_motion_bias_adjustment_enable)
+            cmd.g9->dw59.hme_mv_cost_scaling_factor = avc_state->hme_mv_cost_scaling_factor;
 
     }
 
-    avc_state->block_based_skip_enable = cmd->dw3.block_based_skip_enable;
+    avc_state->block_based_skip_enable = cmd.g9->dw3.block_based_skip_enable;
 
     if(avc_state->rolling_intra_refresh_enable)
     {
         /*by now disable it*/
-        cmd->dw34.widi_intra_refresh_en = avc_state->rolling_intra_refresh_enable;
+        cmd.g9->dw34.widi_intra_refresh_en = avc_state->rolling_intra_refresh_enable;
+        cmd.g9->dw32.mult_pred_l0_disable = 128;
+        /* Pass the same IntraRefreshUnit to the kernel w/o the adjustment by -1, so as to have an overlap of one MB row or column of Intra macroblocks
+         across one P frame to another P frame, as needed by the RollingI algo */
+        if(is_g9)
+        {
+            cmd.g9->dw48.widi_intra_refresh_mb_num = 0;
+            cmd.g9->dw48.widi_intra_refresh_unit_in_mb_minus1 = 0;
+            cmd.g9->dw48.widi_intra_refresh_qp_delta = 0;
+        }
+
+        if(is_g95)
+        {
+            if(avc_state->rolling_intra_refresh_enable == INTEL_ROLLING_I_SQUARE && generic_state->brc_enabled)
+            {
+                cmd.g95->dw4.enable_intra_refresh = 0;
+                cmd.g95->dw34.widi_intra_refresh_en = INTEL_ROLLING_I_DISABLED;
+                cmd.g95->dw48.widi_intra_refresh_mb_x = 0;
+                cmd.g95->dw61.widi_intra_refresh_mb_y = 0;
+            }else
+            {
+                cmd.g95->dw4.enable_intra_refresh = 1;
+                cmd.g95->dw34.widi_intra_refresh_en = avc_state->rolling_intra_refresh_enable;
+                cmd.g95->dw48.widi_intra_refresh_mb_x = 0;
+                cmd.g95->dw61.widi_intra_refresh_mb_y = 0;
+                cmd.g9->dw48.widi_intra_refresh_unit_in_mb_minus1 = 0;
+                cmd.g9->dw48.widi_intra_refresh_qp_delta = 0;
+            }
+        }
 
     }else
     {
-        cmd->dw34.widi_intra_refresh_en = 0;
+        cmd.g9->dw34.widi_intra_refresh_en = 0;
     }
 
-    cmd->dw34.enable_per_mb_static_check = avc_state->sfd_enable && generic_state->hme_enabled;
-    cmd->dw34.enable_adaptive_search_window_size = avc_state->adaptive_search_window_enable;
+    cmd.g9->dw34.enable_per_mb_static_check = avc_state->sfd_enable && generic_state->hme_enabled;
+    cmd.g9->dw34.enable_adaptive_search_window_size = avc_state->adaptive_search_window_enable;
 
     /*roi set disable by now. 49-56*/
     if(curbe_param->roi_enabled)
     {
-        cmd->dw49.roi_1_x_left   = generic_state->roi[0].left;
-        cmd->dw49.roi_1_y_top    = generic_state->roi[0].top;
-        cmd->dw50.roi_1_x_right  = generic_state->roi[0].right;
-        cmd->dw50.roi_1_y_bottom = generic_state->roi[0].bottom;
+        cmd.g9->dw49.roi_1_x_left   = generic_state->roi[0].left;
+        cmd.g9->dw49.roi_1_y_top    = generic_state->roi[0].top;
+        cmd.g9->dw50.roi_1_x_right  = generic_state->roi[0].right;
+        cmd.g9->dw50.roi_1_y_bottom = generic_state->roi[0].bottom;
 
-        cmd->dw51.roi_2_x_left   = generic_state->roi[1].left;
-        cmd->dw51.roi_2_y_top    = generic_state->roi[1].top;
-        cmd->dw52.roi_2_x_right  = generic_state->roi[1].right;
-        cmd->dw52.roi_2_y_bottom = generic_state->roi[1].bottom;
+        cmd.g9->dw51.roi_2_x_left   = generic_state->roi[1].left;
+        cmd.g9->dw51.roi_2_y_top    = generic_state->roi[1].top;
+        cmd.g9->dw52.roi_2_x_right  = generic_state->roi[1].right;
+        cmd.g9->dw52.roi_2_y_bottom = generic_state->roi[1].bottom;
 
-        cmd->dw53.roi_3_x_left   = generic_state->roi[2].left;
-        cmd->dw53.roi_3_y_top    = generic_state->roi[2].top;
-        cmd->dw54.roi_3_x_right  = generic_state->roi[2].right;
-        cmd->dw54.roi_3_y_bottom = generic_state->roi[2].bottom;
+        cmd.g9->dw53.roi_3_x_left   = generic_state->roi[2].left;
+        cmd.g9->dw53.roi_3_y_top    = generic_state->roi[2].top;
+        cmd.g9->dw54.roi_3_x_right  = generic_state->roi[2].right;
+        cmd.g9->dw54.roi_3_y_bottom = generic_state->roi[2].bottom;
 
-        cmd->dw55.roi_4_x_left   = generic_state->roi[3].left;
-        cmd->dw55.roi_4_y_top    = generic_state->roi[3].top;
-        cmd->dw56.roi_4_x_right  = generic_state->roi[3].right;
-        cmd->dw56.roi_4_y_bottom = generic_state->roi[3].bottom;
+        cmd.g9->dw55.roi_4_x_left   = generic_state->roi[3].left;
+        cmd.g9->dw55.roi_4_y_top    = generic_state->roi[3].top;
+        cmd.g9->dw56.roi_4_x_right  = generic_state->roi[3].right;
+        cmd.g9->dw56.roi_4_y_bottom = generic_state->roi[3].bottom;
 
         if(!generic_state->brc_enabled)
         {
             char tmp = 0;
             tmp = generic_state->roi[0].value;
-            CLIP(tmp,-qp,52-qp);
-            cmd->dw57.roi_1_dqp_prime_y = tmp;
+            CLIP(tmp,-qp,AVC_QP_MAX-qp);
+            cmd.g9->dw57.roi_1_dqp_prime_y = tmp;
             tmp = generic_state->roi[1].value;
-            CLIP(tmp,-qp,52-qp);
-            cmd->dw57.roi_2_dqp_prime_y = tmp;
+            CLIP(tmp,-qp,AVC_QP_MAX-qp);
+            cmd.g9->dw57.roi_2_dqp_prime_y = tmp;
             tmp = generic_state->roi[2].value;
-            CLIP(tmp,-qp,52-qp);
-            cmd->dw57.roi_3_dqp_prime_y = tmp;
+            CLIP(tmp,-qp,AVC_QP_MAX-qp);
+            cmd.g9->dw57.roi_3_dqp_prime_y = tmp;
             tmp = generic_state->roi[3].value;
-            CLIP(tmp,-qp,52-qp);
-            cmd->dw57.roi_4_dqp_prime_y = tmp;
+            CLIP(tmp,-qp,AVC_QP_MAX-qp);
+            cmd.g9->dw57.roi_4_dqp_prime_y = tmp;
         }else
         {
-            cmd->dw34.roi_enable_flag = 0;
+            cmd.g9->dw34.roi_enable_flag = 0;
         }
     }
 
-    cmd->dw64.mb_data_surf_index = GEN9_AVC_MBENC_MFC_AVC_PAK_OBJ_INDEX;
-    cmd->dw65.mv_data_surf_index = GEN9_AVC_MBENC_IND_MV_DATA_INDEX;
-    cmd->dw66.i_dist_surf_index = GEN9_AVC_MBENC_BRC_DISTORTION_INDEX;
-    cmd->dw67.src_y_surf_index = GEN9_AVC_MBENC_CURR_Y_INDEX;
-    cmd->dw68.mb_specific_data_surf_index = GEN9_AVC_MBENC_MB_SPECIFIC_DATA_INDEX;
-    cmd->dw69.aux_vme_out_surf_index = GEN9_AVC_MBENC_AUX_VME_OUT_INDEX;
-    cmd->dw70.curr_ref_pic_sel_surf_index = GEN9_AVC_MBENC_REFPICSELECT_L0_INDEX;
-    cmd->dw71.hme_mv_pred_fwd_bwd_surf_index = GEN9_AVC_MBENC_MV_DATA_FROM_ME_INDEX;
-    cmd->dw72.hme_dist_surf_index = GEN9_AVC_MBENC_4XME_DISTORTION_INDEX;
-    cmd->dw73.slice_map_surf_index = GEN9_AVC_MBENC_SLICEMAP_DATA_INDEX;
-    cmd->dw74.fwd_frm_mb_data_surf_index = GEN9_AVC_MBENC_FWD_MB_DATA_INDEX;
-    cmd->dw75.fwd_frm_mv_surf_index = GEN9_AVC_MBENC_FWD_MV_DATA_INDEX;
-    cmd->dw76.mb_qp_buffer = GEN9_AVC_MBENC_MBQP_INDEX;
-    cmd->dw77.mb_brc_lut = GEN9_AVC_MBENC_MBBRC_CONST_DATA_INDEX;
-    cmd->dw78.vme_inter_prediction_surf_index = GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX;
-    cmd->dw79.vme_inter_prediction_mr_surf_index = GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX;
-    cmd->dw80.mb_stats_surf_index = GEN9_AVC_MBENC_MB_STATS_INDEX;
-    cmd->dw81.mad_surf_index = GEN9_AVC_MBENC_MAD_DATA_INDEX;
-    cmd->dw82.force_non_skip_mb_map_surface = GEN9_AVC_MBENC_FORCE_NONSKIP_MB_MAP_INDEX;
-    cmd->dw83.widi_wa_surf_index = GEN9_AVC_MBENC_WIDI_WA_INDEX;
-    cmd->dw84.brc_curbe_surf_index = GEN9_AVC_MBENC_BRC_CURBE_DATA_INDEX;
-    cmd->dw85.static_detection_cost_table_index = GEN9_AVC_MBENC_SFD_COST_TABLE_INDEX;
+    if(is_g95)
+    {
+        if(avc_state->tq_enable)
+        {
+            if(generic_state->frame_type == SLICE_TYPE_I)
+            {
+                cmd.g95->dw58.value = gen95_avc_tq_lambda_i_frame[qp][0];
+                cmd.g95->dw59.value = gen95_avc_tq_lambda_i_frame[qp][1];
+
+            }else if(generic_state->frame_type == SLICE_TYPE_P)
+            {
+                cmd.g95->dw58.value = gen95_avc_tq_lambda_p_frame[qp][0];
+                cmd.g95->dw59.value = gen95_avc_tq_lambda_p_frame[qp][1];
+
+            }else
+            {
+                cmd.g95->dw58.value = gen95_avc_tq_lambda_b_frame[qp][0];
+                cmd.g95->dw59.value = gen95_avc_tq_lambda_b_frame[qp][1];
+            }
+
+            if(cmd.g95->dw58.lambda_8x8_inter > GEN95_AVC_MAX_LAMBDA)
+                cmd.g95->dw58.lambda_8x8_inter = 0xf000 + avc_state->rounding_value;
+
+            if(cmd.g95->dw58.lambda_8x8_intra > GEN95_AVC_MAX_LAMBDA)
+                cmd.g95->dw58.lambda_8x8_intra = 0xf000 + GEN95_AVC_DEFAULT_TRELLIS_QUANT_INTRA_ROUNDING;
+
+            if(cmd.g95->dw59.lambda_inter > GEN95_AVC_MAX_LAMBDA)
+                cmd.g95->dw59.lambda_inter = 0xf000 + avc_state->rounding_value;
+
+            if(cmd.g95->dw59.lambda_intra > GEN95_AVC_MAX_LAMBDA)
+                cmd.g95->dw59.lambda_intra = 0xf000 + GEN95_AVC_DEFAULT_TRELLIS_QUANT_INTRA_ROUNDING;
+        }
+    }
+
+    if(is_g95)
+    {
+        cmd.g95->dw66.mb_data_surf_index = GEN9_AVC_MBENC_MFC_AVC_PAK_OBJ_INDEX;
+        cmd.g95->dw67.mv_data_surf_index = GEN9_AVC_MBENC_IND_MV_DATA_INDEX;
+        cmd.g95->dw68.i_dist_surf_index = GEN9_AVC_MBENC_BRC_DISTORTION_INDEX;
+        cmd.g95->dw69.src_y_surf_index = GEN9_AVC_MBENC_CURR_Y_INDEX;
+        cmd.g95->dw70.mb_specific_data_surf_index = GEN9_AVC_MBENC_MB_SPECIFIC_DATA_INDEX;
+        cmd.g95->dw71.aux_vme_out_surf_index = GEN9_AVC_MBENC_AUX_VME_OUT_INDEX;
+        cmd.g95->dw72.curr_ref_pic_sel_surf_index = GEN9_AVC_MBENC_REFPICSELECT_L0_INDEX;
+        cmd.g95->dw73.hme_mv_pred_fwd_bwd_surf_index = GEN9_AVC_MBENC_MV_DATA_FROM_ME_INDEX;
+        cmd.g95->dw74.hme_dist_surf_index = GEN9_AVC_MBENC_4XME_DISTORTION_INDEX;
+        cmd.g95->dw75.slice_map_surf_index = GEN9_AVC_MBENC_SLICEMAP_DATA_INDEX;
+        cmd.g95->dw76.fwd_frm_mb_data_surf_index = GEN9_AVC_MBENC_FWD_MB_DATA_INDEX;
+        cmd.g95->dw77.fwd_frm_mv_surf_index = GEN9_AVC_MBENC_FWD_MV_DATA_INDEX;
+        cmd.g95->dw78.mb_qp_buffer = GEN9_AVC_MBENC_MBQP_INDEX;
+        cmd.g95->dw79.mb_brc_lut = GEN9_AVC_MBENC_MBBRC_CONST_DATA_INDEX;
+        cmd.g95->dw80.vme_inter_prediction_surf_index = GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX;
+        cmd.g95->dw81.vme_inter_prediction_mr_surf_index = GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX;
+        cmd.g95->dw82.mb_stats_surf_index = GEN9_AVC_MBENC_MB_STATS_INDEX;
+        cmd.g95->dw83.mad_surf_index = GEN9_AVC_MBENC_MAD_DATA_INDEX;
+        cmd.g95->dw84.brc_curbe_surf_index = GEN95_AVC_MBENC_BRC_CURBE_DATA_INDEX;
+        cmd.g95->dw85.force_non_skip_mb_map_surface = GEN95_AVC_MBENC_FORCE_NONSKIP_MB_MAP_INDEX;
+        cmd.g95->dw86.widi_wa_surf_index = GEN95_AVC_MBENC_WIDI_WA_INDEX;
+        cmd.g95->dw87.static_detection_cost_table_index = GEN95_AVC_MBENC_SFD_COST_TABLE_INDEX;
+    }
+
+    if(is_g9)
+    {
+        cmd.g9->dw64.mb_data_surf_index = GEN9_AVC_MBENC_MFC_AVC_PAK_OBJ_INDEX;
+        cmd.g9->dw65.mv_data_surf_index = GEN9_AVC_MBENC_IND_MV_DATA_INDEX;
+        cmd.g9->dw66.i_dist_surf_index = GEN9_AVC_MBENC_BRC_DISTORTION_INDEX;
+        cmd.g9->dw67.src_y_surf_index = GEN9_AVC_MBENC_CURR_Y_INDEX;
+        cmd.g9->dw68.mb_specific_data_surf_index = GEN9_AVC_MBENC_MB_SPECIFIC_DATA_INDEX;
+        cmd.g9->dw69.aux_vme_out_surf_index = GEN9_AVC_MBENC_AUX_VME_OUT_INDEX;
+        cmd.g9->dw70.curr_ref_pic_sel_surf_index = GEN9_AVC_MBENC_REFPICSELECT_L0_INDEX;
+        cmd.g9->dw71.hme_mv_pred_fwd_bwd_surf_index = GEN9_AVC_MBENC_MV_DATA_FROM_ME_INDEX;
+        cmd.g9->dw72.hme_dist_surf_index = GEN9_AVC_MBENC_4XME_DISTORTION_INDEX;
+        cmd.g9->dw73.slice_map_surf_index = GEN9_AVC_MBENC_SLICEMAP_DATA_INDEX;
+        cmd.g9->dw74.fwd_frm_mb_data_surf_index = GEN9_AVC_MBENC_FWD_MB_DATA_INDEX;
+        cmd.g9->dw75.fwd_frm_mv_surf_index = GEN9_AVC_MBENC_FWD_MV_DATA_INDEX;
+        cmd.g9->dw76.mb_qp_buffer = GEN9_AVC_MBENC_MBQP_INDEX;
+        cmd.g9->dw77.mb_brc_lut = GEN9_AVC_MBENC_MBBRC_CONST_DATA_INDEX;
+        cmd.g9->dw78.vme_inter_prediction_surf_index = GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX;
+        cmd.g9->dw79.vme_inter_prediction_mr_surf_index = GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX;
+        cmd.g9->dw80.mb_stats_surf_index = GEN9_AVC_MBENC_MB_STATS_INDEX;
+        cmd.g9->dw81.mad_surf_index = GEN9_AVC_MBENC_MAD_DATA_INDEX;
+        cmd.g9->dw82.force_non_skip_mb_map_surface = GEN9_AVC_MBENC_FORCE_NONSKIP_MB_MAP_INDEX;
+        cmd.g9->dw83.widi_wa_surf_index = GEN9_AVC_MBENC_WIDI_WA_INDEX;
+        cmd.g9->dw84.brc_curbe_surf_index = GEN9_AVC_MBENC_BRC_CURBE_DATA_INDEX;
+        cmd.g9->dw85.static_detection_cost_table_index = GEN9_AVC_MBENC_SFD_COST_TABLE_INDEX;
+    }
 
     i965_gpe_context_unmap_curbe(gpe_context);
 
@@ -3417,6 +3764,13 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     unsigned int h_mb = generic_state->frame_height_in_mbs;
     int i = 0;
     VAEncSliceParameterBufferH264 * slice_param = avc_state->slice_param[0];
+    unsigned char is_g95 = 0;
+
+    if (IS_SKL(i965->intel.device_info)||
+        IS_BXT(i965->intel.device_info))
+        is_g95 = 0;
+    else if (IS_KBL(i965->intel.device_info))
+        is_g95 = 1;
 
     obj_surface = encode_state->reconstructed_object;
 
@@ -3495,7 +3849,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     /*mbbrc const data_buffer*/
     if(param->mb_const_data_buffer_in_use)
     {
-        size = 16 * 52 * sizeof(unsigned int);
+        size = 16 * AVC_QP_MAX * sizeof(unsigned int);
         gpe_resource = &avc_ctx->res_mbbrc_const_data_buffer;
         gen9_add_buffer_gpe_surface(ctx,
                                     gpe_context,
@@ -3678,7 +4032,19 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
         i965_zero_gpe_resource(gpe_resource);
     }
 
-    /*brc updated mbenc curbe data buffer,it is ignored*/
+    /*brc updated mbenc curbe data buffer,it is ignored by gen9 and used in gen95*/
+    if(avc_state->mbenc_brc_buffer_size > 0)
+    {
+        size = avc_state->mbenc_brc_buffer_size;
+        gpe_resource = &(avc_ctx->res_mbenc_brc_buffer);
+        gen9_add_buffer_gpe_surface(ctx,
+                                    gpe_context,
+                                    gpe_resource,
+                                    0,
+                                    size / 4,
+                                    0,
+                                    GEN95_AVC_MBENC_BRC_CURBE_DATA_INDEX);
+    }
 
     /*artitratry num mbs in slice*/
     if(avc_state->arbitrary_num_mbs_in_slice)
@@ -3702,7 +4068,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
                                            gpe_resource,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
-                                           GEN9_AVC_MBENC_FORCE_NONSKIP_MB_MAP_INDEX);
+                                           (is_g95?GEN95_AVC_MBENC_FORCE_NONSKIP_MB_MAP_INDEX:GEN9_AVC_MBENC_FORCE_NONSKIP_MB_MAP_INDEX));
         }
 
         if(avc_state->sfd_enable && generic_state->hme_enabled)
@@ -3722,7 +4088,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
                                                gpe_resource,
                                                1,
                                                I965_SURFACEFORMAT_R8_UNORM,
-                                               GEN9_AVC_MBENC_SFD_COST_TABLE_INDEX);
+                                               (is_g95?GEN95_AVC_MBENC_SFD_COST_TABLE_INDEX:GEN9_AVC_MBENC_SFD_COST_TABLE_INDEX));
             }
         }
     }
@@ -3736,6 +4102,8 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
                       struct intel_encoder_context *encoder_context,
                       bool i_frame_dist_in_use)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
@@ -3840,10 +4208,10 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
 
     if(!avc_state->mbenc_curbe_set_in_brc_update)
     {
-        gen8_gpe_context_init(ctx, gpe_context);
+        gpe->context_init(ctx, gpe_context);
     }
 
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     if(!avc_state->mbenc_curbe_set_in_brc_update)
     {
@@ -3854,6 +4222,10 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
     /* MB brc const data buffer set up*/
     if(mb_const_data_buffer_in_use)
     {
+        // caculate the lambda table, it is kernel controlled trellis quantization,gen95+
+        if(avc_state->lambda_table_enable)
+            gen95_avc_calc_lambda_table(ctx,encode_state,encoder_context);
+
         gen9_avc_load_mb_brc_const_data(ctx,encode_state,encoder_context);
     }
 
@@ -3865,7 +4237,7 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
     /*send surface*/
     generic_ctx->pfn_send_mbenc_surface(ctx,encode_state,gpe_context,encoder_context,&param);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     /*walker setting*/
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
@@ -4274,6 +4646,8 @@ gen9_avc_kernel_me(VADriverContextP ctx,
                    struct intel_encoder_context *encoder_context,
                    int hme_type)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
@@ -4320,8 +4694,8 @@ gen9_avc_kernel_me(VADriverContextP ctx,
     kernel_idx = (generic_state->frame_type == SLICE_TYPE_P)? GEN9_AVC_KERNEL_ME_P_IDX : GEN9_AVC_KERNEL_ME_B_IDX;
     gpe_context = &(avc_ctx->context_me.gpe_contexts[kernel_idx]);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     /*set curbe*/
     memset(&param,0,sizeof(param));
@@ -4331,7 +4705,7 @@ gen9_avc_kernel_me(VADriverContextP ctx,
     /*send surface*/
     generic_ctx->pfn_send_me_surface(ctx,encode_state,gpe_context,encoder_context,&param);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
     /* the scaling is based on 8x8 blk level */
@@ -4441,6 +4815,8 @@ gen9_avc_kernel_wp(VADriverContextP ctx,
                    struct intel_encoder_context *encoder_context,
                    unsigned int list1_in_use)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -4454,8 +4830,8 @@ gen9_avc_kernel_wp(VADriverContextP ctx,
 
     gpe_context = &(avc_ctx->context_wp.gpe_contexts);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     memset(&param,0,sizeof(param));
     param.ref_list_idx = (list1_in_use == 1)? 1: 0;
@@ -4465,7 +4841,7 @@ gen9_avc_kernel_wp(VADriverContextP ctx,
     /*send surface*/
     generic_ctx->pfn_send_wp_surface(ctx,encode_state,gpe_context,encoder_context,&param);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
     /* the scaling is based on 8x8 blk level */
@@ -4528,11 +4904,11 @@ gen9_avc_set_curbe_sfd(VADriverContextP ctx,
 
     if(generic_state->frame_type == SLICE_TYPE_P)
     {
-        memcpy(cmd->cost_table,gen9_avc_sfd_cost_table_p_frame,52* sizeof(unsigned char));
+        memcpy(cmd->cost_table,gen9_avc_sfd_cost_table_p_frame,AVC_QP_MAX* sizeof(unsigned char));
 
     }else if(generic_state->frame_type == SLICE_TYPE_B)
     {
-        memcpy(cmd->cost_table,gen9_avc_sfd_cost_table_b_frame,52* sizeof(unsigned char));
+        memcpy(cmd->cost_table,gen9_avc_sfd_cost_table_b_frame,AVC_QP_MAX* sizeof(unsigned char));
     }
 
     cmd->dw21.actual_width_in_mb = cmd->dw2.frame_width_in_mbs ;
@@ -4592,6 +4968,8 @@ gen9_avc_kernel_sfd(VADriverContextP ctx,
                     struct encode_state *encode_state,
                     struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
@@ -4602,8 +4980,8 @@ gen9_avc_kernel_sfd(VADriverContextP ctx,
     int media_function = INTEL_MEDIA_STATE_STATIC_FRAME_DETECTION;
     gpe_context = &(avc_ctx->context_sfd.gpe_contexts);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     /*set curbe*/
     generic_ctx->pfn_set_curbe_sfd(ctx,encode_state,gpe_context,encoder_context,NULL);
@@ -4611,7 +4989,7 @@ gen9_avc_kernel_sfd(VADriverContextP ctx,
     /*send surface*/
     generic_ctx->pfn_send_sfd_surface(ctx,encode_state,gpe_context,encoder_context,NULL);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&media_object_param, 0, sizeof(media_object_param));
     memset(&media_object_inline_data, 0, sizeof(media_object_inline_data));
@@ -4634,14 +5012,26 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
                              struct generic_encoder_context *generic_context,
                              struct gen_avc_scaling_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
     struct i965_kernel common_kernel;
 
+    if (IS_SKL(i965->intel.device_info)||
+        IS_BXT(i965->intel.device_info))
+    {
+        kernel_param.curbe_size = sizeof(gen9_avc_scaling4x_curbe_data);
+        kernel_param.inline_data_size = sizeof(gen9_avc_scaling4x_curbe_data);
+    }
+    else if (IS_KBL(i965->intel.device_info))
+    {
+        kernel_param.curbe_size = sizeof(gen95_avc_scaling4x_curbe_data);
+        kernel_param.inline_data_size = sizeof(gen95_avc_scaling4x_curbe_data);
+    }
+
     /* 4x scaling kernel*/
-    kernel_param.curbe_size = sizeof(gen9_avc_scaling4x_curbe_data);
-    kernel_param.inline_data_size = sizeof(gen9_avc_scaling4x_curbe_data);
     kernel_param.sampler_size = 0;
 
     memset(&scoreboard_param, 0, sizeof(scoreboard_param));
@@ -4662,10 +5052,10 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
                                          0,
                                          &common_kernel);
 
-    gen8_gpe_load_kernels(ctx,
-                          gpe_context,
-                          &common_kernel,
-                          1);
+    gpe->load_kernels(ctx,
+                      gpe_context,
+                      &common_kernel,
+                      1);
 
     /*2x scaling kernel*/
     kernel_param.curbe_size = sizeof(gen9_avc_scaling2x_curbe_data);
@@ -4684,10 +5074,10 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
                                          0,
                                          &common_kernel);
 
-    gen8_gpe_load_kernels(ctx,
-                          gpe_context,
-                          &common_kernel,
-                          1);
+    gpe->load_kernels(ctx,
+                      gpe_context,
+                      &common_kernel,
+                      1);
 
 }
 
@@ -4696,6 +5086,8 @@ gen9_avc_kernel_init_me(VADriverContextP ctx,
                         struct generic_encoder_context *generic_context,
                         struct gen_avc_me_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4725,7 +5117,7 @@ gen9_avc_kernel_init_me(VADriverContextP ctx,
                                              i,
                                              &common_kernel);
 
-        gen8_gpe_load_kernels(ctx,
+        gpe->load_kernels(ctx,
                               gpe_context,
                               &common_kernel,
                               1);
@@ -4738,13 +5130,25 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
                            struct generic_encoder_context *generic_context,
                            struct gen_avc_mbenc_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
     struct i965_kernel common_kernel;
     int i = 0;
+    unsigned int curbe_size = 0;
 
-    kernel_param.curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+    if (IS_SKL(i965->intel.device_info)||
+        IS_BXT(i965->intel.device_info)) {
+        curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+    }
+    else if (IS_KBL(i965->intel.device_info)) {
+        curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+    }
+
+    assert(curbe_size > 0);
+    kernel_param.curbe_size = curbe_size;
     kernel_param.inline_data_size = 0;
     kernel_param.sampler_size = 0;
 
@@ -4767,10 +5171,10 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
                                              i,
                                              &common_kernel);
 
-        gen8_gpe_load_kernels(ctx,
-                              gpe_context,
-                              &common_kernel,
-                              1);
+        gpe->load_kernels(ctx,
+                          gpe_context,
+                          &common_kernel,
+                          1);
     }
 
 }
@@ -4780,6 +5184,8 @@ gen9_avc_kernel_init_brc(VADriverContextP ctx,
                          struct generic_encoder_context *generic_context,
                          struct gen_avc_brc_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4818,10 +5224,10 @@ gen9_avc_kernel_init_brc(VADriverContextP ctx,
                                              i,
                                              &common_kernel);
 
-        gen8_gpe_load_kernels(ctx,
-                              gpe_context,
-                              &common_kernel,
-                              1);
+        gpe->load_kernels(ctx,
+                          gpe_context,
+                          &common_kernel,
+                          1);
     }
 
 }
@@ -4831,6 +5237,8 @@ gen9_avc_kernel_init_wp(VADriverContextP ctx,
                         struct generic_encoder_context *generic_context,
                         struct gen_avc_wp_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4858,7 +5266,7 @@ gen9_avc_kernel_init_wp(VADriverContextP ctx,
                                          0,
                                          &common_kernel);
 
-    gen8_gpe_load_kernels(ctx,
+    gpe->load_kernels(ctx,
                           gpe_context,
                           &common_kernel,
                           1);
@@ -4870,6 +5278,8 @@ gen9_avc_kernel_init_sfd(VADriverContextP ctx,
                          struct generic_encoder_context *generic_context,
                          struct gen_avc_sfd_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4897,7 +5307,7 @@ gen9_avc_kernel_init_sfd(VADriverContextP ctx,
                                          0,
                                          &common_kernel);
 
-    gen8_gpe_load_kernels(ctx,
+    gpe->load_kernels(ctx,
                           gpe_context,
                           &common_kernel,
                           1);
@@ -4909,26 +5319,28 @@ gen9_avc_kernel_destroy(struct encoder_vme_mfc_context * vme_context)
 {
 
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
+    struct i965_driver_data *i965 = i965_driver_data(avc_ctx->ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
 
     int i = 0;
 
     gen9_avc_free_resources(vme_context);
 
     for(i = 0; i < NUM_GEN9_AVC_KERNEL_SCALING; i++)
-        gen8_gpe_context_destroy(&avc_ctx->context_scaling.gpe_contexts[i]);
+        gpe->context_destroy(&avc_ctx->context_scaling.gpe_contexts[i]);
 
     for(i = 0; i < NUM_GEN9_AVC_KERNEL_BRC; i++)
-        gen8_gpe_context_destroy(&avc_ctx->context_brc.gpe_contexts[i]);
+        gpe->context_destroy(&avc_ctx->context_brc.gpe_contexts[i]);
 
     for(i = 0; i < NUM_GEN9_AVC_KERNEL_ME; i++)
-        gen8_gpe_context_destroy(&avc_ctx->context_me.gpe_contexts[i]);
+        gpe->context_destroy(&avc_ctx->context_me.gpe_contexts[i]);
 
     for(i = 0; i < NUM_GEN9_AVC_KERNEL_MBENC; i++)
-        gen8_gpe_context_destroy(&avc_ctx->context_mbenc.gpe_contexts[i]);
+        gpe->context_destroy(&avc_ctx->context_mbenc.gpe_contexts[i]);
 
-    gen8_gpe_context_destroy(&avc_ctx->context_wp.gpe_contexts);
+    gpe->context_destroy(&avc_ctx->context_wp.gpe_contexts);
 
-    gen8_gpe_context_destroy(&avc_ctx->context_sfd.gpe_contexts);
+    gpe->context_destroy(&avc_ctx->context_sfd.gpe_contexts);
 
 }
 
@@ -5161,12 +5573,10 @@ gen9_avc_encode_check_parameter(VADriverContextP ctx,
     struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
     unsigned int rate_control_mode = encoder_context->rate_control_mode;
     unsigned int preset = generic_state->preset;
-    VAEncPictureParameterBufferH264 *pic_param ;
+    VAEncPictureParameterBufferH264 *pic_param = avc_state->pic_param ;
+    VAEncSliceParameterBufferH264 * slice_param = avc_state->slice_param[0];
     int i = 0;
-
-    /*resolution change detection*/
-    pic_param = avc_state->pic_param;
-
+    int slice_qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
     /*avbr init*/
     generic_state->avbr_curracy = 30;
     generic_state->avbr_convergence = 150;
@@ -5317,6 +5727,55 @@ gen9_avc_encode_check_parameter(VADriverContextP ctx,
         }
     }
 
+    //check the inter rounding
+    avc_state->rounding_value = 0;
+    avc_state->rounding_inter_p = 255;//default
+    avc_state->rounding_inter_b = 255; //default
+    avc_state->rounding_inter_b_ref = 255; //default
+
+    if(generic_state->frame_type == SLICE_TYPE_P)
+    {
+        if(avc_state->rounding_inter_p == AVC_INVALID_ROUNDING_VALUE)
+        {
+            if(avc_state->adaptive_rounding_inter_enable && !(generic_state->brc_enabled))
+            {
+                if(generic_state->gop_ref_distance == 1)
+                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_p_without_b[slice_qp];
+                else
+                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_p[slice_qp];
+            }
+            else
+            {
+                avc_state->rounding_value = gen9_avc_inter_rounding_p[generic_state->preset];
+            }
+
+        }else
+        {
+            avc_state->rounding_value = avc_state->rounding_inter_p;
+        }
+    }else if(generic_state->frame_type == SLICE_TYPE_B)
+    {
+        if(pic_param->pic_fields.bits.reference_pic_flag)
+        {
+            if(avc_state->rounding_inter_b_ref == AVC_INVALID_ROUNDING_VALUE)
+                avc_state->rounding_value = gen9_avc_inter_rounding_b_ref[generic_state->preset];
+            else
+                avc_state->rounding_value = avc_state->rounding_inter_b_ref;
+        }
+        else
+        {
+            if(avc_state->rounding_inter_b == AVC_INVALID_ROUNDING_VALUE)
+            {
+                if(avc_state->adaptive_rounding_inter_enable && !(generic_state->brc_enabled))
+                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_b[slice_qp];
+                else
+                    avc_state->rounding_value = gen9_avc_inter_rounding_b[generic_state->preset];
+            }else
+            {
+                avc_state->rounding_value = avc_state->rounding_inter_b;
+            }
+        }
+    }
     return VA_STATUS_SUCCESS;
 }
 
@@ -5610,7 +6069,7 @@ gen9_avc_vme_gpe_kernel_run(VADriverContextP ctx,
         }
         gen9_avc_kernel_brc_frame_update(ctx,encode_state,encoder_context);
 
-        if(generic_state->mb_brc_enabled)
+        if(avc_state->brc_split_enable && generic_state->mb_brc_enabled)
         {
             gen9_avc_kernel_brc_mb_update(ctx,encode_state,encoder_context);
         }
@@ -5721,6 +6180,7 @@ static void
 gen9_avc_kernel_init(VADriverContextP ctx,
                      struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
@@ -5751,8 +6211,14 @@ gen9_avc_kernel_init(VADriverContextP ctx,
     generic_ctx->pfn_send_brc_mb_update_surface = gen9_avc_send_surface_brc_mb_update;
     generic_ctx->pfn_send_sfd_surface = gen9_avc_send_surface_sfd;
     generic_ctx->pfn_send_wp_surface = gen9_avc_send_surface_wp;
-} 
 
+    if (IS_SKL(i965->intel.device_info)||
+        IS_BXT(i965->intel.device_info))
+        generic_ctx->pfn_set_curbe_scaling4x = gen9_avc_set_curbe_scaling4x;
+    else if (IS_KBL(i965->intel.device_info))
+        generic_ctx->pfn_set_curbe_scaling4x = gen95_avc_set_curbe_scaling4x;
+
+}
 
 /*
 PAK pipeline related function
@@ -6418,51 +6884,6 @@ gen9_mfc_avc_slice_state(VADriverContextP ctx,
     unsigned int rounding_value = 0;
     unsigned int rounding_inter_enable = 0;
 
-    //check the inter rounding
-    if(generic_state->frame_type == SLICE_TYPE_P)
-    {
-        if(avc_state->rounding_inter_p == AVC_INVALID_ROUNDING_VALUE)
-        {
-            if(avc_state->adaptive_rounding_inter_enable && !(generic_state->brc_enabled))
-            {
-                if(generic_state->gop_ref_distance == 1)
-                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_p_without_b[slice_qp];
-                else
-                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_p[slice_qp];
-            }
-            else
-            {
-                avc_state->rounding_value = gen9_avc_inter_rounding_p[generic_state->preset];
-            }
-
-        }else
-        {
-            avc_state->rounding_value = avc_state->rounding_inter_p;
-        }
-    }else if(generic_state->frame_type == SLICE_TYPE_B)
-    {
-        if(pic_param->pic_fields.bits.reference_pic_flag)
-        {
-            if(avc_state->rounding_inter_b_ref == AVC_INVALID_ROUNDING_VALUE)
-                avc_state->rounding_value = gen9_avc_inter_rounding_b_ref[generic_state->preset];
-            else
-                avc_state->rounding_value = avc_state->rounding_inter_b_ref;
-        }
-        else
-        {
-            if(avc_state->rounding_inter_b == AVC_INVALID_ROUNDING_VALUE)
-            {
-                if(avc_state->adaptive_rounding_inter_enable && !(generic_state->brc_enabled))
-                    avc_state->rounding_value = gen9_avc_adaptive_inter_rounding_b[slice_qp];
-                else
-                    avc_state->rounding_value = gen9_avc_inter_rounding_b[generic_state->preset];
-            }else
-            {
-                avc_state->rounding_value = avc_state->rounding_inter_b;
-            }
-        }
-    }
-
     slice_hor_pos = slice_param->macroblock_address % generic_state->frame_width_in_mbs;
     slice_ver_pos = slice_param->macroblock_address / generic_state->frame_width_in_mbs;
 
@@ -6743,6 +7164,8 @@ gen9_mfc_avc_single_slice(VADriverContextP ctx,
                           VAEncSliceParameterBufferH264 *next_slice_param,
                           int slice_index)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
@@ -6795,7 +7218,7 @@ gen9_mfc_avc_single_slice(VADriverContextP ctx,
     second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
     second_level_batch.offset = slice_offset;
     second_level_batch.bo = slice_batch->buffer;
-    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
     /* insert mb code as second levle.*/
     obj_surface = encode_state->reconstructed_object;
@@ -6806,7 +7229,7 @@ gen9_mfc_avc_single_slice(VADriverContextP ctx,
     second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
     second_level_batch.offset = slice_param->macroblock_address * 16 * 4;
     second_level_batch.bo = avc_priv_surface->res_mb_code_surface.bo;
-    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
 }
 
@@ -6815,6 +7238,8 @@ gen9_avc_pak_slice_level(VADriverContextP ctx,
                          struct encode_state *encode_state,
                          struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gpe_mi_flush_dw_parameter mi_flush_dw_params;
     VAEncSliceParameterBufferH264 *slice_param, *next_slice_param, *next_slice_group_param;
@@ -6864,13 +7289,15 @@ gen9_avc_pak_slice_level(VADriverContextP ctx,
 
     memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
     mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
-    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+    gpe->mi_flush_dw(ctx, batch, &mi_flush_dw_params);
 }
 static void
 gen9_avc_pak_picture_level(VADriverContextP ctx,
                            struct encode_state *encode_state,
                            struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
@@ -6889,7 +7316,7 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
         mi_conditional_batch_buffer_end_params.bo = status_buffer->bo;
         mi_conditional_batch_buffer_end_params.compare_data = 0;
         mi_conditional_batch_buffer_end_params.compare_mask_mode_disabled = 0;
-        gen9_gpe_mi_conditional_batch_buffer_end(ctx, batch, &mi_conditional_batch_buffer_end_params);
+        gpe->mi_conditional_batch_buffer_end(ctx, batch, &mi_conditional_batch_buffer_end_params);
     }
 
     gen9_mfc_avc_pipe_mode_select(ctx,encode_state,encoder_context);
@@ -6909,7 +7336,7 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
         }
         second_level_batch.is_second_level = 1;
         second_level_batch.bo = avc_ctx->res_brc_image_state_read_buffer.bo;
-        gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+        gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
     }else
     {
         /*generate a new image state */
@@ -6918,7 +7345,7 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
         second_level_batch.offset = 0;
         second_level_batch.is_second_level = 1;
         second_level_batch.bo = avc_ctx->res_image_state_batch_buffer_2nd_level.bo;
-        gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+        gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
     }
 
     gen9_mfc_avc_qm_state(ctx,encode_state,encoder_context);
@@ -6930,6 +7357,8 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
 static void
 gen9_avc_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
@@ -6943,44 +7372,44 @@ gen9_avc_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *enc
     status_buffer = &(avc_ctx->status_buffer);
 
     memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
-    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+    gpe->mi_flush_dw(ctx, batch, &mi_flush_dw_param);
 
     /* read register and store into status_buffer and pak_statitistic info */
     memset(&mi_store_reg_mem_param, 0, sizeof(mi_store_reg_mem_param));
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->bs_byte_count_frame_offset;
     mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->image_status_mask_offset;
     mi_store_reg_mem_param.mmio_offset = status_buffer->image_status_mask_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     /*update the status in the pak_statistic_surface */
     mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
     mi_store_reg_mem_param.offset = 0;
     mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
     mi_store_reg_mem_param.offset = 4;
     mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_nh_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     memset(&mi_store_data_imm_param, 0, sizeof(mi_store_data_imm_param));
     mi_store_data_imm_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
     mi_store_data_imm_param.offset = sizeof(unsigned int) * 2;
     mi_store_data_imm_param.dw0 = (generic_state->curr_pak_pass + 1);
-    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm_param);
+    gpe->mi_store_data_imm(ctx, batch, &mi_store_data_imm_param);
 
     mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
     mi_store_reg_mem_param.offset = sizeof(unsigned int) * (4 + generic_state->curr_pak_pass) ;
     mi_store_reg_mem_param.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
-    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+    gpe->mi_flush_dw(ctx, batch, &mi_flush_dw_param);
 
     return;
 }
@@ -7210,6 +7639,7 @@ gen9_avc_encode_picture(VADriverContextP ctx,
 {
     VAStatus va_status;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -7239,7 +7669,7 @@ gen9_avc_encode_picture(VADriverContextP ctx,
              memset(&mi_load_reg_imm, 0, sizeof(mi_load_reg_imm));
              mi_load_reg_imm.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
              mi_load_reg_imm.data = 0;
-             gen8_gpe_mi_load_register_imm(ctx, batch, &mi_load_reg_imm);
+             gpe->mi_load_register_imm(ctx, batch, &mi_load_reg_imm);
          }
          gen9_avc_pak_picture_level(ctx, encode_state, encoder_context);
          gen9_avc_pak_slice_level(ctx, encode_state, encoder_context);
@@ -7383,6 +7813,10 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
         IS_BXT(i965->intel.device_info)) {
         generic_ctx->enc_kernel_ptr = (void *)skl_avc_encoder_kernels;
         generic_ctx->enc_kernel_size = sizeof(skl_avc_encoder_kernels);
+    }
+    else if (IS_KBL(i965->intel.device_info)) {
+        generic_ctx->enc_kernel_ptr = (void *)kbl_avc_encoder_kernels;
+        generic_ctx->enc_kernel_size = sizeof(kbl_avc_encoder_kernels);
     }
     else
         goto allocate_structure_failed;
@@ -7545,9 +7979,9 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
     avc_state->generic_reserved = 0;
 
     avc_state->rounding_value = 0;
-    avc_state->rounding_inter_p = 255;//default
-    avc_state->rounding_inter_b = 255; //default
-    avc_state->rounding_inter_b_ref = 255; //default
+    avc_state->rounding_inter_p = AVC_INVALID_ROUNDING_VALUE;//default
+    avc_state->rounding_inter_b = AVC_INVALID_ROUNDING_VALUE; //default
+    avc_state->rounding_inter_b_ref = AVC_INVALID_ROUNDING_VALUE; //default
     avc_state->min_qp_i = INTEL_AVC_MIN_QP;
     avc_state->min_qp_p = INTEL_AVC_MIN_QP;
     avc_state->min_qp_b = INTEL_AVC_MIN_QP;
@@ -7555,9 +7989,9 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
     avc_state->max_qp_p = INTEL_AVC_MAX_QP;
     avc_state->max_qp_b = INTEL_AVC_MAX_QP;
 
-    memset(avc_state->non_ftq_skip_threshold_lut,0,52*sizeof(uint8_t));
-    memset(avc_state->ftq_skip_threshold_lut,0,52*sizeof(uint8_t));
-    memset(avc_state->lamda_value_lut,0,52*2*sizeof(uint8_t));
+    memset(avc_state->non_ftq_skip_threshold_lut,0,AVC_QP_MAX*sizeof(uint8_t));
+    memset(avc_state->ftq_skip_threshold_lut,0,AVC_QP_MAX*sizeof(uint8_t));
+    memset(avc_state->lamda_value_lut,0,AVC_QP_MAX*2*sizeof(uint32_t));
 
     avc_state->intra_refresh_qp_threshold = 0;
     avc_state->trellis_flag = 0;
@@ -7566,8 +8000,27 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
     avc_state->slice_num = 1;
     memset(avc_state->dist_scale_factor_list0,0,32*sizeof(uint32_t));
     avc_state->bi_weight = 0;
-    avc_state->brc_const_data_surface_width = 64;
-    avc_state->brc_const_data_surface_height = 44;
+
+    avc_state->lambda_table_enable = 0;
+
+
+    if (IS_SKL(i965->intel.device_info)||
+        IS_BXT(i965->intel.device_info)) {
+        avc_state->brc_const_data_surface_width = 64;
+        avc_state->brc_const_data_surface_height = 44;
+    }
+    else if (IS_KBL(i965->intel.device_info)) {
+        avc_state->brc_const_data_surface_width = 64;
+        avc_state->brc_const_data_surface_height = 53;
+        //gen95
+        avc_state->decouple_mbenc_curbe_from_brc_enable = 1;
+        avc_state->extended_mv_cost_range_enable = 0;
+        avc_state->reserved_g95 = 0;
+        avc_state->mbenc_brc_buffer_size = 128;
+        avc_state->kernel_trellis_enable = 1;
+        avc_state->lambda_table_enable = 1;
+        avc_state->brc_split_enable = 1;
+    }
 
     avc_state->num_refs[0] = 0;
     avc_state->num_refs[1] = 0;

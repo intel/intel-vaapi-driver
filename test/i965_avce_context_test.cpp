@@ -61,9 +61,8 @@ protected:
         struct i965_driver_data *i965(*this);
         if (not i965) return NULL;
 
-        if (IS_SKL(i965->intel.device_info)||
-            IS_BXT(i965->intel.device_info))
-            is_skl_bxt = true;
+        if (IS_GEN9(i965->intel.device_info))
+            is_gen9 = true;
 
         struct object_context const *obj_context = CONTEXT(context);
         if (not obj_context) return NULL;
@@ -76,7 +75,7 @@ protected:
     VAEntrypoint    entrypoint;
     VAConfigID      config = VA_INVALID_ID;
     VAContextID     context = VA_INVALID_ID;
-    bool            is_skl_bxt = false;
+    bool            is_gen9 = false;
 };
 
 TEST_P(AVCEContextTest, RateControl)
@@ -232,7 +231,7 @@ TEST_P(AVCEContextTest, QualityRange)
     ASSERT_PTR(hw_context);
 
     std::map<VAProfile, unsigned> qranges;
-    if(is_skl_bxt) {
+    if(is_gen9) {
         qranges = {
             {VAProfileH264ConstrainedBaseline, entrypoint == VAEntrypointEncSliceLP
                 ? ENCODER_LP_QUALITY_RANGE : ENCODER_QUALITY_RANGE_AVC},
