@@ -1143,6 +1143,8 @@ gen9_avc_run_kernel_media_object(VADriverContextP ctx,
                              int media_function,
                              struct gpe_media_object_parameter *param)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
 
@@ -1161,13 +1163,13 @@ gen9_avc_run_kernel_media_object(VADriverContextP ctx,
     mi_store_data_imm.bo = status_buffer->bo;
     mi_store_data_imm.offset = status_buffer->media_index_offset;
     mi_store_data_imm.dw0 = media_function;
-    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
+    gpe->mi_store_data_imm(ctx, batch, &mi_store_data_imm);
 
-    gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
-    gen8_gpe_media_object(ctx, gpe_context, batch, param);
-    gen8_gpe_media_state_flush(ctx, gpe_context, batch);
+    gpe->pipeline_setup(ctx, gpe_context, batch);
+    gpe->media_object(ctx, gpe_context, batch, param);
+    gpe->media_state_flush(ctx, gpe_context, batch);
 
-    gen9_gpe_pipeline_end(ctx, gpe_context, batch);
+    gpe->pipeline_end(ctx, gpe_context, batch);
 
     intel_batchbuffer_end_atomic(batch);
 
@@ -1181,6 +1183,8 @@ gen9_avc_run_kernel_media_object_walker(VADriverContextP ctx,
                                     int media_function,
                                     struct gpe_media_object_walker_parameter *param)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
 
@@ -1200,13 +1204,13 @@ gen9_avc_run_kernel_media_object_walker(VADriverContextP ctx,
     mi_store_data_imm.bo = status_buffer->bo;
     mi_store_data_imm.offset = status_buffer->media_index_offset;
     mi_store_data_imm.dw0 = media_function;
-    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm);
+    gpe->mi_store_data_imm(ctx, batch, &mi_store_data_imm);
 
-    gen9_gpe_pipeline_setup(ctx, gpe_context, batch);
-    gen8_gpe_media_object_walker(ctx, gpe_context, batch, param);
-    gen8_gpe_media_state_flush(ctx, gpe_context, batch);
+    gpe->pipeline_setup(ctx, gpe_context, batch);
+    gpe->media_object_walker(ctx, gpe_context, batch, param);
+    gpe->media_state_flush(ctx, gpe_context, batch);
 
-    gen9_gpe_pipeline_end(ctx, gpe_context, batch);
+    gpe->pipeline_end(ctx, gpe_context, batch);
 
     intel_batchbuffer_end_atomic(batch);
 
@@ -1442,6 +1446,8 @@ gen9_avc_kernel_scaling(VADriverContextP ctx,
                         struct intel_encoder_context *encoder_context,
                         int hme_type)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -1547,8 +1553,8 @@ gen9_avc_kernel_scaling(VADriverContextP ctx,
 
     gpe_context = &(avc_ctx->context_scaling.gpe_contexts[kernel_idx]);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     if(surface_param.use_32x_scaling)
     {
@@ -1587,7 +1593,7 @@ gen9_avc_kernel_scaling(VADriverContextP ctx,
     generic_ctx->pfn_send_scaling_surface(ctx,encode_state,gpe_context,encoder_context,&surface_param);
 
     /* setup the interface data */
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
     if(surface_param.use_32x_scaling)
@@ -2234,6 +2240,8 @@ gen9_avc_kernel_brc_init_reset(VADriverContextP ctx,
                                struct encode_state *encode_state,
                                struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -2252,14 +2260,14 @@ gen9_avc_kernel_brc_init_reset(VADriverContextP ctx,
 
     gpe_context = &(avc_ctx->context_brc.gpe_contexts[kernel_idx]);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     generic_ctx->pfn_set_curbe_brc_init_reset(ctx,encode_state,gpe_context,encoder_context,NULL);
 
     generic_ctx->pfn_send_brc_init_reset_surface(ctx,encode_state,gpe_context,encoder_context,NULL);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&media_object_param, 0, sizeof(media_object_param));
     memset(&media_object_inline_data, 0, sizeof(media_object_inline_data));
@@ -2491,13 +2499,15 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
                                  struct intel_encoder_context *encoder_context)
 
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
 
-    struct i965_gpe_context *gpe_context;
+    struct i965_gpe_context *gpe_context = NULL;
     struct gpe_media_object_parameter media_object_param;
     struct gpe_media_object_inline_data media_object_inline_data;
     int media_function = 0;
@@ -2554,7 +2564,7 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
     }
 
     gpe_context = &(avc_ctx->context_mbenc.gpe_contexts[kernel_idx]);
-    gen8_gpe_context_init(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
 
     memset(&curbe_mbenc_param,0,sizeof(struct mbenc_param));
 
@@ -2566,7 +2576,6 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
 
     /* set curbe mbenc*/
     generic_ctx->pfn_set_curbe_mbenc(ctx,encode_state,gpe_context,encoder_context,&curbe_mbenc_param);
-    avc_state->mbenc_curbe_set_in_brc_update = 1;
 
     /*begin brc frame update*/
     memset(&curbe_brc_param,0,sizeof(struct brc_param));
@@ -2576,8 +2585,8 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
     gpe_context = &(avc_ctx->context_brc.gpe_contexts[kernel_idx]);
     curbe_brc_param.gpe_context_brc_frame_update = gpe_context;
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
     /*brc copy ignored*/
 
     /* set curbe frame update*/
@@ -2597,7 +2606,7 @@ gen9_avc_kernel_brc_frame_update(VADriverContextP ctx,
     generic_ctx->pfn_send_brc_frame_update_surface(ctx,encode_state,gpe_context,encoder_context,&curbe_brc_param);
 
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&media_object_param, 0, sizeof(media_object_param));
     memset(&media_object_inline_data, 0, sizeof(media_object_inline_data));
@@ -2707,6 +2716,8 @@ gen9_avc_kernel_brc_mb_update(VADriverContextP ctx,
                               struct intel_encoder_context *encoder_context)
 
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -2722,8 +2733,8 @@ gen9_avc_kernel_brc_mb_update(VADriverContextP ctx,
     kernel_idx = GEN9_AVC_KERNEL_BRC_MB_UPDATE;
     gpe_context = &(avc_ctx->context_brc.gpe_contexts[kernel_idx]);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     /* set curbe brc mb update*/
     generic_ctx->pfn_set_curbe_brc_mb_update(ctx,encode_state,gpe_context,encoder_context,NULL);
@@ -2733,7 +2744,7 @@ gen9_avc_kernel_brc_mb_update(VADriverContextP ctx,
     generic_ctx->pfn_send_brc_mb_update_surface(ctx,encode_state,gpe_context,encoder_context,NULL);
 
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
     /* the scaling is based on 8x8 blk level */
@@ -3736,6 +3747,8 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
                       struct intel_encoder_context *encoder_context,
                       bool i_frame_dist_in_use)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
@@ -3840,10 +3853,10 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
 
     if(!avc_state->mbenc_curbe_set_in_brc_update)
     {
-        gen8_gpe_context_init(ctx, gpe_context);
+        gpe->context_init(ctx, gpe_context);
     }
 
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     if(!avc_state->mbenc_curbe_set_in_brc_update)
     {
@@ -3865,7 +3878,7 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
     /*send surface*/
     generic_ctx->pfn_send_mbenc_surface(ctx,encode_state,gpe_context,encoder_context,&param);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     /*walker setting*/
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
@@ -4274,6 +4287,8 @@ gen9_avc_kernel_me(VADriverContextP ctx,
                    struct intel_encoder_context *encoder_context,
                    int hme_type)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
@@ -4320,8 +4335,8 @@ gen9_avc_kernel_me(VADriverContextP ctx,
     kernel_idx = (generic_state->frame_type == SLICE_TYPE_P)? GEN9_AVC_KERNEL_ME_P_IDX : GEN9_AVC_KERNEL_ME_B_IDX;
     gpe_context = &(avc_ctx->context_me.gpe_contexts[kernel_idx]);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     /*set curbe*/
     memset(&param,0,sizeof(param));
@@ -4331,7 +4346,7 @@ gen9_avc_kernel_me(VADriverContextP ctx,
     /*send surface*/
     generic_ctx->pfn_send_me_surface(ctx,encode_state,gpe_context,encoder_context,&param);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
     /* the scaling is based on 8x8 blk level */
@@ -4441,6 +4456,8 @@ gen9_avc_kernel_wp(VADriverContextP ctx,
                    struct intel_encoder_context *encoder_context,
                    unsigned int list1_in_use)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -4454,8 +4471,8 @@ gen9_avc_kernel_wp(VADriverContextP ctx,
 
     gpe_context = &(avc_ctx->context_wp.gpe_contexts);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     memset(&param,0,sizeof(param));
     param.ref_list_idx = (list1_in_use == 1)? 1: 0;
@@ -4465,7 +4482,7 @@ gen9_avc_kernel_wp(VADriverContextP ctx,
     /*send surface*/
     generic_ctx->pfn_send_wp_surface(ctx,encode_state,gpe_context,encoder_context,&param);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
     /* the scaling is based on 8x8 blk level */
@@ -4592,6 +4609,8 @@ gen9_avc_kernel_sfd(VADriverContextP ctx,
                     struct encode_state *encode_state,
                     struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )vme_context->generic_enc_ctx;
@@ -4602,8 +4621,8 @@ gen9_avc_kernel_sfd(VADriverContextP ctx,
     int media_function = INTEL_MEDIA_STATE_STATIC_FRAME_DETECTION;
     gpe_context = &(avc_ctx->context_sfd.gpe_contexts);
 
-    gen8_gpe_context_init(ctx, gpe_context);
-    gen9_gpe_reset_binding_table(ctx, gpe_context);
+    gpe->context_init(ctx, gpe_context);
+    gpe->reset_binding_table(ctx, gpe_context);
 
     /*set curbe*/
     generic_ctx->pfn_set_curbe_sfd(ctx,encode_state,gpe_context,encoder_context,NULL);
@@ -4611,7 +4630,7 @@ gen9_avc_kernel_sfd(VADriverContextP ctx,
     /*send surface*/
     generic_ctx->pfn_send_sfd_surface(ctx,encode_state,gpe_context,encoder_context,NULL);
 
-    gen8_gpe_setup_interface_data(ctx, gpe_context);
+    gpe->setup_interface_data(ctx, gpe_context);
 
     memset(&media_object_param, 0, sizeof(media_object_param));
     memset(&media_object_inline_data, 0, sizeof(media_object_inline_data));
@@ -4634,6 +4653,8 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
                              struct generic_encoder_context *generic_context,
                              struct gen_avc_scaling_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4662,10 +4683,10 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
                                          0,
                                          &common_kernel);
 
-    gen8_gpe_load_kernels(ctx,
-                          gpe_context,
-                          &common_kernel,
-                          1);
+    gpe->load_kernels(ctx,
+                      gpe_context,
+                      &common_kernel,
+                      1);
 
     /*2x scaling kernel*/
     kernel_param.curbe_size = sizeof(gen9_avc_scaling2x_curbe_data);
@@ -4684,10 +4705,10 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
                                          0,
                                          &common_kernel);
 
-    gen8_gpe_load_kernels(ctx,
-                          gpe_context,
-                          &common_kernel,
-                          1);
+    gpe->load_kernels(ctx,
+                      gpe_context,
+                      &common_kernel,
+                      1);
 
 }
 
@@ -4696,6 +4717,8 @@ gen9_avc_kernel_init_me(VADriverContextP ctx,
                         struct generic_encoder_context *generic_context,
                         struct gen_avc_me_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4725,7 +4748,7 @@ gen9_avc_kernel_init_me(VADriverContextP ctx,
                                              i,
                                              &common_kernel);
 
-        gen8_gpe_load_kernels(ctx,
+        gpe->load_kernels(ctx,
                               gpe_context,
                               &common_kernel,
                               1);
@@ -4738,6 +4761,8 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
                            struct generic_encoder_context *generic_context,
                            struct gen_avc_mbenc_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4767,10 +4792,10 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
                                              i,
                                              &common_kernel);
 
-        gen8_gpe_load_kernels(ctx,
-                              gpe_context,
-                              &common_kernel,
-                              1);
+        gpe->load_kernels(ctx,
+                          gpe_context,
+                          &common_kernel,
+                          1);
     }
 
 }
@@ -4780,6 +4805,8 @@ gen9_avc_kernel_init_brc(VADriverContextP ctx,
                          struct generic_encoder_context *generic_context,
                          struct gen_avc_brc_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4818,10 +4845,10 @@ gen9_avc_kernel_init_brc(VADriverContextP ctx,
                                              i,
                                              &common_kernel);
 
-        gen8_gpe_load_kernels(ctx,
-                              gpe_context,
-                              &common_kernel,
-                              1);
+        gpe->load_kernels(ctx,
+                          gpe_context,
+                          &common_kernel,
+                          1);
     }
 
 }
@@ -4831,6 +4858,8 @@ gen9_avc_kernel_init_wp(VADriverContextP ctx,
                         struct generic_encoder_context *generic_context,
                         struct gen_avc_wp_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4858,7 +4887,7 @@ gen9_avc_kernel_init_wp(VADriverContextP ctx,
                                          0,
                                          &common_kernel);
 
-    gen8_gpe_load_kernels(ctx,
+    gpe->load_kernels(ctx,
                           gpe_context,
                           &common_kernel,
                           1);
@@ -4870,6 +4899,8 @@ gen9_avc_kernel_init_sfd(VADriverContextP ctx,
                          struct generic_encoder_context *generic_context,
                          struct gen_avc_sfd_context *kernel_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_context *gpe_context = NULL;
     struct encoder_kernel_parameter kernel_param ;
     struct encoder_scoreboard_parameter scoreboard_param;
@@ -4897,7 +4928,7 @@ gen9_avc_kernel_init_sfd(VADriverContextP ctx,
                                          0,
                                          &common_kernel);
 
-    gen8_gpe_load_kernels(ctx,
+    gpe->load_kernels(ctx,
                           gpe_context,
                           &common_kernel,
                           1);
@@ -4909,26 +4940,28 @@ gen9_avc_kernel_destroy(struct encoder_vme_mfc_context * vme_context)
 {
 
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
+    struct i965_driver_data *i965 = i965_driver_data(avc_ctx->ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
 
     int i = 0;
 
     gen9_avc_free_resources(vme_context);
 
     for(i = 0; i < NUM_GEN9_AVC_KERNEL_SCALING; i++)
-        gen8_gpe_context_destroy(&avc_ctx->context_scaling.gpe_contexts[i]);
+        gpe->context_destroy(&avc_ctx->context_scaling.gpe_contexts[i]);
 
     for(i = 0; i < NUM_GEN9_AVC_KERNEL_BRC; i++)
-        gen8_gpe_context_destroy(&avc_ctx->context_brc.gpe_contexts[i]);
+        gpe->context_destroy(&avc_ctx->context_brc.gpe_contexts[i]);
 
     for(i = 0; i < NUM_GEN9_AVC_KERNEL_ME; i++)
-        gen8_gpe_context_destroy(&avc_ctx->context_me.gpe_contexts[i]);
+        gpe->context_destroy(&avc_ctx->context_me.gpe_contexts[i]);
 
     for(i = 0; i < NUM_GEN9_AVC_KERNEL_MBENC; i++)
-        gen8_gpe_context_destroy(&avc_ctx->context_mbenc.gpe_contexts[i]);
+        gpe->context_destroy(&avc_ctx->context_mbenc.gpe_contexts[i]);
 
-    gen8_gpe_context_destroy(&avc_ctx->context_wp.gpe_contexts);
+    gpe->context_destroy(&avc_ctx->context_wp.gpe_contexts);
 
-    gen8_gpe_context_destroy(&avc_ctx->context_sfd.gpe_contexts);
+    gpe->context_destroy(&avc_ctx->context_sfd.gpe_contexts);
 
 }
 
@@ -6743,6 +6776,8 @@ gen9_mfc_avc_single_slice(VADriverContextP ctx,
                           VAEncSliceParameterBufferH264 *next_slice_param,
                           int slice_index)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )pak_context->generic_enc_state;
@@ -6795,7 +6830,7 @@ gen9_mfc_avc_single_slice(VADriverContextP ctx,
     second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
     second_level_batch.offset = slice_offset;
     second_level_batch.bo = slice_batch->buffer;
-    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
     /* insert mb code as second levle.*/
     obj_surface = encode_state->reconstructed_object;
@@ -6806,7 +6841,7 @@ gen9_mfc_avc_single_slice(VADriverContextP ctx,
     second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
     second_level_batch.offset = slice_param->macroblock_address * 16 * 4;
     second_level_batch.bo = avc_priv_surface->res_mb_code_surface.bo;
-    gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+    gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
 }
 
@@ -6815,6 +6850,8 @@ gen9_avc_pak_slice_level(VADriverContextP ctx,
                          struct encode_state *encode_state,
                          struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gpe_mi_flush_dw_parameter mi_flush_dw_params;
     VAEncSliceParameterBufferH264 *slice_param, *next_slice_param, *next_slice_group_param;
@@ -6864,13 +6901,15 @@ gen9_avc_pak_slice_level(VADriverContextP ctx,
 
     memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
     mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
-    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+    gpe->mi_flush_dw(ctx, batch, &mi_flush_dw_params);
 }
 static void
 gen9_avc_pak_picture_level(VADriverContextP ctx,
                            struct encode_state *encode_state,
                            struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context * )pak_context->generic_enc_ctx;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
@@ -6889,7 +6928,7 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
         mi_conditional_batch_buffer_end_params.bo = status_buffer->bo;
         mi_conditional_batch_buffer_end_params.compare_data = 0;
         mi_conditional_batch_buffer_end_params.compare_mask_mode_disabled = 0;
-        gen9_gpe_mi_conditional_batch_buffer_end(ctx, batch, &mi_conditional_batch_buffer_end_params);
+        gpe->mi_conditional_batch_buffer_end(ctx, batch, &mi_conditional_batch_buffer_end_params);
     }
 
     gen9_mfc_avc_pipe_mode_select(ctx,encode_state,encoder_context);
@@ -6909,7 +6948,7 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
         }
         second_level_batch.is_second_level = 1;
         second_level_batch.bo = avc_ctx->res_brc_image_state_read_buffer.bo;
-        gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+        gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
     }else
     {
         /*generate a new image state */
@@ -6918,7 +6957,7 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
         second_level_batch.offset = 0;
         second_level_batch.is_second_level = 1;
         second_level_batch.bo = avc_ctx->res_image_state_batch_buffer_2nd_level.bo;
-        gen8_gpe_mi_batch_buffer_start(ctx, batch, &second_level_batch);
+        gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
     }
 
     gen9_mfc_avc_qm_state(ctx,encode_state,encoder_context);
@@ -6930,6 +6969,8 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
 static void
 gen9_avc_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )pak_context->private_enc_ctx;
@@ -6943,44 +6984,44 @@ gen9_avc_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *enc
     status_buffer = &(avc_ctx->status_buffer);
 
     memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
-    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+    gpe->mi_flush_dw(ctx, batch, &mi_flush_dw_param);
 
     /* read register and store into status_buffer and pak_statitistic info */
     memset(&mi_store_reg_mem_param, 0, sizeof(mi_store_reg_mem_param));
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->bs_byte_count_frame_offset;
     mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->image_status_mask_offset;
     mi_store_reg_mem_param.mmio_offset = status_buffer->image_status_mask_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     /*update the status in the pak_statistic_surface */
     mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
     mi_store_reg_mem_param.offset = 0;
     mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
     mi_store_reg_mem_param.offset = 4;
     mi_store_reg_mem_param.mmio_offset = status_buffer->bs_byte_count_frame_nh_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     memset(&mi_store_data_imm_param, 0, sizeof(mi_store_data_imm_param));
     mi_store_data_imm_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
     mi_store_data_imm_param.offset = sizeof(unsigned int) * 2;
     mi_store_data_imm_param.dw0 = (generic_state->curr_pak_pass + 1);
-    gen8_gpe_mi_store_data_imm(ctx, batch, &mi_store_data_imm_param);
+    gpe->mi_store_data_imm(ctx, batch, &mi_store_data_imm_param);
 
     mi_store_reg_mem_param.bo = avc_ctx->res_brc_pre_pak_statistics_output_buffer.bo;
     mi_store_reg_mem_param.offset = sizeof(unsigned int) * (4 + generic_state->curr_pak_pass) ;
     mi_store_reg_mem_param.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
-    gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     memset(&mi_flush_dw_param, 0, sizeof(mi_flush_dw_param));
-    gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
+    gpe->mi_flush_dw(ctx, batch, &mi_flush_dw_param);
 
     return;
 }
@@ -7210,6 +7251,7 @@ gen9_avc_encode_picture(VADriverContextP ctx,
 {
     VAStatus va_status;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
@@ -7239,7 +7281,7 @@ gen9_avc_encode_picture(VADriverContextP ctx,
              memset(&mi_load_reg_imm, 0, sizeof(mi_load_reg_imm));
              mi_load_reg_imm.mmio_offset = status_buffer->image_status_ctrl_reg_offset;
              mi_load_reg_imm.data = 0;
-             gen8_gpe_mi_load_register_imm(ctx, batch, &mi_load_reg_imm);
+             gpe->mi_load_register_imm(ctx, batch, &mi_load_reg_imm);
          }
          gen9_avc_pak_picture_level(ctx, encode_state, encoder_context);
          gen9_avc_pak_slice_level(ctx, encode_state, encoder_context);
