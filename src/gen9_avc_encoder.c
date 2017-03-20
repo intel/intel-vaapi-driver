@@ -957,7 +957,7 @@ gen9_avc_allocate_resources(VADriverContextP ctx,
             goto failed_allocation;
 
         i965_free_gpe_resource(&avc_ctx->res_mbbrc_const_data_buffer);
-        size = 16 * 52 * 4;
+        size = 16 * AVC_QP_MAX * 4;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
                                  &avc_ctx->res_mbbrc_const_data_buffer,
                                  ALIGN(size,0x1000),
@@ -2000,7 +2000,7 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
 
     if((generic_state->frame_type != SLICE_TYPE_I) && avc_state->non_ftq_skip_threshold_lut_input_enable)
     {
-        for(i = 0; i< 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data + 1 + (i * 2)) = (unsigned char)i965_avc_calc_skip_value(block_based_skip_enable,transform_8x8_mode_flag,avc_state->non_ftq_skip_threshold_lut[i]);
         }
@@ -2061,7 +2061,7 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
 
     if(avc_state->old_mode_cost_enable)
     {   data_tmp = data;
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data_tmp +3) = (unsigned int)gen9_avc_old_intra_mode_cost[i];
             data_tmp += 16;
@@ -2070,7 +2070,7 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
 
     if(avc_state->ftq_skip_threshold_lut_input_enable)
     {
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data + (i * 32) + 24) =
             *(data + (i * 32) + 25) =
@@ -2167,7 +2167,7 @@ gen9_avc_init_brc_const_data_old(VADriverContextP ctx,
 
     if((generic_state->frame_type != SLICE_TYPE_I) && avc_state->non_ftq_skip_threshold_lut_input_enable)
     {
-        for(i = 0; i< 52 ; i++)
+        for(i = 0; i< AVC_QP_MAX ; i++)
         {
             *(data + 1 + (i * 2)) = (unsigned char)i965_avc_calc_skip_value(block_based_skip_enable,transform_8x8_mode_flag,avc_state->non_ftq_skip_threshold_lut[i]);
         }
@@ -2186,7 +2186,7 @@ gen9_avc_init_brc_const_data_old(VADriverContextP ctx,
 
     if(avc_state->old_mode_cost_enable)
     {   data_tmp = data;
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data_tmp +3) = (unsigned int)gen9_avc_old_intra_mode_cost[i];
             data_tmp += 16;
@@ -2195,7 +2195,7 @@ gen9_avc_init_brc_const_data_old(VADriverContextP ctx,
 
     if(avc_state->ftq_skip_threshold_lut_input_enable)
     {
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             *(data + (i * 32) + 24) =
             *(data + (i * 32) + 25) =
@@ -3099,7 +3099,7 @@ gen9_avc_load_mb_brc_const_data(VADriverContextP ctx,
     switch(generic_state->frame_type)
     {
     case SLICE_TYPE_I:
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             if(avc_state->old_mode_cost_enable)
                 *data = (unsigned int)gen9_avc_old_intra_mode_cost[i];
@@ -3108,7 +3108,7 @@ gen9_avc_load_mb_brc_const_data(VADriverContextP ctx,
         break;
     case SLICE_TYPE_P:
     case SLICE_TYPE_B:
-        for(i = 0; i < 52 ; i++)
+        for(i = 0; i < AVC_QP_MAX ; i++)
         {
             if(generic_state->frame_type == SLICE_TYPE_P)
             {
@@ -3143,7 +3143,7 @@ gen9_avc_load_mb_brc_const_data(VADriverContextP ctx,
     }
 
     data = data_tmp;
-    for(i = 0; i < 52 ; i++)
+    for(i = 0; i < AVC_QP_MAX ; i++)
     {
         if(avc_state->ftq_skip_threshold_lut_input_enable)
         {
@@ -3849,7 +3849,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     /*mbbrc const data_buffer*/
     if(param->mb_const_data_buffer_in_use)
     {
-        size = 16 * 52 * sizeof(unsigned int);
+        size = 16 * AVC_QP_MAX * sizeof(unsigned int);
         gpe_resource = &avc_ctx->res_mbbrc_const_data_buffer;
         gen9_add_buffer_gpe_surface(ctx,
                                     gpe_context,
@@ -4904,11 +4904,11 @@ gen9_avc_set_curbe_sfd(VADriverContextP ctx,
 
     if(generic_state->frame_type == SLICE_TYPE_P)
     {
-        memcpy(cmd->cost_table,gen9_avc_sfd_cost_table_p_frame,52* sizeof(unsigned char));
+        memcpy(cmd->cost_table,gen9_avc_sfd_cost_table_p_frame,AVC_QP_MAX* sizeof(unsigned char));
 
     }else if(generic_state->frame_type == SLICE_TYPE_B)
     {
-        memcpy(cmd->cost_table,gen9_avc_sfd_cost_table_b_frame,52* sizeof(unsigned char));
+        memcpy(cmd->cost_table,gen9_avc_sfd_cost_table_b_frame,AVC_QP_MAX* sizeof(unsigned char));
     }
 
     cmd->dw21.actual_width_in_mb = cmd->dw2.frame_width_in_mbs ;
@@ -7989,9 +7989,9 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
     avc_state->max_qp_p = INTEL_AVC_MAX_QP;
     avc_state->max_qp_b = INTEL_AVC_MAX_QP;
 
-    memset(avc_state->non_ftq_skip_threshold_lut,0,52*sizeof(uint8_t));
-    memset(avc_state->ftq_skip_threshold_lut,0,52*sizeof(uint8_t));
-    memset(avc_state->lamda_value_lut,0,52*2*sizeof(uint32_t));
+    memset(avc_state->non_ftq_skip_threshold_lut,0,AVC_QP_MAX*sizeof(uint8_t));
+    memset(avc_state->ftq_skip_threshold_lut,0,AVC_QP_MAX*sizeof(uint8_t));
+    memset(avc_state->lamda_value_lut,0,AVC_QP_MAX*2*sizeof(uint32_t));
 
     avc_state->intra_refresh_qp_threshold = 0;
     avc_state->trellis_flag = 0;
