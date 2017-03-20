@@ -125,6 +125,7 @@ struct i965_avc_encoder_context {
 
     //mbenc
     struct i965_gpe_resource res_mbenc_slice_map_surface;
+    struct i965_gpe_resource res_mbenc_brc_buffer;//gen95
 
     //scaling flatness check surface
     struct i965_gpe_resource res_flatness_check_surface;
@@ -308,6 +309,13 @@ struct avc_enc_state {
 
     uint32_t slice_second_levle_batch_buffer_in_use;
     uint32_t slice_batch_offset[MAX_AVC_SLICE_NUM];
+
+    //gen95
+    uint32_t decouple_mbenc_curbe_from_brc_enable :1;
+    uint32_t extended_mv_cost_range_enable :1;
+    uint32_t lambda_table_enable :1;
+    uint32_t reserved_g95 :30;
+    uint32_t mbenc_brc_buffer_size;
 
 };
 
