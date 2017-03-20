@@ -32,4 +32,7 @@
 #define AVC_ENC_SKL_SZ 96346
 extern const unsigned int skl_avc_encoder_kernels[AVC_ENC_SKL_SZ];
 
+#define AVC_ENC_KBL_SZ 101994
+extern const unsigned int kbl_avc_encoder_kernels[AVC_ENC_KBL_SZ];
+
 #endif//_GEN9_AVC_ENCODER_KERNELS_H
