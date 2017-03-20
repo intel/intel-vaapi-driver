@@ -48,7 +48,6 @@ extern Bool i965_encoder_vp8_pak_context_init(VADriverContextP ctx, struct intel
 
 Bool gen9_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
     switch (encoder_context->codec) {
     case CODEC_VP8:
         return i965_encoder_vp8_pak_context_init(ctx, encoder_context);
@@ -61,11 +60,8 @@ Bool gen9_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     case CODEC_H264_MVC:
         if (encoder_context->low_power_mode)
             return gen9_vdenc_context_init(ctx, encoder_context);
-        else if (IS_SKL(i965->intel.device_info)||
-                 IS_BXT(i965->intel.device_info))
-            return gen9_avc_pak_context_init(ctx, encoder_context);
         else
-            return gen8_mfc_context_init(ctx, encoder_context);
+            return gen9_avc_pak_context_init(ctx, encoder_context);
 
     case CODEC_HEVC:
         return gen9_hcpe_context_init(ctx, encoder_context);
