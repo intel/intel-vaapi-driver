@@ -33,14 +33,12 @@
 
 typedef struct gen_codec_surface GenCodecSurface;
 
-struct gen_codec_surface
-{
+struct gen_codec_surface {
     int frame_store_id;
 };
 
 typedef struct gen_avc_surface GenAvcSurface;
-struct gen_avc_surface
-{
+struct gen_avc_surface {
     GenCodecSurface base;
     dri_bo *dmv_top;
     dri_bo *dmv_bottom;
@@ -50,11 +48,10 @@ struct gen_avc_surface
 extern void gen_free_avc_surface(void **data);
 
 
-extern int intel_format_convert(float src, int out_int_bits, int out_frac_bits,int out_sign_flag);
+extern int intel_format_convert(float src, int out_int_bits, int out_frac_bits, int out_sign_flag);
 
 typedef struct gen_hevc_surface GenHevcSurface;
-struct gen_hevc_surface
-{
+struct gen_hevc_surface {
     GenCodecSurface base;
     dri_bo *motion_vector_temporal_bo;
     //Encoding HEVC10:internal surface keep for P010->NV12 , this is only for hevc10 to save the P010->NV12
@@ -65,8 +62,7 @@ struct gen_hevc_surface
 };
 
 typedef struct gen_vp9_surface GenVP9Surface;
-struct gen_vp9_surface
-{
+struct gen_vp9_surface {
     GenCodecSurface base;
     uint16_t frame_width;
     uint16_t frame_height;
@@ -74,8 +70,7 @@ struct gen_vp9_surface
 };
 
 typedef struct vdenc_avc_surface VDEncAvcSurface;
-struct vdenc_avc_surface
-{
+struct vdenc_avc_surface {
     VADriverContextP ctx;
     VASurfaceID scaled_4x_surface_id;
     struct object_surface *scaled_4x_surface_obj;

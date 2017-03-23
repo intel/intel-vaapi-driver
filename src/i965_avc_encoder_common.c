@@ -88,7 +88,7 @@ i965_avc_get_max_mbps(int level_idc)
 
 unsigned int
 i965_avc_get_profile_level_max_frame(struct avc_param * param,
-                                       int level_idc)
+                                     int level_idc)
 {
     double bits_per_mb, tmpf;
     int max_mbps, num_mb_per_frame;
@@ -99,8 +99,7 @@ i965_avc_get_profile_level_max_frame(struct avc_param * param,
 
     if (level_idc >= INTEL_AVC_LEVEL_31 && level_idc <= INTEL_AVC_LEVEL_4)
         bits_per_mb = 96.0;
-    else
-    {
+    else {
         bits_per_mb = 192.0;
         scale_factor = 2;
 
@@ -115,11 +114,11 @@ i965_avc_get_profile_level_max_frame(struct avc_param * param,
         tmpf = max_mbps / 172.0;
 
     max_byte_per_frame0 = (uint64_t)(tmpf * bits_per_mb);
-    max_byte_per_frame1 = (uint64_t)(((double)max_mbps * 100) / param->frames_per_100s *bits_per_mb);
+    max_byte_per_frame1 = (uint64_t)(((double)max_mbps * 100) / param->frames_per_100s * bits_per_mb);
 
     /* TODO: check VAEncMiscParameterTypeMaxFrameSize */
     ret = (unsigned int)MIN(max_byte_per_frame0, max_byte_per_frame1);
-    ret = (unsigned int)MIN(ret, param->frame_width_in_pixel * param->frame_height_in_pixel *3 /(2*scale_factor));
+    ret = (unsigned int)MIN(ret, param->frame_width_in_pixel * param->frame_height_in_pixel * 3 / (2 * scale_factor));
 
     return ret;
 }
@@ -158,8 +157,7 @@ i965_avc_get_max_v_mv_r(int level_idc)
 
     // See JVT Spec Annex A Table A-1 Level limits for below mapping
     // MaxVmvR is in luma quarter pel unit
-    switch (level_idc)
-    {
+    switch (level_idc) {
     case INTEL_AVC_LEVEL_1:
         max_v_mv_r = 64 * 4;
         break;
@@ -199,8 +197,7 @@ i965_avc_get_max_mv_len(int level_idc)
 
     // See JVT Spec Annex A Table A-1 Level limits for below mapping
     // MaxVmvR is in luma quarter pel unit
-    switch (level_idc)
-    {
+    switch (level_idc) {
     case INTEL_AVC_LEVEL_1:
         max_mv_len = 63;
         break;
@@ -239,8 +236,7 @@ i965_avc_get_max_mv_per_2mb(int level_idc)
     unsigned int max_mv_per_2mb = 32;
 
     // See JVT Spec Annex A Table A-1 Level limits for below mapping
-    switch (level_idc)
-    {
+    switch (level_idc) {
     case INTEL_AVC_LEVEL_3:
         max_mv_per_2mb = 32;
         break;
@@ -264,27 +260,22 @@ i965_avc_get_max_mv_per_2mb(int level_idc)
 unsigned short
 i965_avc_calc_skip_value(unsigned int enc_block_based_sip_en, unsigned int transform_8x8_flag, unsigned short skip_value)
 {
-    if(!enc_block_based_sip_en)
-    {
+    if (!enc_block_based_sip_en) {
         skip_value *= 3;
-    }
-    else if(!transform_8x8_flag)
-    {
+    } else if (!transform_8x8_flag) {
         skip_value /= 2;
     }
 
     return skip_value;
 }
 
-unsigned short i965_avc_get_maxnum_slices_num(int profile_idc,int level_idc,unsigned int frames_per_100s)
+unsigned short i965_avc_get_maxnum_slices_num(int profile_idc, int level_idc, unsigned int frames_per_100s)
 {
     unsigned int  slice_num = 0;
 
     if ((profile_idc == VAProfileH264Main) ||
-        (profile_idc == VAProfileH264High))
-    {
-        switch (level_idc)
-        {
+        (profile_idc == VAProfileH264High)) {
+        switch (level_idc) {
         case INTEL_AVC_LEVEL_3:
             slice_num = (unsigned int)(40500.0 * 100 / 22.0 / frames_per_100s);
             break;

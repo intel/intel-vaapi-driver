@@ -199,7 +199,7 @@ static struct hw_codec_info hsw_hw_codec_info = {
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
-                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    VA_PROFILE_MASK(H264MultiviewHigh)),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
@@ -243,7 +243,7 @@ static struct hw_codec_info bdw_hw_codec_info = {
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
-                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    VA_PROFILE_MASK(H264MultiviewHigh)),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
 
@@ -286,7 +286,7 @@ static struct hw_codec_info chv_hw_codec_info = {
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
-                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    VA_PROFILE_MASK(H264MultiviewHigh)),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
     .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
@@ -339,7 +339,7 @@ static struct hw_codec_info skl_hw_codec_info = {
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
-                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    VA_PROFILE_MASK(H264MultiviewHigh)),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
     .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
     .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
@@ -392,7 +392,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
-                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    VA_PROFILE_MASK(H264MultiviewHigh)),
     .vp9_dec_profiles = VP9_PROFILE_MASK(0),
 
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
@@ -449,9 +449,9 @@ static struct hw_codec_info kbl_hw_codec_info = {
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
-                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    VA_PROFILE_MASK(H264MultiviewHigh)),
     .vp9_dec_profiles = VP9_PROFILE_MASK(0) |
-                        VP9_PROFILE_MASK(2),
+    VP9_PROFILE_MASK(2),
     .vp9_enc_profiles = VP9_PROFILE_MASK(0),
 
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
@@ -513,9 +513,9 @@ static struct hw_codec_info glk_hw_codec_info = {
     .min_linear_hpitch = 16,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
-                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    VA_PROFILE_MASK(H264MultiviewHigh)),
     .vp9_dec_profiles = VP9_PROFILE_MASK(0) |
-                        VP9_PROFILE_MASK(2),
+    VP9_PROFILE_MASK(2),
 
     .vp9_enc_profiles = VP9_PROFILE_MASK(0),
 
@@ -730,8 +730,8 @@ i965_get_device_info(int devid)
 }
 
 static void cpuid(unsigned int op,
-                         uint32_t *eax, uint32_t *ebx,
-                         uint32_t *ecx, uint32_t *edx)
+                  uint32_t *eax, uint32_t *ebx,
+                  uint32_t *ecx, uint32_t *edx)
 {
     __cpuid_count(op, 0, *eax, *ebx, *ecx, *edx);
 }
@@ -770,12 +770,12 @@ static int intel_driver_detect_cpustring(char *model_id)
  * It is captured by /proc/cpuinfo and the space character is stripped.
  */
 const static char *hsw_cpu_hook_list[] =  {
-"Intel(R)Pentium(R)3556U",
-"Intel(R)Pentium(R)3560Y",
-"Intel(R)Pentium(R)3550M",
-"Intel(R)Celeron(R)2980U",
-"Intel(R)Celeron(R)2955U",
-"Intel(R)Celeron(R)2950M",
+    "Intel(R)Pentium(R)3556U",
+    "Intel(R)Pentium(R)3560Y",
+    "Intel(R)Pentium(R)3550M",
+    "Intel(R)Celeron(R)2980U",
+    "Intel(R)Celeron(R)2955U",
+    "Intel(R)Celeron(R)2950M",
 };
 
 static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info)
@@ -794,7 +794,7 @@ static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *cod
     /* strip the cpufreq info */
     model_ptr = model_string;
     tmp_ptr = strstr(model_ptr, "@");
-   
+
     if (tmp_ptr)
         *tmp_ptr = '\0';
 
@@ -802,10 +802,10 @@ static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *cod
     model_ptr = model_string;
     model_len = strlen(model_string);
     for (i = 0; i < model_len; i++) {
-         if (model_string[i] != ' ') {
-             *model_ptr = model_string[i];
-             model_ptr++;
-         }
+        if (model_string[i] != ' ') {
+            *model_ptr = model_string[i];
+            model_ptr++;
+        }
     }
     *model_ptr = '\0';
 
@@ -837,8 +837,8 @@ static void hsw_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *cod
  * It is captured by /proc/cpuinfo and the space character is stripped.
  */
 const static char *gen6_cpu_hook_list[] =  {
-"Intel(R)Celeron(R)CPU847",
-"Intel(R)Celeron(R)CPU867",
+    "Intel(R)Celeron(R)CPU847",
+    "Intel(R)Celeron(R)CPU867",
 };
 
 static void gen6_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info)
@@ -865,10 +865,10 @@ static void gen6_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
     model_ptr = model_string;
     model_len = strlen(model_string);
     for (i = 0; i < model_len; i++) {
-         if (model_string[i] != ' ') {
-             *model_ptr = model_string[i];
-             model_ptr++;
-         }
+        if (model_string[i] != ' ') {
+            *model_ptr = model_string[i];
+            model_ptr++;
+        }
     }
     *model_ptr = '\0';
 
@@ -898,9 +898,9 @@ static void gen6_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
  * It is captured by /proc/cpuinfo and the space character is stripped.
  */
 const static char *gen7_cpu_hook_list[] =  {
-"Intel(R)Celeron(R)CPU1007U",
-"Intel(R)Celeron(R)CPU1037U",
-"Intel(R)Pentium(R)CPUG2130",
+    "Intel(R)Celeron(R)CPU1007U",
+    "Intel(R)Celeron(R)CPU1037U",
+    "Intel(R)Pentium(R)CPUG2130",
 };
 
 static void gen7_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info)
@@ -927,10 +927,10 @@ static void gen7_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
     model_ptr = model_string;
     model_len = strlen(model_string);
     for (i = 0; i < model_len; i++) {
-         if (model_string[i] != ' ') {
-             *model_ptr = model_string[i];
-             model_ptr++;
-         }
+        if (model_string[i] != ' ') {
+            *model_ptr = model_string[i];
+            model_ptr++;
+        }
     }
     *model_ptr = '\0';
 

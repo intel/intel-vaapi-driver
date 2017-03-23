@@ -51,8 +51,7 @@
 struct encode_state;
 struct intel_encoder_context;
 
-struct gen6_vme_context
-{
+struct gen6_vme_context {
     struct i965_gpe_context gpe_context;
 
     struct {
@@ -109,12 +108,12 @@ struct gen6_vme_context
     int saved_width_mbs, saved_height_mbs;
 };
 
-#define MPEG2_PIC_WIDTH_HEIGHT	30
-#define	MPEG2_MV_RANGE		29
-#define	MPEG2_LEVEL_MASK	0x0f
-#define	MPEG2_LEVEL_LOW		0x0a
-#define	MPEG2_LEVEL_MAIN	0x08
-#define	MPEG2_LEVEL_HIGH	0x04
+#define MPEG2_PIC_WIDTH_HEIGHT  30
+#define MPEG2_MV_RANGE      29
+#define MPEG2_LEVEL_MASK    0x0f
+#define MPEG2_LEVEL_LOW     0x0a
+#define MPEG2_LEVEL_MAIN    0x08
+#define MPEG2_LEVEL_HIGH    0x04
 
 Bool gen6_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 Bool gen75_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
@@ -124,51 +123,51 @@ extern void intel_vme_update_mbmv_cost(VADriverContextP ctx,
                                        struct intel_encoder_context *encoder_context);
 
 void intel_vme_vp8_update_mbmv_cost(VADriverContextP ctx,
-                                struct encode_state *encode_state,
-                                struct intel_encoder_context *encoder_context);
+                                    struct encode_state *encode_state,
+                                    struct intel_encoder_context *encoder_context);
 
 Bool gen7_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
-#define		MODE_INTRA_NONPRED	0
-#define		MODE_INTRA_16X16	1
-#define		MODE_INTRA_8X8		2
-#define		MODE_INTRA_4X4		3
-#define		MODE_INTER_16X8		4
-#define		MODE_INTER_8X16		4
-#define		MODE_INTER_8X8		5
-#define		MODE_INTER_8X4		6
-#define		MODE_INTER_4X8		6
-#define		MODE_INTER_4X4		7
-#define		MODE_INTER_16X16	8
-#define		MODE_INTER_BWD		9
-#define		MODE_REFID_COST		10
-#define		MODE_CHROMA_INTRA	11
+#define     MODE_INTRA_NONPRED  0
+#define     MODE_INTRA_16X16    1
+#define     MODE_INTRA_8X8      2
+#define     MODE_INTRA_4X4      3
+#define     MODE_INTER_16X8     4
+#define     MODE_INTER_8X16     4
+#define     MODE_INTER_8X8      5
+#define     MODE_INTER_8X4      6
+#define     MODE_INTER_4X8      6
+#define     MODE_INTER_4X4      7
+#define     MODE_INTER_16X16    8
+#define     MODE_INTER_BWD      9
+#define     MODE_REFID_COST     10
+#define     MODE_CHROMA_INTRA   11
 
-#define		MODE_INTER_MV0		12
-#define		MODE_INTER_MV1		13
-#define		MODE_INTER_MV2		14
+#define     MODE_INTER_MV0      12
+#define     MODE_INTER_MV1      13
+#define     MODE_INTER_MV2      14
 
-#define		MODE_INTER_MV3		15
-#define		MODE_INTER_MV4		16
-#define		MODE_INTER_MV5		17
-#define		MODE_INTER_MV6		18
-#define		MODE_INTER_MV7		19
+#define     MODE_INTER_MV3      15
+#define     MODE_INTER_MV4      16
+#define     MODE_INTER_MV5      17
+#define     MODE_INTER_MV6      18
+#define     MODE_INTER_MV7      19
 
-#define		INTRA_PRED_AVAIL_FLAG_AE	0x60
-#define		INTRA_PRED_AVAIL_FLAG_B		0x10
-#define		INTRA_PRED_AVAIL_FLAG_C       	0x8
-#define		INTRA_PRED_AVAIL_FLAG_D		0x4
-#define		INTRA_PRED_AVAIL_FLAG_BCD_MASK	0x1C
+#define     INTRA_PRED_AVAIL_FLAG_AE    0x60
+#define     INTRA_PRED_AVAIL_FLAG_B     0x10
+#define     INTRA_PRED_AVAIL_FLAG_C         0x8
+#define     INTRA_PRED_AVAIL_FLAG_D     0x4
+#define     INTRA_PRED_AVAIL_FLAG_BCD_MASK  0x1C
 
 extern void
-gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
+gen7_vme_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                                      struct encode_state *encode_state,
                                      int mb_width, int mb_height,
                                      int kernel,
                                      int transform_8x8_mode_flag,
                                      struct intel_encoder_context *encoder_context);
 
-extern void 
+extern void
 gen7_vme_scoreboard_init(VADriverContextP ctx, struct gen6_vme_context *vme_context);
 
 extern void
@@ -177,7 +176,7 @@ intel_vme_mpeg2_state_setup(VADriverContextP ctx,
                             struct intel_encoder_context *encoder_context);
 
 extern void
-gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx, 
+gen7_vme_mpeg2_walker_fill_vme_batchbuffer(VADriverContextP ctx,
                                            struct encode_state *encode_state,
                                            int mb_width, int mb_height,
                                            int kernel,
@@ -198,19 +197,19 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
 /* HEVC */
 void
 intel_hevc_vme_reference_state(VADriverContextP ctx,
-                              struct encode_state *encode_state,
-                              struct intel_encoder_context *encoder_context,
-                              int list_index,
-                              int surface_index,
-                              void (* vme_source_surface_state)(
-                                  VADriverContextP ctx,
-                                  int index,
-                                  struct object_surface *obj_surface,
-                                  struct intel_encoder_context *encoder_context));
+                               struct encode_state *encode_state,
+                               struct intel_encoder_context *encoder_context,
+                               int list_index,
+                               int surface_index,
+                               void (* vme_source_surface_state)(
+                                   VADriverContextP ctx,
+                                   int index,
+                                   struct object_surface *obj_surface,
+                                   struct intel_encoder_context *encoder_context));
 
 void intel_vme_hevc_update_mbmv_cost(VADriverContextP ctx,
-                                struct encode_state *encode_state,
-                                struct intel_encoder_context *encoder_context);
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context);
 
 
 extern Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);

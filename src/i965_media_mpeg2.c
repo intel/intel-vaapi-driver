@@ -41,8 +41,8 @@
 #include "i965_media.h"
 #include "i965_media_mpeg2.h"
 
-#define SURFACE_TARGET	    0
-#define SURFACE_FORWARD	    1
+#define SURFACE_TARGET      0
+#define SURFACE_FORWARD     1
 #define SURFACE_BACKWARD    2
 #define SURFACE_BIDIRECT    3
 
@@ -76,20 +76,20 @@ enum interface {
 const uint32_t idct_table[] = {
     C4, C1, C2, C3, C4, C5, C6, C7,             //g5
     C4, C1, C2, C3, C4, C5, C6, C7,
-    C4, C3, C6,-C7,-C4,-C1,-C2,-C5,
-    C4, C3, C6,-C7,-C4,-C1,-C2,-C5,
-    C4, C5,-C6,-C1,-C4, C7, C2, C3,
-    C4, C5,-C6,-C1,-C4, C7, C2, C3,
-    C4, C7,-C2,-C5, C4, C3,-C6,-C1,
-    C4, C7,-C2,-C5, C4, C3,-C6,-C1,
-    C4,-C7,-C2, C5, C4,-C3,-C6, C1,
-    C4,-C7,-C2, C5, C4,-C3,-C6, C1,
-    C4,-C5,-C6, C1,-C4,-C7, C2,-C3,
-    C4,-C5,-C6, C1,-C4,-C7, C2,-C3,
-    C4,-C3, C6, C7,-C4, C1,-C2, C5,
-    C4,-C3, C6, C7,-C4, C1,-C2, C5,
-    C4,-C1, C2,-C3, C4,-C5, C6,-C7,
-    C4,-C1, C2,-C3, C4,-C5, C6,-C7              //g20
+    C4, C3, C6, -C7, -C4, -C1, -C2, -C5,
+    C4, C3, C6, -C7, -C4, -C1, -C2, -C5,
+    C4, C5, -C6, -C1, -C4, C7, C2, C3,
+    C4, C5, -C6, -C1, -C4, C7, C2, C3,
+    C4, C7, -C2, -C5, C4, C3, -C6, -C1,
+    C4, C7, -C2, -C5, C4, C3, -C6, -C1,
+    C4, -C7, -C2, C5, C4, -C3, -C6, C1,
+    C4, -C7, -C2, C5, C4, -C3, -C6, C1,
+    C4, -C5, -C6, C1, -C4, -C7, C2, -C3,
+    C4, -C5, -C6, C1, -C4, -C7, C2, -C3,
+    C4, -C3, C6, C7, -C4, C1, -C2, C5,
+    C4, -C3, C6, C7, -C4, C1, -C2, C5,
+    C4, -C1, C2, -C3, C4, -C5, C6, -C7,
+    C4, -C1, C2, -C3, C4, -C5, C6, -C7          //g20
 };
 #undef C0
 #undef C1
@@ -112,65 +112,65 @@ const uint32_t zigzag_direct[64] = {
 };
 
 static const uint32_t frame_intra_kernel[][4] = {
-   #include "shaders/mpeg2/vld/frame_intra.g4b"
+#include "shaders/mpeg2/vld/frame_intra.g4b"
 };
 static const uint32_t frame_frame_pred_forward_kernel[][4] = {
-   #include "shaders/mpeg2/vld/frame_frame_pred_forward.g4b"
+#include "shaders/mpeg2/vld/frame_frame_pred_forward.g4b"
 };
 static const uint32_t frame_frame_pred_backward_kernel[][4] = {
-   #include "shaders/mpeg2/vld/frame_frame_pred_backward.g4b"
+#include "shaders/mpeg2/vld/frame_frame_pred_backward.g4b"
 };
 static const uint32_t frame_frame_pred_bidirect_kernel[][4] = {
-   #include "shaders/mpeg2/vld/frame_frame_pred_bidirect.g4b"
+#include "shaders/mpeg2/vld/frame_frame_pred_bidirect.g4b"
 };
 static const uint32_t frame_field_pred_forward_kernel[][4] = {
-   #include "shaders/mpeg2/vld/frame_field_pred_forward.g4b"
+#include "shaders/mpeg2/vld/frame_field_pred_forward.g4b"
 };
 static const uint32_t frame_field_pred_backward_kernel[][4] = {
-   #include "shaders/mpeg2/vld/frame_field_pred_backward.g4b"
+#include "shaders/mpeg2/vld/frame_field_pred_backward.g4b"
 };
 static const uint32_t frame_field_pred_bidirect_kernel[][4] = {
-   #include "shaders/mpeg2/vld/frame_field_pred_bidirect.g4b"
+#include "shaders/mpeg2/vld/frame_field_pred_bidirect.g4b"
 };
 static const uint32_t lib_kernel[][4] = {
-   #include "shaders/mpeg2/vld/lib.g4b"
+#include "shaders/mpeg2/vld/lib.g4b"
 };
 /*field picture*/
 static const uint32_t field_intra_kernel[][4] = {
-   #include "shaders/mpeg2/vld/field_intra.g4b"
+#include "shaders/mpeg2/vld/field_intra.g4b"
 };
 static const uint32_t field_forward_kernel[][4] = {
-   #include "shaders/mpeg2/vld/field_forward.g4b"
+#include "shaders/mpeg2/vld/field_forward.g4b"
 };
 static const uint32_t field_forward_16x8_kernel[][4] = {
-   #include "shaders/mpeg2/vld/field_forward_16x8.g4b"
+#include "shaders/mpeg2/vld/field_forward_16x8.g4b"
 };
 static const uint32_t field_backward_kernel[][4] = {
-   #include "shaders/mpeg2/vld/field_backward.g4b"
+#include "shaders/mpeg2/vld/field_backward.g4b"
 };
 static const uint32_t field_backward_16x8_kernel[][4] = {
-   #include "shaders/mpeg2/vld/field_backward_16x8.g4b"
+#include "shaders/mpeg2/vld/field_backward_16x8.g4b"
 };
 static const uint32_t field_bidirect_kernel[][4] = {
-   #include "shaders/mpeg2/vld/field_bidirect.g4b"
+#include "shaders/mpeg2/vld/field_bidirect.g4b"
 };
 static const uint32_t field_bidirect_16x8_kernel[][4] = {
-   #include "shaders/mpeg2/vld/field_bidirect_16x8.g4b"
+#include "shaders/mpeg2/vld/field_bidirect_16x8.g4b"
 };
 
 static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FRAME_INTRA",
         FRAME_INTRA,
-        frame_intra_kernel, 
+        frame_intra_kernel,
         sizeof(frame_intra_kernel),
         NULL
     },
 
     {
         "FRAME_FRAME_PRED_FORWARD",
-    	FRAME_FRAME_PRED_FORWARD,
-        frame_frame_pred_forward_kernel, 
+        FRAME_FRAME_PRED_FORWARD,
+        frame_frame_pred_forward_kernel,
         sizeof(frame_frame_pred_forward_kernel),
         NULL
     },
@@ -178,15 +178,15 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FRAME_FRAME_PRED_BACKWARD",
         FRAME_FRAME_PRED_BACKWARD,
-        frame_frame_pred_backward_kernel, 
+        frame_frame_pred_backward_kernel,
         sizeof(frame_frame_pred_backward_kernel),
         NULL
     },
 
-    {   
+    {
         "FRAME_FRAME_PRED_BIDIRECT",
         FRAME_FRAME_PRED_BIDIRECT,
-        frame_frame_pred_bidirect_kernel, 
+        frame_frame_pred_bidirect_kernel,
         sizeof(frame_frame_pred_bidirect_kernel),
         NULL
     },
@@ -194,7 +194,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FRAME_FIELD_PRED_FORWARD",
         FRAME_FIELD_PRED_FORWARD,
-        frame_field_pred_forward_kernel, 
+        frame_field_pred_forward_kernel,
         sizeof(frame_field_pred_forward_kernel),
         NULL
     },
@@ -202,7 +202,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FRAME_FIELD_PRED_BACKWARD",
         FRAME_FIELD_PRED_BACKWARD,
-        frame_field_pred_backward_kernel, 
+        frame_field_pred_backward_kernel,
         sizeof(frame_field_pred_backward_kernel),
         NULL
     },
@@ -210,15 +210,15 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FRAME_FIELD_PRED_BIDIRECT",
         FRAME_FIELD_PRED_BIDIRECT,
-        frame_field_pred_bidirect_kernel, 
+        frame_field_pred_bidirect_kernel,
         sizeof(frame_field_pred_bidirect_kernel),
         NULL
     },
-    
-    {   
+
+    {
         "LIB",
         LIB_INTERFACE,
-        lib_kernel, 
+        lib_kernel,
         sizeof(lib_kernel),
         NULL
     },
@@ -226,7 +226,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FIELD_INTRA",
         FIELD_INTRA,
-        field_intra_kernel, 
+        field_intra_kernel,
         sizeof(field_intra_kernel),
         NULL
     },
@@ -234,7 +234,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FIELD_FORWARD",
         FIELD_FORWARD,
-        field_forward_kernel, 
+        field_forward_kernel,
         sizeof(field_forward_kernel),
         NULL
     },
@@ -242,7 +242,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FIELD_FORWARD_16X8",
         FIELD_FORWARD_16X8,
-        field_forward_16x8_kernel, 
+        field_forward_16x8_kernel,
         sizeof(field_forward_16x8_kernel),
         NULL
     },
@@ -250,7 +250,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FIELD_BACKWARD",
         FIELD_BACKWARD,
-        field_backward_kernel, 
+        field_backward_kernel,
         sizeof(field_backward_kernel),
         NULL
     },
@@ -258,7 +258,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FIELD_BACKWARD_16X8",
         FIELD_BACKWARD_16X8,
-        field_backward_16x8_kernel, 
+        field_backward_16x8_kernel,
         sizeof(field_backward_16x8_kernel),
         NULL
     },
@@ -266,7 +266,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FIELD_BIDIRECT",
         FIELD_BIDIRECT,
-        field_bidirect_kernel, 
+        field_bidirect_kernel,
         sizeof(field_bidirect_kernel),
         NULL
     },
@@ -274,7 +274,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
     {
         "FIELD_BIDIRECT_16X8",
         FIELD_BIDIRECT_16X8,
-        field_bidirect_16x8_kernel, 
+        field_bidirect_16x8_kernel,
         sizeof(field_bidirect_16x8_kernel),
         NULL
     }
@@ -282,65 +282,65 @@ static struct i965_kernel  mpeg2_vld_kernels_gen4[] = {
 
 /* On IRONLAKE */
 static const uint32_t frame_intra_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/frame_intra.g4b.gen5"
+#include "shaders/mpeg2/vld/frame_intra.g4b.gen5"
 };
 static const uint32_t frame_frame_pred_forward_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/frame_frame_pred_forward.g4b.gen5"
+#include "shaders/mpeg2/vld/frame_frame_pred_forward.g4b.gen5"
 };
 static const uint32_t frame_frame_pred_backward_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/frame_frame_pred_backward.g4b.gen5"
+#include "shaders/mpeg2/vld/frame_frame_pred_backward.g4b.gen5"
 };
 static const uint32_t frame_frame_pred_bidirect_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/frame_frame_pred_bidirect.g4b.gen5"
+#include "shaders/mpeg2/vld/frame_frame_pred_bidirect.g4b.gen5"
 };
 static const uint32_t frame_field_pred_forward_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/frame_field_pred_forward.g4b.gen5"
+#include "shaders/mpeg2/vld/frame_field_pred_forward.g4b.gen5"
 };
 static const uint32_t frame_field_pred_backward_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/frame_field_pred_backward.g4b.gen5"
+#include "shaders/mpeg2/vld/frame_field_pred_backward.g4b.gen5"
 };
 static const uint32_t frame_field_pred_bidirect_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/frame_field_pred_bidirect.g4b.gen5"
+#include "shaders/mpeg2/vld/frame_field_pred_bidirect.g4b.gen5"
 };
 static const uint32_t lib_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/lib.g4b.gen5"
+#include "shaders/mpeg2/vld/lib.g4b.gen5"
 };
 /*field picture*/
 static const uint32_t field_intra_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/field_intra.g4b.gen5"
+#include "shaders/mpeg2/vld/field_intra.g4b.gen5"
 };
 static const uint32_t field_forward_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/field_forward.g4b.gen5"
+#include "shaders/mpeg2/vld/field_forward.g4b.gen5"
 };
 static const uint32_t field_forward_16x8_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/field_forward_16x8.g4b.gen5"
+#include "shaders/mpeg2/vld/field_forward_16x8.g4b.gen5"
 };
 static const uint32_t field_backward_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/field_backward.g4b.gen5"
+#include "shaders/mpeg2/vld/field_backward.g4b.gen5"
 };
 static const uint32_t field_backward_16x8_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/field_backward_16x8.g4b.gen5"
+#include "shaders/mpeg2/vld/field_backward_16x8.g4b.gen5"
 };
 static const uint32_t field_bidirect_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/field_bidirect.g4b.gen5"
+#include "shaders/mpeg2/vld/field_bidirect.g4b.gen5"
 };
 static const uint32_t field_bidirect_16x8_kernel_gen5[][4] = {
-   #include "shaders/mpeg2/vld/field_bidirect_16x8.g4b.gen5"
+#include "shaders/mpeg2/vld/field_bidirect_16x8.g4b.gen5"
 };
 
 static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FRAME_INTRA",
         FRAME_INTRA,
-        frame_intra_kernel_gen5, 
+        frame_intra_kernel_gen5,
         sizeof(frame_intra_kernel_gen5),
         NULL
     },
 
     {
         "FRAME_FRAME_PRED_FORWARD",
-    	FRAME_FRAME_PRED_FORWARD,
-        frame_frame_pred_forward_kernel_gen5, 
+        FRAME_FRAME_PRED_FORWARD,
+        frame_frame_pred_forward_kernel_gen5,
         sizeof(frame_frame_pred_forward_kernel_gen5),
         NULL
     },
@@ -348,15 +348,15 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FRAME_FRAME_PRED_BACKWARD",
         FRAME_FRAME_PRED_BACKWARD,
-        frame_frame_pred_backward_kernel_gen5, 
+        frame_frame_pred_backward_kernel_gen5,
         sizeof(frame_frame_pred_backward_kernel_gen5),
         NULL
     },
 
-    {   
+    {
         "FRAME_FRAME_PRED_BIDIRECT",
         FRAME_FRAME_PRED_BIDIRECT,
-        frame_frame_pred_bidirect_kernel_gen5, 
+        frame_frame_pred_bidirect_kernel_gen5,
         sizeof(frame_frame_pred_bidirect_kernel_gen5),
         NULL
     },
@@ -364,7 +364,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FRAME_FIELD_PRED_FORWARD",
         FRAME_FIELD_PRED_FORWARD,
-        frame_field_pred_forward_kernel_gen5, 
+        frame_field_pred_forward_kernel_gen5,
         sizeof(frame_field_pred_forward_kernel_gen5),
         NULL
     },
@@ -372,7 +372,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FRAME_FIELD_PRED_BACKWARD",
         FRAME_FIELD_PRED_BACKWARD,
-        frame_field_pred_backward_kernel_gen5, 
+        frame_field_pred_backward_kernel_gen5,
         sizeof(frame_field_pred_backward_kernel_gen5),
         NULL
     },
@@ -380,15 +380,15 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FRAME_FIELD_PRED_BIDIRECT",
         FRAME_FIELD_PRED_BIDIRECT,
-        frame_field_pred_bidirect_kernel_gen5, 
+        frame_field_pred_bidirect_kernel_gen5,
         sizeof(frame_field_pred_bidirect_kernel_gen5),
         NULL
     },
-    
-    {   
+
+    {
         "LIB",
         LIB_INTERFACE,
-        lib_kernel_gen5, 
+        lib_kernel_gen5,
         sizeof(lib_kernel_gen5),
         NULL
     },
@@ -396,7 +396,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FIELD_INTRA",
         FIELD_INTRA,
-        field_intra_kernel_gen5, 
+        field_intra_kernel_gen5,
         sizeof(field_intra_kernel_gen5),
         NULL
     },
@@ -404,7 +404,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FIELD_FORWARD",
         FIELD_FORWARD,
-        field_forward_kernel_gen5, 
+        field_forward_kernel_gen5,
         sizeof(field_forward_kernel_gen5),
         NULL
     },
@@ -412,7 +412,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FIELD_FORWARD_16X8",
         FIELD_FORWARD_16X8,
-        field_forward_16x8_kernel_gen5, 
+        field_forward_16x8_kernel_gen5,
         sizeof(field_forward_16x8_kernel_gen5),
         NULL
     },
@@ -420,7 +420,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FIELD_BACKWARD",
         FIELD_BACKWARD,
-        field_backward_kernel_gen5, 
+        field_backward_kernel_gen5,
         sizeof(field_backward_kernel_gen5),
         NULL
     },
@@ -428,7 +428,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FIELD_BACKWARD_16X8",
         FIELD_BACKWARD_16X8,
-        field_backward_16x8_kernel_gen5, 
+        field_backward_16x8_kernel_gen5,
         sizeof(field_backward_16x8_kernel_gen5),
         NULL
     },
@@ -436,7 +436,7 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FIELD_BIDIRECT",
         FIELD_BIDIRECT,
-        field_bidirect_kernel_gen5, 
+        field_bidirect_kernel_gen5,
         sizeof(field_bidirect_kernel_gen5),
         NULL
     },
@@ -444,30 +444,30 @@ static struct i965_kernel  mpeg2_vld_kernels_gen5[] = {
     {
         "FIELD_BIDIRECT_16X8",
         FIELD_BIDIRECT_16X8,
-        field_bidirect_16x8_kernel_gen5, 
+        field_bidirect_16x8_kernel_gen5,
         sizeof(field_bidirect_16x8_kernel_gen5),
         NULL
     }
 };
 
 static void
-i965_media_mpeg2_surface_state(VADriverContextP ctx, 
+i965_media_mpeg2_surface_state(VADriverContextP ctx,
                                int index,
                                struct object_surface *obj_surface,
-                               unsigned long offset, 
+                               unsigned long offset,
                                int w, int h,
                                Bool is_dst,
-			       int vert_line_stride,
-			       int vert_line_stride_ofs,
+                               int vert_line_stride,
+                               int vert_line_stride_ofs,
                                struct i965_media_context *media_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);  
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_surface_state *ss;
     dri_bo *bo;
     uint32_t write_domain, read_domain;
 
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "surface state", 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "surface state",
                       sizeof(struct i965_surface_state), 32);
     assert(bo);
     dri_bo_map(bo, 1);
@@ -504,12 +504,12 @@ i965_media_mpeg2_surface_state(VADriverContextP ctx,
 }
 
 static void
-i965_media_mpeg2_surface_setup(VADriverContextP ctx, 
+i965_media_mpeg2_surface_setup(VADriverContextP ctx,
                                int base_index,
-                               struct object_surface *obj_surface, 
-                               Bool is_dst, 
-			       int picture_structure,
-			       int surface,
+                               struct object_surface *obj_surface,
+                               Bool is_dst,
+                               int picture_structure,
+                               int surface,
                                struct i965_media_context *media_context)
 {
     int w = obj_surface->width;
@@ -518,79 +518,79 @@ i965_media_mpeg2_surface_setup(VADriverContextP ctx,
     i965_check_alloc_surface_bo(ctx, obj_surface, 0, VA_FOURCC_I420, SUBSAMPLE_YUV420);
 
     if (picture_structure == MPEG_FRAME) {
-	i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,
-                                       0, w, h, 
+        i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,
+                                       0, w, h,
                                        is_dst, 0, 0,
                                        media_context);
-	i965_media_mpeg2_surface_state(ctx, base_index + 1, obj_surface,
-                                       w * h, w / 2, h / 2, 
+        i965_media_mpeg2_surface_state(ctx, base_index + 1, obj_surface,
+                                       w * h, w / 2, h / 2,
                                        is_dst, 0, 0,
                                        media_context);
-	i965_media_mpeg2_surface_state(ctx, base_index + 2, obj_surface,
-                                       w * h + w * h / 4, w / 2, h / 2, 
+        i965_media_mpeg2_surface_state(ctx, base_index + 2, obj_surface,
+                                       w * h + w * h / 4, w / 2, h / 2,
                                        is_dst, 0, 0,
                                        media_context);
     } else {
-	if (surface == SURFACE_TARGET) {
-	    i965_media_mpeg2_surface_state(ctx, 3, obj_surface,
-                                           0, w, h, 
+        if (surface == SURFACE_TARGET) {
+            i965_media_mpeg2_surface_state(ctx, 3, obj_surface,
+                                           0, w, h,
                                            False, 0, 0,
                                            media_context);
-	    i965_media_mpeg2_surface_state(ctx, 10, obj_surface,
-                                           w * h, w / 2, h / 2, 
+            i965_media_mpeg2_surface_state(ctx, 10, obj_surface,
+                                           w * h, w / 2, h / 2,
                                            False, 0, 0,
                                            media_context);
-	    i965_media_mpeg2_surface_state(ctx, 11, obj_surface,
-                                           w * h + w * h / 4, w / 2, h / 2, 
+            i965_media_mpeg2_surface_state(ctx, 11, obj_surface,
+                                           w * h + w * h / 4, w / 2, h / 2,
                                            False, 0, 0,
                                            media_context);
-	    if (picture_structure == MPEG_TOP_FIELD) {
-		i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,
-                                               0, w, h, 
+            if (picture_structure == MPEG_TOP_FIELD) {
+                i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,
+                                               0, w, h,
                                                True, 1, 0,
                                                media_context);
-		i965_media_mpeg2_surface_state(ctx, base_index + 1, obj_surface,
-                                               w * h, w / 2, h / 2, 
+                i965_media_mpeg2_surface_state(ctx, base_index + 1, obj_surface,
+                                               w * h, w / 2, h / 2,
                                                True, 1, 0,
                                                media_context);
-		i965_media_mpeg2_surface_state(ctx, base_index + 2, obj_surface,
-                                               w * h + w * h / 4, w / 2, h / 2, 
+                i965_media_mpeg2_surface_state(ctx, base_index + 2, obj_surface,
+                                               w * h + w * h / 4, w / 2, h / 2,
                                                True, 1, 0,
                                                media_context);
-	    } else {
-		assert(picture_structure == MPEG_BOTTOM_FIELD);
-		i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,
-                                               0, w, h, 
+            } else {
+                assert(picture_structure == MPEG_BOTTOM_FIELD);
+                i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,
+                                               0, w, h,
                                                True, 1, 1,
                                                media_context);
-		i965_media_mpeg2_surface_state(ctx, base_index + 1, obj_surface,
-                                               w * h, w / 2, h / 2, 
+                i965_media_mpeg2_surface_state(ctx, base_index + 1, obj_surface,
+                                               w * h, w / 2, h / 2,
                                                True, 1, 1,
                                                media_context);
-		i965_media_mpeg2_surface_state(ctx, base_index + 2, obj_surface,
-                                               w * h + w * h / 4, w / 2, h / 2, 
+                i965_media_mpeg2_surface_state(ctx, base_index + 2, obj_surface,
+                                               w * h + w * h / 4, w / 2, h / 2,
                                                True, 1, 1,
                                                media_context);
-	    }
-	} else {
-	    i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,
-                                           0, w, h, 
+            }
+        } else {
+            i965_media_mpeg2_surface_state(ctx, base_index + 0, obj_surface,
+                                           0, w, h,
                                            is_dst, 0, 0,
                                            media_context);
-	    i965_media_mpeg2_surface_state(ctx, base_index + 1, obj_surface,
-                                           w * h, w / 2, h / 2, 
+            i965_media_mpeg2_surface_state(ctx, base_index + 1, obj_surface,
+                                           w * h, w / 2, h / 2,
                                            is_dst, 0, 0,
                                            media_context);
-	    i965_media_mpeg2_surface_state(ctx, base_index + 2, obj_surface,
-                                           w * h + w * h / 4, w / 2, h / 2, 
+            i965_media_mpeg2_surface_state(ctx, base_index + 2, obj_surface,
+                                           w * h + w * h / 4, w / 2, h / 2,
                                            is_dst, 0, 0,
                                            media_context);
-	}
+        }
     }
 }
 
-void 
-i965_media_mpeg2_surfaces_setup(VADriverContextP ctx, 
+void
+i965_media_mpeg2_surfaces_setup(VADriverContextP ctx,
                                 struct decode_state *decode_state,
                                 struct i965_media_context *media_context)
 {
@@ -613,7 +613,7 @@ i965_media_mpeg2_surfaces_setup(VADriverContextP ctx,
 //        assert(param->picture_coding_type == 1); /* I-picture */
     } else {
         i965_media_mpeg2_surface_setup(ctx, 4, obj_surface, False,
-                                       param->picture_coding_extension.bits.picture_structure, 
+                                       param->picture_coding_extension.bits.picture_structure,
                                        SURFACE_FORWARD,
                                        media_context);
 
@@ -624,7 +624,7 @@ i965_media_mpeg2_surfaces_setup(VADriverContextP ctx,
 
             obj_surface = decode_state->reference_objects[0];
             i965_media_mpeg2_surface_setup(ctx, 7, obj_surface, False,
-                                           param->picture_coding_extension.bits.picture_structure, 
+                                           param->picture_coding_extension.bits.picture_structure,
                                            SURFACE_BACKWARD,
                                            media_context);
         } else {
@@ -680,7 +680,7 @@ i965_media_mpeg2_vfe_state(VADriverContextP ctx, struct i965_media_context *medi
     vfe_state->vfe1.children_present = 0;
     vfe_state->vfe1.urb_entry_alloc_size = media_context->urb.size_vfe_entry - 1;
     vfe_state->vfe1.max_threads = media_context->urb.num_vfe_entries - 1;
-    vfe_state->vfe2.interface_descriptor_base = 
+    vfe_state->vfe2.interface_descriptor_base =
         media_context->idrt.bo->offset >> 4; /* reloc */
     dri_bo_emit_reloc(bo,
                       I915_GEM_DOMAIN_INSTRUCTION, 0,
@@ -690,7 +690,7 @@ i965_media_mpeg2_vfe_state(VADriverContextP ctx, struct i965_media_context *medi
     dri_bo_unmap(bo);
 }
 
-static void 
+static void
 i965_media_mpeg2_interface_descriptor_remap_table(VADriverContextP ctx, struct i965_media_context *media_context)
 {
     struct i965_mpeg2_context *i965_mpeg2_context = (struct i965_mpeg2_context *)media_context->private_context;
@@ -710,7 +710,7 @@ i965_media_mpeg2_interface_descriptor_remap_table(VADriverContextP ctx, struct i
         desc->desc1.const_urb_entry_read_offset = 0;
         desc->desc1.const_urb_entry_read_len = 30;
         desc->desc3.binding_table_entry_count = 0;
-        desc->desc3.binding_table_pointer = 
+        desc->desc3.binding_table_pointer =
             media_context->binding_table.bo->offset >> 5; /*reloc */
 
         dri_bo_emit_reloc(bo,
@@ -763,34 +763,34 @@ i965_media_mpeg2_vld_state(VADriverContextP ctx,
     vld_state->vld1.picture_coding_type = param->picture_coding_type;
 
     if (vld_state->vld0.picture_structure == MPEG_FRAME) {
-	/*frame picture*/ 
-	vld_state->desc_remap_table0.index_0 = FRAME_INTRA;
-	vld_state->desc_remap_table0.index_1 = FRAME_FRAME_PRED_FORWARD;
-	vld_state->desc_remap_table0.index_2 = FRAME_FIELD_PRED_FORWARD;
-	vld_state->desc_remap_table0.index_3 = FRAME_FIELD_PRED_BIDIRECT; /* dual prime */
-	vld_state->desc_remap_table0.index_4 = FRAME_FRAME_PRED_BACKWARD;
-	vld_state->desc_remap_table0.index_5 = FRAME_FIELD_PRED_BACKWARD;
-	vld_state->desc_remap_table0.index_6 = FRAME_FRAME_PRED_BIDIRECT;
-	vld_state->desc_remap_table0.index_7 = FRAME_FIELD_PRED_BIDIRECT;
+        /*frame picture*/
+        vld_state->desc_remap_table0.index_0 = FRAME_INTRA;
+        vld_state->desc_remap_table0.index_1 = FRAME_FRAME_PRED_FORWARD;
+        vld_state->desc_remap_table0.index_2 = FRAME_FIELD_PRED_FORWARD;
+        vld_state->desc_remap_table0.index_3 = FRAME_FIELD_PRED_BIDIRECT; /* dual prime */
+        vld_state->desc_remap_table0.index_4 = FRAME_FRAME_PRED_BACKWARD;
+        vld_state->desc_remap_table0.index_5 = FRAME_FIELD_PRED_BACKWARD;
+        vld_state->desc_remap_table0.index_6 = FRAME_FRAME_PRED_BIDIRECT;
+        vld_state->desc_remap_table0.index_7 = FRAME_FIELD_PRED_BIDIRECT;
 
-	vld_state->desc_remap_table1.index_8 = FRAME_INTRA;
-	vld_state->desc_remap_table1.index_9 = FRAME_FRAME_PRED_FORWARD;
-	vld_state->desc_remap_table1.index_10 = FRAME_FIELD_PRED_FORWARD;
-	vld_state->desc_remap_table1.index_11 = FRAME_FIELD_PRED_BIDIRECT;
-	vld_state->desc_remap_table1.index_12 = FRAME_FRAME_PRED_BACKWARD;
-	vld_state->desc_remap_table1.index_13 = FRAME_FIELD_PRED_BACKWARD;
-	vld_state->desc_remap_table1.index_14 = FRAME_FRAME_PRED_BIDIRECT;
-	vld_state->desc_remap_table1.index_15 = FRAME_FIELD_PRED_BIDIRECT;
+        vld_state->desc_remap_table1.index_8 = FRAME_INTRA;
+        vld_state->desc_remap_table1.index_9 = FRAME_FRAME_PRED_FORWARD;
+        vld_state->desc_remap_table1.index_10 = FRAME_FIELD_PRED_FORWARD;
+        vld_state->desc_remap_table1.index_11 = FRAME_FIELD_PRED_BIDIRECT;
+        vld_state->desc_remap_table1.index_12 = FRAME_FRAME_PRED_BACKWARD;
+        vld_state->desc_remap_table1.index_13 = FRAME_FIELD_PRED_BACKWARD;
+        vld_state->desc_remap_table1.index_14 = FRAME_FRAME_PRED_BIDIRECT;
+        vld_state->desc_remap_table1.index_15 = FRAME_FIELD_PRED_BIDIRECT;
     } else {
-	/*field picture*/
-	vld_state->desc_remap_table0.index_0 = FIELD_INTRA;
-	vld_state->desc_remap_table0.index_1 = FIELD_FORWARD;
-	vld_state->desc_remap_table0.index_2 = FIELD_FORWARD_16X8;
-	vld_state->desc_remap_table0.index_3 = FIELD_BIDIRECT; /* dual prime */
-	vld_state->desc_remap_table0.index_4 = FIELD_BACKWARD;
-	vld_state->desc_remap_table0.index_5 = FIELD_BACKWARD_16X8;
-	vld_state->desc_remap_table0.index_6 = FIELD_BIDIRECT;
-	vld_state->desc_remap_table0.index_7 = FIELD_BIDIRECT_16X8;
+        /*field picture*/
+        vld_state->desc_remap_table0.index_0 = FIELD_INTRA;
+        vld_state->desc_remap_table0.index_1 = FIELD_FORWARD;
+        vld_state->desc_remap_table0.index_2 = FIELD_FORWARD_16X8;
+        vld_state->desc_remap_table0.index_3 = FIELD_BIDIRECT; /* dual prime */
+        vld_state->desc_remap_table0.index_4 = FIELD_BACKWARD;
+        vld_state->desc_remap_table0.index_5 = FIELD_BACKWARD_16X8;
+        vld_state->desc_remap_table0.index_6 = FIELD_BIDIRECT;
+        vld_state->desc_remap_table0.index_7 = FIELD_BIDIRECT_16X8;
     }
 
     dri_bo_unmap(media_context->extended_state.bo);
@@ -865,8 +865,8 @@ i965_media_mpeg2_upload_constants(VADriverContextP ctx,
 }
 
 static void
-i965_media_mpeg2_states_setup(VADriverContextP ctx, 
-                              struct decode_state *decode_state, 
+i965_media_mpeg2_states_setup(VADriverContextP ctx,
+                              struct decode_state *decode_state,
                               struct i965_media_context *media_context)
 {
     i965_media_mpeg2_surfaces_setup(ctx, decode_state, media_context);
@@ -878,7 +878,7 @@ i965_media_mpeg2_states_setup(VADriverContextP ctx,
 }
 
 static void
-i965_media_mpeg2_objects(VADriverContextP ctx, 
+i965_media_mpeg2_objects(VADriverContextP ctx,
                          struct decode_state *decode_state,
                          struct i965_media_context *media_context)
 {
@@ -916,16 +916,16 @@ i965_media_mpeg2_objects(VADriverContextP ctx,
             OUT_BATCH(batch, CMD_MEDIA_OBJECT | 4);
             OUT_BATCH(batch, 0);
             OUT_BATCH(batch, slice_param->slice_data_size - (slice_param->macroblock_offset >> 3));
-            OUT_RELOC(batch, decode_state->slice_datas[j]->bo, 
-                      I915_GEM_DOMAIN_SAMPLER, 0, 
+            OUT_RELOC(batch, decode_state->slice_datas[j]->bo,
+                      I915_GEM_DOMAIN_SAMPLER, 0,
                       slice_param->slice_data_offset + (slice_param->macroblock_offset >> 3));
-            OUT_BATCH(batch, 
-                      ((hpos << 24) |     
+            OUT_BATCH(batch,
+                      ((hpos << 24) |
                        (vpos << 16) |
-                       (127 << 8) | 
+                       (127 << 8) |
                        (slice_param->macroblock_offset & 0x7)));
             OUT_BATCH(batch, slice_param->quantiser_scale_code << 24);
-            ADVANCE_BATCH(batch);          
+            ADVANCE_BATCH(batch);
             slice_param++;
         }
     }
@@ -951,9 +951,9 @@ i965_media_mpeg2_free_private_context(void **data)
     *data = NULL;
 }
 
-void 
-i965_media_mpeg2_decode_init(VADriverContextP ctx, 
-                             struct decode_state *decode_state, 
+void
+i965_media_mpeg2_decode_init(VADriverContextP ctx,
+                             struct decode_state *decode_state,
                              struct i965_media_context *media_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -964,14 +964,14 @@ i965_media_mpeg2_decode_init(VADriverContextP ctx,
 
     media_context->extended_state.enabled = 1;
     dri_bo_unreference(media_context->extended_state.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "vld state", 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "vld state",
                       sizeof(struct i965_vld_state), 32);
     assert(bo);
     media_context->extended_state.bo = bo;
 }
 
-void 
+void
 i965_media_mpeg2_dec_context_init(VADriverContextP ctx, struct i965_media_context *media_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -983,9 +983,9 @@ i965_media_mpeg2_dec_context_init(VADriverContextP ctx, struct i965_media_contex
     i965_mpeg2_context->wa_slice_vertical_position = -1;
 
     /* kernel */
-    assert(NUM_MPEG2_VLD_KERNELS == (sizeof(mpeg2_vld_kernels_gen4) / 
+    assert(NUM_MPEG2_VLD_KERNELS == (sizeof(mpeg2_vld_kernels_gen4) /
                                      sizeof(mpeg2_vld_kernels_gen4[0])));
-    assert(NUM_MPEG2_VLD_KERNELS == (sizeof(mpeg2_vld_kernels_gen5) / 
+    assert(NUM_MPEG2_VLD_KERNELS == (sizeof(mpeg2_vld_kernels_gen5) /
                                      sizeof(mpeg2_vld_kernels_gen5[0])));
     assert(NUM_MPEG2_VLD_KERNELS <= MAX_INTERFACE_DESC);
 
@@ -996,8 +996,8 @@ i965_media_mpeg2_dec_context_init(VADriverContextP ctx, struct i965_media_contex
 
     for (i = 0; i < NUM_MPEG2_VLD_KERNELS; i++) {
         struct i965_kernel *kernel = &i965_mpeg2_context->vld_kernels[i];
-        kernel->bo = dri_bo_alloc(i965->intel.bufmgr, 
-                                  kernel->name, 
+        kernel->bo = dri_bo_alloc(i965->intel.bufmgr,
+                                  kernel->name,
                                   kernel->size, 64);
         assert(kernel->bo);
         dri_bo_subdata(kernel->bo, 0, kernel->size, kernel->bin);
@@ -1011,9 +1011,9 @@ i965_media_mpeg2_dec_context_init(VADriverContextP ctx, struct i965_media_contex
     media_context->urb.size_cs_entry = 16;
 
     media_context->urb.vfe_start = 0;
-    media_context->urb.cs_start = media_context->urb.vfe_start + 
-        media_context->urb.num_vfe_entries * media_context->urb.size_vfe_entry;
-    assert(media_context->urb.cs_start + 
+    media_context->urb.cs_start = media_context->urb.vfe_start +
+                                  media_context->urb.num_vfe_entries * media_context->urb.size_vfe_entry;
+    assert(media_context->urb.cs_start +
            media_context->urb.num_cs_entries * media_context->urb.size_cs_entry <= i965->intel.device_info->urb_size);
 
     /* hook functions */

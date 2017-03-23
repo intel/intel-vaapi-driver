@@ -41,7 +41,7 @@ uint32_t g_intel_debug_option_flags = 0;
 #endif
 
 #ifndef LOCAL_I915_PARAM_HAS_BSD2
-#define LOCAL_I915_PARAM_HAS_BSD2	30
+#define LOCAL_I915_PARAM_HAS_BSD2   30
 #endif
 
 #ifdef I915_PARAM_HAS_HUC
@@ -59,38 +59,38 @@ uint32_t g_intel_debug_option_flags = 0;
 static Bool
 intel_driver_get_param(struct intel_driver_data *intel, int param, int *value)
 {
-   struct drm_i915_getparam gp;
+    struct drm_i915_getparam gp;
 
-   gp.param = param;
-   gp.value = value;
+    gp.param = param;
+    gp.value = value;
 
-   return drmCommandWriteRead(intel->fd, DRM_I915_GETPARAM, &gp, sizeof(gp)) == 0;
+    return drmCommandWriteRead(intel->fd, DRM_I915_GETPARAM, &gp, sizeof(gp)) == 0;
 }
 
 static void intel_driver_get_revid(struct intel_driver_data *intel, int *value)
 {
-#define PCI_REVID	8
-	FILE *fp;
-	char config_data[16];
-	
-	fp = fopen("/sys/devices/pci0000:00/0000:00:02.0/config", "r");
+#define PCI_REVID   8
+    FILE *fp;
+    char config_data[16];
 
-        if (fp) {
-            if (fread(config_data, 1, 16, fp))
-                *value = config_data[PCI_REVID];
-            else
-                *value = 2; /* assume it is at least  B-steping */
-            fclose(fp);
-        } else {
+    fp = fopen("/sys/devices/pci0000:00/0000:00:02.0/config", "r");
+
+    if (fp) {
+        if (fread(config_data, 1, 16, fp))
+            *value = config_data[PCI_REVID];
+        else
             *value = 2; /* assume it is at least  B-steping */
-        }
+        fclose(fp);
+    } else {
+        *value = 2; /* assume it is at least  B-steping */
+    }
 
-	return;
+    return;
 }
 
 extern const struct intel_device_info *i965_get_device_info(int devid);
 
-bool 
+bool
 intel_driver_init(VADriverContextP ctx)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);
@@ -164,7 +164,7 @@ intel_driver_init(VADriverContextP ctx)
     return true;
 }
 
-void 
+void
 intel_driver_terminate(VADriverContextP ctx)
 {
     struct intel_driver_data *intel = intel_driver_data(ctx);

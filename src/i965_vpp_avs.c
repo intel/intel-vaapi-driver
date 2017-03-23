@@ -31,7 +31,7 @@
 #include "i965_vpp_avs.h"
 
 typedef void (*AVSGenCoeffsFunc)(float *coeffs, int num_coeffs, int phase,
-    int num_phases, float f);
+                                 int num_phases, float f);
 
 /* Initializes all coefficients to zero */
 static void
@@ -99,7 +99,7 @@ avs_normalize_coeffs_1(float *coeffs, int num_coeffs, float epsilon)
         s += (coeffs[i] = avs_trunc_coeff(coeffs[i] / sum, epsilon));
 
     /* Distribute the remaining bits, while allocating more to the center */
-    c = num_coeffs/2;
+    c = num_coeffs / 2;
     c = c - (coeffs[c - 1] > coeffs[c]);
 
     r = (1.0f - s) / epsilon;
@@ -107,7 +107,7 @@ avs_normalize_coeffs_1(float *coeffs, int num_coeffs, float epsilon)
     if (coeffs[c + 1] == 0.0f)
         coeffs[c] += r * epsilon;
     else {
-        coeffs[c] += (r - 2*r1) * epsilon;
+        coeffs[c] += (r - 2 * r1) * epsilon;
         coeffs[c - 1] += r1 * epsilon;
         coeffs[c + 1] += r1 * epsilon;
     }
@@ -118,19 +118,19 @@ static void
 avs_normalize_coeffs(AVSCoeffs *coeffs, const AVSConfig *config)
 {
     avs_normalize_coeffs_1(coeffs->y_k_h, config->num_luma_coeffs,
-        config->coeff_epsilon);
+                           config->coeff_epsilon);
     avs_normalize_coeffs_1(coeffs->y_k_v, config->num_luma_coeffs,
-        config->coeff_epsilon);
+                           config->coeff_epsilon);
     avs_normalize_coeffs_1(coeffs->uv_k_h, config->num_chroma_coeffs,
-        config->coeff_epsilon);
+                           config->coeff_epsilon);
     avs_normalize_coeffs_1(coeffs->uv_k_v, config->num_chroma_coeffs,
-        config->coeff_epsilon);
+                           config->coeff_epsilon);
 }
 
 /* Validate coefficients for one sample/direction */
 static bool
 avs_validate_coeffs_1(float *coeffs, int num_coeffs, const float *min_coeffs,
-    const float *max_coeffs)
+                      const float *max_coeffs)
 {
     int i;
 
@@ -149,22 +149,22 @@ avs_validate_coeffs(AVSCoeffs *coeffs, const AVSConfig *config)
     const AVSCoeffs * const max_coeffs = &config->coeff_range.upper_bound;
 
     return avs_validate_coeffs_1(coeffs->y_k_h, config->num_luma_coeffs,
-            min_coeffs->y_k_h, max_coeffs->y_k_h) &&
-        avs_validate_coeffs_1(coeffs->y_k_v, config->num_luma_coeffs,
-            min_coeffs->y_k_v, max_coeffs->y_k_v) &&
-        avs_validate_coeffs_1(coeffs->uv_k_h, config->num_chroma_coeffs,
-            min_coeffs->uv_k_h, max_coeffs->uv_k_h) &&
-        avs_validate_coeffs_1(coeffs->uv_k_v, config->num_chroma_coeffs,
-            min_coeffs->uv_k_v, max_coeffs->uv_k_v);
+                                 min_coeffs->y_k_h, max_coeffs->y_k_h) &&
+           avs_validate_coeffs_1(coeffs->y_k_v, config->num_luma_coeffs,
+                                 min_coeffs->y_k_v, max_coeffs->y_k_v) &&
+           avs_validate_coeffs_1(coeffs->uv_k_h, config->num_chroma_coeffs,
+                                 min_coeffs->uv_k_h, max_coeffs->uv_k_h) &&
+           avs_validate_coeffs_1(coeffs->uv_k_v, config->num_chroma_coeffs,
+                                 min_coeffs->uv_k_v, max_coeffs->uv_k_v);
 }
 
 /* Generate coefficients for default quality (bilinear) */
 static void
 avs_gen_coeffs_linear(float *coeffs, int num_coeffs, int phase, int num_phases,
-    float f)
+                      float f)
 {
-    const int c = num_coeffs/2 - 1;
-    const float p = (float)phase / (num_phases*2);
+    const int c = num_coeffs / 2 - 1;
+    const float p = (float)phase / (num_phases * 2);
 
     avs_init_coeffs(coeffs, num_coeffs);
     coeffs[c] = avs_kernel_linear(p);
@@ -174,11 +174,11 @@ avs_gen_coeffs_linear(float *coeffs, int num_coeffs, int phase, int num_phases,
 /* Generate coefficients for high quality (lanczos) */
 static void
 avs_gen_coeffs_lanczos(float *coeffs, int num_coeffs, int phase, int num_phases,
-    float f)
+                       float f)
 {
-    const int c = num_coeffs/2 - 1;
+    const int c = num_coeffs / 2 - 1;
     const int l = num_coeffs > 4 ? 3 : 2;
-    const float p = (float)phase / (num_phases*2);
+    const float p = (float)phase / (num_phases * 2);
     int i;
 
     if (f > 1.0f)
@@ -198,13 +198,13 @@ avs_gen_coeffs(AVSState *avs, float sx, float sy, AVSGenCoeffsFunc gen_coeffs)
         AVSCoeffs * const coeffs = &avs->coeffs[i];
 
         gen_coeffs(coeffs->y_k_h, config->num_luma_coeffs,
-            i, config->num_phases, sx);
+                   i, config->num_phases, sx);
         gen_coeffs(coeffs->uv_k_h, config->num_chroma_coeffs,
-            i, config->num_phases, sx);
+                   i, config->num_phases, sx);
         gen_coeffs(coeffs->y_k_v, config->num_luma_coeffs,
-            i, config->num_phases, sy);
+                   i, config->num_phases, sy);
         gen_coeffs(coeffs->uv_k_v, config->num_chroma_coeffs,
-            i, config->num_phases, sy);
+                   i, config->num_phases, sy);
 
         avs_normalize_coeffs(coeffs, config);
         if (!avs_validate_coeffs(coeffs, config))
@@ -233,8 +233,7 @@ avs_params_changed(AVSState *avs, float sx, float sy, uint32_t flags)
     if (flags >= VA_FILTER_SCALING_HQ) {
         if (avs->scale_x != sx || avs->scale_y != sy)
             return true;
-    }
-    else {
+    } else {
         if (avs->scale_x == 0.0f || avs->scale_y == 0.0f)
             return true;
     }

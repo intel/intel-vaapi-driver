@@ -101,12 +101,12 @@ i965_avc_hw_scoreboard_interface_descriptor_table(struct i965_h264_context *i965
     desc = bo->virtual;
     memset(desc, 0, sizeof(*desc));
     desc->desc0.grf_reg_blocks = 7;
-    desc->desc0.kernel_start_pointer = (avc_hw_scoreboard_context->hw_kernel.bo->offset + 
+    desc->desc0.kernel_start_pointer = (avc_hw_scoreboard_context->hw_kernel.bo->offset +
                                         avc_hw_scoreboard_context->hw_kernel.offset) >> 6; /* reloc */
     desc->desc1.const_urb_entry_read_offset = 0;
     desc->desc1.const_urb_entry_read_len = 1;
     desc->desc3.binding_table_entry_count = 0;
-    desc->desc3.binding_table_pointer = 
+    desc->desc3.binding_table_pointer =
         avc_hw_scoreboard_context->binding_table.bo->offset >> 5; /*reloc */
 
     dri_bo_emit_reloc(bo,
@@ -161,7 +161,7 @@ i965_avc_hw_scoreboard_vfe_state(struct i965_h264_context *i965_h264_context)
     vfe_state->vfe1.num_urb_entries = avc_hw_scoreboard_context->urb.num_vfe_entries;
     vfe_state->vfe1.vfe_mode = VFE_GENERIC_MODE;
     vfe_state->vfe1.children_present = 0;
-    vfe_state->vfe2.interface_descriptor_base = 
+    vfe_state->vfe2.interface_descriptor_base =
         avc_hw_scoreboard_context->idrt.bo->offset >> 4; /* reloc */
     dri_bo_emit_reloc(bo,
                       I915_GEM_DOMAIN_INSTRUCTION, 0,
@@ -222,7 +222,7 @@ i965_avc_hw_scoreboard_urb_layout(VADriverContextP ctx, struct i965_h264_context
     BEGIN_BATCH(batch, 3);
     OUT_BATCH(batch, CMD_URB_FENCE | UF0_VFE_REALLOC | UF0_CS_REALLOC | 1);
     OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, 
+    OUT_BATCH(batch,
               (vfe_fence << UF2_VFE_FENCE_SHIFT) |      /* VFE_SIZE */
               (cs_fence << UF2_CS_FENCE_SHIFT));        /* CS_SIZE */
     ADVANCE_BATCH(batch);
@@ -258,12 +258,12 @@ i965_avc_hw_scoreboard_state_pointers(VADriverContextP ctx, struct i965_h264_con
     ADVANCE_BATCH(batch);
 }
 
-static void 
+static void
 i965_avc_hw_scoreboard_cs_urb_layout(VADriverContextP ctx, struct i965_h264_context *i965_h264_context)
 {
     struct i965_avc_hw_scoreboard_context *avc_hw_scoreboard_context = &i965_h264_context->avc_hw_scoreboard_context;
     struct intel_batchbuffer *batch = i965_h264_context->batch;
- 
+
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, CMD_CS_URB_STATE | 0);
     OUT_BATCH(batch,
@@ -283,7 +283,7 @@ i965_avc_hw_scoreboard_constant_buffer(VADriverContextP ctx, struct i965_h264_co
     OUT_RELOC(batch, avc_hw_scoreboard_context->curbe.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0,
               avc_hw_scoreboard_context->urb.size_cs_entry - 1);
-    ADVANCE_BATCH(batch);    
+    ADVANCE_BATCH(batch);
 }
 
 static void
@@ -302,7 +302,7 @@ i965_avc_hw_scoreboard_objects(VADriverContextP ctx, struct i965_h264_context *i
         OUT_BATCH(batch, 0); /* no indirect data */
         OUT_BATCH(batch, 0);
         OUT_BATCH(batch, ((number_mb_cmds << 16) |
-                        (starting_mb_number << 0)));
+                          (starting_mb_number << 0)));
         OUT_BATCH(batch, avc_hw_scoreboard_context->inline_data.pic_width_in_mbs);
         ADVANCE_BATCH(batch);
 
@@ -318,7 +318,7 @@ i965_avc_hw_scoreboard_objects(VADriverContextP ctx, struct i965_h264_context *i
         OUT_BATCH(batch, 0); /* no indirect data */
         OUT_BATCH(batch, 0);
         OUT_BATCH(batch, ((number_mb_cmds << 16) |
-                        (starting_mb_number << 0)));
+                          (starting_mb_number << 0)));
         OUT_BATCH(batch, avc_hw_scoreboard_context->inline_data.pic_width_in_mbs);
         ADVANCE_BATCH(batch);
     }
@@ -353,7 +353,7 @@ i965_avc_hw_scoreboard(VADriverContextP ctx, struct decode_state *decode_state, 
         avc_hw_scoreboard_context->inline_data.starting_mb_number = i965_h264_context->avc_it_command_mb_info.mbs;
         avc_hw_scoreboard_context->inline_data.pic_width_in_mbs = i965_h264_context->picture.width_in_mbs;
         avc_hw_scoreboard_context->surface.total_mbs = i965_h264_context->avc_it_command_mb_info.mbs * 2;
-        
+
         dri_bo_unreference(avc_hw_scoreboard_context->hw_kernel.bo);
         avc_hw_scoreboard_context->hw_kernel.bo = i965_h264_context->avc_kernels[H264_AVC_COMBINED].bo;
         assert(avc_hw_scoreboard_context->hw_kernel.bo != NULL);
@@ -394,29 +394,29 @@ i965_avc_hw_scoreboard_decode_init(VADriverContextP ctx, void *h264_context)
         dri_bo_reference(avc_hw_scoreboard_context->surface.s_bo);
 
         dri_bo_unreference(avc_hw_scoreboard_context->surface.ss_bo);
-        bo = dri_bo_alloc(i965->intel.bufmgr, 
-                          "surface state", 
+        bo = dri_bo_alloc(i965->intel.bufmgr,
+                          "surface state",
                           sizeof(struct i965_surface_state), 32);
         assert(bo);
         avc_hw_scoreboard_context->surface.ss_bo = bo;
 
         dri_bo_unreference(avc_hw_scoreboard_context->binding_table.bo);
-        bo = dri_bo_alloc(i965->intel.bufmgr, 
+        bo = dri_bo_alloc(i965->intel.bufmgr,
                           "binding table",
                           MAX_MEDIA_SURFACES * sizeof(unsigned int), 32);
         assert(bo);
         avc_hw_scoreboard_context->binding_table.bo = bo;
 
         dri_bo_unreference(avc_hw_scoreboard_context->idrt.bo);
-        bo = dri_bo_alloc(i965->intel.bufmgr, 
-                          "interface discriptor", 
+        bo = dri_bo_alloc(i965->intel.bufmgr,
+                          "interface discriptor",
                           MAX_INTERFACE_DESC * sizeof(struct i965_interface_descriptor), 16);
         assert(bo);
         avc_hw_scoreboard_context->idrt.bo = bo;
 
         dri_bo_unreference(avc_hw_scoreboard_context->vfe_state.bo);
-        bo = dri_bo_alloc(i965->intel.bufmgr, 
-                          "vfe state", 
+        bo = dri_bo_alloc(i965->intel.bufmgr,
+                          "vfe state",
                           sizeof(struct i965_vfe_state), 32);
         assert(bo);
         avc_hw_scoreboard_context->vfe_state.bo = bo;
@@ -426,14 +426,14 @@ i965_avc_hw_scoreboard_decode_init(VADriverContextP ctx, void *h264_context)
         avc_hw_scoreboard_context->urb.num_cs_entries = 1;
         avc_hw_scoreboard_context->urb.size_cs_entry = 1;
         avc_hw_scoreboard_context->urb.vfe_start = 0;
-        avc_hw_scoreboard_context->urb.cs_start = avc_hw_scoreboard_context->urb.vfe_start + 
-            avc_hw_scoreboard_context->urb.num_vfe_entries * avc_hw_scoreboard_context->urb.size_vfe_entry;
-        assert(avc_hw_scoreboard_context->urb.cs_start + 
+        avc_hw_scoreboard_context->urb.cs_start = avc_hw_scoreboard_context->urb.vfe_start +
+                                                  avc_hw_scoreboard_context->urb.num_vfe_entries * avc_hw_scoreboard_context->urb.size_vfe_entry;
+        assert(avc_hw_scoreboard_context->urb.cs_start +
                avc_hw_scoreboard_context->urb.num_cs_entries * avc_hw_scoreboard_context->urb.size_cs_entry <= i965->intel.device_info->urb_size);
     }
 }
 
-Bool 
+Bool
 i965_avc_hw_scoreboard_ternimate(struct i965_avc_hw_scoreboard_context *avc_hw_scoreboard_context)
 {
     dri_bo_unreference(avc_hw_scoreboard_context->curbe.bo);

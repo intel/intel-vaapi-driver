@@ -153,7 +153,7 @@ static const int8_t buf_rate_adj_tab_b_vbr[72] = {
 };
 
 static const struct huc_brc_update_constant_data
-gen9_brc_update_constant_data = {
+        gen9_brc_update_constant_data = {
     .global_rate_qp_adj_tab_i = {
         48, 40, 32,  24,  16,   8,   0,  -8,
         40, 32, 24,  16,   8,   0,  -8, -16,
@@ -173,7 +173,7 @@ gen9_brc_update_constant_data = {
         8,    0,   0, -24, -32, -32, -32, -48,
         0,  -16, -16, -24, -32, -48, -56, -64,
         -8, -16, -32, -32, -48, -48, -56, -64,
-        -16,-32, -48, -48, -48, -56, -64, -80,
+        -16, -32, -48, -48, -48, -56, -64, -80,
     },
 
     .global_rate_qp_adj_tab_b = {
@@ -835,7 +835,7 @@ map_44_lut_value(unsigned int v, unsigned char max)
     }
 
     ret = (unsigned char)((d << 4) + (int)((v + (d == 0 ? 0 : (1 << (d - 1)))) >> d));
-    ret =  (ret & 0xf) == 0 ? (ret | 8) : ret;
+    ret = (ret & 0xf) == 0 ? (ret | 8) : ret;
 
     return ret;
 }
@@ -1671,7 +1671,7 @@ gen9_vdenc_update_huc_brc_init_dmem(VADriverContextP ctx,
 
     input_bits_per_frame = ((double)vdenc_context->max_bit_rate * 1000.0 * vdenc_context->framerate.den) / vdenc_context->framerate.num;
     bps_ratio = input_bits_per_frame /
-        ((double)vdenc_context->vbv_buffer_size_in_bit * vdenc_context->framerate.den / vdenc_context->framerate.num);
+                ((double)vdenc_context->vbv_buffer_size_in_bit * vdenc_context->framerate.den / vdenc_context->framerate.num);
 
     if (bps_ratio < 0.1)
         bps_ratio = 0.1;
@@ -2168,7 +2168,7 @@ gen9_vdenc_huc_brc_update_constant_data(VADriverContextP ctx,
     struct huc_brc_update_constant_data *brc_buffer;
 
     brc_buffer = (struct huc_brc_update_constant_data *)
-        i965_map_gpe_resource(&vdenc_context->brc_constant_data_res);
+                 i965_map_gpe_resource(&vdenc_context->brc_constant_data_res);
 
     if (!brc_buffer)
         return;
@@ -2340,10 +2340,10 @@ gen9_vdenc_mfx_surface_state(VADriverContextP ctx,
                   (1 << 1)  |                           /* must be tiled */
                   (I965_TILEWALK_YMAJOR << 0));         /* tile walk, TILEWALK_YMAJOR */
     OUT_BCS_BATCH(batch,
-                  (0 << 16) | 			        /* must be 0 for interleave U/V */
+                  (0 << 16) |                   /* must be 0 for interleave U/V */
                   (gpe_resource->y_cb_offset));         /* y offset for U(cb) */
     OUT_BCS_BATCH(batch,
-                  (0 << 16) | 			        /* must be 0 for interleave U/V */
+                  (0 << 16) |                   /* must be 0 for interleave U/V */
                   (gpe_resource->y_cb_offset));         /* y offset for U(cb) */
 
     ADVANCE_BCS_BATCH(batch);
@@ -2609,10 +2609,10 @@ gen9_vdenc_vdenc_surface_state(VADriverContextP ctx,
                   (1 << 1)  |                           /* must be tiled */
                   (I965_TILEWALK_YMAJOR << 0));         /* tile walk, TILEWALK_YMAJOR */
     OUT_BCS_BATCH(batch,
-                  (0 << 16) | 			        /* must be 0 for interleave U/V */
+                  (0 << 16) |                   /* must be 0 for interleave U/V */
                   (gpe_resource->y_cb_offset));         /* y offset for U(cb) */
     OUT_BCS_BATCH(batch,
-                  (0 << 16) | 			        /* must be 0 for interleave U/V */
+                  (0 << 16) |                   /* must be 0 for interleave U/V */
                   (gpe_resource->y_cb_offset));         /* y offset for v(cr) */
 
     ADVANCE_BCS_BATCH(batch);
@@ -2891,7 +2891,7 @@ gen9_vdenc_mfx_avc_insert_object(VADriverContextP ctx,
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
     if (data_bits_in_last_dw == 0)
-	data_bits_in_last_dw = 32;
+        data_bits_in_last_dw = 32;
 
     BEGIN_BCS_BATCH(batch, lenght_in_dws + 2);
 
@@ -3242,7 +3242,7 @@ gen9_vdenc_mfx_avc_slice_state(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 11);
 
-    OUT_BCS_BATCH(batch, MFX_AVC_SLICE_STATE | (11 - 2) );
+    OUT_BCS_BATCH(batch, MFX_AVC_SLICE_STATE | (11 - 2));
     OUT_BCS_BATCH(batch, slice_type);
     OUT_BCS_BATCH(batch,
                   (num_ref_l0 << 16) |
@@ -3269,18 +3269,18 @@ gen9_vdenc_mfx_avc_slice_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   (0 << 31) |           /* TODO: ignore it for VDENC ??? */
                   (!slice_param->macroblock_address << 30) |    /* ResetRateControlCounter */
-                  (2 << 28) |		/* Loose Rate Control */
+                  (2 << 28) |       /* Loose Rate Control */
                   (0 << 24) |           /* RC Stable Tolerance */
                   (0 << 23) |           /* RC Panic Enable */
                   (1 << 22) |           /* CBP mode */
                   (0 << 21) |           /* MB Type Direct Conversion, 0: Enable, 1: Disable */
                   (0 << 20) |           /* MB Type Skip Conversion, 0: Enable, 1: Disable */
                   (!next_slice_param << 19) |                   /* Is Last Slice */
-                  (0 << 18) | 	        /* BitstreamOutputFlag Compressed BitStream Output Disable Flag 0:enable 1:disable */
-                  (1 << 17) |	        /* HeaderPresentFlag */
-                  (1 << 16) |	        /* SliceData PresentFlag */
-                  (0 << 15) |	        /* TailPresentFlag, TODO: check it on VDEnc  */
-                  (1 << 13) |	        /* RBSP NAL TYPE */
+                  (0 << 18) |           /* BitstreamOutputFlag Compressed BitStream Output Disable Flag 0:enable 1:disable */
+                  (1 << 17) |           /* HeaderPresentFlag */
+                  (1 << 16) |           /* SliceData PresentFlag */
+                  (0 << 15) |           /* TailPresentFlag, TODO: check it on VDEnc  */
+                  (1 << 13) |           /* RBSP NAL TYPE */
                   (slice_index << 4) |
                   (1 << 12));           /* CabacZeroWordInsertionEnable */
 

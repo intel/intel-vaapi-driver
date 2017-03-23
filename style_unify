@@ -1,0 +1,11 @@
+#!/bin/sh
+
+files=$(find src -name "*.[ch]")
+for i in $files
+do
+    echo $i
+    astyle --style=linux -cnpUH -s4 -M120 $i
+done
+
+
+

@@ -46,16 +46,14 @@
 #define GEN6_VC1_ADVANCED_PROFILE       2
 #define GEN6_VC1_RESERVED_PROFILE       3
 
-struct gen6_vc1_surface
-{
+struct gen6_vc1_surface {
     dri_bo *dmv;
     int picture_type;
 };
 
 struct hw_context;
 
-struct gen6_mfd_context
-{
+struct gen6_mfd_context {
     struct hw_context base;
 
     union {

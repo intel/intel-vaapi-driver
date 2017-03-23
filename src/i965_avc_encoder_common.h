@@ -69,8 +69,7 @@ struct avc_param {
     uint32_t target_bit_rate;
 };
 
-typedef enum
-{
+typedef enum {
     INTEL_AVC_BASE_PROFILE               = 66,
     INTEL_AVC_MAIN_PROFILE               = 77,
     INTEL_AVC_EXTENDED_PROFILE           = 88,
@@ -78,8 +77,7 @@ typedef enum
     INTEL_AVC_HIGH10_PROFILE             = 110
 } INTEL_AVC_PROFILE_IDC;
 
-typedef enum
-{
+typedef enum {
     INTEL_AVC_LEVEL_1                    = 10,
     INTEL_AVC_LEVEL_11                   = 11,
     INTEL_AVC_LEVEL_12                   = 12,
@@ -196,78 +194,78 @@ struct avc_enc_state {
     VAEncSliceParameterBufferH264    *slice_param[MAX_AVC_SLICE_NUM];
     VAEncMacroblockParameterBufferH264 *mb_param;
 
-    uint32_t mad_enable:1;
+    uint32_t mad_enable: 1;
     //mb skip
-    uint32_t mb_disable_skip_map_enable:1;
+    uint32_t mb_disable_skip_map_enable: 1;
     //static frame detection
-    uint32_t sfd_enable:1;
-    uint32_t sfd_mb_enable:1;
-    uint32_t adaptive_search_window_enable:1;
+    uint32_t sfd_enable: 1;
+    uint32_t sfd_mb_enable: 1;
+    uint32_t adaptive_search_window_enable: 1;
     //external mb qp
-    uint32_t mb_qp_data_enable:1;
+    uint32_t mb_qp_data_enable: 1;
     //rolling intra refresh
-    uint32_t intra_refresh_i_enable:1;
-    uint32_t min_max_qp_enable:1;
-    uint32_t skip_bias_adjustment_enable:1;
+    uint32_t intra_refresh_i_enable: 1;
+    uint32_t min_max_qp_enable: 1;
+    uint32_t skip_bias_adjustment_enable: 1;
 
-    uint32_t non_ftq_skip_threshold_lut_input_enable:1;
-    uint32_t ftq_skip_threshold_lut_input_enable:1;
-    uint32_t ftq_override:1;
-    uint32_t direct_bias_adjustment_enable:1;
-    uint32_t global_motion_bias_adjustment_enable:1;
-    uint32_t disable_sub_mb_partion:1;
-    uint32_t arbitrary_num_mbs_in_slice:1;
-    uint32_t adaptive_transform_decision_enable:1;
-    uint32_t skip_check_disable:1;
-    uint32_t tq_enable:1;
-    uint32_t enable_avc_ildb:1;
-    uint32_t suppress_recon_enable:1;
-    uint32_t flatness_check_supported:1;
-    uint32_t transform_8x8_mode_enable:1;
-    uint32_t caf_supported:1;
-    uint32_t mb_status_enable:1;
-    uint32_t mbaff_flag:1;
-    uint32_t enable_force_skip:1;
-    uint32_t rc_panic_enable:1;
-    uint32_t reserved0:7;
+    uint32_t non_ftq_skip_threshold_lut_input_enable: 1;
+    uint32_t ftq_skip_threshold_lut_input_enable: 1;
+    uint32_t ftq_override: 1;
+    uint32_t direct_bias_adjustment_enable: 1;
+    uint32_t global_motion_bias_adjustment_enable: 1;
+    uint32_t disable_sub_mb_partion: 1;
+    uint32_t arbitrary_num_mbs_in_slice: 1;
+    uint32_t adaptive_transform_decision_enable: 1;
+    uint32_t skip_check_disable: 1;
+    uint32_t tq_enable: 1;
+    uint32_t enable_avc_ildb: 1;
+    uint32_t suppress_recon_enable: 1;
+    uint32_t flatness_check_supported: 1;
+    uint32_t transform_8x8_mode_enable: 1;
+    uint32_t caf_supported: 1;
+    uint32_t mb_status_enable: 1;
+    uint32_t mbaff_flag: 1;
+    uint32_t enable_force_skip: 1;
+    uint32_t rc_panic_enable: 1;
+    uint32_t reserved0: 7;
 
     //generic begin
-    uint32_t ref_pic_select_list_supported:1;
-    uint32_t mb_brc_supported:1;
-    uint32_t multi_pre_enable:1;
-    uint32_t ftq_enable:1;
-    uint32_t caf_enable:1;
-    uint32_t caf_disable_hd:1;
-    uint32_t skip_bias_adjustment_supported:1;
+    uint32_t ref_pic_select_list_supported: 1;
+    uint32_t mb_brc_supported: 1;
+    uint32_t multi_pre_enable: 1;
+    uint32_t ftq_enable: 1;
+    uint32_t caf_enable: 1;
+    uint32_t caf_disable_hd: 1;
+    uint32_t skip_bias_adjustment_supported: 1;
 
-    uint32_t adaptive_intra_scaling_enable:1;
-    uint32_t old_mode_cost_enable:1;
-    uint32_t multi_ref_qp_enable:1;
-    uint32_t weighted_ref_l0_enable:1;
-    uint32_t weighted_ref_l1_enable:1;
-    uint32_t weighted_prediction_supported:1;
-    uint32_t brc_split_enable:1;
-    uint32_t slice_level_report_supported:1;
+    uint32_t adaptive_intra_scaling_enable: 1;
+    uint32_t old_mode_cost_enable: 1;
+    uint32_t multi_ref_qp_enable: 1;
+    uint32_t weighted_ref_l0_enable: 1;
+    uint32_t weighted_ref_l1_enable: 1;
+    uint32_t weighted_prediction_supported: 1;
+    uint32_t brc_split_enable: 1;
+    uint32_t slice_level_report_supported: 1;
 
-    uint32_t fbr_bypass_enable:1;
+    uint32_t fbr_bypass_enable: 1;
     //mb status output in scaling kernel
-    uint32_t field_scaling_output_interleaved:1;
-    uint32_t mb_variance_output_enable:1;
-    uint32_t mb_pixel_average_output_enable:1;
-    uint32_t rolling_intra_refresh_enable:1;
-    uint32_t mbenc_curbe_set_in_brc_update:1;
+    uint32_t field_scaling_output_interleaved: 1;
+    uint32_t mb_variance_output_enable: 1;
+    uint32_t mb_pixel_average_output_enable: 1;
+    uint32_t rolling_intra_refresh_enable: 1;
+    uint32_t mbenc_curbe_set_in_brc_update: 1;
     //rounding
-    uint32_t rounding_inter_enable:1;
-    uint32_t adaptive_rounding_inter_enable:1;
+    uint32_t rounding_inter_enable: 1;
+    uint32_t adaptive_rounding_inter_enable: 1;
 
-    uint32_t mbenc_i_frame_dist_in_use:1;
-    uint32_t mb_status_supported:1;
-    uint32_t mb_vproc_stats_enable:1;
-    uint32_t flatness_check_enable:1;
-    uint32_t block_based_skip_enable:1;
-    uint32_t use_widi_mbenc_kernel:1;
-    uint32_t kernel_trellis_enable:1;
-    uint32_t generic_reserved:1;
+    uint32_t mbenc_i_frame_dist_in_use: 1;
+    uint32_t mb_status_supported: 1;
+    uint32_t mb_vproc_stats_enable: 1;
+    uint32_t flatness_check_enable: 1;
+    uint32_t block_based_skip_enable: 1;
+    uint32_t use_widi_mbenc_kernel: 1;
+    uint32_t kernel_trellis_enable: 1;
+    uint32_t generic_reserved: 1;
     //generic end
 
     //rounding
@@ -311,17 +309,17 @@ struct avc_enc_state {
     uint32_t slice_batch_offset[MAX_AVC_SLICE_NUM];
 
     //gen95
-    uint32_t decouple_mbenc_curbe_from_brc_enable :1;
-    uint32_t extended_mv_cost_range_enable :1;
-    uint32_t lambda_table_enable :1;
-    uint32_t reserved_g95 :30;
+    uint32_t decouple_mbenc_curbe_from_brc_enable : 1;
+    uint32_t extended_mv_cost_range_enable : 1;
+    uint32_t lambda_table_enable : 1;
+    uint32_t reserved_g95 : 30;
     uint32_t mbenc_brc_buffer_size;
 
 };
 
 extern int i965_avc_get_max_mbps(int level_idc);
 extern int i965_avc_calculate_initial_qp(struct avc_param * param);
-extern unsigned int i965_avc_get_profile_level_max_frame(struct avc_param * param,int level_idc);
+extern unsigned int i965_avc_get_profile_level_max_frame(struct avc_param * param, int level_idc);
 extern int i965_avc_get_max_v_mv_r(int level_idc);
 extern int i965_avc_get_max_mv_len(int level_idc);
 extern int i965_avc_get_max_mv_per_2mb(int level_idc);

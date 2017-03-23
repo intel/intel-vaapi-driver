@@ -33,8 +33,7 @@
 #include "i965_gpe_utils.h"
 
 
-const unsigned int table_enc_search_path[2][8][16] =
-{
+const unsigned int table_enc_search_path[2][8][16] = {
     // I-Frame & P-Frame
     {
         // MEMethod: 0

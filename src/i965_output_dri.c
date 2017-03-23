@@ -8,11 +8,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -35,7 +35,7 @@
 typedef struct dri_drawable *(*dri_get_drawable_func)(
     VADriverContextP ctx, XID drawable);
 typedef union dri_buffer *(*dri_get_rendering_buffer_func)(
-    VADriverContextP ctx, struct dri_drawable *d);
+            VADriverContextP ctx, struct dri_drawable *d);
 typedef void (*dri_swap_buffer_func)(
     VADriverContextP ctx, struct dri_drawable *d);
 
@@ -53,17 +53,23 @@ struct va_dri_output {
 bool
 i965_output_dri_init(VADriverContextP ctx)
 {
-    struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct dso_handle *dso_handle;
     struct dri_vtable *dri_vtable;
 
     static const struct dso_symbol symbols[] = {
-        { "dri_get_drawable",
-          offsetof(struct dri_vtable, get_drawable) },
-        { "dri_get_rendering_buffer",
-          offsetof(struct dri_vtable, get_rendering_buffer) },
-        { "dri_swap_buffer",
-          offsetof(struct dri_vtable, swap_buffer) },
+        {
+            "dri_get_drawable",
+            offsetof(struct dri_vtable, get_drawable)
+        },
+        {
+            "dri_get_rendering_buffer",
+            offsetof(struct dri_vtable, get_rendering_buffer)
+        },
+        {
+            "dri_swap_buffer",
+            offsetof(struct dri_vtable, swap_buffer)
+        },
         { NULL, }
     };
 
@@ -89,7 +95,7 @@ error:
 void
 i965_output_dri_terminate(VADriverContextP ctx)
 {
-    struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct va_dri_output * const dri_output = i965->dri_output;
 
     if (!dri_output)
@@ -116,13 +122,13 @@ i965_put_surface_dri(
     unsigned int        flags
 )
 {
-    struct i965_driver_data * const i965 = i965_driver_data(ctx); 
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct dri_vtable * const dri_vtable = &i965->dri_output->vtable;
     struct i965_render_state * const render_state = &i965->render_state;
     struct dri_drawable *dri_drawable;
     union dri_buffer *buffer;
     struct intel_region *dest_region;
-    struct object_surface *obj_surface; 
+    struct object_surface *obj_surface;
     uint32_t name;
     int i, ret;
 
@@ -146,7 +152,7 @@ i965_put_surface_dri(
 
     buffer = dri_vtable->get_rendering_buffer(ctx, dri_drawable);
     assert(buffer);
-    
+
     dest_region = render_state->draw_region;
     if (dest_region == NULL) {
         dest_region = (struct intel_region *)calloc(1, sizeof(*dest_region));
@@ -158,8 +164,8 @@ i965_put_surface_dri(
         dri_bo_flink(dest_region->bo, &name);
         if (buffer->dri2.name != name) {
             dri_bo_unreference(dest_region->bo);
-	    dest_region->bo = NULL;
-	}
+            dest_region->bo = NULL;
+        }
     }
 
     if (dest_region->bo == NULL) {

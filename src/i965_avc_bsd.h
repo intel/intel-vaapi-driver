@@ -31,8 +31,7 @@
 
 #define DMV_SIZE        0x88000 /* 557056 bytes for a frame */
 
-struct i965_avc_bsd_context
-{
+struct i965_avc_bsd_context {
     struct {
         dri_bo *bo;
     } bsd_raw_store;

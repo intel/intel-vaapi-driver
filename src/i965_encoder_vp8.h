@@ -89,8 +89,7 @@
 struct encode_state;
 struct intel_encoder_context;
 
-struct i965_encoder_vp8_surface
-{
+struct i965_encoder_vp8_surface {
     VADriverContextP ctx;
     VASurfaceID scaled_4x_surface_id;
     struct object_surface *scaled_4x_surface_obj;
@@ -99,15 +98,13 @@ struct i965_encoder_vp8_surface
     unsigned int qp_index;
 };
 
-enum vp8_binding_table_offset_vp8_brc_init_reset
-{
+enum vp8_binding_table_offset_vp8_brc_init_reset {
     VP8_BTI_BRC_INIT_RESET_HISTORY = 0,
     VP8_BTI_BRC_INIT_RESET_DISTORTION,
     VP8_BTI_BRC_INIT_RESET_NUM_SURFACES
 };
 
-struct vp8_brc_init_reset_curbe_data
-{
+struct vp8_brc_init_reset_curbe_data {
     struct {
         uint32_t profile_level_max_frame;
     } dw0;
@@ -141,45 +138,45 @@ struct vp8_brc_init_reset_curbe_data
     } dw7;
 
     struct {
-        uint32_t brc_flag:16;
-        uint32_t gop_minus1:16;
+        uint32_t brc_flag: 16;
+        uint32_t gop_minus1: 16;
     } dw8;
 
     struct {
-        uint32_t reserved:16;
-        uint32_t frame_width_in_bytes:16;
+        uint32_t reserved: 16;
+        uint32_t frame_width_in_bytes: 16;
     } dw9;
 
     struct {
-        uint32_t frame_height_in_bytes:16;
-        uint32_t avbr_accuracy:16;
+        uint32_t frame_height_in_bytes: 16;
+        uint32_t avbr_accuracy: 16;
     } dw10;
 
     struct {
-        uint32_t avbr_convergence:16;
-        uint32_t min_qp:16;
+        uint32_t avbr_convergence: 16;
+        uint32_t min_qp: 16;
     } dw11;
 
     struct {
-        uint32_t max_qp:16;
-        uint32_t level_qp:16;
+        uint32_t max_qp: 16;
+        uint32_t level_qp: 16;
     } dw12;
 
     struct {
-        uint32_t max_section_pct:16;
-        uint32_t under_shoot_cbr_pct:16;
+        uint32_t max_section_pct: 16;
+        uint32_t under_shoot_cbr_pct: 16;
     } dw13;
 
     struct {
-        uint32_t vbr_bias_pct:16;
-        uint32_t min_section_pct:16;
+        uint32_t vbr_bias_pct: 16;
+        uint32_t min_section_pct: 16;
     } dw14;
 
     struct {
-        uint32_t instant_rate_threshold_0_for_p:8;
-        uint32_t instant_rate_threshold_1_for_p:8;
-        uint32_t instant_rate_threshold_2_for_p:8;
-        uint32_t instant_rate_threshold_3_for_p:8;
+        uint32_t instant_rate_threshold_0_for_p: 8;
+        uint32_t instant_rate_threshold_1_for_p: 8;
+        uint32_t instant_rate_threshold_2_for_p: 8;
+        uint32_t instant_rate_threshold_3_for_p: 8;
     } dw15;
 
     struct {
@@ -187,57 +184,57 @@ struct vp8_brc_init_reset_curbe_data
     } dw16;
 
     struct {
-        uint32_t instant_rate_threshold_0_for_i:8;
-        uint32_t instant_rate_threshold_1_for_i:8;
-        uint32_t instant_rate_threshold_2_for_i:8;
-        uint32_t instant_rate_threshold_3_for_i:8;
+        uint32_t instant_rate_threshold_0_for_i: 8;
+        uint32_t instant_rate_threshold_1_for_i: 8;
+        uint32_t instant_rate_threshold_2_for_i: 8;
+        uint32_t instant_rate_threshold_3_for_i: 8;
     } dw17;
 
     struct {
-        uint32_t deviation_threshold_0_for_p:8; // Signed byte
-        uint32_t deviation_threshold_1_for_p:8; // Signed byte
-        uint32_t deviation_threshold_2_for_p:8; // Signed byte
-        uint32_t deviation_threshold_3_for_p:8; // Signed byte
+        uint32_t deviation_threshold_0_for_p: 8; // Signed byte
+        uint32_t deviation_threshold_1_for_p: 8; // Signed byte
+        uint32_t deviation_threshold_2_for_p: 8; // Signed byte
+        uint32_t deviation_threshold_3_for_p: 8; // Signed byte
     } dw18;
 
     struct {
-        uint32_t deviation_threshold_4_for_p:8; // Signed byte
-        uint32_t deviation_threshold_5_for_p:8; // Signed byte
-        uint32_t deviation_threshold_6_for_p:8; // Signed byte
-        uint32_t deviation_threshold_7_for_p:8; // Signed byte
+        uint32_t deviation_threshold_4_for_p: 8; // Signed byte
+        uint32_t deviation_threshold_5_for_p: 8; // Signed byte
+        uint32_t deviation_threshold_6_for_p: 8; // Signed byte
+        uint32_t deviation_threshold_7_for_p: 8; // Signed byte
     } dw19;
 
     struct {
-        uint32_t deviation_threshold_0_for_vbr:8; // Signed byte
-        uint32_t deviation_threshold_1_for_vbr:8; // Signed byte
-        uint32_t deviation_threshold_2_for_vbr:8; // Signed byte
-        uint32_t deviation_threshold_3_for_vbr:8; // Signed byte
+        uint32_t deviation_threshold_0_for_vbr: 8; // Signed byte
+        uint32_t deviation_threshold_1_for_vbr: 8; // Signed byte
+        uint32_t deviation_threshold_2_for_vbr: 8; // Signed byte
+        uint32_t deviation_threshold_3_for_vbr: 8; // Signed byte
     } dw20;
 
     struct {
-        uint32_t deviation_threshold_4_for_vbr:8; // Signed byte
-        uint32_t deviation_threshold_5_for_vbr:8; // Signed byte
-        uint32_t deviation_threshold_6_for_vbr:8; // Signed byte
-        uint32_t deviation_threshold_7_for_vbr:8; // Signed byte
+        uint32_t deviation_threshold_4_for_vbr: 8; // Signed byte
+        uint32_t deviation_threshold_5_for_vbr: 8; // Signed byte
+        uint32_t deviation_threshold_6_for_vbr: 8; // Signed byte
+        uint32_t deviation_threshold_7_for_vbr: 8; // Signed byte
     } dw21;
 
     struct {
-        uint32_t deviation_threshold_0_for_i:8; // Signed byte
-        uint32_t deviation_threshold_1_for_i:8; // Signed byte
-        uint32_t deviation_threshold_2_for_i:8; // Signed byte
-        uint32_t deviation_threshold_3_for_i:8; // Signed byte
+        uint32_t deviation_threshold_0_for_i: 8; // Signed byte
+        uint32_t deviation_threshold_1_for_i: 8; // Signed byte
+        uint32_t deviation_threshold_2_for_i: 8; // Signed byte
+        uint32_t deviation_threshold_3_for_i: 8; // Signed byte
     } dw22;
 
     struct {
-        uint32_t deviation_threshold_4_for_i:8; // Signed byte
-        uint32_t deviation_threshold_5_for_i:8; // Signed byte
-        uint32_t deviation_threshold_6_for_i:8; // Signed byte
-        uint32_t deviation_threshold_7_for_i:8; // Signed byte
+        uint32_t deviation_threshold_4_for_i: 8; // Signed byte
+        uint32_t deviation_threshold_5_for_i: 8; // Signed byte
+        uint32_t deviation_threshold_6_for_i: 8; // Signed byte
+        uint32_t deviation_threshold_7_for_i: 8; // Signed byte
     } dw23;
 
     struct {
-        uint32_t num_t_levels:8;
-        uint32_t reserved:24;
+        uint32_t num_t_levels: 8;
+        uint32_t reserved: 24;
     } dw24;
 
     struct {
@@ -257,13 +254,11 @@ struct vp8_brc_init_reset_curbe_data
 #define VP8_BRC_RESET                   1
 #define NUM_VP8_BRC_RESET               2
 
-struct i965_encoder_vp8_brc_init_reset_context
-{
+struct i965_encoder_vp8_brc_init_reset_context {
     struct i965_gpe_context gpe_contexts[NUM_VP8_BRC_RESET];
 };
 
-struct scaling_curbe_parameters
-{
+struct scaling_curbe_parameters {
     unsigned int input_picture_width;
     unsigned int input_picture_height;
     char is_field_picture;
@@ -272,8 +267,7 @@ struct scaling_curbe_parameters
     char mb_pixel_average_output_enabled;
 };
 
-struct scaling_surface_parameters
-{
+struct scaling_surface_parameters {
     struct object_surface *input_obj_surface;
     struct object_surface *output_obj_surface;
     unsigned int input_width;
@@ -282,8 +276,7 @@ struct scaling_surface_parameters
     unsigned int output_height;
 };
 
-enum vp8_binding_table_offset_scaling
-{
+enum vp8_binding_table_offset_scaling {
     VP8_BTI_SCALING_FRAME_SRC_Y                 = 0,
     VP8_BTI_SCALING_FRAME_DST_Y                 = 1,
     VP8_BTI_SCALING_FIELD_TOP_SRC_Y             = 0,
@@ -299,11 +292,10 @@ enum vp8_binding_table_offset_scaling
     VP8_BTI_SCALING_NUM_SURFACES                = 8
 };
 
-struct vp8_scaling_curbe_data
-{
+struct vp8_scaling_curbe_data {
     struct {
-        uint32_t input_picture_width:16;
-        uint32_t input_picture_height:16;
+        uint32_t input_picture_width: 16;
+        uint32_t input_picture_height: 16;
     } dw0;
 
     union {
@@ -329,10 +321,10 @@ struct vp8_scaling_curbe_data
     } dw5;
 
     struct {
-        uint32_t enable_mb_flatness_check:1;
-        uint32_t enable_mb_variance_output:1;
-        uint32_t enable_mb_pixel_average_output:1;
-        uint32_t reserved:29;
+        uint32_t enable_mb_flatness_check: 1;
+        uint32_t enable_mb_variance_output: 1;
+        uint32_t enable_mb_pixel_average_output: 1;
+        uint32_t reserved: 29;
     } dw6;
 
     struct {
@@ -362,39 +354,33 @@ struct vp8_scaling_curbe_data
 #define VP8_SCALING_16X                 1
 #define NUM_VP8_SCALING                 2
 
-struct i965_encoder_vp8_scaling_context
-{
+struct i965_encoder_vp8_scaling_context {
     struct i965_gpe_context gpe_contexts[NUM_VP8_SCALING];
 };
 
-enum VP8_ME_MODES
-{
+enum VP8_ME_MODES {
     VP8_ME_MODE_ME16X_BEFORE_ME4X       = 0,
     VP8_ME_MODE_ME16X_ONLY              = 1,
     VP8_ME_MODE_ME4X_ONLY               = 2,
     VP8_ME_MODE_ME4X_AFTER_ME16X        = 3
 };
 
-struct me_curbe_parameters
-{
+struct me_curbe_parameters {
     unsigned int down_scaled_width_in_mbs;
     unsigned int down_scaled_height_in_mbs;
     int use_16x_me;
 };
 
-struct me_surface_parameters
-{
+struct me_surface_parameters {
     int use_16x_me;
 };
 
-struct vp8_search_path_delta
-{
-    char search_path_delta_x:4;
-    char search_path_delta_y:4;
+struct vp8_search_path_delta {
+    char search_path_delta_x: 4;
+    char search_path_delta_y: 4;
 };
 
-enum vp8_binding_table_offset_me
-{
+enum vp8_binding_table_offset_me {
     VP8_BTI_ME_MV_DATA                  = 0,
     VP8_BTI_16X_ME_MV_DATA              = 2,
     VP8_BTI_ME_DISTORTION               = 3,
@@ -406,137 +392,136 @@ enum vp8_binding_table_offset_me
     VP8_BTI_ME_NUM_SURFACES             = 11
 };
 
-struct vp8_me_curbe_data
-{
+struct vp8_me_curbe_data {
     struct {
-        uint32_t skip_mode_enable:1;
-        uint32_t adaptive_enable:1;
-        uint32_t bi_mix_dis:1;
-        uint32_t reserved0:2;
-        uint32_t early_ime_success_enable:1;
-        uint32_t reserved1:1;
-        uint32_t t8x8_flag_for_inter_enable:1;
-        uint32_t reserved2:16;
-        uint32_t early_ime_stop:8;
+        uint32_t skip_mode_enable: 1;
+        uint32_t adaptive_enable: 1;
+        uint32_t bi_mix_dis: 1;
+        uint32_t reserved0: 2;
+        uint32_t early_ime_success_enable: 1;
+        uint32_t reserved1: 1;
+        uint32_t t8x8_flag_for_inter_enable: 1;
+        uint32_t reserved2: 16;
+        uint32_t early_ime_stop: 8;
     } dw0;
 
     struct {
-        uint32_t max_num_mvs:6;
-        uint32_t reserved0:10;
-        uint32_t bi_weight:6;
-        uint32_t reserved1:6;
-        uint32_t uni_mix_disable:1;
-        uint32_t reserved2:3;
+        uint32_t max_num_mvs: 6;
+        uint32_t reserved0: 10;
+        uint32_t bi_weight: 6;
+        uint32_t reserved1: 6;
+        uint32_t uni_mix_disable: 1;
+        uint32_t reserved2: 3;
     } dw1;
 
     struct {
-        uint32_t max_len_sp:8;
-        uint32_t max_num_su:8;
-        uint32_t reserved0:16;
+        uint32_t max_len_sp: 8;
+        uint32_t max_num_su: 8;
+        uint32_t reserved0: 16;
     } dw2;
 
     struct {
-        uint32_t src_size:2;
-        uint32_t reserved0:2;
-        uint32_t mb_type_remap:2;
-        uint32_t src_Access:1;
-        uint32_t ref_access:1;
-        uint32_t search_ctrl:3;
-        uint32_t dual_search_path_option:1;
-        uint32_t sub_pel_mode:2;
-        uint32_t skip_type:1;
-        uint32_t disable_field_cache_allocation:1;
-        uint32_t inter_chroma_mode:1;
-        uint32_t ft_enable:1;
-        uint32_t bme_disable_fbr:1;
-        uint32_t block_based_skip_enable:1;
-        uint32_t inter_sad:2;
-        uint32_t intra_sad:2;
-        uint32_t sub_mb_part_mask:7;
-        uint32_t reserved1:1;
+        uint32_t src_size: 2;
+        uint32_t reserved0: 2;
+        uint32_t mb_type_remap: 2;
+        uint32_t src_Access: 1;
+        uint32_t ref_access: 1;
+        uint32_t search_ctrl: 3;
+        uint32_t dual_search_path_option: 1;
+        uint32_t sub_pel_mode: 2;
+        uint32_t skip_type: 1;
+        uint32_t disable_field_cache_allocation: 1;
+        uint32_t inter_chroma_mode: 1;
+        uint32_t ft_enable: 1;
+        uint32_t bme_disable_fbr: 1;
+        uint32_t block_based_skip_enable: 1;
+        uint32_t inter_sad: 2;
+        uint32_t intra_sad: 2;
+        uint32_t sub_mb_part_mask: 7;
+        uint32_t reserved1: 1;
     } dw3;
 
     struct {
-        uint32_t reserved0:8;
-        uint32_t picture_height_minus1:8;
-        uint32_t picture_width:8;
-        uint32_t reserved1:8;
+        uint32_t reserved0: 8;
+        uint32_t picture_height_minus1: 8;
+        uint32_t picture_width: 8;
+        uint32_t reserved1: 8;
     } dw4;
 
     struct {
-        uint32_t reserved0:8;
-        uint32_t qp_prime_y:8;
-        uint32_t ref_width:8;
-        uint32_t ref_height:8;
+        uint32_t reserved0: 8;
+        uint32_t qp_prime_y: 8;
+        uint32_t ref_width: 8;
+        uint32_t ref_height: 8;
 
     } dw5;
 
     struct {
-        uint32_t reserved0:3;
-        uint32_t me_mode:2;
-        uint32_t reserved1:3;
-        uint32_t super_combine_dist:8;
-        uint32_t max_vmv_range:16;
+        uint32_t reserved0: 3;
+        uint32_t me_mode: 2;
+        uint32_t reserved1: 3;
+        uint32_t super_combine_dist: 8;
+        uint32_t max_vmv_range: 16;
     } dw6;
 
     struct {
-        uint32_t reserved0:16;
-        uint32_t mv_cost_scale_factor:2;
-        uint32_t bilinear_enable:1;
-        uint32_t src_field_polarity:1;
-        uint32_t weightedsad_harr:1;
-        uint32_t ac_only_haar:1;
-        uint32_t ref_id_cost_mode:1;
-        uint32_t reserved1:1;
-        uint32_t skip_center_mask:8;
+        uint32_t reserved0: 16;
+        uint32_t mv_cost_scale_factor: 2;
+        uint32_t bilinear_enable: 1;
+        uint32_t src_field_polarity: 1;
+        uint32_t weightedsad_harr: 1;
+        uint32_t ac_only_haar: 1;
+        uint32_t ref_id_cost_mode: 1;
+        uint32_t reserved1: 1;
+        uint32_t skip_center_mask: 8;
     } dw7;
 
     struct {
-        uint32_t mode_0_cost:8;
-        uint32_t mode_1_cost:8;
-        uint32_t mode_2_cost:8;
-        uint32_t mode_3_cost:8;
+        uint32_t mode_0_cost: 8;
+        uint32_t mode_1_cost: 8;
+        uint32_t mode_2_cost: 8;
+        uint32_t mode_3_cost: 8;
     } dw8;
 
     struct {
-        uint32_t mode_4_cost:8;
-        uint32_t mode_5_cost:8;
-        uint32_t mode_6_cost:8;
-        uint32_t mode_7_cost:8;
+        uint32_t mode_4_cost: 8;
+        uint32_t mode_5_cost: 8;
+        uint32_t mode_6_cost: 8;
+        uint32_t mode_7_cost: 8;
     } dw9;
 
     struct {
-        uint32_t mode_8_cost:8;
-        uint32_t mode_9_cost:8;
-        uint32_t ref_id_cost:8;
-        uint32_t chroma_intra_mode_cost:8;
+        uint32_t mode_8_cost: 8;
+        uint32_t mode_9_cost: 8;
+        uint32_t ref_id_cost: 8;
+        uint32_t chroma_intra_mode_cost: 8;
     } dw10;
 
     struct {
-        uint32_t mv_0_cost:8;
-        uint32_t mv_1_cost:8;
-        uint32_t mv_2_cost:8;
-        uint32_t mv_3_cost:8;
+        uint32_t mv_0_cost: 8;
+        uint32_t mv_1_cost: 8;
+        uint32_t mv_2_cost: 8;
+        uint32_t mv_3_cost: 8;
     } dw11;
 
     struct {
-        uint32_t mv_4_cost:8;
-        uint32_t mv_5_cost:8;
-        uint32_t mv_6_cost:8;
-        uint32_t mv_7_cost:8;
+        uint32_t mv_4_cost: 8;
+        uint32_t mv_5_cost: 8;
+        uint32_t mv_6_cost: 8;
+        uint32_t mv_7_cost: 8;
     } dw12;
 
     struct {
-        uint32_t num_ref_idx_l0_minus1:8;
-        uint32_t num_ref_idx_l1_minus1:8;
-        uint32_t actual_mb_width:8;
-        uint32_t actual_mb_height:8;
+        uint32_t num_ref_idx_l0_minus1: 8;
+        uint32_t num_ref_idx_l1_minus1: 8;
+        uint32_t actual_mb_width: 8;
+        uint32_t actual_mb_height: 8;
     } dw13;
 
     struct {
-        uint32_t l0_ref_pic_polarity_bits:8;
-        uint32_t l1_ref_pic_polarity_bits:2;
-        uint32_t reserved:12;
+        uint32_t l0_ref_pic_polarity_bits: 8;
+        uint32_t l1_ref_pic_polarity_bits: 2;
+        uint32_t reserved: 12;
     } dw14;
 
     struct {
@@ -678,8 +663,7 @@ struct vp8_me_curbe_data
 #define VP8_ME_16X                      1
 #define NUM_VP8_ME                      2
 
-struct i965_encoder_vp8_me_context
-{
+struct i965_encoder_vp8_me_context {
     struct i965_gpe_context gpe_contexts[NUM_VP8_ME];
 };
 
@@ -688,14 +672,12 @@ struct i965_encoder_vp8_me_context
 
 #define DC_BIAS_SEGMENT_DEFAULT_VAL_VP8 1500
 
-struct mbenc_surface_parameters
-{
+struct mbenc_surface_parameters {
     int i_frame_dist_in_use;
     struct i965_gpe_resource *me_brc_distortion_buffer;
 };
 
-enum vp8_binding_table_offset_mbenc
-{
+enum vp8_binding_table_offset_mbenc {
     VP8_BTI_MBENC_PER_MB_OUT            = 0,
     VP8_BTI_MBENC_CURR_Y                = 1,
     VP8_BTI_MBENC_CURR_UV               = 2,
@@ -726,163 +708,162 @@ enum vp8_binding_table_offset_mbenc
     VP8_BTI_MBENC_NUM_SURFACES          = 19
 };
 
-struct vp8_mbenc_i_frame_curbe_data
-{
+struct vp8_mbenc_i_frame_curbe_data {
     struct {
-        uint32_t frame_width:16;
-        uint32_t frame_height:16;
+        uint32_t frame_width: 16;
+        uint32_t frame_height: 16;
     } dw0;
 
     struct {
-        uint32_t frame_type:1;
-        uint32_t enable_segmentation:1;
-        uint32_t enable_hw_intra_prediction:1;
-        uint32_t enable_debug_dumps:1;
-        uint32_t enable_coeff_clamp:1;
-        uint32_t enable_chroma_ip_enhancement:1;
-        uint32_t enable_mpu_histogram_update:1;
-        uint32_t reserved0:1;
-        uint32_t vme_enable_tm_check:1;
-        uint32_t vme_distortion_measure:2;
-        uint32_t reserved1:21;
+        uint32_t frame_type: 1;
+        uint32_t enable_segmentation: 1;
+        uint32_t enable_hw_intra_prediction: 1;
+        uint32_t enable_debug_dumps: 1;
+        uint32_t enable_coeff_clamp: 1;
+        uint32_t enable_chroma_ip_enhancement: 1;
+        uint32_t enable_mpu_histogram_update: 1;
+        uint32_t reserved0: 1;
+        uint32_t vme_enable_tm_check: 1;
+        uint32_t vme_distortion_measure: 2;
+        uint32_t reserved1: 21;
     } dw1;
 
     struct {
-        uint32_t lambda_seg_0:16;
-        uint32_t lambda_seg_1:16;
+        uint32_t lambda_seg_0: 16;
+        uint32_t lambda_seg_1: 16;
     } dw2;
 
     struct {
-        uint32_t lambda_seg_2:16;
-        uint32_t lambda_seg_3:16;
+        uint32_t lambda_seg_2: 16;
+        uint32_t lambda_seg_3: 16;
     } dw3;
 
     struct {
-        uint32_t all_dc_bias_segment_0:16;
-        uint32_t all_dc_bias_segment_1:16;
+        uint32_t all_dc_bias_segment_0: 16;
+        uint32_t all_dc_bias_segment_1: 16;
     } dw4;
 
     struct {
-        uint32_t all_dc_bias_segment_2:16;
-        uint32_t all_dc_bias_segment_3:16;
+        uint32_t all_dc_bias_segment_2: 16;
+        uint32_t all_dc_bias_segment_3: 16;
     } dw5;
 
     struct {
-        uint32_t chroma_dc_de_quant_segment_0:16;
-        uint32_t chroma_dc_de_quant_segment_1:16;
+        uint32_t chroma_dc_de_quant_segment_0: 16;
+        uint32_t chroma_dc_de_quant_segment_1: 16;
     } dw6;
 
     struct {
-        uint32_t chroma_dc_de_quant_segment_2:16;
-        uint32_t chroma_dc_de_quant_segment_3:16;
+        uint32_t chroma_dc_de_quant_segment_2: 16;
+        uint32_t chroma_dc_de_quant_segment_3: 16;
     } dw7;
 
     struct {
-        uint32_t chroma_ac_de_quant_segment0:16;
-        uint32_t chroma_ac_de_quant_segment1:16;
+        uint32_t chroma_ac_de_quant_segment0: 16;
+        uint32_t chroma_ac_de_quant_segment1: 16;
     } dw8;
 
     struct {
-        uint32_t chroma_ac_de_quant_segment2:16;
-        uint32_t chroma_ac_de_quant_segment3:16;
+        uint32_t chroma_ac_de_quant_segment2: 16;
+        uint32_t chroma_ac_de_quant_segment3: 16;
     } dw9;
 
     struct {
-        uint32_t chroma_ac0_threshold0_segment0:16;
-        uint32_t chroma_ac0_threshold1_segment0:16;
+        uint32_t chroma_ac0_threshold0_segment0: 16;
+        uint32_t chroma_ac0_threshold1_segment0: 16;
     } dw10;
 
     struct {
-        uint32_t chroma_ac0_threshold0_segment1:16;
-        uint32_t chroma_ac0_threshold1_segment1:16;
+        uint32_t chroma_ac0_threshold0_segment1: 16;
+        uint32_t chroma_ac0_threshold1_segment1: 16;
     } dw11;
 
     struct {
-        uint32_t chroma_ac0_threshold0_segment2:16;
-        uint32_t chroma_ac0_threshold1_segment2:16;
+        uint32_t chroma_ac0_threshold0_segment2: 16;
+        uint32_t chroma_ac0_threshold1_segment2: 16;
     } dw12;
 
     struct {
-        uint32_t chroma_ac0_threshold0_segment3:16;
-        uint32_t chroma_ac0_threshold1_segment3:16;
+        uint32_t chroma_ac0_threshold0_segment3: 16;
+        uint32_t chroma_ac0_threshold1_segment3: 16;
     } dw13;
 
     struct {
-        uint32_t chroma_dc_threshold0_segment0:16;
-        uint32_t chroma_dc_threshold1_segment0:16;
+        uint32_t chroma_dc_threshold0_segment0: 16;
+        uint32_t chroma_dc_threshold1_segment0: 16;
     } dw14;
 
     struct {
-        uint32_t chroma_dc_threshold2_segment0:16;
-        uint32_t chroma_dc_threshold3_segment0:16;
+        uint32_t chroma_dc_threshold2_segment0: 16;
+        uint32_t chroma_dc_threshold3_segment0: 16;
     } dw15;
 
     struct {
-        uint32_t chroma_dc_threshold0_segment1:16;
-        uint32_t chroma_dc_threshold1_segment1:16;
+        uint32_t chroma_dc_threshold0_segment1: 16;
+        uint32_t chroma_dc_threshold1_segment1: 16;
     } dw16;
 
     struct {
-        uint32_t chroma_dc_threshold2_segment1:16;
-        uint32_t chroma_dc_threshold3_segment1:16;
+        uint32_t chroma_dc_threshold2_segment1: 16;
+        uint32_t chroma_dc_threshold3_segment1: 16;
     } dw17;
 
     struct {
-        uint32_t chroma_dc_threshold0_segment2:16;
-        uint32_t chroma_dc_threshold1_segment2:16;
+        uint32_t chroma_dc_threshold0_segment2: 16;
+        uint32_t chroma_dc_threshold1_segment2: 16;
     } dw18;
 
     struct {
-        uint32_t chroma_dc_threshold2_segment2:16;
-        uint32_t chroma_dc_threshold3_segment2:16;
+        uint32_t chroma_dc_threshold2_segment2: 16;
+        uint32_t chroma_dc_threshold3_segment2: 16;
     } dw19;
 
     struct {
-        uint32_t chroma_dc_threshold0_segment3:16;
-        uint32_t chroma_dc_threshold1_segment3:16;
+        uint32_t chroma_dc_threshold0_segment3: 16;
+        uint32_t chroma_dc_threshold1_segment3: 16;
     } dw20;
 
     struct {
-        uint32_t chroma_dc_threshold2_segment3:16;
-        uint32_t chroma_dc_threshold3_segment3:16;
+        uint32_t chroma_dc_threshold2_segment3: 16;
+        uint32_t chroma_dc_threshold3_segment3: 16;
     } dw21;
 
     struct {
-        uint32_t chroma_ac1_threshold_segment0:16;
-        uint32_t chroma_ac1_threshold_segment1:16;
+        uint32_t chroma_ac1_threshold_segment0: 16;
+        uint32_t chroma_ac1_threshold_segment1: 16;
     } dw22;
 
     struct {
-        uint32_t chroma_ac1_threshold_segment2:16;
-        uint32_t chroma_ac1_threshold_segment3:16;
+        uint32_t chroma_ac1_threshold_segment2: 16;
+        uint32_t chroma_ac1_threshold_segment3: 16;
     } dw23;
 
     struct {
-        uint32_t vme_16x16_cost_segment0:8;
-        uint32_t vme_16x16_cost_segment1:8;
-        uint32_t vme_16x16_cost_segment2:8;
-        uint32_t vme_16x16_cost_segment3:8;
+        uint32_t vme_16x16_cost_segment0: 8;
+        uint32_t vme_16x16_cost_segment1: 8;
+        uint32_t vme_16x16_cost_segment2: 8;
+        uint32_t vme_16x16_cost_segment3: 8;
     } dw24;
 
     struct {
-        uint32_t vme_4x4_cost_segment0:8;
-        uint32_t vme_4x4_cost_segment1:8;
-        uint32_t vme_4x4_cost_segment2:8;
-        uint32_t vme_4x4_cost_segment3:8;
+        uint32_t vme_4x4_cost_segment0: 8;
+        uint32_t vme_4x4_cost_segment1: 8;
+        uint32_t vme_4x4_cost_segment2: 8;
+        uint32_t vme_4x4_cost_segment3: 8;
     } dw25;
 
     struct {
-        uint32_t vme_16x16_non_dc_penalty_segment0:8;
-        uint32_t vme_16x16_non_dc_penalty_segment1:8;
-        uint32_t vme_16x16_non_dc_penalty_segment2:8;
-        uint32_t vme_16x16_non_dc_penalty_segment3:8;
+        uint32_t vme_16x16_non_dc_penalty_segment0: 8;
+        uint32_t vme_16x16_non_dc_penalty_segment1: 8;
+        uint32_t vme_16x16_non_dc_penalty_segment2: 8;
+        uint32_t vme_16x16_non_dc_penalty_segment3: 8;
     } dw26;
 
     struct {
-        uint32_t vme_4x4_non_dc_penalty_segment0:8;
-        uint32_t vme_4x4_non_dc_penalty_segment1:8;
-        uint32_t vme_4x4_non_dc_penalty_segment2:8;
-        uint32_t vme_4x4_non_dc_penalty_segment3:8;
+        uint32_t vme_4x4_non_dc_penalty_segment0: 8;
+        uint32_t vme_4x4_non_dc_penalty_segment1: 8;
+        uint32_t vme_4x4_non_dc_penalty_segment2: 8;
+        uint32_t vme_4x4_non_dc_penalty_segment3: 8;
     } dw27;
 
     struct {
@@ -954,118 +935,117 @@ struct vp8_mbenc_i_frame_curbe_data
     } dw44;
 };
 
-struct vp8_mbenc_p_frame_curbe_data
-{
+struct vp8_mbenc_p_frame_curbe_data {
     struct {
-        uint32_t frame_width:16;
-        uint32_t frame_height:16;
+        uint32_t frame_width: 16;
+        uint32_t frame_height: 16;
     } dw0;
 
     struct {
-        uint32_t frame_type:1;
-        uint32_t multiple_pred:2;
-        uint32_t hme_enable:1;
-        uint32_t hme_combine_overlap:2;
-        uint32_t all_fractional:1;
-        uint32_t enable_temporal_scalability:1;
-        uint32_t hme_combined_extra_su:8;
-        uint32_t ref_frame_flags:4;
-        uint32_t enable_segmentation:1;
-        uint32_t enable_segmentation_info_update:1;
-        uint32_t enable_coeff_clamp:1;
-        uint32_t multi_reference_qp_check:1;
-        uint32_t mode_cost_enable_flag:1;
-        uint32_t main_ref:6;
-        uint32_t enable_debug_dumps:1;
+        uint32_t frame_type: 1;
+        uint32_t multiple_pred: 2;
+        uint32_t hme_enable: 1;
+        uint32_t hme_combine_overlap: 2;
+        uint32_t all_fractional: 1;
+        uint32_t enable_temporal_scalability: 1;
+        uint32_t hme_combined_extra_su: 8;
+        uint32_t ref_frame_flags: 4;
+        uint32_t enable_segmentation: 1;
+        uint32_t enable_segmentation_info_update: 1;
+        uint32_t enable_coeff_clamp: 1;
+        uint32_t multi_reference_qp_check: 1;
+        uint32_t mode_cost_enable_flag: 1;
+        uint32_t main_ref: 6;
+        uint32_t enable_debug_dumps: 1;
     } dw1;
 
     struct {
-        uint32_t lambda_intra_segment0:16;
-        uint32_t lambda_inter_segment0:16;
+        uint32_t lambda_intra_segment0: 16;
+        uint32_t lambda_inter_segment0: 16;
     } dw2;
 
     struct {
-        uint32_t lambda_intra_segment1:16;
-        uint32_t lambda_inter_segment1:16;
+        uint32_t lambda_intra_segment1: 16;
+        uint32_t lambda_inter_segment1: 16;
     } dw3;
 
     struct {
-        uint32_t lambda_intra_segment2:16;
-        uint32_t lambda_inter_segment2:16;
+        uint32_t lambda_intra_segment2: 16;
+        uint32_t lambda_inter_segment2: 16;
     } dw4;
 
     struct {
-        uint32_t lambda_intra_segment3:16;
-        uint32_t lambda_inter_segment3:16;
+        uint32_t lambda_intra_segment3: 16;
+        uint32_t lambda_inter_segment3: 16;
     } dw5;
 
     struct {
-        uint32_t reference_frame_sign_bias_0:8;
-        uint32_t reference_frame_sign_bias_1:8;
-        uint32_t reference_frame_sign_bias_2:8;
-        uint32_t reference_frame_sign_bias_3:8;
+        uint32_t reference_frame_sign_bias_0: 8;
+        uint32_t reference_frame_sign_bias_1: 8;
+        uint32_t reference_frame_sign_bias_2: 8;
+        uint32_t reference_frame_sign_bias_3: 8;
     } dw6;
 
     struct {
-        uint32_t raw_dist_threshold:16;
-        uint32_t temporal_layer_id:8;
-        uint32_t reserved_mbz:8;
+        uint32_t raw_dist_threshold: 16;
+        uint32_t temporal_layer_id: 8;
+        uint32_t reserved_mbz: 8;
     } dw7;
 
     struct {
-        uint32_t skip_mode_enable:1;
-        uint32_t adaptive_search_enable:1;
-        uint32_t bidirectional_mix_disbale:1;
-        uint32_t reserved_mbz1:2;
-        uint32_t early_ime_success_enable:1;
-        uint32_t reserved_mbz2:1;
-        uint32_t transform8x8_flag_for_inter_enable:1;
-        uint32_t reserved_mbz3:16;
-        uint32_t early_ime_successful_stop_threshold:8;
+        uint32_t skip_mode_enable: 1;
+        uint32_t adaptive_search_enable: 1;
+        uint32_t bidirectional_mix_disbale: 1;
+        uint32_t reserved_mbz1: 2;
+        uint32_t early_ime_success_enable: 1;
+        uint32_t reserved_mbz2: 1;
+        uint32_t transform8x8_flag_for_inter_enable: 1;
+        uint32_t reserved_mbz3: 16;
+        uint32_t early_ime_successful_stop_threshold: 8;
     } dw8;
 
     struct {
-        uint32_t max_num_of_motion_vectors:6;
-        uint32_t reserved_mbz1:2;
-        uint32_t ref_id_polarity_bits:8;
-        uint32_t bidirectional_weight:6;
-        uint32_t reserved_mbz2:6;
-        uint32_t unidirection_mix_enable:1;
-        uint32_t ref_pixel_bias_enable:1;
-        uint32_t reserved_mbz3:2;
+        uint32_t max_num_of_motion_vectors: 6;
+        uint32_t reserved_mbz1: 2;
+        uint32_t ref_id_polarity_bits: 8;
+        uint32_t bidirectional_weight: 6;
+        uint32_t reserved_mbz2: 6;
+        uint32_t unidirection_mix_enable: 1;
+        uint32_t ref_pixel_bias_enable: 1;
+        uint32_t reserved_mbz3: 2;
     } dw9;
 
     struct {
-        uint32_t max_fixed_search_path_length:8;
-        uint32_t maximum_search_path_length:8;
-        uint32_t reserved_mbz:16;
+        uint32_t max_fixed_search_path_length: 8;
+        uint32_t maximum_search_path_length: 8;
+        uint32_t reserved_mbz: 16;
     } dw10;
 
     struct {
-        uint32_t source_block_size:2;
-        uint32_t reserved_mbz1:2;
-        uint32_t inter_mb_type_road_map:2;
-        uint32_t source_access:1;
-        uint32_t reference_access:1;
-        uint32_t search_control:3;
-        uint32_t dual_search_path_option:1;
-        uint32_t sub_pel_mode:2;
-        uint32_t skip_mode_type:1;
-        uint32_t disable_field_cache_allocation:1;
-        uint32_t process_inter_chroma_pixels_mode:1;
-        uint32_t forward_trans_form_skip_check_enable:1;
-        uint32_t bme_disable_for_fbr_message:1;
-        uint32_t block_based_skip_enable:1;
-        uint32_t inter_sad_measure_adjustment:2;
-        uint32_t intra_sad_measure_adjustment:2;
-        uint32_t submacro_block_subPartition_mask:6;
-        uint32_t reserved_mbz2:1;
+        uint32_t source_block_size: 2;
+        uint32_t reserved_mbz1: 2;
+        uint32_t inter_mb_type_road_map: 2;
+        uint32_t source_access: 1;
+        uint32_t reference_access: 1;
+        uint32_t search_control: 3;
+        uint32_t dual_search_path_option: 1;
+        uint32_t sub_pel_mode: 2;
+        uint32_t skip_mode_type: 1;
+        uint32_t disable_field_cache_allocation: 1;
+        uint32_t process_inter_chroma_pixels_mode: 1;
+        uint32_t forward_trans_form_skip_check_enable: 1;
+        uint32_t bme_disable_for_fbr_message: 1;
+        uint32_t block_based_skip_enable: 1;
+        uint32_t inter_sad_measure_adjustment: 2;
+        uint32_t intra_sad_measure_adjustment: 2;
+        uint32_t submacro_block_subPartition_mask: 6;
+        uint32_t reserved_mbz2: 1;
     } dw11;
 
     struct {
-        uint32_t reserved_mbz:16;
-        uint32_t reference_search_windows_width:8;
-        uint32_t reference_search_windows_height:8;
+        uint32_t reserved_mbz: 16;
+        uint32_t reference_search_windows_width: 8;
+        uint32_t reference_search_windows_height: 8;
     } dw12;
 
     struct {
@@ -1187,171 +1167,171 @@ struct vp8_mbenc_p_frame_curbe_data
     } dw31;
 
     struct {
-        uint32_t intra_16x16_no_dc_penalty_segment0:8;
-        uint32_t intra_16x16_no_dc_penalty_segment1:8;
-        uint32_t reserved_mbz1:7;
-        uint32_t bilinear_enable:1;
-        uint32_t reserved_mbz2:8;
+        uint32_t intra_16x16_no_dc_penalty_segment0: 8;
+        uint32_t intra_16x16_no_dc_penalty_segment1: 8;
+        uint32_t reserved_mbz1: 7;
+        uint32_t bilinear_enable: 1;
+        uint32_t reserved_mbz2: 8;
     } dw32;
 
     struct {
-        uint32_t hme_combine_len:16;
-        uint32_t intra_16x16_no_dc_penalty_segment2:8;
-        uint32_t intra_16x16_no_dc_penalty_segment3:8;
+        uint32_t hme_combine_len: 16;
+        uint32_t intra_16x16_no_dc_penalty_segment2: 8;
+        uint32_t intra_16x16_no_dc_penalty_segment3: 8;
     } dw33;
 
     struct {
-        uint32_t mv_ref_cost_context_0_0_0:16;
-        uint32_t mv_ref_cost_context_0_0_1:16;
+        uint32_t mv_ref_cost_context_0_0_0: 16;
+        uint32_t mv_ref_cost_context_0_0_1: 16;
     } dw34;
 
     struct {
-        uint32_t mv_ref_cost_context_0_1_0:16;
-        uint32_t mv_ref_cost_context_0_1_1:16;
+        uint32_t mv_ref_cost_context_0_1_0: 16;
+        uint32_t mv_ref_cost_context_0_1_1: 16;
     } dw35;
 
     struct {
-        uint32_t mv_ref_cost_context_0_2_0:16;
-        uint32_t mv_ref_cost_context_0_2_1:16;
+        uint32_t mv_ref_cost_context_0_2_0: 16;
+        uint32_t mv_ref_cost_context_0_2_1: 16;
     } dw36;
 
     struct {
-        uint32_t mv_ref_cost_context_0_3_0:16;
-        uint32_t mv_ref_cost_context_0_3_1:16;
+        uint32_t mv_ref_cost_context_0_3_0: 16;
+        uint32_t mv_ref_cost_context_0_3_1: 16;
     } dw37;
 
     struct {
-        uint32_t mv_ref_cost_context_1_0_0:16;
-        uint32_t mv_ref_cost_context_1_0_1:16;
+        uint32_t mv_ref_cost_context_1_0_0: 16;
+        uint32_t mv_ref_cost_context_1_0_1: 16;
     } dw38;
 
     struct {
-        uint32_t mv_ref_cost_context_1_1_0:16;
-        uint32_t mv_ref_cost_context_1_1_1:16;
+        uint32_t mv_ref_cost_context_1_1_0: 16;
+        uint32_t mv_ref_cost_context_1_1_1: 16;
     } dw39;
 
     struct {
-        uint32_t mv_ref_cost_context_1_2_0:16;
-        uint32_t mv_ref_cost_context_1_2_1:16;
+        uint32_t mv_ref_cost_context_1_2_0: 16;
+        uint32_t mv_ref_cost_context_1_2_1: 16;
     } dw40;
 
     struct {
-        uint32_t mv_ref_cost_context_1_3_0:16;
-        uint32_t mv_ref_cost_context_1_3_1:16;
+        uint32_t mv_ref_cost_context_1_3_0: 16;
+        uint32_t mv_ref_cost_context_1_3_1: 16;
     } dw41;
 
     struct {
-        uint32_t mv_ref_cost_context_2_0_0:16;
-        uint32_t mv_ref_cost_context_2_0_1:16;
+        uint32_t mv_ref_cost_context_2_0_0: 16;
+        uint32_t mv_ref_cost_context_2_0_1: 16;
     };
 
     struct {
-        uint32_t mv_ref_cost_context_2_1_0:16;
-        uint32_t mv_ref_cost_context_2_1_1:16;
+        uint32_t mv_ref_cost_context_2_1_0: 16;
+        uint32_t mv_ref_cost_context_2_1_1: 16;
     };
 
     struct {
-        uint32_t mv_ref_cost_context_2_2_0:16;
-        uint32_t mv_ref_cost_context_2_2_1:16;
+        uint32_t mv_ref_cost_context_2_2_0: 16;
+        uint32_t mv_ref_cost_context_2_2_1: 16;
     } dw44;
 
     struct {
-        uint32_t mv_ref_cost_context_2_3_0:16;
-        uint32_t mv_ref_cost_context_2_3_1:16;
+        uint32_t mv_ref_cost_context_2_3_0: 16;
+        uint32_t mv_ref_cost_context_2_3_1: 16;
     } dw45;
 
     struct {
-        uint32_t mv_ref_cost_context_3_0_0:16;
-        uint32_t mv_ref_cost_context_3_0_1:16;
+        uint32_t mv_ref_cost_context_3_0_0: 16;
+        uint32_t mv_ref_cost_context_3_0_1: 16;
     } dw46;
 
     struct {
-        uint32_t mv_ref_cost_context_3_1_0:16;
-        uint32_t mv_ref_cost_context_3_1_1:16;
+        uint32_t mv_ref_cost_context_3_1_0: 16;
+        uint32_t mv_ref_cost_context_3_1_1: 16;
     } dw47;
 
     struct {
-        uint32_t mv_ref_cost_context_3_2_0:16;
-        uint32_t mv_ref_cost_context_3_2_1:16;
+        uint32_t mv_ref_cost_context_3_2_0: 16;
+        uint32_t mv_ref_cost_context_3_2_1: 16;
     } dw48;
 
     struct {
-        uint32_t mv_ref_cost_context_3_3_0:16;
-        uint32_t mv_ref_cost_context_3_3_1:16;
+        uint32_t mv_ref_cost_context_3_3_0: 16;
+        uint32_t mv_ref_cost_context_3_3_1: 16;
     } dw49;
 
     struct {
-        uint32_t mv_ref_cost_context_4_0_0:16;
-        uint32_t mv_ref_cost_context_4_0_1:16;
+        uint32_t mv_ref_cost_context_4_0_0: 16;
+        uint32_t mv_ref_cost_context_4_0_1: 16;
     } dw50;
 
     struct {
-        uint32_t mv_ref_cost_context_4_1_0:16;
-        uint32_t mv_ref_cost_context_4_1_1:16;
+        uint32_t mv_ref_cost_context_4_1_0: 16;
+        uint32_t mv_ref_cost_context_4_1_1: 16;
     } dw51;
 
     struct {
-        uint32_t mv_ref_cost_context_4_2_0:16;
-        uint32_t mv_ref_cost_context_4_2_1:16;
+        uint32_t mv_ref_cost_context_4_2_0: 16;
+        uint32_t mv_ref_cost_context_4_2_1: 16;
     };
 
     struct {
-        uint32_t mv_ref_cost_context_4_3_0:16;
-        uint32_t mv_ref_cost_context_4_3_1:16;
+        uint32_t mv_ref_cost_context_4_3_0: 16;
+        uint32_t mv_ref_cost_context_4_3_1: 16;
     };
 
     struct {
-        uint32_t mv_ref_cost_context_5_0_0:16;
-        uint32_t mv_ref_cost_context_5_0_1:16;
+        uint32_t mv_ref_cost_context_5_0_0: 16;
+        uint32_t mv_ref_cost_context_5_0_1: 16;
     };
 
     struct {
-        uint32_t mv_ref_cost_context_5_1_0:16;
-        uint32_t mv_ref_cost_context_5_1_1:16;
+        uint32_t mv_ref_cost_context_5_1_0: 16;
+        uint32_t mv_ref_cost_context_5_1_1: 16;
     } dw55;
 
     struct {
-        uint32_t mv_ref_cost_context_5_2_0:16;
-        uint32_t mv_ref_cost_context_5_2_1:16;
+        uint32_t mv_ref_cost_context_5_2_0: 16;
+        uint32_t mv_ref_cost_context_5_2_1: 16;
     } dw56;
 
     struct {
-        uint32_t mv_ref_cost_context_5_3_0:16;
-        uint32_t mv_ref_cost_context_5_3_1:16;
+        uint32_t mv_ref_cost_context_5_3_0: 16;
+        uint32_t mv_ref_cost_context_5_3_1: 16;
     } dw57;
 
     struct {
-        uint32_t enc_cost_16x16:16;
-        uint32_t enc_cost_16x8:16;
+        uint32_t enc_cost_16x16: 16;
+        uint32_t enc_cost_16x8: 16;
     } dw58;
 
     struct {
-        uint32_t enc_cost_8x8:16;
-        uint32_t enc_cost_4x4:16;
+        uint32_t enc_cost_8x8: 16;
+        uint32_t enc_cost_4x4: 16;
     } dw59;
 
     struct {
-        uint32_t frame_count_probability_ref_frame_cost_0:16;
-        uint32_t frame_count_probability_ref_frame_cost_1:16;
+        uint32_t frame_count_probability_ref_frame_cost_0: 16;
+        uint32_t frame_count_probability_ref_frame_cost_1: 16;
     } dw60;
 
     struct {
-        uint32_t frame_count_probability_ref_frame_cost_2:16;
-        uint32_t frame_count_probability_ref_frame_cost_3:16;
+        uint32_t frame_count_probability_ref_frame_cost_2: 16;
+        uint32_t frame_count_probability_ref_frame_cost_3: 16;
     } dw61;
 
     struct {
-        uint32_t average_qp_of_last_ref_frame:8;
-        uint32_t average_qp_of_gold_ref_frame:8;
-        uint32_t average_qp_of_alt_ref_frame:8;
-        uint32_t reserved_mbz:8;
+        uint32_t average_qp_of_last_ref_frame: 8;
+        uint32_t average_qp_of_gold_ref_frame: 8;
+        uint32_t average_qp_of_alt_ref_frame: 8;
+        uint32_t reserved_mbz: 8;
     } dw62;
 
     struct {
-        uint32_t intra_4x4_no_dc_penalty_segment0:8;
-        uint32_t intra_4x4_no_dc_penalty_segment1:8;
-        uint32_t intra_4x4_no_dc_penalty_segment2:8;
-        uint32_t intra_4x4_no_dc_penalty_segment3:8;
+        uint32_t intra_4x4_no_dc_penalty_segment0: 8;
+        uint32_t intra_4x4_no_dc_penalty_segment1: 8;
+        uint32_t intra_4x4_no_dc_penalty_segment2: 8;
+        uint32_t intra_4x4_no_dc_penalty_segment3: 8;
     } dw63;
 
     struct {
@@ -1415,13 +1395,13 @@ struct vp8_mbenc_p_frame_curbe_data
     } dw78;
 
     struct {
-        uint32_t new_mv_skip_threshold_segment0:16;
-        uint32_t new_mv_skip_threshold_segment1:16;
+        uint32_t new_mv_skip_threshold_segment0: 16;
+        uint32_t new_mv_skip_threshold_segment1: 16;
     } dw79;
 
     struct {
-        uint32_t new_mv_skip_threshold_segment2:16;
-        uint32_t new_mv_skip_threshold_segment3:16;
+        uint32_t new_mv_skip_threshold_segment2: 16;
+        uint32_t new_mv_skip_threshold_segment3: 16;
     } dw80;
 
     struct {
@@ -1499,14 +1479,12 @@ struct vp8_mbenc_p_frame_curbe_data
 #define VP8_MBENC_P_FRAME               3
 #define NUM_VP8_MBENC                   4
 
-struct i965_encoder_vp8_mbenc_context
-{
+struct i965_encoder_vp8_mbenc_context {
     struct i965_gpe_context gpe_contexts[NUM_VP8_MBENC];
     dri_bo *luma_chroma_dynamic_buffer;
 };
 
-enum vp8_binding_table_offset_brc_update
-{
+enum vp8_binding_table_offset_brc_update {
     VP8_BTI_BRC_UPDATE_HISTORY                  = 1,
     VP8_BTI_BRC_UPDATE_PAK_STATISTICS_OUTPUT    = 2,
     VP8_BTI_BRC_UPDATE_MFX_ENCODER_CFG_READ     = 3,
@@ -1523,15 +1501,13 @@ enum vp8_binding_table_offset_brc_update
     VP8_BTI_BRC_UPDATE_NUM_SURFACES             = 14
 };
 
-struct brc_update_surface_parameters
-{
+struct brc_update_surface_parameters {
     struct i965_gpe_context *mbenc_gpe_context;
     struct i965_gpe_context *mpu_gpe_context;
     struct i965_gpe_context *tpu_gpe_context;
 };
 
-struct vp8_brc_update_curbe_data
-{
+struct vp8_brc_update_curbe_data {
     struct {
         uint32_t target_size;
     } dw0;
@@ -1545,26 +1521,26 @@ struct vp8_brc_update_curbe_data
     } dw2;
 
     struct {
-        uint32_t start_global_adjust_frame0:16;
-        uint32_t start_global_adjust_frame1:16;
+        uint32_t start_global_adjust_frame0: 16;
+        uint32_t start_global_adjust_frame1: 16;
     } dw3;
 
     struct {
-        uint32_t start_global_adjust_frame2:16;
-        uint32_t start_global_adjust_frame3:16;
+        uint32_t start_global_adjust_frame2: 16;
+        uint32_t start_global_adjust_frame3: 16;
     } dw4;
 
     struct {
-        uint32_t target_size_flag:8;
-        uint32_t brc_flag:8;
-        uint32_t max_num_paks:8;
-        uint32_t curr_frame_type:8;
+        uint32_t target_size_flag: 8;
+        uint32_t brc_flag: 8;
+        uint32_t max_num_paks: 8;
+        uint32_t curr_frame_type: 8;
     } dw5;
 
     struct {
-        uint32_t tid:8;
-        uint32_t num_t_levels:8;
-        uint32_t reserved0:16;
+        uint32_t tid: 8;
+        uint32_t num_t_levels: 8;
+        uint32_t reserved0: 16;
     } dw6;
 
     struct {
@@ -1572,99 +1548,99 @@ struct vp8_brc_update_curbe_data
     } dw7;
 
     struct {
-        uint32_t start_global_adjust_mult0:8;
-        uint32_t start_global_adjust_mult1:8;
-        uint32_t start_global_adjust_mult2:8;
-        uint32_t start_global_adjust_mult3:8;
+        uint32_t start_global_adjust_mult0: 8;
+        uint32_t start_global_adjust_mult1: 8;
+        uint32_t start_global_adjust_mult2: 8;
+        uint32_t start_global_adjust_mult3: 8;
     } dw8;
 
     struct {
-        uint32_t start_global_adjust_mult4:8;
-        uint32_t start_global_adjust_div0:8;
-        uint32_t start_global_adjust_div1:8;
-        uint32_t start_global_adjust_div2:8;
+        uint32_t start_global_adjust_mult4: 8;
+        uint32_t start_global_adjust_div0: 8;
+        uint32_t start_global_adjust_div1: 8;
+        uint32_t start_global_adjust_div2: 8;
     } dw9;
 
     struct {
-        uint32_t start_global_adjust_div3:8;
-        uint32_t start_global_adjust_div4:8;
-        uint32_t qp_threshold0:8;
-        uint32_t qp_threshold1:8;
+        uint32_t start_global_adjust_div3: 8;
+        uint32_t start_global_adjust_div4: 8;
+        uint32_t qp_threshold0: 8;
+        uint32_t qp_threshold1: 8;
     } dw10;
 
     struct {
-        uint32_t qp_threshold2:8;
-        uint32_t qp_threshold3:8;
-        uint32_t g_rate_ratio_threshold0:8;
-        uint32_t g_rate_ratio_threshold1:8;
+        uint32_t qp_threshold2: 8;
+        uint32_t qp_threshold3: 8;
+        uint32_t g_rate_ratio_threshold0: 8;
+        uint32_t g_rate_ratio_threshold1: 8;
     } dw11;
 
     struct {
-        uint32_t g_rate_ratio_threshold2:8;
-        uint32_t g_rate_ratio_threshold3:8;
-        uint32_t g_rate_ratio_threshold4:8;
-        uint32_t g_rate_ratio_threshold5:8;
+        uint32_t g_rate_ratio_threshold2: 8;
+        uint32_t g_rate_ratio_threshold3: 8;
+        uint32_t g_rate_ratio_threshold4: 8;
+        uint32_t g_rate_ratio_threshold5: 8;
     } dw12;
 
     struct {
-        uint32_t g_rate_ratio_threshold_qp0:8;
-        uint32_t g_rate_ratio_threshold_qp1:8;
-        uint32_t g_rate_ratio_threshold_qp2:8;
-        uint32_t g_rate_ratio_threshold_qp3:8;
+        uint32_t g_rate_ratio_threshold_qp0: 8;
+        uint32_t g_rate_ratio_threshold_qp1: 8;
+        uint32_t g_rate_ratio_threshold_qp2: 8;
+        uint32_t g_rate_ratio_threshold_qp3: 8;
     } dw13;
 
     struct {
-        uint32_t g_rate_ratio_threshold_qp4:8;
-        uint32_t g_rate_ratio_threshold_qp5:8;
-        uint32_t g_rate_ratio_threshold_qp6:8;
-        uint32_t index_of_previous_qp:8;
+        uint32_t g_rate_ratio_threshold_qp4: 8;
+        uint32_t g_rate_ratio_threshold_qp5: 8;
+        uint32_t g_rate_ratio_threshold_qp6: 8;
+        uint32_t index_of_previous_qp: 8;
     } dw14;
 
     struct {
-        uint32_t frame_width_in_mb:16;
-        uint32_t frame_height_in_mb:16;
+        uint32_t frame_width_in_mb: 16;
+        uint32_t frame_height_in_mb: 16;
     } dw15;
 
     struct {
-        uint32_t p_frame_qp_seg0:8;
-        uint32_t p_frame_qp_seg1:8;
-        uint32_t p_frame_qp_seg2:8;
-        uint32_t p_frame_qp_seg3:8;
+        uint32_t p_frame_qp_seg0: 8;
+        uint32_t p_frame_qp_seg1: 8;
+        uint32_t p_frame_qp_seg2: 8;
+        uint32_t p_frame_qp_seg3: 8;
     } dw16;
 
     struct {
-        uint32_t key_frame_qp_seg0:8;
-        uint32_t key_frame_qp_seg1:8;
-        uint32_t key_frame_qp_seg2:8;
-        uint32_t key_frame_qp_seg3:8;
+        uint32_t key_frame_qp_seg0: 8;
+        uint32_t key_frame_qp_seg1: 8;
+        uint32_t key_frame_qp_seg2: 8;
+        uint32_t key_frame_qp_seg3: 8;
     } dw17;
 
     struct {
-        uint32_t qdelta_plane0:8;
-        uint32_t qdelta_plane1:8;
-        uint32_t qdelta_plane2:8;
-        uint32_t qdelta_plane3:8;
+        uint32_t qdelta_plane0: 8;
+        uint32_t qdelta_plane1: 8;
+        uint32_t qdelta_plane2: 8;
+        uint32_t qdelta_plane3: 8;
     } dw18;
 
     struct {
-        uint32_t qdelta_plane4:8;
-        uint32_t qindex:8;
-        uint32_t main_ref:8;
-        uint32_t ref_frame_flags:8;
+        uint32_t qdelta_plane4: 8;
+        uint32_t qindex: 8;
+        uint32_t main_ref: 8;
+        uint32_t ref_frame_flags: 8;
     } dw19;
 
     struct {
-        uint32_t seg_on:8;
-        uint32_t mb_rc:8;
-        uint32_t brc_method:8;
-        uint32_t vme_intra_prediction:8;
+        uint32_t seg_on: 8;
+        uint32_t mb_rc: 8;
+        uint32_t brc_method: 8;
+        uint32_t vme_intra_prediction: 8;
     } dw20;
 
     struct {
-        uint32_t current_frame_qpindex:8;
-        uint32_t last_frame_qpindex:8;
-        uint32_t gold_frame_qpindex:8;
-        uint32_t alt_frame_qpindex:8;
+        uint32_t current_frame_qpindex: 8;
+        uint32_t last_frame_qpindex: 8;
+        uint32_t gold_frame_qpindex: 8;
+        uint32_t alt_frame_qpindex: 8;
     } dw21;
 
     struct {
@@ -1723,13 +1699,11 @@ struct vp8_brc_update_curbe_data
 #define VP8_BRC_UPDATE                  0
 #define NUM_VP8_BRC_UPDATE              1
 
-struct i965_encoder_vp8_brc_update_context
-{
+struct i965_encoder_vp8_brc_update_context {
     struct i965_gpe_context gpe_contexts[NUM_VP8_BRC_UPDATE];
 };
 
-enum vp8_binding_table_offset_mpu
-{
+enum vp8_binding_table_offset_mpu {
     VP8_BTI_MPU_HISTOGRAM               = 0,
     VP8_BTI_MPU_REF_MODE_PROBABILITY    = 1,
     VP8_BTI_MPU_CURR_MODE_PROBABILITY   = 2,
@@ -1746,92 +1720,91 @@ enum vp8_binding_table_offset_mpu
     VP8_BTI_MPU_NUM_SURFACES            = 13
 };
 
-struct vp8_mpu_curbe_data
-{
+struct vp8_mpu_curbe_data {
     struct {
-        uint32_t frame_width:16;
-        uint32_t frame_height:16;
+        uint32_t frame_width: 16;
+        uint32_t frame_height: 16;
     } dw0;
 
     struct {
-        uint32_t frame_type:1;
-        uint32_t version:3;
-        uint32_t show_frame:1;
-        uint32_t horizontal_scale_code:2;
-        uint32_t vertical_scale_code:2;
-        uint32_t color_space_type:1;
-        uint32_t clamp_type:1;
-        uint32_t partition_num_l2:2;
-        uint32_t enable_segmentation:1;
-        uint32_t seg_map_update:1;
-        uint32_t segmentation_feature_update:1;
-        uint32_t segmentation_feature_mode:1;
-        uint32_t loop_filter_type:1;
-        uint32_t sharpness_level:3;
-        uint32_t loop_filter_adjustment_on:1;
-        uint32_t mb_no_coeffiscient_skip:1;
-        uint32_t golden_reference_copy_flag:2;
-        uint32_t alternate_reference_copy_flag:2;
-        uint32_t last_frame_update:1;
-        uint32_t sign_bias_golden:1;
-        uint32_t sign_bias_alt_ref:1;
-        uint32_t refresh_entropy_p:1;
-        uint32_t forced_lf_update_for_key_frame:1;
+        uint32_t frame_type: 1;
+        uint32_t version: 3;
+        uint32_t show_frame: 1;
+        uint32_t horizontal_scale_code: 2;
+        uint32_t vertical_scale_code: 2;
+        uint32_t color_space_type: 1;
+        uint32_t clamp_type: 1;
+        uint32_t partition_num_l2: 2;
+        uint32_t enable_segmentation: 1;
+        uint32_t seg_map_update: 1;
+        uint32_t segmentation_feature_update: 1;
+        uint32_t segmentation_feature_mode: 1;
+        uint32_t loop_filter_type: 1;
+        uint32_t sharpness_level: 3;
+        uint32_t loop_filter_adjustment_on: 1;
+        uint32_t mb_no_coeffiscient_skip: 1;
+        uint32_t golden_reference_copy_flag: 2;
+        uint32_t alternate_reference_copy_flag: 2;
+        uint32_t last_frame_update: 1;
+        uint32_t sign_bias_golden: 1;
+        uint32_t sign_bias_alt_ref: 1;
+        uint32_t refresh_entropy_p: 1;
+        uint32_t forced_lf_update_for_key_frame: 1;
     } dw1;
 
     struct {
-        uint32_t loop_filter_level:6;
-        uint32_t reserved0:2;
-        uint32_t qindex:7;
-        uint32_t reserved1:1;
-        uint32_t y1_dc_qindex:8;
-        uint32_t y2_dc_qindex:8;
+        uint32_t loop_filter_level: 6;
+        uint32_t reserved0: 2;
+        uint32_t qindex: 7;
+        uint32_t reserved1: 1;
+        uint32_t y1_dc_qindex: 8;
+        uint32_t y2_dc_qindex: 8;
     } dw2;
 
     struct {
-        uint32_t y2_ac_qindex:8;
-        uint32_t uv_dc_qindex:8;
-        uint32_t uv_ac_qindex:8;
-        uint32_t feature_data0_segment0:8;
+        uint32_t y2_ac_qindex: 8;
+        uint32_t uv_dc_qindex: 8;
+        uint32_t uv_ac_qindex: 8;
+        uint32_t feature_data0_segment0: 8;
     } dw3;
 
     struct {
-        uint32_t feature_data0_segment1:8;
-        uint32_t feature_data0_segment2:8;
-        uint32_t feature_data0_segment3:8;
-        uint32_t feature_data1_segment0:8;
+        uint32_t feature_data0_segment1: 8;
+        uint32_t feature_data0_segment2: 8;
+        uint32_t feature_data0_segment3: 8;
+        uint32_t feature_data1_segment0: 8;
     } dw4;
 
     struct {
-        uint32_t feature_data1_segment1:8;
-        uint32_t feature_data1_segment2:8;
-        uint32_t feature_data1_segment3:8;
-        uint32_t ref_lf_delta0:8;
+        uint32_t feature_data1_segment1: 8;
+        uint32_t feature_data1_segment2: 8;
+        uint32_t feature_data1_segment3: 8;
+        uint32_t ref_lf_delta0: 8;
     } dw5;
 
     struct {
-        uint32_t ref_lf_delta1:8;
-        uint32_t ref_lf_delta2:8;
-        uint32_t ref_lf_delta3:8;
-        uint32_t mode_lf_delta0:8;
+        uint32_t ref_lf_delta1: 8;
+        uint32_t ref_lf_delta2: 8;
+        uint32_t ref_lf_delta3: 8;
+        uint32_t mode_lf_delta0: 8;
     } dw6;
 
     struct {
-        uint32_t mode_lf_delta1:8;
-        uint32_t mode_lf_delta2:8;
-        uint32_t mode_lf_delta3:8;
-        uint32_t forced_token_surface_read:1;
-        uint32_t mode_cost_enable_flag:1;
-        uint32_t mc_filter_select:1;
-        uint32_t chroma_full_pixel_mc_filter_mode:1;
-        uint32_t max_num_pak_passes:4;
+        uint32_t mode_lf_delta1: 8;
+        uint32_t mode_lf_delta2: 8;
+        uint32_t mode_lf_delta3: 8;
+        uint32_t forced_token_surface_read: 1;
+        uint32_t mode_cost_enable_flag: 1;
+        uint32_t mc_filter_select: 1;
+        uint32_t chroma_full_pixel_mc_filter_mode: 1;
+        uint32_t max_num_pak_passes: 4;
 
     } dw7;
 
     struct {
-        uint32_t temporal_layer_id:8;
-        uint32_t num_t_levels:8;
-        uint32_t reserved:16;
+        uint32_t temporal_layer_id: 8;
+        uint32_t num_t_levels: 8;
+        uint32_t reserved: 16;
     } dw8;
 
     struct {
@@ -1899,77 +1872,76 @@ struct vp8_mpu_curbe_data
     } dw24;
 };
 
-struct vp8_mfx_encoder_cfg_cmd
-{
+struct vp8_mfx_encoder_cfg_cmd {
     union {
         struct {
-            uint32_t dword_length:12;
-            uint32_t reserved:4;
-            uint32_t sub_opcode_b:5;
-            uint32_t sub_opcode_a:3;
-            uint32_t media_command_opcode:3;
-            uint32_t pipeline:2;
-            uint32_t command_type:3;
+            uint32_t dword_length: 12;
+            uint32_t reserved: 4;
+            uint32_t sub_opcode_b: 5;
+            uint32_t sub_opcode_a: 3;
+            uint32_t media_command_opcode: 3;
+            uint32_t pipeline: 2;
+            uint32_t command_type: 3;
         };
 
         uint32_t value;
     } dw0;
 
     struct {
-        uint32_t performance_counter_enable:1;
-        uint32_t final_bitstream_output_disable:1;
-        uint32_t token_statistics_output_enable:1;
-        uint32_t bitstream_statistics_output_enable:1;
-        uint32_t update_segment_feature_data_flag:1;
-        uint32_t skip_final_bitstream_when_over_under_flow:1;
-        uint32_t rate_control_initial_pass:1;
-        uint32_t per_segment_delta_qindex_loop_filter_disable:1;
-        uint32_t finer_brc_enable:1;
-        uint32_t compressed_bitstream_output_disable:1;
-        uint32_t clock_gating_disable:1;
-        uint32_t reserved:21;
+        uint32_t performance_counter_enable: 1;
+        uint32_t final_bitstream_output_disable: 1;
+        uint32_t token_statistics_output_enable: 1;
+        uint32_t bitstream_statistics_output_enable: 1;
+        uint32_t update_segment_feature_data_flag: 1;
+        uint32_t skip_final_bitstream_when_over_under_flow: 1;
+        uint32_t rate_control_initial_pass: 1;
+        uint32_t per_segment_delta_qindex_loop_filter_disable: 1;
+        uint32_t finer_brc_enable: 1;
+        uint32_t compressed_bitstream_output_disable: 1;
+        uint32_t clock_gating_disable: 1;
+        uint32_t reserved: 21;
     } dw1;
 
     struct {
-        uint32_t max_frame_bit_count_rate_control_enable_mask:1;
-        uint32_t min_frame_bit_count_rate_control_enable_mask:1;
-        uint32_t max_inter_mb_bit_count_check_enable_mask:1;
-        uint32_t max_intra_mb_bit_count_check_enable_mask:1;
-        uint32_t inter_mediate_bit_buffer_overrun_enable_mask:1;
-        uint32_t final_bistream_buffer_overrun_enable_mask:1;
-        uint32_t qindex_clamp_high_mask_for_underflow:1;
-        uint32_t qindex_clamp_high_mask_for_overflow:1;
-        uint32_t reserved:24;
+        uint32_t max_frame_bit_count_rate_control_enable_mask: 1;
+        uint32_t min_frame_bit_count_rate_control_enable_mask: 1;
+        uint32_t max_inter_mb_bit_count_check_enable_mask: 1;
+        uint32_t max_intra_mb_bit_count_check_enable_mask: 1;
+        uint32_t inter_mediate_bit_buffer_overrun_enable_mask: 1;
+        uint32_t final_bistream_buffer_overrun_enable_mask: 1;
+        uint32_t qindex_clamp_high_mask_for_underflow: 1;
+        uint32_t qindex_clamp_high_mask_for_overflow: 1;
+        uint32_t reserved: 24;
     } dw2;
 
     struct {
-        uint32_t max_inter_mb_bit_count:12;
-        uint32_t reserved0:4;
-        uint32_t max_intra_mb_bit_count_limit:12;
-        uint32_t reserved1:4;
+        uint32_t max_inter_mb_bit_count: 12;
+        uint32_t reserved0: 4;
+        uint32_t max_intra_mb_bit_count_limit: 12;
+        uint32_t reserved1: 4;
     } dw3;
 
     struct {
-        uint32_t frame_bit_rate_max:14;
-        uint32_t frame_bit_rate_max_unit:1;
-        uint32_t frame_bit_rate_max_unit_mode:1;
-        uint32_t frame_bit_rate_min:14;
-        uint32_t frame_bit_rate_min_unit:1;
-        uint32_t frame_bit_rate_min_unit_mode:1;
+        uint32_t frame_bit_rate_max: 14;
+        uint32_t frame_bit_rate_max_unit: 1;
+        uint32_t frame_bit_rate_max_unit_mode: 1;
+        uint32_t frame_bit_rate_min: 14;
+        uint32_t frame_bit_rate_min_unit: 1;
+        uint32_t frame_bit_rate_min_unit_mode: 1;
     } dw4;
 
     struct {
-        uint32_t frame_delta_qindex_max0:8;
-        uint32_t frame_delta_qindex_max1:8;
-        uint32_t frame_delta_qindex_max2:8;
-        uint32_t frame_delta_qindex_max3:8;
+        uint32_t frame_delta_qindex_max0: 8;
+        uint32_t frame_delta_qindex_max1: 8;
+        uint32_t frame_delta_qindex_max2: 8;
+        uint32_t frame_delta_qindex_max3: 8;
     } dw5;
 
     struct {
-        uint32_t frame_delta_qindex_min0:8;
-        uint32_t frame_delta_qindex_min1:8;
-        uint32_t frame_delta_qindex_min2:8;
-        uint32_t frame_delta_qindex_min3:8;
+        uint32_t frame_delta_qindex_min0: 8;
+        uint32_t frame_delta_qindex_min1: 8;
+        uint32_t frame_delta_qindex_min2: 8;
+        uint32_t frame_delta_qindex_min3: 8;
     } dw6;
 
     struct {
@@ -1997,17 +1969,17 @@ struct vp8_mfx_encoder_cfg_cmd
     } dw12;
 
     struct {
-        uint32_t frame_delta_loop_filter_max0:8;
-        uint32_t frame_delta_loop_filter_max1:8;
-        uint32_t frame_delta_loop_filter_max2:8;
-        uint32_t frame_delta_loop_filter_max3:8;
+        uint32_t frame_delta_loop_filter_max0: 8;
+        uint32_t frame_delta_loop_filter_max1: 8;
+        uint32_t frame_delta_loop_filter_max2: 8;
+        uint32_t frame_delta_loop_filter_max3: 8;
     } dw13;
 
     struct {
-        uint32_t frame_delta_loop_filter_min0:8;
-        uint32_t frame_delta_loop_filter_min1:8;
-        uint32_t frame_delta_loop_filter_min2:8;
-        uint32_t frame_delta_loop_filter_min3:8;
+        uint32_t frame_delta_loop_filter_min0: 8;
+        uint32_t frame_delta_loop_filter_min1: 8;
+        uint32_t frame_delta_loop_filter_min2: 8;
+        uint32_t frame_delta_loop_filter_min3: 8;
     } dw14;
 
     struct {
@@ -2035,24 +2007,24 @@ struct vp8_mfx_encoder_cfg_cmd
     } dw20;
 
     struct {
-        uint32_t frame_bit_rate_max_delta:15;
-        uint32_t reserved0:1;
-        uint32_t frame_bit_rate_min_delta:15;
-        uint32_t reserved1:1;
+        uint32_t frame_bit_rate_max_delta: 15;
+        uint32_t reserved0: 1;
+        uint32_t frame_bit_rate_min_delta: 15;
+        uint32_t reserved1: 1;
     } dw21;
 
     struct {
-        uint32_t min_frame_w_size:16;
-        uint32_t min_frame_w_size_unit:2;
-        uint32_t reserved0:2;
-        uint32_t bitstream_format_version:3;
-        uint32_t show_frame:1;
-        uint32_t reserved1:8;
+        uint32_t min_frame_w_size: 16;
+        uint32_t min_frame_w_size_unit: 2;
+        uint32_t reserved0: 2;
+        uint32_t bitstream_format_version: 3;
+        uint32_t show_frame: 1;
+        uint32_t reserved1: 8;
     } dw22;
 
     struct {
-        uint32_t horizontal_size_code:16;
-        uint32_t vertical_size_code:16;
+        uint32_t horizontal_size_code: 16;
+        uint32_t vertical_size_code: 16;
     } dw23;
 
     struct {
@@ -2076,19 +2048,18 @@ struct vp8_mfx_encoder_cfg_cmd
     } dw28;
 
     struct {
-        uint32_t cv0_neg_clamp_value0:4;
-        uint32_t cv1:4;
-        uint32_t cv2:4;
-        uint32_t cv3:4;
-        uint32_t cv4:4;
-        uint32_t cv5:4;
-        uint32_t cv6:4;
-        uint32_t clamp_values_cv7:4;
+        uint32_t cv0_neg_clamp_value0: 4;
+        uint32_t cv1: 4;
+        uint32_t cv2: 4;
+        uint32_t cv3: 4;
+        uint32_t cv4: 4;
+        uint32_t cv5: 4;
+        uint32_t cv6: 4;
+        uint32_t clamp_values_cv7: 4;
     } dw29;
 };
 
-struct vp8_mpu_encoder_config_parameters
-{
+struct vp8_mpu_encoder_config_parameters {
     struct i965_gpe_resource *config_buffer;
     unsigned int is_first_pass;
     unsigned int command_offset;
@@ -2098,14 +2069,12 @@ struct vp8_mpu_encoder_config_parameters
 #define VP8_MPU                         0
 #define NUM_VP8_MPU                     1
 
-struct i965_encoder_vp8_mpu_context
-{
+struct i965_encoder_vp8_mpu_context {
     struct i965_gpe_context gpe_contexts[NUM_VP8_MPU];
     dri_bo *dynamic_buffer;
 };
 
-enum vp8_binding_table_offset_tpu
-{
+enum vp8_binding_table_offset_tpu {
     VP8_BTI_TPU_PAK_TOKEN_STATISTICS            = 0,
     VP8_BTI_TPU_TOKEN_UPDATE_FLAGS              = 1,
     VP8_BTI_TPU_ENTROPY_COST_TABLE              = 2,
@@ -2124,44 +2093,43 @@ enum vp8_binding_table_offset_tpu
     VP8_BTI_TPU_NUM_SURFACES                    = 15
 };
 
-struct vp8_tpu_curbe_data
-{
+struct vp8_tpu_curbe_data {
     struct {
         uint32_t mbs_in_frame;
     } dw0;
 
     struct {
-        uint32_t frame_type:1;
-        uint32_t enable_segmentation:1;
-        uint32_t rebinarization_frame_hdr:1;
-        uint32_t refresh_entropy_p:1;
-        uint32_t mb_no_coeffiscient_skip:1;
-        uint32_t reserved:27;
+        uint32_t frame_type: 1;
+        uint32_t enable_segmentation: 1;
+        uint32_t rebinarization_frame_hdr: 1;
+        uint32_t refresh_entropy_p: 1;
+        uint32_t mb_no_coeffiscient_skip: 1;
+        uint32_t reserved: 27;
     } dw1;
 
     struct {
-        uint32_t token_probability_start_offset:16;
-        uint32_t token_probability_end_offset:16;
+        uint32_t token_probability_start_offset: 16;
+        uint32_t token_probability_end_offset: 16;
     } dw2;
 
     struct {
-        uint32_t frame_header_bit_count:16;
-        uint32_t max_qp:8;
-        uint32_t min_qp:8;
+        uint32_t frame_header_bit_count: 16;
+        uint32_t max_qp: 8;
+        uint32_t min_qp: 8;
     } dw3;
 
     struct {
-        uint32_t loop_filter_level_segment0:8;
-        uint32_t loop_filter_level_segment1:8;
-        uint32_t loop_filter_level_segment2:8;
-        uint32_t loop_filter_level_segment3:8;
+        uint32_t loop_filter_level_segment0: 8;
+        uint32_t loop_filter_level_segment1: 8;
+        uint32_t loop_filter_level_segment2: 8;
+        uint32_t loop_filter_level_segment3: 8;
     } dw4;
 
     struct {
-        uint32_t quantization_index_segment0:8;
-        uint32_t quantization_index_segment1:8;
-        uint32_t quantization_index_segment2:8;
-        uint32_t quantization_index_segment3:8;
+        uint32_t quantization_index_segment0: 8;
+        uint32_t quantization_index_segment1: 8;
+        uint32_t quantization_index_segment2: 8;
+        uint32_t quantization_index_segment3: 8;
     } dw5;
 
     struct {
@@ -2169,8 +2137,8 @@ struct vp8_tpu_curbe_data
     } dw6;
 
     struct {
-        uint32_t token_cost_delta_threshold:16;
-        uint32_t skip_cost_delta_threshold:16;
+        uint32_t token_cost_delta_threshold: 16;
+        uint32_t skip_cost_delta_threshold: 16;
     } dw7;
 
     struct {
@@ -2253,21 +2221,18 @@ struct vp8_tpu_curbe_data
 #define VP8_TPU                         0
 #define NUM_VP8_TPU                     1
 
-struct i965_encoder_vp8_tpu_context
-{
+struct i965_encoder_vp8_tpu_context {
     struct i965_gpe_context gpe_contexts[NUM_VP8_TPU];
     dri_bo *dynamic_buffer;
 };
 
-struct vp8_encoder_kernel_parameters
-{
+struct vp8_encoder_kernel_parameters {
     unsigned int                curbe_size;
     unsigned int                inline_data_size;
     unsigned int                external_data_size;
 };
 
-enum VP8_ENCODER_WALKER_DEGREE
-{
+enum VP8_ENCODER_WALKER_DEGREE {
     VP8_ENCODER_NO_DEGREE       = 0,
     VP8_ENCODER_45_DEGREE,
     VP8_ENCODER_26_DEGREE,
@@ -2275,8 +2240,7 @@ enum VP8_ENCODER_WALKER_DEGREE
     VP8_ENCODER_45Z_DEGREE
 };
 
-struct vp8_encoder_kernel_walker_parameter
-{
+struct vp8_encoder_kernel_walker_parameter {
     unsigned int                walker_degree;
     unsigned int                use_scoreboard;
     unsigned int                scoreboard_mask;
@@ -2285,8 +2249,7 @@ struct vp8_encoder_kernel_walker_parameter
     unsigned int                resolution_y;
 };
 
-struct vp8_encoder_scoreboard_parameters
-{
+struct vp8_encoder_scoreboard_parameters {
     unsigned int                mask;
     unsigned int                type;
     unsigned int                enable;
@@ -2303,8 +2266,7 @@ struct vp8_encoder_scoreboard_parameters
 
 #define VP8_BRC_CONSTANT_DATA_SIZE      2880
 
-struct vp8_brc_pak_statistics
-{
+struct vp8_brc_pak_statistics {
     // DWORD 0
     struct {
         uint32_t bitstream_byte_count_per_frame;
@@ -2317,76 +2279,76 @@ struct vp8_brc_pak_statistics
 
     // DWORD 2
     struct {
-        uint32_t num_of_pak_passes_executed:16;
-        uint32_t reserved:16;
+        uint32_t num_of_pak_passes_executed: 16;
+        uint32_t reserved: 16;
     } dw2;
 
     // DWORD 3
     struct {
-        uint32_t previous_qp:32;
+        uint32_t previous_qp: 32;
     } dw3;
 
     // DWORD 4 - 1st pass IMAGE_STATUS_CONTROL_MMIO
     struct {
-        uint32_t max_macroblock_conformance_flag:1;
-        uint32_t frame_bit_count_over_underflow:1;
-        uint32_t reserved0:14;
-        uint32_t suggested_slice_qp_delta:8;
-        uint32_t reserved1:8;
+        uint32_t max_macroblock_conformance_flag: 1;
+        uint32_t frame_bit_count_over_underflow: 1;
+        uint32_t reserved0: 14;
+        uint32_t suggested_slice_qp_delta: 8;
+        uint32_t reserved1: 8;
     } dw4;
 
     // DWORD 5 - 2nd pass IMAGE_STATUS_CONTROL_MMIO
     struct {
-        uint32_t max_macroblock_conformance_flag:1;
-        uint32_t frame_bit_count_over_underflow:1;
-        uint32_t reserved0:14;
-        uint32_t suggested_slice_qp_delta:8;
-        uint32_t reserved1:8;
+        uint32_t max_macroblock_conformance_flag: 1;
+        uint32_t frame_bit_count_over_underflow: 1;
+        uint32_t reserved0: 14;
+        uint32_t suggested_slice_qp_delta: 8;
+        uint32_t reserved1: 8;
     } dw5;
 
     // DWORD 6 - 3rd pass IMAGE_STATUS_CONTROL_MMIO
     struct {
-        uint32_t max_macroblock_conformance_flag:1;
-        uint32_t frame_bit_count_over_underflow:1;
-        uint32_t reserved0:14;
-        uint32_t suggested_slice_qp_delta:8;
-        uint32_t reserved1:8;
+        uint32_t max_macroblock_conformance_flag: 1;
+        uint32_t frame_bit_count_over_underflow: 1;
+        uint32_t reserved0: 14;
+        uint32_t suggested_slice_qp_delta: 8;
+        uint32_t reserved1: 8;
     } dw6;
 
     // DWORD 7 - 4th pass IMAGE_STATUS_CONTROL_MMIO
     struct {
-        uint32_t max_macroblock_conformance_flag:1;
-        uint32_t frame_bit_count_over_underflow:1;
-        uint32_t reserved0:14;
-        uint32_t suggested_slice_qp_delta:8;
-        uint32_t reserved1:8;
+        uint32_t max_macroblock_conformance_flag: 1;
+        uint32_t frame_bit_count_over_underflow: 1;
+        uint32_t reserved0: 14;
+        uint32_t suggested_slice_qp_delta: 8;
+        uint32_t reserved1: 8;
     } dw7;
 
     // DWORD 8 - 5th pass IMAGE_STATUS_CONTROL_MMIO
     struct {
-        uint32_t max_macroblock_conformance_flag:1;
-        uint32_t frame_bit_count_over_underflow:1;
-        uint32_t reserved0:14;
-        uint32_t suggested_slice_qp_delta:8;
-        uint32_t reserved1:8;
+        uint32_t max_macroblock_conformance_flag: 1;
+        uint32_t frame_bit_count_over_underflow: 1;
+        uint32_t reserved0: 14;
+        uint32_t suggested_slice_qp_delta: 8;
+        uint32_t reserved1: 8;
     } dw8;
 
     // DWORD 9 - 6th pass IMAGE_STATUS_CONTROL_MMIO
     struct {
-        uint32_t max_macroblock_conformance_flag:1;
-        uint32_t frame_bit_count_over_underflow:1;
-        uint32_t reserved0:14;
-        uint32_t suggested_slice_qp_delta:8;
-        uint32_t reserved1:8;
+        uint32_t max_macroblock_conformance_flag: 1;
+        uint32_t frame_bit_count_over_underflow: 1;
+        uint32_t reserved0: 14;
+        uint32_t suggested_slice_qp_delta: 8;
+        uint32_t reserved1: 8;
     } dw9;
 
     // DWORD 10 - 7th pass IMAGE_STATUS_CONTROL_MMIO
     struct {
-        uint32_t max_macroblock_conformance_flag:1;
-        uint32_t frame_bit_count_over_underflow:1;
-        uint32_t reserved0:14;
-        uint32_t suggested_slice_qp_delta:8;
-        uint32_t reserved1:8;
+        uint32_t max_macroblock_conformance_flag: 1;
+        uint32_t frame_bit_count_over_underflow: 1;
+        uint32_t reserved0: 14;
+        uint32_t suggested_slice_qp_delta: 8;
+        uint32_t reserved1: 8;
     } dw10;
 
     // DWORD 11
@@ -2411,8 +2373,7 @@ struct vp8_brc_pak_statistics
     } dw15;
 };
 
-enum vp8_media_state_type
-{
+enum vp8_media_state_type {
     VP8_MEDIA_STATE_ENC_I_FRAME_CHROMA = 0,
     VP8_MEDIA_STATE_ENC_I_FRAME_LUMA,
     VP8_MEDIA_STATE_ENC_I_FRAME_DIST,
@@ -2428,23 +2389,21 @@ enum vp8_media_state_type
     VP8_NUM_MEDIA_STATES
 };
 
-struct vp8_vdbox_image_status_control
-{
-    uint32_t max_mb_conformance_flag:1;
-    uint32_t frame_bitcount_flag:1;
-    uint32_t panic:1;
-    uint32_t missing_huffman_code:1;
-    uint32_t reserved0:4;
-    uint32_t total_num_pass:4;
-    uint32_t reserved1:1;
-    uint32_t num_pass_polarity_change:2;
-    uint32_t cumulative_slice_qp_polarity_change:1;
-    uint32_t suggested_slice_qpdelta:8;
-    uint32_t cumulative_slice_delta_qp:8;
+struct vp8_vdbox_image_status_control {
+    uint32_t max_mb_conformance_flag: 1;
+    uint32_t frame_bitcount_flag: 1;
+    uint32_t panic: 1;
+    uint32_t missing_huffman_code: 1;
+    uint32_t reserved0: 4;
+    uint32_t total_num_pass: 4;
+    uint32_t reserved1: 1;
+    uint32_t num_pass_polarity_change: 2;
+    uint32_t cumulative_slice_qp_polarity_change: 1;
+    uint32_t suggested_slice_qpdelta: 8;
+    uint32_t cumulative_slice_delta_qp: 8;
 };
 
-struct vp8_encode_status
-{
+struct vp8_encode_status {
     uint32_t bitstream_byte_count_per_frame;
     uint32_t pad0;
     uint32_t image_status_mask;
@@ -2453,8 +2412,7 @@ struct vp8_encode_status
     uint32_t pad2;
 };
 
-struct i965_encoder_vp8_encode_status_buffer
-{
+struct i965_encoder_vp8_encode_status_buffer {
     dri_bo *bo;
     uint32_t base_offset;
     uint32_t size;
@@ -2468,8 +2426,7 @@ struct i965_encoder_vp8_encode_status_buffer
 #define MAX_MFX_REFERENCE_SURFACES              16
 #endif
 
-struct i965_encoder_vp8_context
-{
+struct i965_encoder_vp8_context {
     struct i965_gpe_table *gpe_table;
 
     struct i965_encoder_vp8_brc_init_reset_context brc_init_reset_context;
@@ -2583,30 +2540,30 @@ struct i965_encoder_vp8_context
     double brc_init_current_target_buf_full_in_bits;
     double brc_init_reset_input_bits_per_frame;
 
-    unsigned int brc_initted:1;
-    unsigned int brc_need_reset:1;
-    unsigned int brc_mbenc_phase1_ignored:1;
-    unsigned int hme_supported:1;
-    unsigned int hme_16x_supported:1;
-    unsigned int hme_enabled            :1;
-    unsigned int hme_16x_enabled        :1;
-    unsigned int is_render_context:1;
-    unsigned int is_first_frame:1;
-    unsigned int is_first_two_frame:1;
-    unsigned int repak_supported:1;
-    unsigned int multiple_pass_brc_supported:1;
-    unsigned int use_hw_scoreboard:1;
-    unsigned int use_hw_non_stalling_scoreborad:1;
-    unsigned int ref_ctrl_optimization_done:1;
-    unsigned int brc_distortion_buffer_supported:1;
-    unsigned int brc_constant_buffer_supported:1;
-    unsigned int brc_distortion_buffer_need_reset:1;
-    unsigned int mbenc_curbe_updated_in_brc_update:1;
-    unsigned int mpu_curbe_updated_in_brc_update:1;
-    unsigned int mfx_encoder_config_command_initialized:1;
-    unsigned int tpu_curbe_updated_in_brc_update:1;
-    unsigned int tpu_required:1;
-    unsigned int submit_batchbuffer:1;
+    unsigned int brc_initted: 1;
+    unsigned int brc_need_reset: 1;
+    unsigned int brc_mbenc_phase1_ignored: 1;
+    unsigned int hme_supported: 1;
+    unsigned int hme_16x_supported: 1;
+    unsigned int hme_enabled            : 1;
+    unsigned int hme_16x_enabled        : 1;
+    unsigned int is_render_context: 1;
+    unsigned int is_first_frame: 1;
+    unsigned int is_first_two_frame: 1;
+    unsigned int repak_supported: 1;
+    unsigned int multiple_pass_brc_supported: 1;
+    unsigned int use_hw_scoreboard: 1;
+    unsigned int use_hw_non_stalling_scoreborad: 1;
+    unsigned int ref_ctrl_optimization_done: 1;
+    unsigned int brc_distortion_buffer_supported: 1;
+    unsigned int brc_constant_buffer_supported: 1;
+    unsigned int brc_distortion_buffer_need_reset: 1;
+    unsigned int mbenc_curbe_updated_in_brc_update: 1;
+    unsigned int mpu_curbe_updated_in_brc_update: 1;
+    unsigned int mfx_encoder_config_command_initialized: 1;
+    unsigned int tpu_curbe_updated_in_brc_update: 1;
+    unsigned int tpu_required: 1;
+    unsigned int submit_batchbuffer: 1;
 
     struct {
         dri_bo *bo;
