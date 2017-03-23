@@ -80,89 +80,88 @@ struct encode_state;
 #define VDENC_LUTMODE_REF_ID                    0x0A
 #define VDENC_LUTMODE_INTRA_CHROMA              0x0B
 
-struct gen9_mfx_avc_img_state
-{
+struct gen9_mfx_avc_img_state {
     union {
         struct {
-            uint32_t dword_length:16;
-            uint32_t sub_opcode_b:5;
-            uint32_t sub_opcode_a:3;
-            uint32_t command_opcode:3;
-            uint32_t pipeline:2;
-            uint32_t command_type:3;
+            uint32_t dword_length: 16;
+            uint32_t sub_opcode_b: 5;
+            uint32_t sub_opcode_a: 3;
+            uint32_t command_opcode: 3;
+            uint32_t pipeline: 2;
+            uint32_t command_type: 3;
         };
 
         uint32_t value;
     } dw0;
 
     struct {
-        uint32_t frame_size_in_mbs_minus1:16;
-        uint32_t pad0:16;
+        uint32_t frame_size_in_mbs_minus1: 16;
+        uint32_t pad0: 16;
     } dw1;
 
     struct {
-        uint32_t frame_width_in_mbs_minus1:8;
-        uint32_t pad0:8;
-        uint32_t frame_height_in_mbs_minus1:8;
-        uint32_t pad1:8;
+        uint32_t frame_width_in_mbs_minus1: 8;
+        uint32_t pad0: 8;
+        uint32_t frame_height_in_mbs_minus1: 8;
+        uint32_t pad1: 8;
     } dw2;
 
     struct {
-        uint32_t pad0:8;
-        uint32_t image_structure:2;
-        uint32_t weighted_bipred_idc:2;
-        uint32_t weighted_pred_flag:1;
-        uint32_t brc_domain_rate_control_enable:1;
-        uint32_t pad1:2;
-        uint32_t chroma_qp_offset:5;
-        uint32_t pad2:3;
-        uint32_t second_chroma_qp_offset:5;
-        uint32_t pad3:3;
+        uint32_t pad0: 8;
+        uint32_t image_structure: 2;
+        uint32_t weighted_bipred_idc: 2;
+        uint32_t weighted_pred_flag: 1;
+        uint32_t brc_domain_rate_control_enable: 1;
+        uint32_t pad1: 2;
+        uint32_t chroma_qp_offset: 5;
+        uint32_t pad2: 3;
+        uint32_t second_chroma_qp_offset: 5;
+        uint32_t pad3: 3;
     } dw3;
 
     struct {
-        uint32_t field_picture_flag:1;
-        uint32_t mbaff_mode_active:1;
-        uint32_t frame_mb_only_flag:1;
-        uint32_t transform_8x8_idct_mode_flag:1;
-        uint32_t direct_8x8_interface_flag:1;
-        uint32_t constrained_intra_prediction_flag:1;
-        uint32_t current_img_dispoable_flag:1;
-        uint32_t entropy_coding_flag:1;
-        uint32_t mb_mv_format_flag:1;
-        uint32_t pad0:1;
-        uint32_t chroma_format_idc:2;
-        uint32_t mv_unpacked_flag:1;
-        uint32_t insert_test_flag:1;
-        uint32_t load_slice_pointer_flag:1;
-        uint32_t macroblock_stat_enable:1;
-        uint32_t minimum_frame_size:16;
+        uint32_t field_picture_flag: 1;
+        uint32_t mbaff_mode_active: 1;
+        uint32_t frame_mb_only_flag: 1;
+        uint32_t transform_8x8_idct_mode_flag: 1;
+        uint32_t direct_8x8_interface_flag: 1;
+        uint32_t constrained_intra_prediction_flag: 1;
+        uint32_t current_img_dispoable_flag: 1;
+        uint32_t entropy_coding_flag: 1;
+        uint32_t mb_mv_format_flag: 1;
+        uint32_t pad0: 1;
+        uint32_t chroma_format_idc: 2;
+        uint32_t mv_unpacked_flag: 1;
+        uint32_t insert_test_flag: 1;
+        uint32_t load_slice_pointer_flag: 1;
+        uint32_t macroblock_stat_enable: 1;
+        uint32_t minimum_frame_size: 16;
     } dw4;
 
     struct {
-        uint32_t intra_mb_max_bit_flag:1;
-        uint32_t inter_mb_max_bit_flag:1;
-        uint32_t frame_size_over_flag:1;
-        uint32_t frame_size_under_flag:1;
-        uint32_t pad0:3;
-        uint32_t intra_mb_ipcm_flag:1;
-        uint32_t pad1:1;
-        uint32_t mb_rate_ctrl_flag:1;
-        uint32_t min_frame_size_units:2;
-        uint32_t inter_mb_zero_cbp_flag:1;
-        uint32_t pad2:3;
-        uint32_t non_first_pass_flag:1;
-        uint32_t pad3:10;
-        uint32_t aq_chroma_disable:1;
-        uint32_t aq_rounding:3;
-        uint32_t aq_enable:1;
+        uint32_t intra_mb_max_bit_flag: 1;
+        uint32_t inter_mb_max_bit_flag: 1;
+        uint32_t frame_size_over_flag: 1;
+        uint32_t frame_size_under_flag: 1;
+        uint32_t pad0: 3;
+        uint32_t intra_mb_ipcm_flag: 1;
+        uint32_t pad1: 1;
+        uint32_t mb_rate_ctrl_flag: 1;
+        uint32_t min_frame_size_units: 2;
+        uint32_t inter_mb_zero_cbp_flag: 1;
+        uint32_t pad2: 3;
+        uint32_t non_first_pass_flag: 1;
+        uint32_t pad3: 10;
+        uint32_t aq_chroma_disable: 1;
+        uint32_t aq_rounding: 3;
+        uint32_t aq_enable: 1;
     } dw5;
 
     struct {
-        uint32_t intra_mb_max_size:12;
-        uint32_t pad0:4;
-        uint32_t inter_mb_max_size:12;
-        uint32_t pad1:4;
+        uint32_t intra_mb_max_size: 12;
+        uint32_t pad0: 4;
+        uint32_t inter_mb_max_size: 12;
+        uint32_t pad1: 4;
     } dw6;
 
     struct {
@@ -170,87 +169,87 @@ struct gen9_mfx_avc_img_state
     } dw7;
 
     struct {
-        uint32_t slice_delta_qp_max0:8;
-        uint32_t slice_delta_qp_max1:8;
-        uint32_t slice_delta_qp_max2:8;
-        uint32_t slice_delta_qp_max3:8;
+        uint32_t slice_delta_qp_max0: 8;
+        uint32_t slice_delta_qp_max1: 8;
+        uint32_t slice_delta_qp_max2: 8;
+        uint32_t slice_delta_qp_max3: 8;
     } dw8;
 
     struct {
-        uint32_t slice_delta_qp_min0:8;
-        uint32_t slice_delta_qp_min1:8;
-        uint32_t slice_delta_qp_min2:8;
-        uint32_t slice_delta_qp_min3:8;
+        uint32_t slice_delta_qp_min0: 8;
+        uint32_t slice_delta_qp_min1: 8;
+        uint32_t slice_delta_qp_min2: 8;
+        uint32_t slice_delta_qp_min3: 8;
     } dw9;
 
     struct {
-        uint32_t frame_bitrate_min:14;
-        uint32_t frame_bitrate_min_unit_mode:1;
-        uint32_t frame_bitrate_min_unit:1;
-        uint32_t frame_bitrate_max:14;
-        uint32_t frame_bitrate_max_unit_mode:1;
-        uint32_t frame_bitrate_max_unit:1;
+        uint32_t frame_bitrate_min: 14;
+        uint32_t frame_bitrate_min_unit_mode: 1;
+        uint32_t frame_bitrate_min_unit: 1;
+        uint32_t frame_bitrate_max: 14;
+        uint32_t frame_bitrate_max_unit_mode: 1;
+        uint32_t frame_bitrate_max_unit: 1;
     } dw10;
 
     struct {
-        uint32_t frame_bitrate_min_delta:15;
-        uint32_t pad0:1;
-        uint32_t frame_bitrate_max_delta:15;
-        uint32_t pad1:1;
+        uint32_t frame_bitrate_min_delta: 15;
+        uint32_t pad0: 1;
+        uint32_t frame_bitrate_max_delta: 15;
+        uint32_t pad1: 1;
     } dw11;
 
     struct {
-        uint32_t pad0:18;
-        uint32_t vad_error_logic:1;
-        uint32_t pad1:13;
+        uint32_t pad0: 18;
+        uint32_t vad_error_logic: 1;
+        uint32_t pad1: 13;
     } dw12;
 
     struct {
-        uint32_t pic_qp_init_minus26:8;
-        uint32_t pic_num_ref_idx_l0_active_minus1:6;
-        uint32_t pad0:2;
-        uint32_t pic_num_ref_idx_l1_active_minus1:6;
-        uint32_t pad1:2;
-        uint32_t num_ref_frames:5;
-        uint32_t is_curr_pic_has_mmco5:1;
+        uint32_t pic_qp_init_minus26: 8;
+        uint32_t pic_num_ref_idx_l0_active_minus1: 6;
+        uint32_t pad0: 2;
+        uint32_t pic_num_ref_idx_l1_active_minus1: 6;
+        uint32_t pad1: 2;
+        uint32_t num_ref_frames: 5;
+        uint32_t is_curr_pic_has_mmco5: 1;
     } dw13;
 
     struct {
-        uint32_t pic_order_present_flag:1;
-        uint32_t delta_pic_order_always_zero_flag:1;
-        uint32_t pic_order_cnt_type:2;
-        uint32_t pad0:4;
-        uint32_t slice_group_map_type:3;
-        uint32_t redundant_pic_cnt_present_flag:1;
-        uint32_t num_slice_groups_minus1:3;
-        uint32_t deblock_filter_ctrl_present_flag:1;
-        uint32_t log2_max_frame_num_minus4:8;
-        uint32_t log2_max_pic_order_cnt_lsb_minus4:8;
+        uint32_t pic_order_present_flag: 1;
+        uint32_t delta_pic_order_always_zero_flag: 1;
+        uint32_t pic_order_cnt_type: 2;
+        uint32_t pad0: 4;
+        uint32_t slice_group_map_type: 3;
+        uint32_t redundant_pic_cnt_present_flag: 1;
+        uint32_t num_slice_groups_minus1: 3;
+        uint32_t deblock_filter_ctrl_present_flag: 1;
+        uint32_t log2_max_frame_num_minus4: 8;
+        uint32_t log2_max_pic_order_cnt_lsb_minus4: 8;
     } dw14;
 
     struct {
-        uint32_t slice_group_change_rate:16;
-        uint32_t curr_pic_frame_num:16;
+        uint32_t slice_group_change_rate: 16;
+        uint32_t curr_pic_frame_num: 16;
     } dw15;
 
     struct {
-        uint32_t current_frame_view_id:10;
-        uint32_t pad0:2;
-        uint32_t max_view_idx_l0:4;
-        uint32_t pad1:2;
-        uint32_t max_view_idx_l1:4;
-        uint32_t pad2:9;
-        uint32_t inter_view_order_disable:1;
+        uint32_t current_frame_view_id: 10;
+        uint32_t pad0: 2;
+        uint32_t max_view_idx_l0: 4;
+        uint32_t pad1: 2;
+        uint32_t max_view_idx_l1: 4;
+        uint32_t pad2: 9;
+        uint32_t inter_view_order_disable: 1;
     } dw16;
 
     struct {
-        uint32_t fqp:3;                         // Must be zero for SKL
-        uint32_t fqp_offset:3;                  // Must be zero for SKL
-        uint32_t pad0:2;
-        uint32_t ext_brc_dm_stat_en:1;          // Must be zero for SKL
-        uint32_t pad1:7;
-        uint32_t brc_dm_avg_mb_qp:6;            // Must be zero for SKL
-        uint32_t pad2:10;
+        uint32_t fqp: 3;                        // Must be zero for SKL
+        uint32_t fqp_offset: 3;                 // Must be zero for SKL
+        uint32_t pad0: 2;
+        uint32_t ext_brc_dm_stat_en: 1;         // Must be zero for SKL
+        uint32_t pad1: 7;
+        uint32_t brc_dm_avg_mb_qp: 6;           // Must be zero for SKL
+        uint32_t pad2: 10;
     } dw17;
 
     struct {
@@ -266,92 +265,90 @@ struct gen9_mfx_avc_img_state
     } dw20;
 };
 
-struct gen9_image_state_cost
-{
+struct gen9_image_state_cost {
     struct {
-        uint32_t mv0_cost:8;
-        uint32_t mv1_cost:8;
-        uint32_t mv2_cost:8;
-        uint32_t mv3_cost:8;
+        uint32_t mv0_cost: 8;
+        uint32_t mv1_cost: 8;
+        uint32_t mv2_cost: 8;
+        uint32_t mv3_cost: 8;
     } dw0;
 
     struct {
-        uint32_t mv4_cost:8;
-        uint32_t mv5_cost:8;
-        uint32_t mv6_cost:8;
-        uint32_t mv7_cost:8;
+        uint32_t mv4_cost: 8;
+        uint32_t mv5_cost: 8;
+        uint32_t mv6_cost: 8;
+        uint32_t mv7_cost: 8;
     } dw1;
 };
 
-struct gen9_vdenc_img_state
-{
+struct gen9_vdenc_img_state {
     union {
         struct {
-            uint32_t dword_length:12;
-            uint32_t pad0:4;
-            uint32_t sub_opcode_b:5;
-            uint32_t sub_opcode_a:2;
-            uint32_t command_opcode:4;
-            uint32_t pipeline:2;
-            uint32_t command_type:3;
+            uint32_t dword_length: 12;
+            uint32_t pad0: 4;
+            uint32_t sub_opcode_b: 5;
+            uint32_t sub_opcode_a: 2;
+            uint32_t command_opcode: 4;
+            uint32_t pipeline: 2;
+            uint32_t command_type: 3;
         };
 
         uint32_t value;
     } dw0;
 
     struct {
-        uint32_t pad0:2;
-        uint32_t bidirectional_mix_disable:1;
-        uint32_t pad1:1;
-        uint32_t time_budget_overflow_check:1;
-        uint32_t pad2:1;
-        uint32_t extended_pak_obj_cmd_enable:1;
-        uint32_t transform_8x8_flag:1;
-        uint32_t vdenc_l1_cache_priority:2;
-        uint32_t pad3:22;
+        uint32_t pad0: 2;
+        uint32_t bidirectional_mix_disable: 1;
+        uint32_t pad1: 1;
+        uint32_t time_budget_overflow_check: 1;
+        uint32_t pad2: 1;
+        uint32_t extended_pak_obj_cmd_enable: 1;
+        uint32_t transform_8x8_flag: 1;
+        uint32_t vdenc_l1_cache_priority: 2;
+        uint32_t pad3: 22;
     } dw1;
 
     struct {
-        uint32_t pad0:16;
-        uint32_t bidirectional_weight:6;
-        uint32_t pad1:6;
-        uint32_t unidirection_mix_disable:1;
-        uint32_t pad2:3;
+        uint32_t pad0: 16;
+        uint32_t bidirectional_weight: 6;
+        uint32_t pad1: 6;
+        uint32_t unidirection_mix_disable: 1;
+        uint32_t pad2: 3;
     } dw2;
 
     struct {
-        uint32_t pad0:16;
-        uint32_t picture_width:16;
+        uint32_t pad0: 16;
+        uint32_t picture_width: 16;
     } dw3;
 
     struct {
-        uint32_t pad0:12;
-        uint32_t subpel_mode:2;
-        uint32_t pad1:3;
-        uint32_t forward_transform_skip_check_enable:1;
-        uint32_t bme_disable_for_fbr_message:1;
-        uint32_t block_based_skip_enabled:1;
-        uint32_t inter_sad_measure_adjustment:2;
-        uint32_t intra_sad_measure_adjustment:2;
-        uint32_t sub_macroblock_sub_partition_mask:7;
-        uint32_t block_based_skip_type:1;
+        uint32_t pad0: 12;
+        uint32_t subpel_mode: 2;
+        uint32_t pad1: 3;
+        uint32_t forward_transform_skip_check_enable: 1;
+        uint32_t bme_disable_for_fbr_message: 1;
+        uint32_t block_based_skip_enabled: 1;
+        uint32_t inter_sad_measure_adjustment: 2;
+        uint32_t intra_sad_measure_adjustment: 2;
+        uint32_t sub_macroblock_sub_partition_mask: 7;
+        uint32_t block_based_skip_type: 1;
     } dw4;
 
     struct {
-        uint32_t picture_height_minus1:16;
-        uint32_t cre_prefetch_enable:1;
-        uint32_t hme_ref1_disable:1;
-        uint32_t mb_slice_threshold_value:4;
-        uint32_t pad0:4;
-        uint32_t constrained_intra_prediction_flag:1;
-        uint32_t pad1:2;
-        uint32_t picture_type:2;
-        uint32_t pad2:1;
+        uint32_t picture_height_minus1: 16;
+        uint32_t cre_prefetch_enable: 1;
+        uint32_t hme_ref1_disable: 1;
+        uint32_t mb_slice_threshold_value: 4;
+        uint32_t pad0: 4;
+        uint32_t constrained_intra_prediction_flag: 1;
+        uint32_t pad1: 2;
+        uint32_t picture_type: 2;
+        uint32_t pad2: 1;
     } dw5;
 
     struct {
-        uint32_t slice_macroblock_height_minus1:16;
-        uint32_t pad0:16;
+        uint32_t slice_macroblock_height_minus1: 16;
+        uint32_t pad0: 16;
     } dw6;
 
     struct {
@@ -359,36 +356,36 @@ struct gen9_vdenc_img_state
     } dw7;
 
     struct {
-        uint32_t luma_intra_partition_mask:5;
-        uint32_t non_skip_zero_mv_const_added:1;
-        uint32_t non_skip_mb_mode_const_added:1;
-        uint32_t pad0:9;
-        uint32_t mv_cost_scaling_factor:2;
-        uint32_t bilinear_filter_enable:1;
-        uint32_t pad1:3;
-        uint32_t ref_id_cost_mode_select:1;
-        uint32_t pad2:9;
+        uint32_t luma_intra_partition_mask: 5;
+        uint32_t non_skip_zero_mv_const_added: 1;
+        uint32_t non_skip_mb_mode_const_added: 1;
+        uint32_t pad0: 9;
+        uint32_t mv_cost_scaling_factor: 2;
+        uint32_t bilinear_filter_enable: 1;
+        uint32_t pad1: 3;
+        uint32_t ref_id_cost_mode_select: 1;
+        uint32_t pad2: 9;
     } dw8;
 
     struct {
-        uint32_t mode0_cost:8;
-        uint32_t mode1_cost:8;
-        uint32_t mode2_cost:8;
-        uint32_t mode3_cost:8;
+        uint32_t mode0_cost: 8;
+        uint32_t mode1_cost: 8;
+        uint32_t mode2_cost: 8;
+        uint32_t mode3_cost: 8;
     } dw9;
 
     struct {
-        uint32_t mode4_cost:8;
-        uint32_t mode5_cost:8;
-        uint32_t mode6_cost:8;
-        uint32_t mode7_cost:8;
+        uint32_t mode4_cost: 8;
+        uint32_t mode5_cost: 8;
+        uint32_t mode6_cost: 8;
+        uint32_t mode7_cost: 8;
     } dw10;
 
     struct {
-        uint32_t mode8_cost:8;
-        uint32_t mode9_cost:8;
-        uint32_t ref_id_cost:8;
-        uint32_t chroma_intra_mode_cost:8;
+        uint32_t mode8_cost: 8;
+        uint32_t mode9_cost: 8;
+        uint32_t ref_id_cost: 8;
+        uint32_t chroma_intra_mode_cost: 8;
     } dw11;
 
     struct {
@@ -396,9 +393,9 @@ struct gen9_vdenc_img_state
     } dw12_13;
 
     struct {
-        uint32_t qp_prime_y:8;
-        uint32_t pad0:16;
-        uint32_t target_size_in_word:8;
+        uint32_t qp_prime_y: 8;
+        uint32_t pad0: 16;
+        uint32_t target_size_in_word: 8;
     } dw14;
 
     struct {
@@ -410,17 +407,17 @@ struct gen9_vdenc_img_state
     } dw16;
 
     struct {
-        uint32_t avc_intra_4x4_mode_mask:9;
-        uint32_t pad0:7;
-        uint32_t avc_intra_8x8_mode_mask:9;
-        uint32_t pad1:7;
+        uint32_t avc_intra_4x4_mode_mask: 9;
+        uint32_t pad0: 7;
+        uint32_t avc_intra_8x8_mode_mask: 9;
+        uint32_t pad1: 7;
     } dw17;
 
     struct {
-        uint32_t avc_intra_16x16_mode_mask:4;
-        uint32_t avc_intra_chroma_mode_mask:4;
-        uint32_t intra_compute_type_intra_compute_type:2;
-        uint32_t pad0:22;
+        uint32_t avc_intra_16x16_mode_mask: 4;
+        uint32_t avc_intra_chroma_mode_mask: 4;
+        uint32_t intra_compute_type_intra_compute_type: 2;
+        uint32_t pad0: 22;
     } dw18;
 
     struct {
@@ -428,10 +425,10 @@ struct gen9_vdenc_img_state
     } dw19;
 
     struct {
-        uint32_t penalty_for_intra_16x16_non_dc_prediction:8;
-        uint32_t penalty_for_intra_8x8_non_dc_prediction:8;
-        uint32_t penalty_for_intra_4x4_non_dc_prediction:8;
-        uint32_t pad0:8;
+        uint32_t penalty_for_intra_16x16_non_dc_prediction: 8;
+        uint32_t penalty_for_intra_8x8_non_dc_prediction: 8;
+        uint32_t penalty_for_intra_4x4_non_dc_prediction: 8;
+        uint32_t pad0: 8;
     } dw20;
 
     struct {
@@ -439,16 +436,16 @@ struct gen9_vdenc_img_state
     } dw21;
 
     struct {
-        uint32_t panic_mode_mb_threadhold:16;
-        uint32_t small_mb_size_in_word:8;
-        uint32_t large_mb_size_in_word:8;
+        uint32_t panic_mode_mb_threadhold: 16;
+        uint32_t small_mb_size_in_word: 8;
+        uint32_t large_mb_size_in_word: 8;
     } dw22;
 
     struct {
-        uint32_t l0_number_of_reference_minus1:8;
-        uint32_t pad0:8;
-        uint32_t l1_number_of_reference_minus1:8;
-        uint32_t pad1:8;
+        uint32_t l0_number_of_reference_minus1: 8;
+        uint32_t pad0: 8;
+        uint32_t l1_number_of_reference_minus1: 8;
+        uint32_t pad1: 8;
     } dw23;
 
     struct {
@@ -460,14 +457,14 @@ struct gen9_vdenc_img_state
     } dw25;
 
     struct {
-        uint32_t pad0:8;
-        uint32_t hme_ref_windows_combining_threshold:8;
-        uint32_t pad1:16;
+        uint32_t pad0: 8;
+        uint32_t hme_ref_windows_combining_threshold: 8;
+        uint32_t pad1: 16;
     } dw26;
 
     struct {
-        uint32_t max_hmv_r:16;
-        uint32_t max_vmv_r:16;
+        uint32_t max_hmv_r: 16;
+        uint32_t max_vmv_r: 16;
     } dw27;
 
     struct {
@@ -475,86 +472,85 @@ struct gen9_vdenc_img_state
     } dw28_29;
 
     struct {
-        uint32_t roi_qp_adjustment_for_zone0:4;
-        uint32_t roi_qp_adjustment_for_zone1:4;
-        uint32_t roi_qp_adjustment_for_zone2:4;
-        uint32_t roi_qp_adjustment_for_zone3:4;
-        uint32_t qp_adjustment_for_shape_best_intra_4x4_winner:4;
-        uint32_t qp_adjustment_for_shape_best_intra_8x8_winner:4;
-        uint32_t qp_adjustment_for_shape_best_intra_16x16_winner:4;
-        uint32_t pad0:4;
+        uint32_t roi_qp_adjustment_for_zone0: 4;
+        uint32_t roi_qp_adjustment_for_zone1: 4;
+        uint32_t roi_qp_adjustment_for_zone2: 4;
+        uint32_t roi_qp_adjustment_for_zone3: 4;
+        uint32_t qp_adjustment_for_shape_best_intra_4x4_winner: 4;
+        uint32_t qp_adjustment_for_shape_best_intra_8x8_winner: 4;
+        uint32_t qp_adjustment_for_shape_best_intra_16x16_winner: 4;
+        uint32_t pad0: 4;
     } dw30;
 
     struct {
-        uint32_t best_distortion_qp_adjustment_for_zone0:4;
-        uint32_t best_distortion_qp_adjustment_for_zone1:4;
-        uint32_t best_distortion_qp_adjustment_for_zone2:4;
-        uint32_t best_distortion_qp_adjustment_for_zone3:4;
-        uint32_t offset0_for_zone0_neg_zone1_boundary:16;
+        uint32_t best_distortion_qp_adjustment_for_zone0: 4;
+        uint32_t best_distortion_qp_adjustment_for_zone1: 4;
+        uint32_t best_distortion_qp_adjustment_for_zone2: 4;
+        uint32_t best_distortion_qp_adjustment_for_zone3: 4;
+        uint32_t offset0_for_zone0_neg_zone1_boundary: 16;
     } dw31;
 
     struct {
-        uint32_t offset1_for_zone1_neg_zone2_boundary:16;
-        uint32_t offset2_for_zone2_neg_zone3_boundary:16;
+        uint32_t offset1_for_zone1_neg_zone2_boundary: 16;
+        uint32_t offset2_for_zone2_neg_zone3_boundary: 16;
     } dw32;
 
     struct {
-        uint32_t qp_range_check_upper_bound:8;
-        uint32_t qp_range_check_lower_bound:8;
-        uint32_t pad0:8;
-        uint32_t qp_range_check_value:4;
-        uint32_t pad1:4;
+        uint32_t qp_range_check_upper_bound: 8;
+        uint32_t qp_range_check_lower_bound: 8;
+        uint32_t pad0: 8;
+        uint32_t qp_range_check_value: 4;
+        uint32_t pad1: 4;
     } dw33;
 
     struct {
-        uint32_t roi_enable:1;
-        uint32_t fwd_predictor0_mv_enable:1;
-        uint32_t bdw_predictor1_mv_enable:1;
-        uint32_t mb_level_qp_enable:1;
-        uint32_t target_size_in_words_mb_max_size_in_words_mb_enable:1;
-        uint32_t pad0:3;
-        uint32_t ppmv_disable:1;
-        uint32_t coefficient_clamp_enable:1;
-        uint32_t long_term_reference_frame_bwd_ref0_indicator:1;
-        uint32_t long_term_reference_frame_fwd_ref2_indicator:1;
-        uint32_t long_term_reference_frame_fwd_ref1_indicator:1;
-        uint32_t long_term_reference_frame_fwd_ref0_indicator:1;
-        uint32_t image_state_qp_override:1;
-        uint32_t pad1:1;
-        uint32_t midpoint_distortion:16;
+        uint32_t roi_enable: 1;
+        uint32_t fwd_predictor0_mv_enable: 1;
+        uint32_t bdw_predictor1_mv_enable: 1;
+        uint32_t mb_level_qp_enable: 1;
+        uint32_t target_size_in_words_mb_max_size_in_words_mb_enable: 1;
+        uint32_t pad0: 3;
+        uint32_t ppmv_disable: 1;
+        uint32_t coefficient_clamp_enable: 1;
+        uint32_t long_term_reference_frame_bwd_ref0_indicator: 1;
+        uint32_t long_term_reference_frame_fwd_ref2_indicator: 1;
+        uint32_t long_term_reference_frame_fwd_ref1_indicator: 1;
+        uint32_t long_term_reference_frame_fwd_ref0_indicator: 1;
+        uint32_t image_state_qp_override: 1;
+        uint32_t pad1: 1;
+        uint32_t midpoint_distortion: 16;
     } dw34;
 };
 
-struct gen9_vdenc_streamin_state
-{
+struct gen9_vdenc_streamin_state {
     struct {
-        uint32_t roi_selection:8;
-        uint32_t force_intra:1;
-        uint32_t force_skip:1;
-        uint32_t pad0:22;
+        uint32_t roi_selection: 8;
+        uint32_t force_intra: 1;
+        uint32_t force_skip: 1;
+        uint32_t pad0: 22;
     } dw0;
 
     struct {
-        uint32_t qp_prime_y:8;
-        uint32_t target_size_in_word:8;
-        uint32_t max_size_in_word:8;
-        uint32_t pad0:8;
+        uint32_t qp_prime_y: 8;
+        uint32_t target_size_in_word: 8;
+        uint32_t max_size_in_word: 8;
+        uint32_t pad0: 8;
     } dw1;
 
     struct {
-        uint32_t fwd_predictor_x:16;
-        uint32_t fwd_predictor_y:16;
+        uint32_t fwd_predictor_x: 16;
+        uint32_t fwd_predictor_y: 16;
     } dw2;
 
     struct {
-        uint32_t bwd_predictore_x:16;
-        uint32_t bwd_predictore_y:16;
+        uint32_t bwd_predictore_x: 16;
+        uint32_t bwd_predictore_y: 16;
     } dw3;
 
     struct {
-        uint32_t fwd_ref_id0:4;
-        uint32_t bdw_ref_id0:4;
-        uint32_t pad0:24;
+        uint32_t fwd_ref_id0: 4;
+        uint32_t bdw_ref_id0: 4;
+        uint32_t pad0: 24;
     } dw4;
 
     struct {
@@ -562,8 +558,7 @@ struct gen9_vdenc_streamin_state
     } dw5_15;
 };
 
-struct huc_brc_update_constant_data
-{
+struct huc_brc_update_constant_data {
     uint8_t global_rate_qp_adj_tab_i[64];
     uint8_t global_rate_qp_adj_tab_p[64];
     uint8_t global_rate_qp_adj_tab_b[64];
@@ -604,8 +599,7 @@ struct huc_brc_update_constant_data
     uint8_t pad0[42];
 };
 
-struct huc_brc_init_dmem
-{
+struct huc_brc_init_dmem {
     uint8_t     brc_func;                       // 0: Init; 2: Reset
     uint8_t     os_enabled;                     // Always 1
     uint8_t     pad0[2];
@@ -664,8 +658,7 @@ struct huc_brc_init_dmem
     uint8_t     pad3[61];                       // Must be zero
 };
 
-struct huc_brc_update_dmem
-{
+struct huc_brc_update_dmem {
     uint8_t     brc_func;                       // =1 for Update, other values are reserved for future use
     uint8_t     pad0[3];
     uint32_t    target_size;                    // refer to AVC BRC HLD for calculation
@@ -721,13 +714,11 @@ struct huc_brc_update_dmem
     uint8_t     pad1[63];
 };
 
-struct gen9_vdenc_status
-{
+struct gen9_vdenc_status {
     uint32_t    bytes_per_frame;
 };
 
-struct gen9_vdenc_context
-{
+struct gen9_vdenc_context {
     uint32_t    frame_width_in_mbs;
     uint32_t    frame_height_in_mbs;
     uint32_t    frame_width;                    // frame_width_in_mbs * 16
@@ -760,26 +751,26 @@ struct gen9_vdenc_context
     uint32_t    min_delta_qp;
     struct intel_roi roi[3];
 
-    uint32_t    brc_initted:1;
-    uint32_t    brc_need_reset:1;
-    uint32_t    is_low_delay:1;
-    uint32_t    brc_enabled:1;
-    uint32_t    internal_rate_mode:4;
-    uint32_t    current_pass:4;
-    uint32_t    num_passes:4;
-    uint32_t    is_first_pass:1;
-    uint32_t    is_last_pass:1;
+    uint32_t    brc_initted: 1;
+    uint32_t    brc_need_reset: 1;
+    uint32_t    is_low_delay: 1;
+    uint32_t    brc_enabled: 1;
+    uint32_t    internal_rate_mode: 4;
+    uint32_t    current_pass: 4;
+    uint32_t    num_passes: 4;
+    uint32_t    is_first_pass: 1;
+    uint32_t    is_last_pass: 1;
 
-    uint32_t    vdenc_streamin_enable:1;
-    uint32_t    vdenc_pak_threshold_check_enable:1;
-    uint32_t    pad1:1;
-    uint32_t    transform_8x8_mode_enable:1;
-    uint32_t    frame_type:2;
+    uint32_t    vdenc_streamin_enable: 1;
+    uint32_t    vdenc_pak_threshold_check_enable: 1;
+    uint32_t    pad1: 1;
+    uint32_t    transform_8x8_mode_enable: 1;
+    uint32_t    frame_type: 2;
 
-    uint32_t    mb_brc_enabled:1;
-    uint32_t    is_frame_level_vdenc:1;
-    uint32_t    use_extended_pak_obj_cmd:1;
-    uint32_t    pad0:29;
+    uint32_t    mb_brc_enabled: 1;
+    uint32_t    is_frame_level_vdenc: 1;
+    uint32_t    use_extended_pak_obj_cmd: 1;
+    uint32_t    pad0: 29;
 
     struct i965_gpe_resource brc_init_reset_dmem_res;
     struct i965_gpe_resource brc_history_buffer_res;
@@ -830,47 +821,40 @@ struct gen9_vdenc_context
     } status_bffuer;
 };
 
-struct huc_pipe_mode_select_parameter
-{
+struct huc_pipe_mode_select_parameter {
     uint32_t    huc_stream_object_enable;
     uint32_t    indirect_stream_out_enable;
     uint32_t    media_soft_reset_counter;
 };
 
-struct huc_imem_state_parameter
-{
+struct huc_imem_state_parameter {
     uint32_t    huc_firmware_descriptor;
 };
 
-struct huc_dmem_state_parameter
-{
+struct huc_dmem_state_parameter {
     struct i965_gpe_resource *huc_data_source_res;
     uint32_t    huc_data_destination_base_address;
     uint32_t    huc_data_length;
 };
 
-struct huc_cfg_state_parameter
-{
+struct huc_cfg_state_parameter {
     uint32_t    force_reset;
 };
 
 
-struct huc_virtual_addr_parameter
-{
+struct huc_virtual_addr_parameter {
     struct {
         struct i965_gpe_resource *huc_surface_res;
         uint32_t is_target;
     } regions[16];
 };
 
-struct huc_ind_obj_base_addr_parameter
-{
+struct huc_ind_obj_base_addr_parameter {
     struct i965_gpe_resource *huc_indirect_stream_in_object_res;
     struct i965_gpe_resource *huc_indirect_stream_out_object_res;
 };
 
-struct huc_stream_object_parameter
-{
+struct huc_stream_object_parameter {
     uint32_t indirect_stream_in_data_length;
     uint32_t indirect_stream_in_start_address;
     uint32_t indirect_stream_out_start_address;
@@ -884,13 +868,11 @@ struct huc_stream_object_parameter
     uint8_t start_code_byte0;
 };
 
-struct huc_start_parameter
-{
+struct huc_start_parameter {
     uint32_t last_stream_object;
 };
 
-struct vd_pipeline_flush_parameter
-{
+struct vd_pipeline_flush_parameter {
     uint32_t hevc_pipeline_done;
     uint32_t vdenc_pipeline_done;
     uint32_t mfl_pipeline_done;
@@ -905,4 +887,4 @@ struct vd_pipeline_flush_parameter
 extern Bool
 gen9_vdenc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
-#endif	/* GEN9_VDENC_H */
+#endif  /* GEN9_VDENC_H */

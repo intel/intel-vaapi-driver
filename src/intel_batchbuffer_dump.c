@@ -8,11 +8,11 @@
 
 #ifdef I965_DEBUG
 
-#define BUFFER_FAIL(_count, _len, _name) do {			\
-    fprintf(gout, "Buffer size too small in %s (%d < %d)\n",	\
-	    (_name), (_count), (_len));				\
-    (*failures)++;						\
-    return count;						\
+#define BUFFER_FAIL(_count, _len, _name) do {           \
+    fprintf(gout, "Buffer size too small in %s (%d < %d)\n",    \
+        (_name), (_count), (_len));             \
+    (*failures)++;                      \
+    return count;                       \
 } while (0)
 
 static FILE *gout;
@@ -23,7 +23,7 @@ instr_out(unsigned int *data, unsigned int offset, unsigned int index, char *fmt
     va_list va;
 
     fprintf(gout, "0x%08x: 0x%08x:%s ", offset + index * 4, data[index],
-	    index == 0 ? "" : "  ");
+            index == 0 ? "" : "  ");
     va_start(va, fmt);
     vfprintf(gout, fmt, va);
     va_end(va);
@@ -37,16 +37,16 @@ dump_mi(unsigned int *data, unsigned int offset, int count, unsigned int device,
     int length, i;
 
     struct {
-	unsigned int opcode;
-	int mask_length;
-	int min_len;
-	int max_len;
-	char *name;
+        unsigned int opcode;
+        int mask_length;
+        int min_len;
+        int max_len;
+        char *name;
     } mi_commands[] = {
-	{ 0x00, 0, 1, 1, "MI_NOOP" },
-	{ 0x04, 0, 1, 1, "MI_FLUSH" },
-	{ 0x0a, 0, 1, 1, "MI_BATCH_BUFFER_END" },
-	{ 0x26, 0x3f, 4, 5, "MI_FLUSH_DW" },
+        { 0x00, 0, 1, 1, "MI_NOOP" },
+        { 0x04, 0, 1, 1, "MI_FLUSH" },
+        { 0x0a, 0, 1, 1, "MI_BATCH_BUFFER_END" },
+        { 0x26, 0x3f, 4, 5, "MI_FLUSH_DW" },
     };
 
     opcode = ((data[0] & MASK_MI_OPCODE) >> SHIFT_MI_OPCODE);
@@ -56,29 +56,29 @@ dump_mi(unsigned int *data, unsigned int offset, int count, unsigned int device,
             int index;
 
             length = 1;
-	    instr_out(data, offset, 0, "%s\n", mi_commands[i].name);
+            instr_out(data, offset, 0, "%s\n", mi_commands[i].name);
 
-	    if (mi_commands[i].max_len > 1) {
+            if (mi_commands[i].max_len > 1) {
                 length = (data[0] & mi_commands[i].mask_length) + 2;
 
                 if (length < mi_commands[i].min_len ||
                     length > mi_commands[i].max_len) {
-		    fprintf(gout, "Bad length (%d) in %s, [%d, %d]\n",
-			    length, mi_commands[i].name,
-			    mi_commands[i].min_len,
-			    mi_commands[i].max_len);
-		}
-	    }
+                    fprintf(gout, "Bad length (%d) in %s, [%d, %d]\n",
+                            length, mi_commands[i].name,
+                            mi_commands[i].min_len,
+                            mi_commands[i].max_len);
+                }
+            }
 
             for (index = 1; index < length; index++) {
                 if (index >= count)
-		    BUFFER_FAIL(count, length, mi_commands[i].name);
+                    BUFFER_FAIL(count, length, mi_commands[i].name);
 
-		instr_out(data, offset, index, "dword %d\n", index);
-	    }
+                instr_out(data, offset, index, "dword %d\n", index);
+            }
 
-	    return length;
-	}
+            return length;
+        }
     }
 
     instr_out(data, offset, 0, "UNKNOWN MI COMMAND\n");
@@ -102,10 +102,10 @@ dump_avc_bsd_img_state(unsigned int *data, unsigned int offset, unsigned int dev
 
     instr_out(data, offset, 1, "frame size: %d\n", (data[1] & 0xffff));
     instr_out(data, offset, 2, "width: %d, height: %d\n", (data[2] & 0xff), (data[2] >> 16) & 0xff);
-    instr_out(data, offset, 3, 
+    instr_out(data, offset, 3,
               "second_chroma_qp_offset: %d,"
               "chroma_qp_offset: %d,"
-              "QM present flag: %d," 
+              "QM present flag: %d,"
               "image struct: %s,"
               "img_dec_fs_idc: %d,"
               "\n",
@@ -145,7 +145,7 @@ dump_avc_bsd_qm_state(unsigned int *data, unsigned int offset, unsigned int devi
     unsigned int length = ((data[0] & MASK_GFXPIPE_LENGTH) >> SHIFT_GFXPIPE_LENGTH) + 2;
     int i;
 
-    instr_out(data, offset, 1, "user default: %02x, QM list present: %02x\n", 
+    instr_out(data, offset, 1, "user default: %02x, QM list present: %02x\n",
               (data[1] >> 8) & 0xff, data[1] & 0xff);
 
     for (i = 2; i < length; i++) {
@@ -167,7 +167,7 @@ dump_avc_bsd_buf_base_state(unsigned int *data, unsigned int offset, unsigned in
     instr_out(data, offset, 1, "BSD row store base address\n");
     instr_out(data, offset, 2, "MPR row store base address\n");
     instr_out(data, offset, 3, "AVC-IT command buffer base address\n");
-    instr_out(data, offset, 4, "AVC-IT data buffer: 0x%08x, write offset: 0x%x\n", 
+    instr_out(data, offset, 4, "AVC-IT data buffer: 0x%08x, write offset: 0x%x\n",
               data[4] & 0xFFFFF000, data[4] & 0xFC0);
     instr_out(data, offset, 5, "ILDB data buffer\n");
 
@@ -190,7 +190,7 @@ dump_bsd_ind_obj_base_addr(unsigned int *data, unsigned int offset, unsigned int
     instr_out(data, offset, 2, "AVC Indirect Object Access Upper Bound\n");
 }
 
-static void 
+static void
 dump_ironlake_avc_bsd_object(unsigned int *data, unsigned int offset, int *failures)
 {
     int slice_type = data[3] & 0xf;
@@ -200,7 +200,7 @@ dump_ironlake_avc_bsd_object(unsigned int *data, unsigned int offset, int *failu
         instr_out(data, offset, 1, "Encrypted: %d, bitsteam length: %d\n", data[1] >> 31, data[1] & 0x3fffff);
         instr_out(data, offset, 2, "Indirect Data Start Address: %d\n", data[2] & 0x1fffffff);
         instr_out(data, offset, 3, "%s Slice\n", slice_type == 0 ? "P" : slice_type == 1 ? "B" : "I");
-        instr_out(data, offset, 4, 
+        instr_out(data, offset, 4,
                   "Num_Ref_Idx_L1: %d,"
                   "Num_Ref_Idx_L0: %d,"
                   "Log2WeightDenomChroma: %d,"
@@ -260,13 +260,13 @@ dump_ironlake_avc_bsd_object(unsigned int *data, unsigned int offset, int *failu
     }
 }
 
-static void 
+static void
 dump_g4x_avc_bsd_object(unsigned int *data, unsigned int offset, int *failures)
 {
 
 }
 
-static void 
+static void
 dump_avc_bsd_object(unsigned int *data, unsigned int offset, unsigned int device, int *failures)
 {
     if (IS_IRONLAKE(device))
@@ -282,10 +282,10 @@ dump_bsd_avc(unsigned int *data, unsigned int offset, int count, unsigned int de
     int length, i;
 
     struct {
-	unsigned int subopcode;
-	int min_len;
-	int max_len;
-	char *name;
+        unsigned int subopcode;
+        int min_len;
+        int max_len;
+        char *name;
         void (*detail)(unsigned int *data, unsigned int offset, unsigned int device, int  *failures);
     } avc_commands[] = {
         { 0x00, 0x06, 0x06, "AVC_BSD_IMG_STATE", dump_avc_bsd_img_state },
@@ -306,9 +306,9 @@ dump_bsd_avc(unsigned int *data, unsigned int offset, int count, unsigned int de
             length += 2;
             instr_out(data, offset, 0, "%s\n", avc_commands[i].name);
 
-            if (length < avc_commands[i].min_len || 
+            if (length < avc_commands[i].min_len ||
                 length > avc_commands[i].max_len) {
-                fprintf(gout, "Bad length(%d) in %s [%d, %d]\n", 
+                fprintf(gout, "Bad length(%d) in %s [%d, %d]\n",
                         length, avc_commands[i].name,
                         avc_commands[i].min_len,
                         avc_commands[i].max_len);
@@ -324,8 +324,8 @@ dump_bsd_avc(unsigned int *data, unsigned int offset, int count, unsigned int de
                     instr_out(data, offset, index, "dword %d\n", index);
             }
 
-	    return length;
-	}
+            return length;
+        }
     }
 
     instr_out(data, offset, 0, "UNKNOWN AVC COMMAND\n");
@@ -356,7 +356,7 @@ dump_gfxpipe_bsd(unsigned int *data, unsigned int offset, int count, unsigned in
 static void
 dump_mfx_mode_select(unsigned int *data, unsigned int offset, unsigned int device, int *failures)
 {
-    instr_out(data, offset, 1, 
+    instr_out(data, offset, 1,
               "decoder mode: %d(%s),"
               "post deblocking output enable %d,"
               "pre deblocking output enable %d,"
@@ -459,10 +459,10 @@ dump_mfx_common(unsigned int *data, unsigned int offset, int count, unsigned int
     int length, i;
 
     struct {
-	unsigned int subopcode;
-	int min_len;
-	int max_len;
-	char *name;
+        unsigned int subopcode;
+        int min_len;
+        int max_len;
+        char *name;
         void (*detail)(unsigned int *data, unsigned int offset, unsigned int device, int  *failures);
     } mfx_common_commands[] = {
         { SUBOPCODE_MFX(0, 0), 0x04, 0x04, "MFX_PIPE_MODE_SELECT", dump_mfx_mode_select },
@@ -484,9 +484,9 @@ dump_mfx_common(unsigned int *data, unsigned int offset, int count, unsigned int
             length += 2;
             instr_out(data, offset, 0, "%s\n", mfx_common_commands[i].name);
 
-            if (length < mfx_common_commands[i].min_len || 
+            if (length < mfx_common_commands[i].min_len ||
                 length > mfx_common_commands[i].max_len) {
-                fprintf(gout, "Bad length(%d) in %s [%d, %d]\n", 
+                fprintf(gout, "Bad length(%d) in %s [%d, %d]\n",
                         length, mfx_common_commands[i].name,
                         mfx_common_commands[i].min_len,
                         mfx_common_commands[i].max_len);
@@ -502,8 +502,8 @@ dump_mfx_common(unsigned int *data, unsigned int offset, int count, unsigned int
                     instr_out(data, offset, index, "dword %d\n", index);
             }
 
-	    return length;
-	}
+            return length;
+        }
     }
 
     instr_out(data, offset, 0, "UNKNOWN MFX COMMON COMMAND\n");
@@ -534,7 +534,7 @@ dump_mfx_avc_qm_state(unsigned int *data, unsigned int offset, unsigned int devi
     unsigned int length = ((data[0] & MASK_GFXPIPE_LENGTH) >> SHIFT_GFXPIPE_LENGTH) + 2;
     int i;
 
-    instr_out(data, offset, 1, "user default: %02x, QM list present: %02x\n", 
+    instr_out(data, offset, 1, "user default: %02x, QM list present: %02x\n",
               (data[1] >> 8) & 0xff, data[1] & 0xff);
 
     for (i = 2; i < length; i++) {
@@ -593,7 +593,7 @@ dump_mfx_avc_weightoffset_state(unsigned int *data, unsigned int offset, unsigne
 {
     int i;
 
-    instr_out(data, offset, 1, 
+    instr_out(data, offset, 1,
               "Weight and Offset L%d table\n",
               (data[1] >> 0) & 0x1);
 
@@ -634,10 +634,10 @@ dump_mfx_avc(unsigned int *data, unsigned int offset, int count, unsigned int de
     int length, i;
 
     struct {
-	unsigned int subopcode;
-	int min_len;
-	int max_len;
-	char *name;
+        unsigned int subopcode;
+        int min_len;
+        int max_len;
+        char *name;
         void (*detail)(unsigned int *data, unsigned int offset, unsigned int device, int  *failures);
     } mfx_avc_commands[] = {
         { SUBOPCODE_MFX(0, 0), 0x0d, 0x0d, "MFX_AVC_IMG_STATE", dump_mfx_avc_img_state },
@@ -659,9 +659,9 @@ dump_mfx_avc(unsigned int *data, unsigned int offset, int count, unsigned int de
             length += 2;
             instr_out(data, offset, 0, "%s\n", mfx_avc_commands[i].name);
 
-            if (length < mfx_avc_commands[i].min_len || 
+            if (length < mfx_avc_commands[i].min_len ||
                 length > mfx_avc_commands[i].max_len) {
-                fprintf(gout, "Bad length(%d) in %s [%d, %d]\n", 
+                fprintf(gout, "Bad length(%d) in %s [%d, %d]\n",
                         length, mfx_avc_commands[i].name,
                         mfx_avc_commands[i].min_len,
                         mfx_avc_commands[i].max_len);
@@ -677,8 +677,8 @@ dump_mfx_avc(unsigned int *data, unsigned int offset, int count, unsigned int de
                     instr_out(data, offset, index, "dword %d\n", index);
             }
 
-	    return length;
-	}
+            return length;
+        }
     }
 
     instr_out(data, offset, 0, "UNKNOWN MFX AVC COMMAND\n");
@@ -746,25 +746,25 @@ int intel_batchbuffer_dump(unsigned int *data, unsigned int offset, int count, u
     gout = fopen("/tmp/bsd_command_dump.txt", "w+");
 
     while (index < count) {
-	switch ((data[index] & MASK_CMD_TYPE) >> SHIFT_CMD_TYPE) {
-	case CMD_TYPE_MI:
-	    index += dump_mi(data + index, offset + index * 4,
+        switch ((data[index] & MASK_CMD_TYPE) >> SHIFT_CMD_TYPE) {
+        case CMD_TYPE_MI:
+            index += dump_mi(data + index, offset + index * 4,
                              count - index, device, &failures);
-	    break;
+            break;
 
-	case CMD_TYPE_GFXPIPE:
+        case CMD_TYPE_GFXPIPE:
             index += dump_gfxpipe(data + index, offset + index * 4,
                                   count - index, device, &failures);
-	    break;
+            break;
 
-	default:
-	    instr_out(data, offset, index, "UNKNOWN COMMAND\n");
-	    failures++;
-	    index++;
-	    break;
-	}
+        default:
+            instr_out(data, offset, index, "UNKNOWN COMMAND\n");
+            failures++;
+            index++;
+            break;
+        }
 
-	fflush(gout);
+        fflush(gout);
     }
 
     fclose(gout);

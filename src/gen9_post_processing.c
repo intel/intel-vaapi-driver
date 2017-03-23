@@ -367,7 +367,7 @@ gen9_pp_state_base_address(VADriverContextP ctx,
     OUT_RELOC64(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
     /* DW6-7 Dynamic state address */
     OUT_RELOC64(batch, pp_context->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
-              0, 0 | BASE_ADDRESS_MODIFY);
+                0, 0 | BASE_ADDRESS_MODIFY);
 
     /* DW8. Indirect object address */
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
@@ -455,9 +455,9 @@ gen9_post_processing(VADriverContextP ctx,
 
 static void
 gen9_vpp_scaling_sample_state(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               VARectangle *src_rect,
-                               VARectangle *dst_rect)
+                              struct i965_gpe_context *gpe_context,
+                              VARectangle *src_rect,
+                              VARectangle *dst_rect)
 {
     struct gen8_sampler_state *sampler_state;
 
@@ -471,7 +471,7 @@ gen9_vpp_scaling_sample_state(VADriverContextP ctx,
     assert(gpe_context->sampler.bo->virtual);
 
     sampler_state = (struct gen8_sampler_state *)
-       (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
+                    (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
 
     memset(sampler_state, 0, sizeof(*sampler_state));
 
@@ -655,11 +655,11 @@ pp_get_surface_fourcc(VADriverContextP ctx, struct i965_surface *surface)
 
 static void
 gen9_gpe_context_p010_scaling_curbe(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               VARectangle *src_rect,
-                               struct i965_surface *src_surface,
-                               VARectangle *dst_rect,
-                               struct i965_surface *dst_surface)
+                                    struct i965_gpe_context *gpe_context,
+                                    VARectangle *src_rect,
+                                    struct i965_surface *src_surface,
+                                    VARectangle *dst_rect,
+                                    struct i965_surface *dst_surface)
 {
     struct scaling_input_parameter *scaling_curbe;
     float src_width, src_height;
@@ -691,11 +691,11 @@ gen9_gpe_context_p010_scaling_curbe(VADriverContextP ctx,
     scaling_curbe->inv_width = 1 / src_width;
     scaling_curbe->inv_height = 1 / src_height;
 
-    coeff = (float) (src_rect->width) / dst_rect->width;
+    coeff = (float)(src_rect->width) / dst_rect->width;
     scaling_curbe->x_factor = coeff / src_width;
     scaling_curbe->x_orig = (float)(src_rect->x) / src_width;
 
-    coeff = (float) (src_rect->height) / dst_rect->height;
+    coeff = (float)(src_rect->height) / dst_rect->height;
     scaling_curbe->y_factor = coeff / src_height;
     scaling_curbe->y_orig = (float)(src_rect->y) / src_height;
 
@@ -794,11 +794,11 @@ gen9_pp_context_get_surface_conf(VADriverContextP ctx,
 
 static void
 gen9_gpe_context_p010_scaling_surfaces(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               VARectangle *src_rect,
-                               struct i965_surface *src_surface,
-                               VARectangle *dst_rect,
-                               struct i965_surface *dst_surface)
+                                       struct i965_gpe_context *gpe_context,
+                                       VARectangle *src_rect,
+                                       struct i965_surface *src_surface,
+                                       VARectangle *dst_rect,
+                                       struct i965_surface *dst_surface)
 {
     unsigned int fourcc;
     int width[3], height[3], pitch[3], bo_offset[3];
@@ -839,25 +839,25 @@ gen9_gpe_context_p010_scaling_surfaces(VADriverContextP ctx,
                                            bti, 1);
         if (fourcc == VA_FOURCC_P010) {
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 0,
-                                           I965_SURFACEFORMAT_R16G16_UNORM,
-                                           bti + 1, 1);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 0,
+                                               I965_SURFACEFORMAT_R16G16_UNORM,
+                                               bti + 1, 1);
         } else {
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 0,
-                                           I965_SURFACEFORMAT_R16_UNORM,
-                                           bti + 1, 1);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 0,
+                                               I965_SURFACEFORMAT_R16_UNORM,
+                                               bti + 1, 1);
 
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[2],
-                                           width[2], height[2],
-                                           pitch[2], 0,
-                                           I965_SURFACEFORMAT_R16_UNORM,
-                                           bti + 2, 1);
+                                               bo_offset[2],
+                                               width[2], height[2],
+                                               pitch[2], 0,
+                                               I965_SURFACEFORMAT_R16_UNORM,
+                                               bti + 2, 1);
         }
     }
 
@@ -884,25 +884,25 @@ gen9_gpe_context_p010_scaling_surfaces(VADriverContextP ctx,
                                            bti, 1);
         if (fourcc == VA_FOURCC_P010) {
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1] * 2, height[1],
-                                           pitch[1], 1,
-                                           I965_SURFACEFORMAT_R16_UINT,
-                                           bti + 1, 1);
+                                               bo_offset[1],
+                                               width[1] * 2, height[1],
+                                               pitch[1], 1,
+                                               I965_SURFACEFORMAT_R16_UINT,
+                                               bti + 1, 1);
         } else {
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 1,
-                                           I965_SURFACEFORMAT_R16_UINT,
-                                           bti + 1, 1);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 1,
+                                               I965_SURFACEFORMAT_R16_UINT,
+                                               bti + 1, 1);
 
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[2],
-                                           width[2], height[2],
-                                           pitch[2], 1,
-                                           I965_SURFACEFORMAT_R16_UINT,
-                                           bti + 2, 1);
+                                               bo_offset[2],
+                                               width[2], height[2],
+                                               pitch[2], 1,
+                                               I965_SURFACEFORMAT_R16_UINT,
+                                               bti + 2, 1);
         }
     }
 
@@ -938,8 +938,8 @@ gen9_p010_scaling_post_processing(
                                         dst_rect, dst_surface);
 
     gen9_gpe_context_p010_scaling_surfaces(ctx, gpe_context,
-                                        src_rect, src_surface,
-                                        dst_rect, dst_surface);
+                                           src_rect, src_surface,
+                                           dst_rect, dst_surface);
 
     gen8_gpe_setup_interface_data(ctx, gpe_context);
 
@@ -959,11 +959,11 @@ gen9_p010_scaling_post_processing(
 
 static void
 gen9_gpe_context_yuv420p8_scaling_curbe(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               VARectangle *src_rect,
-                               struct i965_surface *src_surface,
-                               VARectangle *dst_rect,
-                               struct i965_surface *dst_surface)
+                                        struct i965_gpe_context *gpe_context,
+                                        VARectangle *src_rect,
+                                        struct i965_surface *src_surface,
+                                        VARectangle *dst_rect,
+                                        struct i965_surface *dst_surface)
 {
     struct scaling_input_parameter *scaling_curbe;
     float src_width, src_height;
@@ -995,11 +995,11 @@ gen9_gpe_context_yuv420p8_scaling_curbe(VADriverContextP ctx,
     scaling_curbe->inv_width = 1 / src_width;
     scaling_curbe->inv_height = 1 / src_height;
 
-    coeff = (float) (src_rect->width) / dst_rect->width;
+    coeff = (float)(src_rect->width) / dst_rect->width;
     scaling_curbe->x_factor = coeff / src_width;
     scaling_curbe->x_orig = (float)(src_rect->x) / src_width;
 
-    coeff = (float) (src_rect->height) / dst_rect->height;
+    coeff = (float)(src_rect->height) / dst_rect->height;
     scaling_curbe->y_factor = coeff / src_height;
     scaling_curbe->y_orig = (float)(src_rect->y) / src_height;
 
@@ -1019,11 +1019,11 @@ gen9_gpe_context_yuv420p8_scaling_curbe(VADriverContextP ctx,
 
 static void
 gen9_gpe_context_yuv420p8_scaling_surfaces(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               VARectangle *src_rect,
-                               struct i965_surface *src_surface,
-                               VARectangle *dst_rect,
-                               struct i965_surface *dst_surface)
+                                           struct i965_gpe_context *gpe_context,
+                                           VARectangle *src_rect,
+                                           struct i965_surface *src_surface,
+                                           VARectangle *dst_rect,
+                                           struct i965_surface *dst_surface)
 {
     unsigned int fourcc;
     int width[3], height[3], pitch[3], bo_offset[3];
@@ -1064,25 +1064,25 @@ gen9_gpe_context_yuv420p8_scaling_surfaces(VADriverContextP ctx,
                                            bti, 0);
         if (fourcc == VA_FOURCC_NV12) {
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 0,
-                                           I965_SURFACEFORMAT_R8G8_UNORM,
-                                           bti + 1, 0);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 0,
+                                               I965_SURFACEFORMAT_R8G8_UNORM,
+                                               bti + 1, 0);
         } else {
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 0,
-                                           I965_SURFACEFORMAT_R8_UNORM,
-                                           bti + 1, 0);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 0,
+                                               I965_SURFACEFORMAT_R8_UNORM,
+                                               bti + 1, 0);
 
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[2],
-                                           width[2], height[2],
-                                           pitch[2], 0,
-                                           I965_SURFACEFORMAT_R8_UNORM,
-                                           bti + 2, 0);
+                                               bo_offset[2],
+                                               width[2], height[2],
+                                               pitch[2], 0,
+                                               I965_SURFACEFORMAT_R8_UNORM,
+                                               bti + 2, 0);
         }
     }
 
@@ -1109,25 +1109,25 @@ gen9_gpe_context_yuv420p8_scaling_surfaces(VADriverContextP ctx,
                                            bti, 0);
         if (fourcc == VA_FOURCC_NV12) {
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1] * 2, height[1],
-                                           pitch[1], 1,
-                                           I965_SURFACEFORMAT_R16_UINT,
-                                           bti + 1, 0);
+                                               bo_offset[1],
+                                               width[1] * 2, height[1],
+                                               pitch[1], 1,
+                                               I965_SURFACEFORMAT_R16_UINT,
+                                               bti + 1, 0);
         } else {
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 1,
-                                           I965_SURFACEFORMAT_R8_UINT,
-                                           bti + 1, 0);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 1,
+                                               I965_SURFACEFORMAT_R8_UINT,
+                                               bti + 1, 0);
 
             gen9_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[2],
-                                           width[2], height[2],
-                                           pitch[2], 1,
-                                           I965_SURFACEFORMAT_R8_UINT,
-                                           bti + 2, 0);
+                                               bo_offset[2],
+                                               width[2], height[2],
+                                               pitch[2], 1,
+                                               I965_SURFACEFORMAT_R8_UINT,
+                                               bti + 2, 0);
         }
     }
 
@@ -1159,12 +1159,12 @@ gen9_yuv420p8_scaling_post_processing(
     gen9_vpp_scaling_sample_state(ctx, gpe_context, src_rect, dst_rect);
     gen9_gpe_reset_binding_table(ctx, gpe_context);
     gen9_gpe_context_yuv420p8_scaling_curbe(ctx, gpe_context,
-                                        src_rect, src_surface,
-                                        dst_rect, dst_surface);
+                                            src_rect, src_surface,
+                                            dst_rect, dst_surface);
 
     gen9_gpe_context_yuv420p8_scaling_surfaces(ctx, gpe_context,
-                                        src_rect, src_surface,
-                                        dst_rect, dst_surface);
+                                               src_rect, src_surface,
+                                               dst_rect, dst_surface);
 
     gen8_gpe_setup_interface_data(ctx, gpe_context);
 

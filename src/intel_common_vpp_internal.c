@@ -67,16 +67,16 @@ intel_yuv420p8_scaling_post_processing(
 
     if (IS_GEN8(i965->intel.device_info))
         va_status = gen8_yuv420p8_scaling_post_processing(ctx, pp_context,
-                                                      src_surface,
-                                                      src_rect,
-                                                      dst_surface,
-                                                      dst_rect);
+                                                          src_surface,
+                                                          src_rect,
+                                                          dst_surface,
+                                                          dst_rect);
     else
         va_status = gen9_yuv420p8_scaling_post_processing(ctx, pp_context,
-                                                      src_surface,
-                                                      src_rect,
-                                                      dst_surface,
-                                                      dst_rect);
+                                                          src_surface,
+                                                          src_rect,
+                                                          dst_surface,
+                                                          dst_rect);
 
     return va_status;
 }

@@ -88,10 +88,10 @@ gen9_hcpd_init_hevc_surface(VADriverContextP ctx,
 
         if (gen9_hcpd_context->ctb_size == 16)
             size = ((gen9_hcpd_context->picture_width_in_pixels + 63) >> 6) *
-                ((gen9_hcpd_context->picture_height_in_pixels + 15) >> 4);
+                   ((gen9_hcpd_context->picture_height_in_pixels + 15) >> 4);
         else
             size = ((gen9_hcpd_context->picture_width_in_pixels + 31) >> 5) *
-                ((gen9_hcpd_context->picture_height_in_pixels + 31) >> 5);
+                   ((gen9_hcpd_context->picture_height_in_pixels + 31) >> 5);
 
         size <<= 6; /* in unit of 64bytes */
         gen9_hevc_surface->motion_vector_temporal_bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -136,7 +136,7 @@ gen9_hcpd_hevc_decode_init(VADriverContextP ctx,
     hevc_ensure_surface_bo(ctx, decode_state, obj_surface, pic_param);
     gen9_hcpd_init_hevc_surface(ctx, pic_param, obj_surface, gen9_hcpd_context);
 
-    if((pic_param->bit_depth_luma_minus8 > 0)
+    if ((pic_param->bit_depth_luma_minus8 > 0)
         || (pic_param->bit_depth_chroma_minus8 > 0))
         size_shift = 2;
 
@@ -194,15 +194,12 @@ gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
 
     assert((codec == HCP_CODEC_HEVC) || (codec == HCP_CODEC_VP9));
 
-    if(IS_KBL(i965->intel.device_info) ||
-        IS_GLK(i965->intel.device_info))
-    {
+    if (IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info)) {
         BEGIN_BCS_BATCH(batch, 6);
 
         OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (6 - 2));
-    }
-    else
-    {
+    } else {
         BEGIN_BCS_BATCH(batch, 4);
 
         OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (4 - 2));
@@ -214,11 +211,10 @@ gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
 
-    if(IS_KBL(i965->intel.device_info) ||
-        IS_GLK(i965->intel.device_info))
-    {
-        if(codec == HCP_CODEC_VP9)
-            OUT_BCS_BATCH(batch, 1<<6);
+    if (IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info)) {
+        if (codec == HCP_CODEC_VP9)
+            OUT_BCS_BATCH(batch, 1 << 6);
         else
             OUT_BCS_BATCH(batch, 0);
 
@@ -249,18 +245,15 @@ gen9_hcpd_surface_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   (0 << 28) |                   /* surface id */
                   (obj_surface->width - 1));    /* pitch - 1 */
-    if((pic_param->bit_depth_luma_minus8 > 0)
-        || (pic_param->bit_depth_chroma_minus8 > 0))
-    {
+    if ((pic_param->bit_depth_luma_minus8 > 0)
+        || (pic_param->bit_depth_chroma_minus8 > 0)) {
         OUT_BCS_BATCH(batch,
-                  (SURFACE_FORMAT_P010 << 28) |
-                  y_cb_offset);
-    }
-    else
-    {
+                      (SURFACE_FORMAT_P010 << 28) |
+                      y_cb_offset);
+    } else {
         OUT_BCS_BATCH(batch,
-                  (SURFACE_FORMAT_PLANAR_420_8 << 28) |
-                  y_cb_offset);
+                      (SURFACE_FORMAT_PLANAR_420_8 << 28) |
+                      y_cb_offset);
     }
 
     ADVANCE_BCS_BATCH(batch);
@@ -457,7 +450,7 @@ gen9_hcpd_pic_state(VADriverContextP ctx,
 
     if (pic_param->pic_fields.bits.pcm_enabled_flag) {
         max_pcm_size_minus3 = pic_param->log2_min_pcm_luma_coding_block_size_minus3 +
-            pic_param->log2_diff_max_min_pcm_luma_coding_block_size;
+                              pic_param->log2_diff_max_min_pcm_luma_coding_block_size;
         min_pcm_size_minus3 = pic_param->log2_min_pcm_luma_coding_block_size_minus3;
         pcm_sample_bit_depth_luma_minus1 = (pic_param->pcm_sample_bit_depth_luma_minus1 & 0x0f);
         pcm_sample_bit_depth_chroma_minus1 = (pic_param->pcm_sample_bit_depth_chroma_minus1 & 0x0f);
@@ -788,10 +781,10 @@ gen9_hcpd_is_low_delay(VADriverContextP ctx,
                                            slice_param->RefPicList[0],
                                            &pic_param->CurrPic,
                                            pic_param->ReferenceFrames) &&
-            gen9_hcpd_is_list_low_delay(slice_param->num_ref_idx_l1_active_minus1 + 1,
-                                        slice_param->RefPicList[1],
-                                        &pic_param->CurrPic,
-                                        pic_param->ReferenceFrames);
+               gen9_hcpd_is_list_low_delay(slice_param->num_ref_idx_l1_active_minus1 + 1,
+                                           slice_param->RefPicList[1],
+                                           &pic_param->CurrPic,
+                                           pic_param->ReferenceFrames);
 }
 
 static void
@@ -837,11 +830,9 @@ gen9_hcpd_slice_state(VADriverContextP ctx,
     }
 
     sliceqp = pic_param->init_qp_minus26 + 26 + slice_param->slice_qp_delta;
-    if((pic_param->bit_depth_luma_minus8 > 0)
-        || (pic_param->bit_depth_chroma_minus8 > 0))
-    {
-        if(sliceqp < 0)
-        {
+    if ((pic_param->bit_depth_luma_minus8 > 0)
+        || (pic_param->bit_depth_chroma_minus8 > 0)) {
+        if (sliceqp < 0) {
             sliceqp_sign_flag = 1;
             sliceqp = -sliceqp;
         }
@@ -1020,8 +1011,8 @@ out:
 
 static void
 vp9_update_segmentId_buffer(VADriverContextP ctx,
-                          struct decode_state *decode_state,
-                          struct gen9_hcpd_context *gen9_hcpd_context)
+                            struct decode_state *decode_state,
+                            struct gen9_hcpd_context *gen9_hcpd_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VADecPictureParameterBufferVP9 *pic_param;
@@ -1033,28 +1024,27 @@ vp9_update_segmentId_buffer(VADriverContextP ctx,
 
     size = gen9_hcpd_context->picture_width_in_ctbs * gen9_hcpd_context->picture_height_in_ctbs * 1 ;
     size <<= 6;
-    if (gen9_hcpd_context->vp9_segment_id_buffer.bo == NULL || pic_param->frame_width > gen9_hcpd_context->last_frame.frame_width || pic_param->frame_height > gen9_hcpd_context->last_frame.frame_height)
-    {
+    if (gen9_hcpd_context->vp9_segment_id_buffer.bo == NULL || pic_param->frame_width > gen9_hcpd_context->last_frame.frame_width || pic_param->frame_height > gen9_hcpd_context->last_frame.frame_height) {
         ALLOC_GEN_BUFFER((&gen9_hcpd_context->vp9_segment_id_buffer), "vp9 segment id buffer", size);
     }
 
     is_scaling = (pic_param->frame_width != gen9_hcpd_context->last_frame.frame_width) || (pic_param->frame_height != gen9_hcpd_context->last_frame.frame_height);
 
-    if((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||
+    if ((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||
         pic_param->pic_fields.bits.error_resilient_mode ||
         pic_param->pic_fields.bits.intra_only || is_scaling) {
 
         //VP9 Segment ID buffer needs to be zero
-        dri_bo_map(gen9_hcpd_context->vp9_segment_id_buffer.bo,1);
-        memset((unsigned char *)gen9_hcpd_context->vp9_segment_id_buffer.bo->virtual,0, size);
+        dri_bo_map(gen9_hcpd_context->vp9_segment_id_buffer.bo, 1);
+        memset((unsigned char *)gen9_hcpd_context->vp9_segment_id_buffer.bo->virtual, 0, size);
         dri_bo_unmap(gen9_hcpd_context->vp9_segment_id_buffer.bo);
     }
 }
 
 static void
 vp9_update_mv_temporal_buffer(VADriverContextP ctx,
-                          struct decode_state *decode_state,
-                          struct gen9_hcpd_context *gen9_hcpd_context)
+                              struct decode_state *decode_state,
+                              struct gen9_hcpd_context *gen9_hcpd_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VADecPictureParameterBufferVP9 *pic_param;
@@ -1065,13 +1055,11 @@ vp9_update_mv_temporal_buffer(VADriverContextP ctx,
 
     size = gen9_hcpd_context->picture_width_in_ctbs * gen9_hcpd_context->picture_height_in_ctbs * 9 ;
     size <<= 6; //CL aligned
-    if (gen9_hcpd_context->vp9_mv_temporal_buffer_curr.bo == NULL || pic_param->frame_width > gen9_hcpd_context->vp9_mv_temporal_buffer_curr.frame_width || pic_param->frame_height > gen9_hcpd_context->vp9_mv_temporal_buffer_curr.frame_height)
-    {
-        ALLOC_MV_BUFFER((&gen9_hcpd_context->vp9_mv_temporal_buffer_curr), "vp9 curr mv temporal buffer", size,pic_param->frame_width,pic_param->frame_height);
+    if (gen9_hcpd_context->vp9_mv_temporal_buffer_curr.bo == NULL || pic_param->frame_width > gen9_hcpd_context->vp9_mv_temporal_buffer_curr.frame_width || pic_param->frame_height > gen9_hcpd_context->vp9_mv_temporal_buffer_curr.frame_height) {
+        ALLOC_MV_BUFFER((&gen9_hcpd_context->vp9_mv_temporal_buffer_curr), "vp9 curr mv temporal buffer", size, pic_param->frame_width, pic_param->frame_height);
     }
-    if (gen9_hcpd_context->vp9_mv_temporal_buffer_last.bo == NULL)
-    {
-        ALLOC_MV_BUFFER((&gen9_hcpd_context->vp9_mv_temporal_buffer_last), "vp9 last mv temporal buffer", size,pic_param->frame_width,pic_param->frame_height);
+    if (gen9_hcpd_context->vp9_mv_temporal_buffer_last.bo == NULL) {
+        ALLOC_MV_BUFFER((&gen9_hcpd_context->vp9_mv_temporal_buffer_last), "vp9 last mv temporal buffer", size, pic_param->frame_width, pic_param->frame_height);
     }
 
 }
@@ -1083,9 +1071,9 @@ vp9_gen_default_probabilities(VADriverContextP ctx, struct gen9_hcpd_context *ge
     uint32_t size = 0;
 
     size = sizeof(FRAME_CONTEXT);
-    memset(&gen9_hcpd_context->vp9_fc_key_default,0,size);
-    memset(&gen9_hcpd_context->vp9_fc_inter_default,0,size);
-    memset(&gen9_hcpd_context->vp9_frame_ctx,0,size*FRAME_CONTEXTS);
+    memset(&gen9_hcpd_context->vp9_fc_key_default, 0, size);
+    memset(&gen9_hcpd_context->vp9_fc_inter_default, 0, size);
+    memset(&gen9_hcpd_context->vp9_frame_ctx, 0, size * FRAME_CONTEXTS);
     //more code to come here below
 
     //1. key default
@@ -1126,16 +1114,15 @@ vp9_gen_default_probabilities(VADriverContextP ctx, struct gen9_hcpd_context *ge
     vp9_copy(gen9_hcpd_context->vp9_fc_inter_default.seg_tree_probs, default_seg_tree_probs);
     vp9_copy(gen9_hcpd_context->vp9_fc_inter_default.seg_pred_probs, default_seg_pred_probs);
 
-    for(i = 0; i < FRAME_CONTEXTS; i++)
-    {
+    for (i = 0; i < FRAME_CONTEXTS; i++) {
         gen9_hcpd_context->vp9_frame_ctx[i] = gen9_hcpd_context->vp9_fc_inter_default;
     }
 }
 
 static void
 vp9_update_probabilities(VADriverContextP ctx,
-                          struct decode_state *decode_state,
-                          struct gen9_hcpd_context *gen9_hcpd_context)
+                         struct decode_state *decode_state,
+                         struct gen9_hcpd_context *gen9_hcpd_context)
 {
     VADecPictureParameterBufferVP9 *pic_param;
     int i = 0;
@@ -1144,38 +1131,31 @@ vp9_update_probabilities(VADriverContextP ctx,
     pic_param = (VADecPictureParameterBufferVP9 *)decode_state->pic_param->buffer;
 
     //first part buffer update: Case 1)Reset all 4 probablity buffers
-   if((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||pic_param->pic_fields.bits.intra_only||pic_param->pic_fields.bits.error_resilient_mode)
-    {
-        if((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||
-            (pic_param->pic_fields.bits.reset_frame_context == 3)||
-            pic_param->pic_fields.bits.error_resilient_mode)
-        {
+    if ((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) || pic_param->pic_fields.bits.intra_only || pic_param->pic_fields.bits.error_resilient_mode) {
+        if ((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||
+            (pic_param->pic_fields.bits.reset_frame_context == 3) ||
+            pic_param->pic_fields.bits.error_resilient_mode) {
             //perform full buffer update
-            for(i = 0; i < FRAME_CONTEXTS; i++)
-            {
-                memcpy(&gen9_hcpd_context->vp9_frame_ctx[i],&gen9_hcpd_context->vp9_fc_inter_default,VP9_PROB_BUFFER_FIRST_PART_SIZE);
+            for (i = 0; i < FRAME_CONTEXTS; i++) {
+                memcpy(&gen9_hcpd_context->vp9_frame_ctx[i], &gen9_hcpd_context->vp9_fc_inter_default, VP9_PROB_BUFFER_FIRST_PART_SIZE);
 
                 vp9_copy(gen9_hcpd_context->vp9_frame_ctx[i].seg_tree_probs, default_seg_tree_probs);
                 vp9_copy(gen9_hcpd_context->vp9_frame_ctx[i].seg_pred_probs, default_seg_pred_probs);
             }
-        }else if(pic_param->pic_fields.bits.reset_frame_context == 2&&pic_param->pic_fields.bits.intra_only)
-        {
-            memcpy(&gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx],&gen9_hcpd_context->vp9_fc_inter_default,VP9_PROB_BUFFER_FIRST_PART_SIZE);
+        } else if (pic_param->pic_fields.bits.reset_frame_context == 2 && pic_param->pic_fields.bits.intra_only) {
+            memcpy(&gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx], &gen9_hcpd_context->vp9_fc_inter_default, VP9_PROB_BUFFER_FIRST_PART_SIZE);
         }
         pic_param->pic_fields.bits.frame_context_idx = 0;
     }
 
     //Case 3) Update only segment probabilities
-    if((pic_param->pic_fields.bits.segmentation_enabled &&
-        pic_param->pic_fields.bits.segmentation_update_map))
-    {
+    if ((pic_param->pic_fields.bits.segmentation_enabled &&
+         pic_param->pic_fields.bits.segmentation_update_map)) {
         //Update seg_tree_probs and seg_pred_probs accordingly
-        for (i=0; i<SEG_TREE_PROBS; i++)
-        {
+        for (i = 0; i < SEG_TREE_PROBS; i++) {
             gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx].seg_tree_probs[i] = pic_param->mb_segment_tree_probs[i];
         }
-        for (i=0; i<PREDICTION_PROBS; i++)
-        {
+        for (i = 0; i < PREDICTION_PROBS; i++) {
             gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx].seg_pred_probs[i] = pic_param->segment_pred_probs[i];
         }
     }
@@ -1185,17 +1165,16 @@ vp9_update_probabilities(VADriverContextP ctx,
         void *pfc = (void *)&gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx];
         void *pprob = NULL;
 
-        dri_bo_map(gen9_hcpd_context->vp9_probability_buffer.bo,1);
+        dri_bo_map(gen9_hcpd_context->vp9_probability_buffer.bo, 1);
 
         pprob = (void *)gen9_hcpd_context->vp9_probability_buffer.bo->virtual;
-        memcpy(pprob,pfc,2048);
+        memcpy(pprob, pfc, 2048);
         //only update 343bytes for key or intra_only frame
-        if(pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME ||
-            pic_param->pic_fields.bits.intra_only)
-        {
+        if (pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME ||
+            pic_param->pic_fields.bits.intra_only) {
             memcpy(pprob + VP9_PROB_BUFFER_FIRST_PART_SIZE - VP9_PROB_BUFFER_KEY_INTER_SIZE
-                    , gen9_hcpd_context->vp9_fc_key_default.inter_mode_probs
-                    , VP9_PROB_BUFFER_KEY_INTER_SIZE);
+                   , gen9_hcpd_context->vp9_fc_key_default.inter_mode_probs
+                   , VP9_PROB_BUFFER_KEY_INTER_SIZE);
         }
 
         dri_bo_unmap(gen9_hcpd_context->vp9_probability_buffer.bo);
@@ -1204,9 +1183,9 @@ vp9_update_probabilities(VADriverContextP ctx,
 
 static void
 gen9_hcpd_init_vp9_surface(VADriverContextP ctx,
-                            VADecPictureParameterBufferVP9 *pic_param,
-                            struct object_surface *obj_surface,
-                            struct gen9_hcpd_context *gen9_hcpd_context)
+                           VADecPictureParameterBufferVP9 *pic_param,
+                           struct object_surface *obj_surface,
+                           struct gen9_hcpd_context *gen9_hcpd_context)
 {
     GenVP9Surface *gen9_vp9_surface;
 
@@ -1230,14 +1209,14 @@ gen9_hcpd_init_vp9_surface(VADriverContextP ctx,
 
 static VAStatus
 gen9_hcpd_vp9_decode_init(VADriverContextP ctx,
-                           struct decode_state *decode_state,
-                           struct gen9_hcpd_context *gen9_hcpd_context)
+                          struct decode_state *decode_state,
+                          struct gen9_hcpd_context *gen9_hcpd_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VADecPictureParameterBufferVP9 *pic_param;
     struct object_surface *obj_surface;
     uint32_t size;
-    int width_in_mbs=0, height_in_mbs=0;
+    int width_in_mbs = 0, height_in_mbs = 0;
     int bit_depth_minus8 = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
@@ -1250,28 +1229,25 @@ gen9_hcpd_vp9_decode_init(VADriverContextP ctx,
     assert(width_in_mbs > 0 && width_in_mbs <= 256); /* 4K */
     assert(height_in_mbs > 0 && height_in_mbs <= 256);
 
-    if(!(i965->codec_info->vp9_dec_profiles & (1U<<pic_param->profile)))
+    if (!(i965->codec_info->vp9_dec_profiles & (1U << pic_param->profile)))
         return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
 
-    if(pic_param->profile >= 2)
-    {
-        if(pic_param->bit_depth >= 8)
+    if (pic_param->profile >= 2) {
+        if (pic_param->bit_depth >= 8)
             bit_depth_minus8 = pic_param->bit_depth - 8;
 
-        if(bit_depth_minus8 == 2)
-        {
-            if(!(i965->codec_info->vp9_dec_chroma_formats & VA_RT_FORMAT_YUV420_10BPP))
+        if (bit_depth_minus8 == 2) {
+            if (!(i965->codec_info->vp9_dec_chroma_formats & VA_RT_FORMAT_YUV420_10BPP))
                 return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
-        }
-        else if((bit_depth_minus8 > 2) || (bit_depth_minus8 == 1) || (bit_depth_minus8 < 0))
+        } else if ((bit_depth_minus8 > 2) || (bit_depth_minus8 == 1) || (bit_depth_minus8 < 0))
             return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
     }
 
     //Update the frame store buffers with the reference frames information
     intel_update_vp9_frame_store_index(ctx,
-                                        decode_state,
-                                        pic_param,
-                                        gen9_hcpd_context->reference_surfaces);
+                                       decode_state,
+                                       pic_param,
+                                       gen9_hcpd_context->reference_surfaces);
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
@@ -1296,37 +1272,37 @@ gen9_hcpd_vp9_decode_init(VADriverContextP ctx,
 
     gen9_hcpd_init_vp9_surface(ctx, pic_param, obj_surface, gen9_hcpd_context);
 
-    if(pic_param->profile >= 2)
-        size = gen9_hcpd_context->picture_width_in_ctbs*36; //num_width_in_SB * 36
+    if (pic_param->profile >= 2)
+        size = gen9_hcpd_context->picture_width_in_ctbs * 36; //num_width_in_SB * 36
     else
-        size = gen9_hcpd_context->picture_width_in_ctbs*18; //num_width_in_SB * 18
-    size<<=6;
+        size = gen9_hcpd_context->picture_width_in_ctbs * 18; //num_width_in_SB * 18
+    size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_line_buffer), "line buffer", size);
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_tile_line_buffer), "tile line buffer", size);
 
-    if(pic_param->profile >= 2)
-        size = gen9_hcpd_context->picture_height_in_ctbs*34; //num_height_in_SB * 17
+    if (pic_param->profile >= 2)
+        size = gen9_hcpd_context->picture_height_in_ctbs * 34; //num_height_in_SB * 17
     else
-        size = gen9_hcpd_context->picture_height_in_ctbs*17; //num_height_in_SB * 17
-    size<<=6;
+        size = gen9_hcpd_context->picture_height_in_ctbs * 17; //num_height_in_SB * 17
+    size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->deblocking_filter_tile_column_buffer), "tile column buffer", size);
 
-    size = gen9_hcpd_context->picture_width_in_ctbs*5; //num_width_in_SB * 5
-    size<<=6;
+    size = gen9_hcpd_context->picture_width_in_ctbs * 5; //num_width_in_SB * 5
+    size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_line_buffer), "metadata line buffer", size);
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_line_buffer), "metadata tile line buffer", size);
 
-    size = gen9_hcpd_context->picture_height_in_ctbs*5; //num_height_in_SB * 5
-    size<<=6;
+    size = gen9_hcpd_context->picture_height_in_ctbs * 5; //num_height_in_SB * 5
+    size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->metadata_tile_column_buffer), "metadata tile column buffer", size);
 
-    size =gen9_hcpd_context->picture_width_in_ctbs*1; //num_width_in_SB * 1
-    size<<=6;
+    size = gen9_hcpd_context->picture_width_in_ctbs * 1; //num_width_in_SB * 1
+    size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->hvd_line_rowstore_buffer), "hvd line rowstore buffer", size);
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->hvd_tile_rowstore_buffer), "hvd tile rowstore buffer", size);
 
     size = 32;
-    size<<=6;
+    size <<= 6;
     ALLOC_GEN_BUFFER((&gen9_hcpd_context->vp9_probability_buffer), "vp9 probability buffer", size);
 
     gen9_hcpd_context->first_inter_slice_collocated_ref_idx = 0;
@@ -1338,8 +1314,8 @@ gen9_hcpd_vp9_decode_init(VADriverContextP ctx,
 
 static void
 gen9_hcpd_vp9_surface_state(VADriverContextP ctx,
-                        struct decode_state *decode_state,
-                        struct gen9_hcpd_context *gen9_hcpd_context)
+                            struct decode_state *decode_state,
+                            struct gen9_hcpd_context *gen9_hcpd_context)
 {
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     struct object_surface *obj_surface = decode_state->render_object;
@@ -1358,38 +1334,35 @@ gen9_hcpd_vp9_surface_state(VADriverContextP ctx,
                   (0 << 28) |                   /* surface id */
                   (obj_surface->width - 1));    /* pitch - 1 */
     OUT_BCS_BATCH(batch,
-                  (((obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010: SURFACE_FORMAT_PLANAR_420_8) << 28) |
+                  (((obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010 : SURFACE_FORMAT_PLANAR_420_8) << 28) |
                   y_cb_offset);
     ADVANCE_BCS_BATCH(batch);
 
     tmp_obj_surface = obj_surface;
 
-    for(i = 0; i < 3; i++)
-    {
+    for (i = 0; i < 3; i++) {
         obj_surface = gen9_hcpd_context->reference_surfaces[i].obj_surface;
-        if (obj_surface && obj_surface->private_data)
-        {
+        if (obj_surface && obj_surface->private_data) {
             BEGIN_BCS_BATCH(batch, 3);
 
             OUT_BCS_BATCH(batch, HCP_SURFACE_STATE | (3 - 2));
             OUT_BCS_BATCH(batch,
-                ((i + 2) << 28) |                   /* surface id */
-                (obj_surface->width - 1));    /* pitch - 1 */
+                          ((i + 2) << 28) |                   /* surface id */
+                          (obj_surface->width - 1));    /* pitch - 1 */
             OUT_BCS_BATCH(batch,
-                (((obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010: SURFACE_FORMAT_PLANAR_420_8) << 28) |
-                obj_surface->y_cb_offset);
+                          (((obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010 : SURFACE_FORMAT_PLANAR_420_8) << 28) |
+                          obj_surface->y_cb_offset);
             ADVANCE_BCS_BATCH(batch);
-        }else
-        {
+        } else {
             BEGIN_BCS_BATCH(batch, 3);
 
             OUT_BCS_BATCH(batch, HCP_SURFACE_STATE | (3 - 2));
             OUT_BCS_BATCH(batch,
-                ((i + 2) << 28) |                   /* surface id */
-                (tmp_obj_surface->width - 1));    /* pitch - 1 */
+                          ((i + 2) << 28) |                   /* surface id */
+                          (tmp_obj_surface->width - 1));    /* pitch - 1 */
             OUT_BCS_BATCH(batch,
-                (((tmp_obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010: SURFACE_FORMAT_PLANAR_420_8) << 28) |
-                tmp_obj_surface->y_cb_offset);
+                          (((tmp_obj_surface->fourcc == VA_FOURCC_P010) ? SURFACE_FORMAT_P010 : SURFACE_FORMAT_PLANAR_420_8) << 28) |
+                          tmp_obj_surface->y_cb_offset);
             ADVANCE_BCS_BATCH(batch);
         }
     }
@@ -1397,13 +1370,13 @@ gen9_hcpd_vp9_surface_state(VADriverContextP ctx,
 
 static void
 gen9_hcpd_vp9_pipe_buf_addr_state(VADriverContextP ctx,
-                              struct decode_state *decode_state,
-                              struct gen9_hcpd_context *gen9_hcpd_context)
+                                  struct decode_state *decode_state,
+                                  struct gen9_hcpd_context *gen9_hcpd_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     struct object_surface *obj_surface;
-    int i=0;
+    int i = 0;
 
     BEGIN_BCS_BATCH(batch, 95);
 
@@ -1427,20 +1400,16 @@ gen9_hcpd_vp9_pipe_buf_addr_state(VADriverContextP ctx,
     OUT_BUFFER_MA_TARGET(NULL); /* DW 34..36, reserved */
 
     /* DW 37..52 - Reference picture address */
-    for (i = 0; i < 3; i++)
-    {
+    for (i = 0; i < 3; i++) {
         obj_surface = gen9_hcpd_context->reference_surfaces[i].obj_surface;
 
-        if (obj_surface)
-        {
+        if (obj_surface) {
             OUT_BUFFER_NMA_REFERENCE(obj_surface->bo);
-        }
-        else
+        } else
             OUT_BUFFER_NMA_REFERENCE(NULL);
     }
-    for (; i < ARRAY_ELEMS(gen9_hcpd_context->reference_surfaces); i++)
-    {
-       OUT_BUFFER_NMA_REFERENCE(NULL);
+    for (; i < ARRAY_ELEMS(gen9_hcpd_context->reference_surfaces); i++) {
+        OUT_BUFFER_NMA_REFERENCE(NULL);
     }
     OUT_BCS_BATCH(batch, 0);    /* DW 53, memory address attributes */
 
@@ -1450,12 +1419,10 @@ gen9_hcpd_vp9_pipe_buf_addr_state(VADriverContextP ctx,
     OUT_BUFFER_MA_TARGET(NULL); /* DW 63..65, Ignored */
 
     /* DW 66..81 - for 8 Collocated motion vectors */
-    for (i = 0; i < 1; i++)
-    {
+    for (i = 0; i < 1; i++) {
         OUT_BUFFER_NMA_REFERENCE(gen9_hcpd_context->vp9_mv_temporal_buffer_last.bo);
     }
-    for (; i < ARRAY_ELEMS(gen9_hcpd_context->reference_surfaces); i++)
-    {
+    for (; i < ARRAY_ELEMS(gen9_hcpd_context->reference_surfaces); i++) {
         OUT_BUFFER_NMA_REFERENCE(NULL);
     }
 
@@ -1471,16 +1438,17 @@ gen9_hcpd_vp9_pipe_buf_addr_state(VADriverContextP ctx,
 
 static inline int
 gen9_hcpd_vp9_valid_ref_frame_size(int ref_width, int ref_height,
-                                   int cur_width, int cur_height) {
-  return 2 * cur_width >= ref_width &&
-         2 * cur_height >= ref_height &&
-         cur_width <= 16 * ref_width &&
-         cur_height <= 16 * ref_height;
+                                   int cur_width, int cur_height)
+{
+    return 2 * cur_width >= ref_width &&
+           2 * cur_height >= ref_height &&
+           cur_width <= 16 * ref_width &&
+           cur_height <= 16 * ref_height;
 }
 static void
 gen9_hcpd_vp9_pic_state(VADriverContextP ctx,
-                       struct decode_state *decode_state,
-                       struct gen9_hcpd_context *gen9_hcpd_context)
+                        struct decode_state *decode_state,
+                        struct gen9_hcpd_context *gen9_hcpd_context)
 {
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     VADecPictureParameterBufferVP9 *pic_param;
@@ -1504,26 +1472,21 @@ gen9_hcpd_vp9_pic_state(VADriverContextP ctx,
 
     // For KEY_FRAME or INTRA_ONLY frame, this bit should be set to "0".
     uint8_t segmentation_temporal_update =
-    ((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) || (pic_param->pic_fields.bits.intra_only)) ? 0 : pic_param->pic_fields.bits.segmentation_temporal_update;
+        ((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) || (pic_param->pic_fields.bits.intra_only)) ? 0 : pic_param->pic_fields.bits.segmentation_temporal_update;
 
 
-    if(pic_param->pic_fields.bits.intra_only || (pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME))
-    {
+    if (pic_param->pic_fields.bits.intra_only || (pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME)) {
         segmentIDStreamInEnable = 1;
-    }else if(pic_param->pic_fields.bits.segmentation_enabled)
-    {
-        if(!pic_param->pic_fields.bits.segmentation_update_map)
-        {
+    } else if (pic_param->pic_fields.bits.segmentation_enabled) {
+        if (!pic_param->pic_fields.bits.segmentation_update_map) {
             segmentIDStreamInEnable = 1;
 
-        }else if( pic_param->pic_fields.bits.segmentation_temporal_update)
-        {
+        } else if (pic_param->pic_fields.bits.segmentation_temporal_update) {
             segmentIDStreamInEnable = 1;
         }
     }
 
-    if(pic_param->pic_fields.bits.error_resilient_mode)
-    {
+    if (pic_param->pic_fields.bits.error_resilient_mode) {
         segmentIDStreamInEnable = 1;
     }
 
@@ -1532,29 +1495,28 @@ gen9_hcpd_vp9_pic_state(VADriverContextP ctx,
 
     uint8_t use_pre_frame_mvs = 0;
     use_pre_frame_mvs = !((pic_param->pic_fields.bits.error_resilient_mode) ||
-                                (pic_param->frame_width != gen9_hcpd_context->last_frame.frame_width) ||
-                                (pic_param->frame_height != gen9_hcpd_context->last_frame.frame_height) ||
-                                (pic_param->pic_fields.bits.intra_only) ||
-                                (pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME)||
-                                (gen9_hcpd_context->last_frame.intra_only)||
-                                (last_frame_type == HCP_VP9_KEY_FRAME) ||
-                                (!gen9_hcpd_context->last_frame.show_frame));
+                          (pic_param->frame_width != gen9_hcpd_context->last_frame.frame_width) ||
+                          (pic_param->frame_height != gen9_hcpd_context->last_frame.frame_height) ||
+                          (pic_param->pic_fields.bits.intra_only) ||
+                          (pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||
+                          (gen9_hcpd_context->last_frame.intra_only) ||
+                          (last_frame_type == HCP_VP9_KEY_FRAME) ||
+                          (!gen9_hcpd_context->last_frame.show_frame));
 
     uint8_t adapt_probabilities_flag = 0;
-    if((pic_param->pic_fields.bits.error_resilient_mode || pic_param->pic_fields.bits.frame_parallel_decoding_mode))
+    if ((pic_param->pic_fields.bits.error_resilient_mode || pic_param->pic_fields.bits.frame_parallel_decoding_mode))
         adapt_probabilities_flag = 0; //0: Do not adapt (error resilient or frame_parallel_mode are set)
-    else if(!(pic_param->pic_fields.bits.error_resilient_mode) && !(pic_param->pic_fields.bits.frame_parallel_decoding_mode))
+    else if (!(pic_param->pic_fields.bits.error_resilient_mode) && !(pic_param->pic_fields.bits.frame_parallel_decoding_mode))
         adapt_probabilities_flag = 1; //1: Adapt (not error resilient and not frame_ parallel_mode)
 
     frame_width_in_pixel  = (gen9_hcpd_context->picture_width_in_min_cb_minus1  + 1) * gen9_hcpd_context->min_cb_size ;
     frame_height_in_pixel = (gen9_hcpd_context->picture_height_in_min_cb_minus1 + 1) * gen9_hcpd_context->min_cb_size ;
 
-    fwidth = (fwidth > frame_width_in_pixel)?frame_width_in_pixel:fwidth;
-    fheight = (fheight > frame_height_in_pixel)?frame_height_in_pixel:fheight;
+    fwidth = (fwidth > frame_width_in_pixel) ? frame_width_in_pixel : fwidth;
+    fheight = (fheight > frame_height_in_pixel) ? frame_height_in_pixel : fheight;
 
-    if(pic_param->profile >= 2)
-    {
-        if(pic_param->bit_depth >= 8)
+    if (pic_param->profile >= 2) {
+        if (pic_param->bit_depth >= 8)
             bit_depth_minus8 = pic_param->bit_depth - 8;
     }
 
@@ -1586,74 +1548,65 @@ gen9_hcpd_vp9_pic_state(VADriverContextP ctx,
                   pic_param->pic_fields.bits.last_ref_frame_sign_bias << 7 |
                   pic_param->pic_fields.bits.mcomp_filter_type << 4 |
                   pic_param->pic_fields.bits.allow_high_precision_mv << 3 |
-                  pic_param->pic_fields.bits.intra_only <<2 |
+                  pic_param->pic_fields.bits.intra_only << 2 |
                   adapt_probabilities_flag << 1 |
-                  pic_param->pic_fields.bits.frame_type <<0);               /* DW 2 */
+                  pic_param->pic_fields.bits.frame_type << 0);              /* DW 2 */
     OUT_BCS_BATCH(batch,
-        pic_param->profile << 28 |
-        bit_depth_minus8 << 24 |
-        0 << 22 | /* only support 4:2:0 */
-        pic_param->log2_tile_rows << 8 |
-        pic_param->log2_tile_columns <<0);                       /* DW 3 */
+                  pic_param->profile << 28 |
+                  bit_depth_minus8 << 24 |
+                  0 << 22 | /* only support 4:2:0 */
+                  pic_param->log2_tile_rows << 8 |
+                  pic_param->log2_tile_columns << 0);                      /* DW 3 */
     // resolution change case
 
     // DW4-DW6
-    for(i = 0; i < 3; i++)
-    {
+    for (i = 0; i < 3; i++) {
         obj_surface = gen9_hcpd_context->reference_surfaces[i].obj_surface;
         gen9_vp9_surface = NULL;
         scale_w = 0;
         scale_h = 0;
-        if (obj_surface && obj_surface->private_data)
-        {
+        if (obj_surface && obj_surface->private_data) {
             gen9_vp9_surface = obj_surface->private_data;
-            if(!gen9_hcpd_vp9_valid_ref_frame_size(gen9_vp9_surface->frame_width,gen9_vp9_surface->frame_height,pic_param->frame_width,pic_param->frame_height))
-            {
+            if (!gen9_hcpd_vp9_valid_ref_frame_size(gen9_vp9_surface->frame_width, gen9_vp9_surface->frame_height, pic_param->frame_width, pic_param->frame_height)) {
                 scale_w = -1;
                 scale_h = -1;
-            }else
-            {
-                scale_w = (gen9_vp9_surface->frame_width  << 14) /pic_param->frame_width ;
-                scale_h = (gen9_vp9_surface->frame_height << 14) /pic_param->frame_height ;
+            } else {
+                scale_w = (gen9_vp9_surface->frame_width  << 14) / pic_param->frame_width ;
+                scale_h = (gen9_vp9_surface->frame_height << 14) / pic_param->frame_height ;
             }
             OUT_BCS_BATCH(batch,
-                scale_w<<16 |
-                scale_h);
-        }else
-        {
+                          scale_w << 16 |
+                          scale_h);
+        } else {
             OUT_BCS_BATCH(batch, 0);
         }
     }
 
     // DW7-DW9
-    for(i = 0; i < 3; i++)
-    {
+    for (i = 0; i < 3; i++) {
         obj_surface = gen9_hcpd_context->reference_surfaces[i].obj_surface;
         gen9_vp9_surface = NULL;
 
-        if (obj_surface && obj_surface->private_data)
-        {
+        if (obj_surface && obj_surface->private_data) {
             gen9_vp9_surface = obj_surface->private_data;
             OUT_BCS_BATCH(batch,
-                ((gen9_vp9_surface->frame_height- 1)&0x3fff)<<16 |
-                ((gen9_vp9_surface->frame_width - 1)&0x3fff));
-        }else
-        {
+                          ((gen9_vp9_surface->frame_height - 1) & 0x3fff) << 16 |
+                          ((gen9_vp9_surface->frame_width - 1) & 0x3fff));
+        } else {
             OUT_BCS_BATCH(batch, 0);
         }
     }
 
     OUT_BCS_BATCH(batch,
                   pic_param->first_partition_size << 16 |
-                  pic_param->frame_header_length_in_bytes <<0); /* DW 10 */
+                  pic_param->frame_header_length_in_bytes << 0); /* DW 10 */
     OUT_BCS_BATCH(batch,
                   (0 << 3) |
                   (0 << 2) |
                   (1 << 1) |
                   (0 << 0)); /* DW 11, ignored */
     //Rest of the DWs are not valid for BXT
-    for(i = 12; i < LEN_COMMAND_OWN; i++)
-    {
+    for (i = 12; i < LEN_COMMAND_OWN; i++) {
         OUT_BCS_BATCH(batch, 0);
     }
 
@@ -1671,8 +1624,8 @@ gen9_hcpd_vp9_segment_state(VADriverContextP ctx,
 
     int segment_ref = seg_param->segment_flags.fields.segment_reference;
 
-    if((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME)
-            || (pic_param->pic_fields.bits.intra_only))
+    if ((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME)
+        || (pic_param->pic_fields.bits.intra_only))
         segment_ref = 0;
 
     BEGIN_BCS_BATCH(batch, 7);
@@ -1682,32 +1635,30 @@ gen9_hcpd_vp9_segment_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   seg_param->segment_flags.fields.segment_reference_enabled << 3 |
                   segment_ref << 1 |
-                  seg_param->segment_flags.fields.segment_reference_skipped <<0 ); /* DW 2 */
-    if(pic_param->filter_level)
-    {
+                  seg_param->segment_flags.fields.segment_reference_skipped << 0); /* DW 2 */
+    if (pic_param->filter_level) {
         OUT_BCS_BATCH(batch,
-            seg_param->filter_level[1][1] << 24    | //FilterLevelRef1Mode1
-            seg_param->filter_level[1][0] << 16    | //FilterLevelRef1Mode0
-            seg_param->filter_level[0][1] << 8     | //FilterLevelRef0Mode1
-            seg_param->filter_level[0][0] << 0 );     //FilterLevelRef0Mode0 /* DW 3 */
+                      seg_param->filter_level[1][1] << 24    | //FilterLevelRef1Mode1
+                      seg_param->filter_level[1][0] << 16    | //FilterLevelRef1Mode0
+                      seg_param->filter_level[0][1] << 8     | //FilterLevelRef0Mode1
+                      seg_param->filter_level[0][0] << 0);      //FilterLevelRef0Mode0 /* DW 3 */
         OUT_BCS_BATCH(batch,
-            seg_param->filter_level[3][1] << 24    | //FilterLevelRef3Mode1
-            seg_param->filter_level[3][0] << 16    | //FilterLevelRef3Mode0
-            seg_param->filter_level[2][1] << 8     | //FilterLevelRef2Mode1
-            seg_param->filter_level[2][0] << 0 );    //FilterLevelRef2Mode0 /* DW 4 */
-    }else
-    {
+                      seg_param->filter_level[3][1] << 24    | //FilterLevelRef3Mode1
+                      seg_param->filter_level[3][0] << 16    | //FilterLevelRef3Mode0
+                      seg_param->filter_level[2][1] << 8     | //FilterLevelRef2Mode1
+                      seg_param->filter_level[2][0] << 0);     //FilterLevelRef2Mode0 /* DW 4 */
+    } else {
         OUT_BCS_BATCH(batch,
-            0 );      /* DW 3 */
+                      0);       /* DW 3 */
         OUT_BCS_BATCH(batch,
-            0 );      /* DW 4 */
+                      0);       /* DW 4 */
     }
     OUT_BCS_BATCH(batch,
                   seg_param->luma_ac_quant_scale << 16   |
-                  seg_param->luma_dc_quant_scale << 0 );    /* DW 5 */
+                  seg_param->luma_dc_quant_scale << 0);     /* DW 5 */
     OUT_BCS_BATCH(batch,
                   seg_param->chroma_ac_quant_scale << 16 |
-                  seg_param->chroma_dc_quant_scale << 0 );  /* DW 6 */
+                  seg_param->chroma_dc_quant_scale << 0);   /* DW 6 */
 
     ADVANCE_BCS_BATCH(batch);
 
@@ -1715,9 +1666,9 @@ gen9_hcpd_vp9_segment_state(VADriverContextP ctx,
 
 static void
 gen9_hcpd_vp9_bsd_object(VADriverContextP ctx,
-                     VADecPictureParameterBufferVP9 *pic_param,
-                     VASliceParameterBufferVP9 *slice_param,
-                     struct gen9_hcpd_context *gen9_hcpd_context)
+                         VADecPictureParameterBufferVP9 *pic_param,
+                         VASliceParameterBufferVP9 *slice_param,
+                         struct gen9_hcpd_context *gen9_hcpd_context)
 {
     struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
     int slice_data_size   = slice_param->slice_data_size - pic_param->frame_header_length_in_bytes;
@@ -1727,7 +1678,7 @@ gen9_hcpd_vp9_bsd_object(VADriverContextP ctx,
 
     OUT_BCS_BATCH(batch, HCP_BSD_OBJECT | (3 - 2));
 
-    OUT_BCS_BATCH(batch, slice_data_size );
+    OUT_BCS_BATCH(batch, slice_data_size);
     OUT_BCS_BATCH(batch, slice_data_offset);
 
     ADVANCE_BCS_BATCH(batch);
@@ -1736,8 +1687,8 @@ gen9_hcpd_vp9_bsd_object(VADriverContextP ctx,
 
 static VAStatus
 gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
-                              struct decode_state *decode_state,
-                              struct gen9_hcpd_context *gen9_hcpd_context)
+                             struct decode_state *decode_state,
+                             struct gen9_hcpd_context *gen9_hcpd_context)
 {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -1747,15 +1698,14 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
     dri_bo *slice_data_bo;
     dri_bo *tmp_bo;
     uint16_t tmp;
-    int i = 0, num_segments=0;
+    int i = 0, num_segments = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     assert(decode_state->slice_params && decode_state->slice_params[0]->buffer);
     slice_param = (VASliceParameterBufferVP9 *)decode_state->slice_params[0]->buffer;
     pic_param = (VADecPictureParameterBufferVP9 *)decode_state->pic_param->buffer;
 
-    if(slice_param->slice_data_size == 1)
-    {
+    if (slice_param->slice_data_size == 1) {
         goto out;
     }
 
@@ -1789,12 +1739,12 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
     gen9_hcpd_vp9_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
     //If segmentation is disabled, only SegParam[0] is valid,
     //all others should be populated with 0
-    if(!pic_param->pic_fields.bits.segmentation_enabled)
+    if (!pic_param->pic_fields.bits.segmentation_enabled)
         num_segments = 1;
     else  //If segmentation is enabled, all 8 entries should be valid.
         num_segments = 8;
 
-    for(i=0; i<num_segments; i++) {
+    for (i = 0; i < num_segments; i++) {
         VASegmentParameterVP9 seg_param = slice_param->seg_param[i];
         gen9_hcpd_vp9_segment_state(ctx, pic_param, &seg_param, i, gen9_hcpd_context);
     }
@@ -1816,8 +1766,7 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
     gen9_hcpd_context->last_frame.intra_only = pic_param->pic_fields.bits.intra_only;
 
     // switch mv buffer
-    if(pic_param->pic_fields.bits.frame_type != HCP_VP9_KEY_FRAME)
-    {
+    if (pic_param->pic_fields.bits.frame_type != HCP_VP9_KEY_FRAME) {
         tmp_bo = gen9_hcpd_context->vp9_mv_temporal_buffer_last.bo;
         gen9_hcpd_context->vp9_mv_temporal_buffer_last.bo = gen9_hcpd_context->vp9_mv_temporal_buffer_curr.bo;
         gen9_hcpd_context->vp9_mv_temporal_buffer_curr.bo = tmp_bo;
@@ -1833,16 +1782,15 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
 
     }
     //update vp9_frame_ctx according to frame_context_id
-    if (pic_param->pic_fields.bits.refresh_frame_context)
-    {
+    if (pic_param->pic_fields.bits.refresh_frame_context) {
         void *pfc = (void *)&gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx];
         void *pprob = NULL;
 
         //update vp9_fc to frame_context
-        dri_bo_map(gen9_hcpd_context->vp9_probability_buffer.bo,1);
+        dri_bo_map(gen9_hcpd_context->vp9_probability_buffer.bo, 1);
         pprob = (void *)gen9_hcpd_context->vp9_probability_buffer.bo->virtual;
-        if(pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME||
-                pic_param->pic_fields.bits.intra_only)
+        if (pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME ||
+            pic_param->pic_fields.bits.intra_only)
             memcpy(pfc, pprob, VP9_PROB_BUFFER_FIRST_PART_SIZE - VP9_PROB_BUFFER_KEY_INTER_SIZE);
         else
             memcpy(pfc, pprob, VP9_PROB_BUFFER_FIRST_PART_SIZE);
@@ -1926,7 +1874,7 @@ gen9_hcpd_hevc_context_init(VADriverContextP ctx,
 
 static void
 gen9_hcpd_vp9_context_init(VADriverContextP ctx,
-                            struct gen9_hcpd_context *gen9_hcpd_context)
+                           struct gen9_hcpd_context *gen9_hcpd_context)
 {
 
     gen9_hcpd_context->last_frame.frame_height  = 0;

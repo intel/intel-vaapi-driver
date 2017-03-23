@@ -34,15 +34,13 @@
 init const table for scaling/sfd/curbe
 */
 
-const char gen9_avc_sfd_cost_table_p_frame[AVC_QP_MAX] =
-{
+const char gen9_avc_sfd_cost_table_p_frame[AVC_QP_MAX] = {
     44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 60, 60, 60, 60,
     73, 73, 73, 76, 76, 76, 88, 89, 89, 91, 92, 93, 104, 104, 106, 107, 108, 109, 120,
     120, 122, 123, 124, 125, 136, 136, 138, 139, 140, 141, 143, 143
 };
 
-const char gen9_avc_sfd_cost_table_b_frame[AVC_QP_MAX] =
-{
+const char gen9_avc_sfd_cost_table_b_frame[AVC_QP_MAX] = {
     57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 73, 73, 73, 73,
     77, 77, 77, 89, 89, 89, 91, 93, 93, 95, 105, 106, 107, 108, 110, 111, 121, 122,
     123, 124, 125, 127, 137, 138, 139, 140, 142, 143, 143, 143, 143, 143
@@ -51,8 +49,7 @@ const char gen9_avc_sfd_cost_table_b_frame[AVC_QP_MAX] =
 /*
 MBBRC const: mv mode cost  ,skip value,scaling factor
 */
-const unsigned int gen9_avc_old_intra_mode_cost[AVC_QP_MAX] =
-{
+const unsigned int gen9_avc_old_intra_mode_cost[AVC_QP_MAX] = {
     0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a,
     0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a, 0x1e03000a,
     0x2e06001a, 0x2e06001a, 0x2e06001a, 0x2e06001a, 0x3b09001f, 0x3b09001f, 0x3b09001f, 0x3e0c002a,
@@ -62,8 +59,7 @@ const unsigned int gen9_avc_old_intra_mode_cost[AVC_QP_MAX] =
     0x7e4c006a, 0x884e006b, 0x894f006d, 0x8a59006e
 };
 
-const unsigned int gen9_avc_mv_cost_p_skip_adjustment[AVC_QP_MAX] =
-{
+const unsigned int gen9_avc_mv_cost_p_skip_adjustment[AVC_QP_MAX] = {
     0x09060500, 0x09060500, 0x09060500, 0x09060500, 0x09060500, 0x09060500, 0x09060500, 0x09060500,
     0x09060500, 0x09060500, 0x09060500, 0x09060500, 0x09060500, 0x09060500, 0x09060500, 0x09060500,
     0x190c0a00, 0x190c0a00, 0x190c0a00, 0x190c0a00, 0x1e190f00, 0x1e190f00, 0x1e190f00, 0x291c1a00,
@@ -73,8 +69,7 @@ const unsigned int gen9_avc_mv_cost_p_skip_adjustment[AVC_QP_MAX] =
     0x695c5a00, 0x6a5e5b00, 0x6b5f5d00, 0x6d695e00
 };
 
-const unsigned short gen9_avc_skip_value_p[2][2][64] =
-{
+const unsigned short gen9_avc_skip_value_p[2][2][64] = {
     {
         // Block Based Skip = 0 and Transform Flag = 0
         {
@@ -127,8 +122,7 @@ const unsigned short gen9_avc_skip_value_p[2][2][64] =
     }
 };
 
-const unsigned short gen9_avc_skip_value_b[2][2][64] =
-{
+const unsigned short gen9_avc_skip_value_b[2][2][64] = {
     {
         // Block Based Skip = 0 and Transform Flag = 0
         {
@@ -180,8 +174,7 @@ const unsigned short gen9_avc_skip_value_b[2][2][64] =
 };
 
 // QP is from 0 - 51, pad it to 64 since BRC needs array size to be 64 bytes
-const unsigned char gen9_avc_adaptive_intra_scaling_factor[64] =
-{
+const unsigned char gen9_avc_adaptive_intra_scaling_factor[64] = {
     0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
     0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c, 0x0c,
     0x0c, 0x0c, 0x0d, 0x0d, 0x0d, 0x0d, 0x0e, 0x0e,
@@ -193,8 +186,7 @@ const unsigned char gen9_avc_adaptive_intra_scaling_factor[64] =
 };
 
 // QP is from 0 - 51, pad it to 64 since BRC needs array size to be 64 bytes
-const unsigned char gen9_avc_intra_scaling_factor[64] =
-{
+const unsigned char gen9_avc_intra_scaling_factor[64] = {
     0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c,
     0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x0c,
     0x0c, 0x0c, 0x0c, 0x0c, 0x0c, 0x10, 0x10, 0x10,
@@ -206,8 +198,7 @@ const unsigned char gen9_avc_intra_scaling_factor[64] =
 };
 
 // AVC MBEnc CURBE init data
-const unsigned int gen9_avc_mbenc_curbe_normal_i_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] =
-{
+const unsigned int gen9_avc_mbenc_curbe_normal_i_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] = {
     0x00000082, 0x00000000, 0x00003910, 0x00a83000, 0x00000000, 0x28300000, 0x05000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -222,8 +213,7 @@ const unsigned int gen9_avc_mbenc_curbe_normal_i_frame_init_data[GEN9_AVC_MBENC_
 };
 
 
-const unsigned int gen9_avc_mbenc_curbe_normal_p_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] =
-{
+const unsigned int gen9_avc_mbenc_curbe_normal_p_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] = {
     0x000000a3, 0x00000008, 0x00003910, 0x00ae3000, 0x30000000, 0x28300000, 0x05000000, 0x01400060,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -237,8 +227,7 @@ const unsigned int gen9_avc_mbenc_curbe_normal_p_frame_init_data[GEN9_AVC_MBENC_
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 };
 
-const unsigned int gen9_avc_mbenc_curbe_normal_b_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] =
-{
+const unsigned int gen9_avc_mbenc_curbe_normal_b_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] = {
     0x000000a3, 0x00200008, 0x00003910, 0x00aa7700, 0x50020000, 0x20200000, 0x05000000, 0xff400000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -253,8 +242,7 @@ const unsigned int gen9_avc_mbenc_curbe_normal_b_frame_init_data[GEN9_AVC_MBENC_
 };
 
 // AVC I_DIST CURBE init data
-const unsigned int gen9_avc_mbenc_curbe_i_frame_dist_init_data[GEN9_AVC_MBENC_CURBE_SIZE] =
-{
+const unsigned int gen9_avc_mbenc_curbe_i_frame_dist_init_data[GEN9_AVC_MBENC_CURBE_SIZE] = {
     0x00000082, 0x00200008, 0x001e3910, 0x00a83000, 0x90000000, 0x28300000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xff000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -269,8 +257,7 @@ const unsigned int gen9_avc_mbenc_curbe_i_frame_dist_init_data[GEN9_AVC_MBENC_CU
 };
 
 // AVC ME CURBE init data
-const unsigned int gen9_avc_me_curbe_init_data[39] =
-{
+const unsigned int gen9_avc_me_curbe_init_data[39] = {
     0x00000000, 0x00200010, 0x00003939, 0x77a43000, 0x00000000, 0x28300000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -282,8 +269,7 @@ const unsigned int gen9_avc_me_curbe_init_data[39] =
 ME cost table: mv/ref/mode
 */
 // AVC MBEnc ModeCost and MVCost tables, index [CodingType][QP] and
-const unsigned int gen75_avc_mode_mv_cost_table[3][52][8] =
-{
+const unsigned int gen75_avc_mode_mv_cost_table[3][52][8] = {
     // I-Frame
     {
         {0x1e03000a, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xff000000, 0x00000000, 0x00000000},
@@ -339,7 +325,7 @@ const unsigned int gen75_avc_mode_mv_cost_table[3][52][8] =
         {0x894f006d, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xff323232, 0x68680068, 0x68686868},
         {0x8a59006e, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xff333333, 0x73730073, 0x73737373},
     },
-        // P-Frame
+    // P-Frame
     {
         {0x391e1a07, 0x06040208, 0x00040005, 0x09050401, 0x0f0e0c0a, 0xff000000, 0x00000000, 0x00000000},
         {0x391e1a07, 0x06040208, 0x00040005, 0x09050401, 0x0f0e0c0a, 0xff010101, 0x00000000, 0x00000000},
@@ -394,7 +380,7 @@ const unsigned int gen75_avc_mode_mv_cost_table[3][52][8] =
         {0x8f897d69, 0x685c4d6b, 0x005a005e, 0x6b5d5a3a, 0x6f6f6f6d, 0xff323232, 0x68680068, 0x68686868},
         {0x8f8a7e6a, 0x695d4f6c, 0x005b0068, 0x6d5e5b3b, 0x6f6f6f6e, 0xff333333, 0x73730073, 0x73737373},
     },
-        // B-Frame
+    // B-Frame
     {
         {0x3a2a2907, 0x0a08060c, 0x00040206, 0x06020200, 0x180e0c0a, 0xff000000, 0x00000000, 0x00000000},
         {0x3a2a2907, 0x0a08060c, 0x00040206, 0x06020200, 0x180e0c0a, 0xff010101, 0x00000000, 0x00000000},
@@ -451,8 +437,7 @@ const unsigned int gen75_avc_mode_mv_cost_table[3][52][8] =
     }
 };
 
-const unsigned int gen9_avc_mode_mv_cost_table[3][52][8] =
-{
+const unsigned int gen9_avc_mode_mv_cost_table[3][52][8] = {
     // I-Frame
     {
         {0x0d000003, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xff000000, 0x00000000, 0x00000000},
@@ -508,7 +493,7 @@ const unsigned int gen9_avc_mode_mv_cost_table[3][52][8] =
         {0x8f68005f, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xff323232, 0x68680068, 0x68686868},
         {0x8f690068, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xff333333, 0x73730073, 0x73737373}
     },
-        // P-Frame
+    // P-Frame
     {
         {0x391e1a07, 0x06040208, 0x00040005, 0x09050401, 0x0f0e0c0a, 0xff000000, 0x00000000, 0x00000000},
         {0x391e1a07, 0x06040208, 0x00040005, 0x09050401, 0x0f0e0c0a, 0xff010101, 0x00000000, 0x00000000},
@@ -563,7 +548,7 @@ const unsigned int gen9_avc_mode_mv_cost_table[3][52][8] =
         {0x8f897d69, 0x685c4d6b, 0x005a005e, 0x6b5d5a3a, 0x6f6f6f6d, 0xff323232, 0x68680068, 0x68686868},
         {0x8f8a7e6a, 0x695d4f6c, 0x005b0068, 0x6d5e5b3b, 0x6f6f6f6e, 0xff333333, 0x73730073, 0x73737373}
     },
-        // B-Frame
+    // B-Frame
     {
         {0x3a2a2907, 0x0a08060c, 0x00040206, 0x06020200, 0x180e0c0a, 0xff000000, 0x00000000, 0x00000000},
         {0x3a2a2907, 0x0a08060c, 0x00040206, 0x06020200, 0x180e0c0a, 0xff010101, 0x00000000, 0x00000000},
@@ -619,8 +604,7 @@ const unsigned int gen9_avc_mode_mv_cost_table[3][52][8] =
         {0x8f8e8c6a, 0x6f6c6979, 0x005b4b69, 0x694b4b00, 0x6f6f6f6e, 0xff333333, 0x73730073, 0x73737373}
     }
 };
-const unsigned char gen75_avc_qp_adjustment_dist_threshold_max_frame_threshold_dist_qp_adjustment_ipb[576] =
-{
+const unsigned char gen75_avc_qp_adjustment_dist_threshold_max_frame_threshold_dist_qp_adjustment_ipb[576] = {
     0x01, 0x02, 0x03, 0x05, 0x06, 0x01, 0x01, 0x02, 0x03, 0x05, 0x00, 0x00, 0x01, 0x02, 0x03, 0xff,
     0x00, 0x00, 0x01, 0x02, 0xff, 0x00, 0x00, 0x00, 0x01, 0xfe, 0xfe, 0xff, 0x00, 0x01, 0xfd, 0xfd,
     0xff, 0xff, 0x00, 0xfb, 0xfd, 0xfe, 0xff, 0xff, 0xfa, 0xfb, 0xfd, 0xfe, 0xff, 0x00, 0x04, 0x1e,
@@ -659,8 +643,7 @@ const unsigned char gen75_avc_qp_adjustment_dist_threshold_max_frame_threshold_d
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-const unsigned char gen9_avc_qp_adjustment_dist_threshold_max_frame_threshold_dist_qp_adjustment_ipb[576] =
-{
+const unsigned char gen9_avc_qp_adjustment_dist_threshold_max_frame_threshold_dist_qp_adjustment_ipb[576] = {
     0x01, 0x02, 0x03, 0x05, 0x06, 0x01, 0x01, 0x02, 0x03, 0x05, 0x00, 0x00, 0x01, 0x02, 0x03, 0xff,
     0x00, 0x00, 0x01, 0x02, 0xff, 0x00, 0x00, 0x00, 0x01, 0xfe, 0xfe, 0xff, 0x00, 0x01, 0xfd, 0xfd,
     0xff, 0xff, 0x00, 0xfb, 0xfd, 0xfe, 0xff, 0xff, 0xfa, 0xfb, 0xfd, 0xfe, 0xff, 0x00, 0x04, 0x1e,
@@ -701,8 +684,7 @@ const unsigned char gen9_avc_qp_adjustment_dist_threshold_max_frame_threshold_di
 
 // SkipVal (DW offset 9) in the following table needs to be changed by Driver based on the BlockbasedSkip and Transform Flag.
 // Kernel indexes this table based on the MB QP.
-const unsigned int gen9_avc_mb_brc_const_data[3][AVC_QP_MAX][16] =
-{
+const unsigned int gen9_avc_mb_brc_const_data[3][AVC_QP_MAX][16] = {
     //I-slice
     {
         //ModeCOST(0), ModeCOST(1), ModeCOST(2), MVCOST(3),   MVCOST(4),   QP(5),       FTQ Thds(6), FTQ Thds(7), RefCost(8),  SkipVal(9),  IntraSF(10) ,Zero(11),  Zero(12),   Zero(13),   Zero(14) ,  Zero(15)
@@ -875,8 +857,7 @@ const unsigned int gen9_avc_mb_brc_const_data[3][AVC_QP_MAX][16] =
 
 // AVC MBEnc RefCost tables, index [CodingType][QP]
 // QP is from 0 - 51, pad it to 64 since BRC needs each subarray size to be 128bytes
-const unsigned short gen9_avc_ref_cost[3][64] =
-{
+const unsigned short gen9_avc_ref_cost[3][64] = {
     // I-frame
     {
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -909,202 +890,166 @@ const unsigned short gen9_avc_ref_cost[3][64] =
     }
 };
 
-const bool gen9_avc_mbbrc_enable[PRESET_NUM] =
-{
+const bool gen9_avc_mbbrc_enable[PRESET_NUM] = {
     false, true, true, false, false, false, false, false
 };
 
-const unsigned int gen9_avc_super_hme[PRESET_NUM] =
-{
+const unsigned int gen9_avc_super_hme[PRESET_NUM] = {
     0, 1, 1, 1, 1, 1, 1, 1
 };
 
-const unsigned int gen9_avc_ultra_hme[PRESET_NUM] =
-{
+const unsigned int gen9_avc_ultra_hme[PRESET_NUM] = {
     0, 1, 1, 1, 1, 1, 1, 0
 };
 
 // 1 for P, 3 for P & B
-const unsigned int gen9_avc_all_fractional[PRESET_NUM] =
-{
+const unsigned int gen9_avc_all_fractional[PRESET_NUM] = {
     0, 3, 3, 3, 3, 3, 3, 0
 };
 
-const unsigned char gen9_avc_max_ref_id0_progressive_4k[PRESET_NUM] =
-{
+const unsigned char gen9_avc_max_ref_id0_progressive_4k[PRESET_NUM] = {
     0, 3, 3, 2, 2, 2, 0, 0
 };
 
-const unsigned char gen9_avc_max_ref_id0[PRESET_NUM] =
-{
+const unsigned char gen9_avc_max_ref_id0[PRESET_NUM] = {
     0, 7, 5, 2, 2, 2, 0, 0
 };
 
-const unsigned char gen9_avc_max_b_ref_id0[PRESET_NUM] =
-{
+const unsigned char gen9_avc_max_b_ref_id0[PRESET_NUM] = {
     0, 3, 3, 1, 1, 1, 0, 0
 };
 
-const unsigned char gen9_avc_max_ref_id1[PRESET_NUM] =
-{
+const unsigned char gen9_avc_max_ref_id1[PRESET_NUM] = {
     0, 1, 1, 1, 1, 1, 0, 0
 };
 
-const unsigned int gen9_avc_inter_rounding_p[PRESET_NUM] =
-{
+const unsigned int gen9_avc_inter_rounding_p[PRESET_NUM] = {
     // gen9 and gen95
     0, 3, 3, 3, 3, 3, 3, 3
 };
 
-const unsigned int gen9_avc_inter_rounding_b_ref[PRESET_NUM] =
-{
+const unsigned int gen9_avc_inter_rounding_b_ref[PRESET_NUM] = {
     // gen9 and gen95
     0, 2, 2, 2, 2, 2, 2, 2
 };
 
-const unsigned int gen9_avc_inter_rounding_b[PRESET_NUM] =
-{
+const unsigned int gen9_avc_inter_rounding_b[PRESET_NUM] = {
     // gen9 and gen95
     0, 0, 0, 0, 0, 0, 0, 0
 };
 
 // This applies only for progressive pictures. For interlaced, CAF is currently not disabled.
-const unsigned int gen9_avc_disable_all_fractional_check_for_high_res[PRESET_NUM] =
-{
+const unsigned int gen9_avc_disable_all_fractional_check_for_high_res[PRESET_NUM] = {
     0, 0, 0, 1, 1, 1, 1, 1
 };
 
-const unsigned char gen9_avc_adaptive_inter_rounding_p[AVC_QP_MAX] =
-{
+const unsigned char gen9_avc_adaptive_inter_rounding_p[AVC_QP_MAX] = {
 //QP =  0   1   2   3   4   5   6   7   8   9   10  11  12
-        4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  //QP=[0~12]
-        4,  4,  4,  4,  4,  3,  3,  3,  3,  3,  3,  3,  3,  //QP=[13~25]
-        3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  //QP=[26~38]
-        3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3   //QP=[39~51]
+    4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  //QP=[0~12]
+    4,  4,  4,  4,  4,  3,  3,  3,  3,  3,  3,  3,  3,  //QP=[13~25]
+    3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  //QP=[26~38]
+    3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3   //QP=[39~51]
 };
 
-const unsigned char gen9_avc_adaptive_inter_rounding_b[AVC_QP_MAX] =
-{
+const unsigned char gen9_avc_adaptive_inter_rounding_b[AVC_QP_MAX] = {
 //QP =  0   1   2   3   4   5   6   7   8   9   10  11  12
-        4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  //QP=[0~12]
-        4,  3,  3,  3,  3,  3,  3,  0,  0,  0,  0,  0,  0,  //QP=[13~25]
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  //QP=[26~38]
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0   //QP=[39~51]
+    4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  //QP=[0~12]
+    4,  3,  3,  3,  3,  3,  3,  0,  0,  0,  0,  0,  0,  //QP=[13~25]
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  //QP=[26~38]
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0   //QP=[39~51]
 };
 
-const unsigned char gen9_avc_adaptive_inter_rounding_p_without_b[AVC_QP_MAX] =
-{
+const unsigned char gen9_avc_adaptive_inter_rounding_p_without_b[AVC_QP_MAX] = {
 //QP =  0   1   2   3   4   5   6   7   8   9   10  11  12
-        3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  //QP=[0~12]
-        3,  3,  3,  3,  3,  3,  3,  3,  1,  0,  0,  0,  0,  //QP=[13~25]
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  //QP=[26~38]
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0   //QP=[39~51]
+    3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  //QP=[0~12]
+    3,  3,  3,  3,  3,  3,  3,  3,  1,  0,  0,  0,  0,  //QP=[13~25]
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  //QP=[26~38]
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0   //QP=[39~51]
 };
 
-const unsigned int gen9_avc_trellis_quantization_enable[PRESET_NUM] =
-{
+const unsigned int gen9_avc_trellis_quantization_enable[PRESET_NUM] = {
     //gen9 and gen95
     0, 1, 0, 0, 0, 0, 0, 0
 };
 
-const unsigned int gen9_avc_trellis_quantization_rounding[PRESET_NUM] =
-{
+const unsigned int gen9_avc_trellis_quantization_rounding[PRESET_NUM] = {
     0, 6, 0, 0, 0, 0, 0, 0
 };
 
-const unsigned int gen9_avc_enable_adaptive_trellis_quantization[PRESET_NUM] =
-{
+const unsigned int gen9_avc_enable_adaptive_trellis_quantization[PRESET_NUM] = {
     //gen9 and gen95
     0, 1, 0, 0, 0, 0, 0, 0
 };
 
-const unsigned int gen9_avc_super_combine_dist[PRESET_NUM + 1] =
-{
+const unsigned int gen9_avc_super_combine_dist[PRESET_NUM + 1] = {
     0, 1, 1, 5, 5, 5, 9, 9, 0
 };
 
-const unsigned char gen9_avc_b_me_method[PRESET_NUM + 1] =
-{
+const unsigned char gen9_avc_b_me_method[PRESET_NUM + 1] = {
     0, 4, 4, 6, 6, 6, 6, 4, 7
 };
 
-const unsigned char gen9_avc_p_me_method[PRESET_NUM + 1] =
-{
+const unsigned char gen9_avc_p_me_method[PRESET_NUM + 1] = {
     0, 4, 4, 6, 6, 6, 6, 4, 7
 };
 
-const unsigned int gen9_avc_enable_adaptive_search[PRESET_NUM] =
-{
+const unsigned int gen9_avc_enable_adaptive_search[PRESET_NUM] = {
     0, 1, 1, 1, 1, 1, 0, 0
 };
 
-const unsigned int gen9_avc_max_len_sp[PRESET_NUM] =
-{
+const unsigned int gen9_avc_max_len_sp[PRESET_NUM] = {
     0, 57, 57, 25, 25, 25, 16, 9
 };
 
-const unsigned int gen9_avc_max_ftq_based_skip[PRESET_NUM] =
-{
+const unsigned int gen9_avc_max_ftq_based_skip[PRESET_NUM] = {
     0, 3, 3, 3, 3, 3, 3, 0
 };
 
-const unsigned int gen9_avc_mr_disable_qp_check[PRESET_NUM] =
-{
+const unsigned int gen9_avc_mr_disable_qp_check[PRESET_NUM] = {
     0, 1, 0, 0, 0, 0, 0, 0
 };
 
-const unsigned int gen9_avc_multi_pred[PRESET_NUM] =
-{
+const unsigned int gen9_avc_multi_pred[PRESET_NUM] = {
     0, 3, 3, 0, 0, 0, 0, 0
 };
 
-const unsigned int gen9_avc_hme_b_combine_len[PRESET_NUM] =
-{
+const unsigned int gen9_avc_hme_b_combine_len[PRESET_NUM] = {
     0, 8, 8, 8, 8, 8, 8, 8
 };
-const unsigned int gen9_avc_hme_combine_len[PRESET_NUM] =
-{
+const unsigned int gen9_avc_hme_combine_len[PRESET_NUM] = {
     0, 8, 8, 8, 8, 8, 16, 8
 };
 
-const unsigned int gen9_avc_search_x[PRESET_NUM] =
-{
+const unsigned int gen9_avc_search_x[PRESET_NUM] = {
     0, 48, 48, 48, 48, 48, 48, 28
 };
-const unsigned int gen9_avc_search_y[PRESET_NUM] =
-{
+const unsigned int gen9_avc_search_y[PRESET_NUM] = {
     0, 40, 40, 40, 40, 40, 40, 28
 };
 
-const unsigned int gen9_avc_b_search_x[PRESET_NUM] =
-{
+const unsigned int gen9_avc_b_search_x[PRESET_NUM] = {
     0, 32, 32, 32, 32, 32, 32, 24
 };
-const unsigned int gen9_avc_b_search_y[PRESET_NUM] =
-{
+const unsigned int gen9_avc_b_search_y[PRESET_NUM] = {
     0, 32, 32, 32, 32, 32, 32, 24
 };
 
-const unsigned char gen9_avc_enable_adaptive_tx_decision[PRESET_NUM] =
-{
+const unsigned char gen9_avc_enable_adaptive_tx_decision[PRESET_NUM] = {
     0, 1, 1, 1, 1, 1, 1, 0
 };
 
-const unsigned char gen9_avc_kernel_mode[PRESET_NUM] =
-{
+const unsigned char gen9_avc_kernel_mode[PRESET_NUM] = {
     1,  0,  0, 1, 1, 1, 1, 2
 };
 
 
 /* Gen95  */
-const unsigned int gen95_avc_trellis_quantization_rounding[PRESET_NUM] =
-{
+const unsigned int gen95_avc_trellis_quantization_rounding[PRESET_NUM] = {
     0, 3, 0, 0, 0, 0, 0, 0
 };
 
 // AVC MBEnc CURBE init data
-const unsigned int gen95_avc_mbenc_curbe_normal_i_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] =
-{
+const unsigned int gen95_avc_mbenc_curbe_normal_i_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] = {
     0x00000082, 0x00000000, 0x00003910, 0x00a83000, 0x00000000, 0x28300000, 0x05000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -1119,8 +1064,7 @@ const unsigned int gen95_avc_mbenc_curbe_normal_i_frame_init_data[GEN9_AVC_MBENC
 };
 
 
-const unsigned int gen95_avc_mbenc_curbe_normal_p_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] =
-{
+const unsigned int gen95_avc_mbenc_curbe_normal_p_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] = {
     0x000000a3, 0x00000008, 0x00003910, 0x00ae3000, 0x30000000, 0x28300000, 0x05000000, 0x01400060,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -1134,8 +1078,7 @@ const unsigned int gen95_avc_mbenc_curbe_normal_p_frame_init_data[GEN9_AVC_MBENC
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000
 };
 
-const unsigned int gen95_avc_mbenc_curbe_normal_b_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] =
-{
+const unsigned int gen95_avc_mbenc_curbe_normal_b_frame_init_data[GEN9_AVC_MBENC_CURBE_SIZE] = {
     0x000000a3, 0x00200008, 0x00003910, 0x00aa7700, 0x50020000, 0x20200000, 0x05000000, 0xff400000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -1150,8 +1093,7 @@ const unsigned int gen95_avc_mbenc_curbe_normal_b_frame_init_data[GEN9_AVC_MBENC
 };
 
 // AVC I_DIST CURBE init data
-const unsigned int gen95_avc_mbenc_curbe_i_frame_dist_init_data[GEN9_AVC_MBENC_CURBE_SIZE] =
-{
+const unsigned int gen95_avc_mbenc_curbe_i_frame_dist_init_data[GEN9_AVC_MBENC_CURBE_SIZE] = {
     0x00000082, 0x00200008, 0x001e3910, 0x00a83000, 0x90000000, 0x28300000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xff000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -1166,8 +1108,7 @@ const unsigned int gen95_avc_mbenc_curbe_i_frame_dist_init_data[GEN9_AVC_MBENC_C
 };
 
 // Lambda values for Trellis Quantization
-const unsigned int gen95_avc_tq_lambda_i_frame[AVC_QP_MAX][2] =
-{
+const unsigned int gen95_avc_tq_lambda_i_frame[AVC_QP_MAX][2] = {
     {0x00070000, 0x00060000},
     {0x00080000, 0x00080000},
     {0x000a0000, 0x00090000},
@@ -1224,8 +1165,7 @@ const unsigned int gen95_avc_tq_lambda_i_frame[AVC_QP_MAX][2] =
     {0xfffa0000, 0xfffa0000}
 };
 
-const unsigned int gen95_avc_tq_lambda_p_frame[AVC_QP_MAX][2] =
-{
+const unsigned int gen95_avc_tq_lambda_p_frame[AVC_QP_MAX][2] = {
     {0x00070009, 0x00060009},
     {0x0008000c, 0x0008000c},
     {0x000a000f, 0x0009000f},
@@ -1280,8 +1220,7 @@ const unsigned int gen95_avc_tq_lambda_p_frame[AVC_QP_MAX][2] =
     {0xfffaffef, 0xfffaffef}
 };
 
-const unsigned int gen95_avc_tq_lambda_b_frame[AVC_QP_MAX][2] =
-{
+const unsigned int gen95_avc_tq_lambda_b_frame[AVC_QP_MAX][2] = {
     {0x00070009, 0x00060009},
     {0x0008000c, 0x0008000c},
     {0x000a000f, 0x0009000f},
@@ -1337,26 +1276,25 @@ const unsigned int gen95_avc_tq_lambda_b_frame[AVC_QP_MAX][2] =
 };
 
 const unsigned short gen95_avc_lambda_data[256] = {
-     9,     7,     9,     6,    12,     8,    12,     8,    15,    10,    15,     9,    19,    13,    19,    12,    24,
+    9,     7,     9,     6,    12,     8,    12,     8,    15,    10,    15,     9,    19,    13,    19,    12,    24,
     17,    24,    15,    30,    21,    30,    19,    38,    27,    38,    24,    48,    34,    48,    31,    60,    43,
     60,    39,    76,    54,    76,    49,    96,    68,    96,    62,   121,    85,   121,    78,   153,   108,   153,
     99,   193,   135,   193,   125,   243,   171,   243,   157,   306,   215,   307,   199,   385,   271,   387,   251,
-   485,   342,   488,   317,   612,   431,   616,   400,   771,   543,   777,   505,   971,   684,   981,   638,  1224,
-   862,  1237,   806,  1542,  1086,  1562,  1018,  1991,  1402,  1971,  1287,  2534,  1785,  2488,  1626,  3077,  2167,
-  3141,  2054,  3982,  2805,  3966,  2596,  4887,  3442,  5007,  3281,  6154,  4335,  6322,  4148,  7783,  5482,  7984,
-  5243,  9774,  6885, 10082,  6629, 12489,  8797, 12733,  8382, 15566, 10965, 16082, 10599, 19729, 13897, 20313, 13404,
- 24797, 17467, 25660, 16954, 31313, 22057, 32415, 21445, 39458, 27795, 40953, 27129, 49594, 34935, 51742, 34323, 61440,
- 43987, 61440, 43428, 61440, 55462, 61440, 54954, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440,
- 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440,
- 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440,
- 61440, 61440, 61440, 61440,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-     0,
+    485,   342,   488,   317,   612,   431,   616,   400,   771,   543,   777,   505,   971,   684,   981,   638,  1224,
+    862,  1237,   806,  1542,  1086,  1562,  1018,  1991,  1402,  1971,  1287,  2534,  1785,  2488,  1626,  3077,  2167,
+    3141,  2054,  3982,  2805,  3966,  2596,  4887,  3442,  5007,  3281,  6154,  4335,  6322,  4148,  7783,  5482,  7984,
+    5243,  9774,  6885, 10082,  6629, 12489,  8797, 12733,  8382, 15566, 10965, 16082, 10599, 19729, 13897, 20313, 13404,
+    24797, 17467, 25660, 16954, 31313, 22057, 32415, 21445, 39458, 27795, 40953, 27129, 49594, 34935, 51742, 34323, 61440,
+    43987, 61440, 43428, 61440, 55462, 61440, 54954, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440,
+    61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440,
+    61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440, 61440,
+    61440, 61440, 61440, 61440,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+    0,
 };
 
-const unsigned char gen95_avc_ftq25[64] = //27 value 4 dummy
-{
+const unsigned char gen95_avc_ftq25[64] = { //27 value 4 dummy
     0,                                      //qp=0
     0, 0, 0, 0, 0, 0,                       //qp=1,2;3,4;5,6;
     1, 1, 3, 3, 6, 6, 8, 8, 11, 11,         //qp=7,8;9,10;11,12;13,14;15;16

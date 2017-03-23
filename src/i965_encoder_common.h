@@ -69,13 +69,12 @@ struct intel_encoder_context;
 
 #define INTEL_VME_MIN_ALLOWED_WIDTH_HEIGHT           48
 
-#define INTEL_ROI_NUM				     4
+#define INTEL_ROI_NUM                    4
 
 extern const unsigned int table_enc_search_path[2][8][16];
 
 // BRC Flag in BRC Init Kernel
-typedef enum _INTEL_ENCODE_BRCINIT_FLAG
-{
+typedef enum _INTEL_ENCODE_BRCINIT_FLAG {
     INTEL_ENCODE_BRCINIT_ISCBR                       = 0x0010,
     INTEL_ENCODE_BRCINIT_ISVBR                       = 0x0020,
     INTEL_ENCODE_BRCINIT_ISAVBR                      = 0x0040,
@@ -89,8 +88,7 @@ typedef enum _INTEL_ENCODE_BRCINIT_FLAG
 } INTEL_ENCODE_BRCINIT_FLAG;
 
 // BRC Flag in BRC Update Kernel
-typedef enum _INTEL_ENCODE_BRCUPDATE_FLAG
-{
+typedef enum _INTEL_ENCODE_BRCUPDATE_FLAG {
     INTEL_ENCODE_BRCUPDATE_IS_FIELD                  = 0x01,
     INTEL_ENCODE_BRCUPDATE_IS_MBAFF                  = (0x01 << 1),
     INTEL_ENCODE_BRCUPDATE_IS_BOTTOM_FIELD           = (0x01 << 2),
@@ -101,8 +99,7 @@ typedef enum _INTEL_ENCODE_BRCUPDATE_FLAG
 /*
 kernel operation related defines
 */
-typedef enum _INTEL_GENERIC_ENC_OPERATION
-{
+typedef enum _INTEL_GENERIC_ENC_OPERATION {
     INTEL_GENERIC_ENC_SCALING4X = 0,
     INTEL_GENERIC_ENC_SCALING2X,
     INTEL_GENERIC_ENC_ME,
@@ -114,8 +111,7 @@ typedef enum _INTEL_GENERIC_ENC_OPERATION
     INTEL_GENERIC_ENC_DYS
 } INTEL_GENERIC_ENC_OPERATION;
 
-typedef enum _INTEL_MEDIA_STATE_TYPE
-{
+typedef enum _INTEL_MEDIA_STATE_TYPE {
     INTEL_MEDIA_STATE_OLP                                = 0,
     INTEL_MEDIA_STATE_ENC_NORMAL                         = 1,
     INTEL_MEDIA_STATE_ENC_PERFORMANCE                    = 2,
@@ -137,7 +133,7 @@ typedef enum _INTEL_MEDIA_STATE_TYPE
     INTEL_MEDIA_STATE_32x32_PU_MODE_DECISION             = 24,
     INTEL_MEDIA_STATE_16x16_PU_SAD                       = 25,
     INTEL_MEDIA_STATE_16x16_PU_MODE_DECISION             = 26,
-    INTEL_MEDIA_STATE_8x8_PU	                         = 27,
+    INTEL_MEDIA_STATE_8x8_PU                             = 27,
     INTEL_MEDIA_STATE_8x8_PU_FMODE                       = 28,
     INTEL_MEDIA_STATE_32x32_B_INTRA_CHECK                = 29,
     INTEL_MEDIA_STATE_HEVC_B_MBENC                       = 30,
@@ -161,23 +157,20 @@ typedef enum _INTEL_MEDIA_STATE_TYPE
     INTEL_NUM_MEDIA_STATES                               = 61
 } INTEL_MEDIA_STATE_TYPE;
 
-typedef enum
-{
+typedef enum {
     INTEL_ROLLING_I_DISABLED  = 0,
     INTEL_ROLLING_I_COLUMN    = 1,
     INTEL_ROLLING_I_ROW       = 2,
     INTEL_ROLLING_I_SQUARE    = 3
 } INTEL_ROLLING_I_SETTING;
 
-struct encoder_kernel_parameter
-{
+struct encoder_kernel_parameter {
     unsigned int curbe_size;
     unsigned int inline_data_size;
     unsigned int sampler_size;
 };
 
-struct encoder_scoreboard_parameter
-{
+struct encoder_scoreboard_parameter {
     unsigned int mask;
     unsigned int type;
     unsigned int enable;
@@ -201,15 +194,13 @@ ME related defines
 #define GENERIC_BRC_FR          0x08
 #define GENERIC_BRC_FAILURE     (1 << 31)
 
-enum INTEL_ENC_KERNAL_MODE
-{
+enum INTEL_ENC_KERNAL_MODE {
     INTEL_ENC_KERNEL_QUALITY      = 0,
     INTEL_ENC_KERNEL_NORMAL,
     INTEL_ENC_KERNEL_PERFORMANCE
 };
 
-enum INTEL_ENC_PRESET_MODE
-{
+enum INTEL_ENC_PRESET_MODE {
     INTEL_PRESET_UNKNOWN         = 0,
     INTEL_PRESET_BEST_QUALITY    = 1,
     INTEL_PRESET_HI_QUALITY      = 2,
@@ -229,8 +220,7 @@ enum INTEL_ENC_PRESET_MODE
 */
 
 
-struct generic_encoder_context
-{
+struct generic_encoder_context {
     // kernel pointer
     void * enc_kernel_ptr;
     uint32_t enc_kernel_size;
@@ -409,34 +399,34 @@ struct generic_enc_codec_state {
     uint32_t downscaled_height_32x_in_mb;
 
     // ME related
-    uint32_t hme_supported:1;
-    uint32_t b16xme_supported:1;
-    uint32_t b32xme_supported:1;
-    uint32_t hme_enabled:1;
-    uint32_t b16xme_enabled:1;
-    uint32_t b32xme_enabled:1;
-    uint32_t brc_distortion_buffer_supported:1;
-    uint32_t brc_constant_buffer_supported:1;
-    uint32_t hme_reserved:24;
+    uint32_t hme_supported: 1;
+    uint32_t b16xme_supported: 1;
+    uint32_t b32xme_supported: 1;
+    uint32_t hme_enabled: 1;
+    uint32_t b16xme_enabled: 1;
+    uint32_t b32xme_enabled: 1;
+    uint32_t brc_distortion_buffer_supported: 1;
+    uint32_t brc_constant_buffer_supported: 1;
+    uint32_t hme_reserved: 24;
 
     //BRC related
     uint32_t frame_rate;
     uint32_t internal_rate_mode;
 
-    uint32_t brc_allocated:1;
-    uint32_t brc_inited:1;
-    uint32_t brc_need_reset:1;
-    uint32_t is_low_delay:1;
-    uint32_t brc_enabled:1;
-    uint32_t curr_pak_pass:4;
-    uint32_t num_pak_passes:4;
-    uint32_t is_first_pass:1;
-    uint32_t is_last_pass:1;
-    uint32_t mb_brc_enabled:1;
-    uint32_t brc_roi_enable:1;
-    uint32_t brc_dirty_roi_enable:1;
-    uint32_t skip_frame_enbale:1;
-    uint32_t brc_reserved:13;
+    uint32_t brc_allocated: 1;
+    uint32_t brc_inited: 1;
+    uint32_t brc_need_reset: 1;
+    uint32_t is_low_delay: 1;
+    uint32_t brc_enabled: 1;
+    uint32_t curr_pak_pass: 4;
+    uint32_t num_pak_passes: 4;
+    uint32_t is_first_pass: 1;
+    uint32_t is_last_pass: 1;
+    uint32_t mb_brc_enabled: 1;
+    uint32_t brc_roi_enable: 1;
+    uint32_t brc_dirty_roi_enable: 1;
+    uint32_t skip_frame_enbale: 1;
+    uint32_t brc_reserved: 13;
 
     uint32_t target_bit_rate;
     uint32_t max_bit_rate;

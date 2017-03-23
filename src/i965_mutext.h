@@ -38,10 +38,22 @@ _i965UnlockMutex(_I965Mutex *m)
 #else
 
 typedef int _I965Mutex;
-static INLINE void _i965InitMutex(_I965Mutex *m) { (void) m; }
-static INLINE void _i965DestroyMutex(_I965Mutex *m) { (void) m; }
-static INLINE void _i965LockMutex(_I965Mutex *m) { (void) m; }
-static INLINE void _i965UnlockMutex(_I965Mutex *m) { (void) m; }
+static INLINE void _i965InitMutex(_I965Mutex *m)
+{
+    (void) m;
+}
+static INLINE void _i965DestroyMutex(_I965Mutex *m)
+{
+    (void) m;
+}
+static INLINE void _i965LockMutex(_I965Mutex *m)
+{
+    (void) m;
+}
+static INLINE void _i965UnlockMutex(_I965Mutex *m)
+{
+    (void) m;
+}
 
 #define _I965_MUTEX_INITIALIZER 0
 #define _I965_DECLARE_MUTEX(m)                    \

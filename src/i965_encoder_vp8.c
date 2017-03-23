@@ -551,35 +551,35 @@ static const unsigned char diamond_vp8[56] = {
 
 static const unsigned short
 mv_ref_cost_context_vp8[6][4][2] = {
-    {{1328, 10},
-     {2047, 1},
-     {2047, 1},
-     {214, 304},
+    {   {1328, 10},
+        {2047, 1},
+        {2047, 1},
+        {214, 304},
     },
-    {{1072, 21},
-     {979, 27},
-     {1072, 21},
-     {321, 201},
+    {   {1072, 21},
+        {979, 27},
+        {1072, 21},
+        {321, 201},
     },
-    {{235, 278},
-     {511, 107},
-     {553, 93},
-     {488, 115},
+    {   {235, 278},
+        {511, 107},
+        {553, 93},
+        {488, 115},
     },
-    {{534, 99},
-     {560, 92},
-     {255, 257},
-     {505, 109},
+    {   {534, 99},
+        {560, 92},
+        {255, 257},
+        {505, 109},
     },
-    {{174, 361},
-     {238, 275},
-     {255, 257},
-     {744, 53},
+    {   {174, 361},
+        {238, 275},
+        {255, 257},
+        {744, 53},
     },
-    {{32, 922},
-     {113, 494},
-     {255, 257},
-     {816, 43},
+    {   {32, 922},
+        {113, 494},
+        {255, 257},
+        {816, 43},
     },
 };
 
@@ -1166,7 +1166,7 @@ brc_skip_mv_threshold_vp8[256] = {
     663,  672,  681,  689,  698,  707,  715,  724,  733,  741,  750,  758,  767,  776,  784,  793,
     802,  810,  819,  827,  836,  845,  853,  862,  871,  879,  888,  896,  905,  914,  922,  931,
     940,  948,  957,  965,  974,  983,  991, 1000, 1009, 1017, 1026, 1034, 1043, 1052, 1060, 1069,
-    1078,1086, 1095, 1103, 1112, 1121, 1129, 1138, 1147, 1155, 1164, 1172, 1181, 1190, 1198, 1208
+    1078, 1086, 1095, 1103, 1112, 1121, 1129, 1138, 1147, 1155, 1164, 1172, 1181, 1190, 1198, 1208
 };
 
 void
@@ -1420,7 +1420,7 @@ i965_encoder_vp8_gpe_context_init_once(VADriverContextP ctx,
     gpe_context->surface_state_binding_table.max_entries = MAX_VP8_ENCODER_SURFACES;
     gpe_context->surface_state_binding_table.binding_table_offset = 0;
     gpe_context->surface_state_binding_table.surface_state_offset = gpe_context->surface_state_binding_table.binding_table_offset +
-        ALIGN(MAX_VP8_ENCODER_SURFACES * 4, 64);
+                                                                    ALIGN(MAX_VP8_ENCODER_SURFACES * 4, 64);
     gpe_context->surface_state_binding_table.length = ALIGN(MAX_VP8_ENCODER_SURFACES * 4, 64) + ALIGN(MAX_VP8_ENCODER_SURFACES * SURFACE_STATE_PADDED_SIZE_GEN8, 64);
 
     if (i965->intel.eu_total > 0)
@@ -1857,7 +1857,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     unsigned int frame_size_in_mbs = vp8_context->frame_width_in_mbs *
-        vp8_context->frame_height_in_mbs;
+                                     vp8_context->frame_height_in_mbs;
 
     vp8_context->mv_offset = ALIGN((frame_size_in_mbs * 16 * 4), 4096);
     vp8_context->mb_coded_buffer_size = vp8_context->mv_offset + (frame_size_in_mbs * 16 * sizeof(unsigned int));
@@ -1869,7 +1869,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
     vp8_context->mb_mode_cost_luma_buffer.height = 1;
     vp8_context->mb_mode_cost_luma_buffer.pitch = vp8_context->mb_mode_cost_luma_buffer.width;
     vp8_context->mb_mode_cost_luma_buffer.size = vp8_context->mb_mode_cost_luma_buffer.pitch *
-        vp8_context->mb_mode_cost_luma_buffer.height;
+                                                 vp8_context->mb_mode_cost_luma_buffer.height;
     vp8_context->mb_mode_cost_luma_buffer.tiling = I915_TILING_NONE;
     i965_allocate_gpe_resource(i965->intel.bufmgr,
                                &vp8_context->mb_mode_cost_luma_buffer,
@@ -1881,7 +1881,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
     vp8_context->block_mode_cost_buffer.height = 1;
     vp8_context->block_mode_cost_buffer.pitch = vp8_context->block_mode_cost_buffer.width;
     vp8_context->block_mode_cost_buffer.size = vp8_context->block_mode_cost_buffer.pitch *
-        vp8_context->block_mode_cost_buffer.height;
+                                               vp8_context->block_mode_cost_buffer.height;
     vp8_context->block_mode_cost_buffer.tiling = I915_TILING_NONE;
     i965_allocate_gpe_resource(i965->intel.bufmgr,
                                &vp8_context->block_mode_cost_buffer,
@@ -1895,7 +1895,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
     vp8_context->per_mb_quant_data_buffer.height = vp8_context->frame_height_in_mbs;
     vp8_context->per_mb_quant_data_buffer.pitch = vp8_context->per_mb_quant_data_buffer.width;
     vp8_context->per_mb_quant_data_buffer.size = vp8_context->per_mb_quant_data_buffer.pitch *
-        vp8_context->per_mb_quant_data_buffer.height;
+                                                 vp8_context->per_mb_quant_data_buffer.height;
     vp8_context->per_mb_quant_data_buffer.tiling = I915_TILING_NONE;
     i965_allocate_gpe_resource(i965->intel.bufmgr,
                                &vp8_context->per_mb_quant_data_buffer,
@@ -1916,7 +1916,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
     vp8_context->brc_segment_map_buffer.height = vp8_context->frame_height_in_mbs;
     vp8_context->brc_segment_map_buffer.pitch = vp8_context->brc_segment_map_buffer.width;
     vp8_context->brc_segment_map_buffer.size = vp8_context->brc_segment_map_buffer.pitch *
-        vp8_context->brc_segment_map_buffer.height;
+                                               vp8_context->brc_segment_map_buffer.height;
     vp8_context->brc_segment_map_buffer.tiling = I915_TILING_NONE;
     i965_allocate_gpe_resource(i965->intel.bufmgr,
                                &vp8_context->brc_segment_map_buffer,
@@ -1928,7 +1928,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
     vp8_context->brc_distortion_buffer.height = 2 * ALIGN((vp8_context->down_scaled_height_in_mb4x * 4), 8);
     vp8_context->brc_distortion_buffer.pitch = vp8_context->brc_distortion_buffer.width;
     vp8_context->brc_distortion_buffer.size = vp8_context->brc_distortion_buffer.pitch *
-        vp8_context->brc_distortion_buffer.height;
+                                              vp8_context->brc_distortion_buffer.height;
     vp8_context->brc_distortion_buffer.tiling = I915_TILING_NONE;
     i965_allocate_gpe_resource(i965->intel.bufmgr,
                                &vp8_context->brc_distortion_buffer,
@@ -1956,7 +1956,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
     vp8_context->me_4x_mv_data_buffer.height = vp8_context->down_scaled_height_in_mb4x * 4 * 4;
     vp8_context->me_4x_mv_data_buffer.pitch = ALIGN(vp8_context->me_4x_mv_data_buffer.width, 64);
     vp8_context->me_4x_mv_data_buffer.size = vp8_context->me_4x_mv_data_buffer.pitch *
-        vp8_context->me_4x_mv_data_buffer.height;
+                                             vp8_context->me_4x_mv_data_buffer.height;
     vp8_context->me_4x_mv_data_buffer.tiling = I915_TILING_NONE;
     i965_allocate_gpe_resource(i965->intel.bufmgr,
                                &vp8_context->me_4x_mv_data_buffer,
@@ -1968,7 +1968,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
     vp8_context->me_4x_distortion_buffer.height = vp8_context->down_scaled_height_in_mb4x * 4 * 4;
     vp8_context->me_4x_distortion_buffer.pitch = ALIGN(vp8_context->me_4x_distortion_buffer.width, 64);
     vp8_context->me_4x_distortion_buffer.size = vp8_context->me_4x_distortion_buffer.pitch *
-        vp8_context->me_4x_distortion_buffer.height;
+                                                vp8_context->me_4x_distortion_buffer.height;
     vp8_context->me_4x_distortion_buffer.tiling = I915_TILING_NONE;
     i965_allocate_gpe_resource(i965->intel.bufmgr,
                                &vp8_context->me_4x_distortion_buffer,
@@ -1980,7 +1980,7 @@ i965_encoder_vp8_vme_allocate_resources(VADriverContextP ctx,
     vp8_context->me_16x_mv_data_buffer.height = vp8_context->down_scaled_height_in_mb16x * 4 * VP8_ME_MV_DATA_SIZE_MULTIPLIER;
     vp8_context->me_16x_mv_data_buffer.pitch = vp8_context->me_16x_mv_data_buffer.width;
     vp8_context->me_16x_mv_data_buffer.size = vp8_context->me_16x_mv_data_buffer.pitch *
-        vp8_context->me_16x_mv_data_buffer.height;
+                                              vp8_context->me_16x_mv_data_buffer.height;
     vp8_context->me_16x_mv_data_buffer.tiling = I915_TILING_NONE;
     i965_allocate_gpe_resource(i965->intel.bufmgr,
                                &vp8_context->me_16x_mv_data_buffer,
@@ -2342,7 +2342,7 @@ i965_encoder_vp8_vme_gpe_kernel_init(VADriverContextP ctx,
      * the dynamic state buffer,
      */
     ds_param.bo_size = ALIGN(MAX(sizeof(struct vp8_mbenc_i_frame_curbe_data), sizeof(struct vp8_mbenc_p_frame_curbe_data)), 64) +
-        vp8_context->idrt_entry_size * 2;
+                       vp8_context->idrt_entry_size * 2;
     mbenc_context->luma_chroma_dynamic_buffer = dri_bo_alloc(i965->intel.bufmgr,
                                                              "IFrame Luma & CHROMA curbe buffer",
                                                              ds_param.bo_size,
@@ -3243,58 +3243,58 @@ i965_encoder_vp8_vme_mbenc_set_i_frame_curbe(VADriverContextP ctx,
 
     QUANT_INDEX(uv_quanta_dc_idx, 0, 1);
     pcmd->dw14.chroma_dc_threshold0_segment0 = (((1) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-        ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                               ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
     pcmd->dw14.chroma_dc_threshold1_segment0 = (((2) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-        ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                               ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
     pcmd->dw15.chroma_dc_threshold2_segment0 = (((3) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-        ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                               ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
     pcmd->dw15.chroma_dc_threshold3_segment0 = (((4) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-        ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                               ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
 
     if (segmentation_enabled) {
         QUANT_INDEX(uv_quanta_dc_idx, 1, 1);
         pcmd->dw16.chroma_dc_threshold0_segment1 = (((1) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw16.chroma_dc_threshold1_segment1 = (((2) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw17.chroma_dc_threshold2_segment1 = (((3) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw17.chroma_dc_threshold3_segment1 = (((4) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
 
         QUANT_INDEX(uv_quanta_dc_idx, 2, 1);
         pcmd->dw18.chroma_dc_threshold0_segment2 = (((1) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw18.chroma_dc_threshold1_segment2 = (((2) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw19.chroma_dc_threshold2_segment2 = (((3) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw19.chroma_dc_threshold3_segment2 = (((4) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
 
         QUANT_INDEX(uv_quanta_dc_idx, 3, 1);
         pcmd->dw20.chroma_dc_threshold0_segment3 = (((1) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw20.chroma_dc_threshold1_segment3 = (((2) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw21.chroma_dc_threshold2_segment3 = (((3) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
         pcmd->dw21.chroma_dc_threshold3_segment3 = (((4) << 16) - 1) / ((1 << 16) / quant_dc_vp8[uv_quanta_dc_idx]) -
-            ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
+                                                   ((48 * quant_dc_vp8[uv_quanta_dc_idx]) >> 7);
     }
 
     QUANT_INDEX(uv_quanta_ac_idx, 0, 2);
     pcmd->dw22.chroma_ac1_threshold_segment0 = ((1 << (16)) - 1) / ((1 << 16) / quant_ac_vp8[uv_quanta_ac_idx]) -
-        ((48 * quant_ac_vp8[uv_quanta_ac_idx]) >> 7);
+                                               ((48 * quant_ac_vp8[uv_quanta_ac_idx]) >> 7);
 
     if (segmentation_enabled) {
         QUANT_INDEX(uv_quanta_ac_idx, 1, 2);
         pcmd->dw22.chroma_ac1_threshold_segment1 = ((1 << (16)) - 1) / ((1 << 16) / quant_ac_vp8[uv_quanta_ac_idx]) -
-            ((48 * quant_ac_vp8[uv_quanta_ac_idx]) >> 7);
+                                                   ((48 * quant_ac_vp8[uv_quanta_ac_idx]) >> 7);
 
         QUANT_INDEX(uv_quanta_ac_idx, 2, 2);
         pcmd->dw23.chroma_ac1_threshold_segment2 = ((1 << (16)) - 1) / ((1 << 16) / quant_ac_vp8[uv_quanta_ac_idx]) -
-            ((48 * quant_ac_vp8[uv_quanta_ac_idx]) >> 7);
+                                                   ((48 * quant_ac_vp8[uv_quanta_ac_idx]) >> 7);
 
         QUANT_INDEX(uv_quanta_ac_idx, 3, 2);
         pcmd->dw23.chroma_ac1_threshold_segment3 =
@@ -3372,9 +3372,9 @@ i965_encoder_vp8_vme_mbenc_set_p_frame_curbe(VADriverContextP ctx,
     pcmd->dw0.frame_width = vp8_context->frame_width;
     pcmd->dw0.frame_height = vp8_context->frame_height;
 
-    pcmd->dw1.frame_type = 1;	// P-frame
+    pcmd->dw1.frame_type = 1;   // P-frame
     pcmd->dw1.multiple_pred = (encoder_context->quality_level == ENCODER_DEFAULT_QUALITY) ? 1 :
-        ((encoder_context->quality_level == ENCODER_LOW_QUALITY) ? 0 : 2);
+                              ((encoder_context->quality_level == ENCODER_LOW_QUALITY) ? 0 : 2);
     pcmd->dw1.hme_enable = vp8_context->hme_enabled;
     pcmd->dw1.hme_combine_overlap = 1;
     pcmd->dw1.enable_temporal_scalability = 0;
@@ -3403,7 +3403,7 @@ i965_encoder_vp8_vme_mbenc_set_p_frame_curbe(VADriverContextP ctx,
     pcmd->dw6.reference_frame_sign_bias_0 = 0;
 
     pcmd->dw7.raw_dist_threshold = (encoder_context->quality_level == ENCODER_DEFAULT_QUALITY) ? 50 :
-        ((encoder_context->quality_level == ENCODER_LOW_QUALITY) ? 0 : 100);
+                                   ((encoder_context->quality_level == ENCODER_LOW_QUALITY) ? 0 : 100);
     pcmd->dw7.temporal_layer_id = 0;
 
     pcmd->dw8.early_ime_successful_stop_threshold = 0;
@@ -3420,7 +3420,7 @@ i965_encoder_vp8_vme_mbenc_set_p_frame_curbe(VADriverContextP ctx,
     pcmd->dw9.max_num_of_motion_vectors = 0;
 
     pcmd->dw10.max_fixed_search_path_length = (encoder_context->quality_level == ENCODER_DEFAULT_QUALITY) ? 25 :
-        ((encoder_context->quality_level == ENCODER_LOW_QUALITY) ? 9 : 57);
+                                              ((encoder_context->quality_level == ENCODER_LOW_QUALITY) ? 9 : 57);
     pcmd->dw10.maximum_search_path_length = 57;
 
     pcmd->dw11.submacro_block_subPartition_mask = 0;
@@ -4068,7 +4068,7 @@ i965_encoder_vp8_vme_brc_update_set_curbe(VADriverContextP ctx,
     pcmd->dw2.picture_header_size = 0;
 
     pcmd->dw3.start_global_adjust_frame0 = 10;
-    pcmd->dw3.start_global_adjust_frame1= 50;
+    pcmd->dw3.start_global_adjust_frame1 = 50;
 
     pcmd->dw4.start_global_adjust_frame2 = 100;
     pcmd->dw4.start_global_adjust_frame3 = 150;
@@ -5293,7 +5293,9 @@ i965_encoder_vp8_vme_var_init(VADriverContextP ctx,
     vp8_context->hme_16x_enabled = 0;
     vp8_context->brc_initted = 0;
     vp8_context->frame_num = 0;
-    vp8_context->framerate = (struct intel_fraction) { 30, 1 };
+    vp8_context->framerate = (struct intel_fraction) {
+        30, 1
+    };
 
     return True;
 }
@@ -5390,7 +5392,7 @@ i965_encoder_vp8_pak_context_destroy(void *context)
     dri_bo_unreference(vp8_context->indirect_pak_bse_object.bo);
     vp8_context->indirect_pak_bse_object.bo = NULL;
 
-    for (i = 0; i < MAX_MFX_REFERENCE_SURFACES; i++){
+    for (i = 0; i < MAX_MFX_REFERENCE_SURFACES; i++) {
         dri_bo_unreference(vp8_context->reference_surfaces[i].bo);
         vp8_context->reference_surfaces[i].bo = NULL;
     }
@@ -5446,7 +5448,7 @@ i965_encoder_vp8_pak_surface_state(VADriverContextP ctx,
                   (1 << 1)  | /* must be tiled */
                   (I965_TILEWALK_YMAJOR << 0));  /* tile walk, TILEWALK_YMAJOR */
     OUT_BCS_BATCH(batch,
-                  (0 << 16) | 			 /* must be 0 for interleave U/V */
+                  (0 << 16) |            /* must be 0 for interleave U/V */
                   (obj_surface->height));        /* y offset for U(cb) */
     OUT_BCS_BATCH(batch, 0);
 
@@ -5798,7 +5800,7 @@ i965_encoder_vp8_pak_slice_level(VADriverContextP ctx,
     } else {
         if ((brc_enabled) &&
             ((vp8_context->curr_pass < vp8_context->num_passes && vp8_context->repak_pass_iter_val > 0) ||
-             (vp8_context->curr_pass <= vp8_context->num_passes && vp8_context->repak_pass_iter_val == 0))){
+             (vp8_context->curr_pass <= vp8_context->num_passes && vp8_context->repak_pass_iter_val == 0))) {
             i965_encoder_vp8_pak_slice_level_brc(ctx, encoder_context, vp8_context->curr_pass);
 
             if (vp8_context->tpu_required)

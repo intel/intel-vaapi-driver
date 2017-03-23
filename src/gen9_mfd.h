@@ -38,8 +38,7 @@
 
 struct hw_context;
 
-typedef struct vp9_frame_status
-{
+typedef struct vp9_frame_status {
     uint16_t frame_width;
     uint16_t frame_height;
     uint8_t frame_type;
@@ -49,17 +48,15 @@ typedef struct vp9_frame_status
     uint8_t intra_only;
     uint8_t prob_buffer_saved_flag;
     uint8_t prob_buffer_restored_flag;
-}vp9_last_frame_status;
+} vp9_last_frame_status;
 
-typedef struct vp9_mv_temporal_buffer
-{
+typedef struct vp9_mv_temporal_buffer {
     dri_bo *bo;
     uint16_t frame_width;
     uint16_t frame_height;
-}VP9_MV_BUFFER;
+} VP9_MV_BUFFER;
 
-struct gen9_hcpd_context
-{
+struct gen9_hcpd_context {
     struct hw_context base;
 
     GenFrameStoreContext fs_ctx;

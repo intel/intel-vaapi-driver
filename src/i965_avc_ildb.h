@@ -40,8 +40,7 @@
 #define EDGE_CONTROL_DATA_IN_DWS        16
 #define EDGE_CONTROL_DATA_IN_BTYES      64
 
-struct i965_avc_ildb_context
-{
+struct i965_avc_ildb_context {
     struct {
         dri_bo *bo;
     } curbe;

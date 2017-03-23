@@ -97,63 +97,63 @@ typedef uint8_t vp9_prob;
 }
 
 struct tx_probs {
-  vp9_prob p8x8[TX_SIZE_CONTEXTS][TX_SIZES - 3];
-  vp9_prob p16x16[TX_SIZE_CONTEXTS][TX_SIZES - 2];
-  vp9_prob p32x32[TX_SIZE_CONTEXTS][TX_SIZES - 1];
+    vp9_prob p8x8[TX_SIZE_CONTEXTS][TX_SIZES - 3];
+    vp9_prob p16x16[TX_SIZE_CONTEXTS][TX_SIZES - 2];
+    vp9_prob p32x32[TX_SIZE_CONTEXTS][TX_SIZES - 1];
 };
 
 struct tx_counts {
-  unsigned int p32x32[TX_SIZE_CONTEXTS][TX_SIZES];
-  unsigned int p16x16[TX_SIZE_CONTEXTS][TX_SIZES - 1];
-  unsigned int p8x8[TX_SIZE_CONTEXTS][TX_SIZES - 2];
-  unsigned int tx_totals[TX_SIZES];
+    unsigned int p32x32[TX_SIZE_CONTEXTS][TX_SIZES];
+    unsigned int p16x16[TX_SIZE_CONTEXTS][TX_SIZES - 1];
+    unsigned int p8x8[TX_SIZE_CONTEXTS][TX_SIZES - 2];
+    unsigned int tx_totals[TX_SIZES];
 };
 
 typedef struct {
-  vp9_prob sign;
-  vp9_prob classes[MV_CLASSES - 1];
-  vp9_prob class0[CLASS0_SIZE - 1];
-  vp9_prob bits[MV_OFFSET_BITS];
+    vp9_prob sign;
+    vp9_prob classes[MV_CLASSES - 1];
+    vp9_prob class0[CLASS0_SIZE - 1];
+    vp9_prob bits[MV_OFFSET_BITS];
 } nmv_component;
 
 //Modified the nmv_context from libvpx to suit our HW needs
 typedef struct {
-  vp9_prob joints[MV_JOINTS-1];
-  nmv_component comps[2];
-  vp9_prob class0_fp0[CLASS0_SIZE][MV_FP_SIZE - 1];
-  vp9_prob fp0[MV_FP_SIZE - 1];
-  vp9_prob class0_fp1[CLASS0_SIZE][MV_FP_SIZE - 1];
-  vp9_prob fp1[MV_FP_SIZE - 1];
-  vp9_prob class0_hp[2];
-  vp9_prob hp[2];
+    vp9_prob joints[MV_JOINTS - 1];
+    nmv_component comps[2];
+    vp9_prob class0_fp0[CLASS0_SIZE][MV_FP_SIZE - 1];
+    vp9_prob fp0[MV_FP_SIZE - 1];
+    vp9_prob class0_fp1[CLASS0_SIZE][MV_FP_SIZE - 1];
+    vp9_prob fp1[MV_FP_SIZE - 1];
+    vp9_prob class0_hp[2];
+    vp9_prob hp[2];
 } nmv_context;
 
 //Modified the FRAME_CONTEXT from libvpx to suit our HW needs
 typedef struct frame_contexts {
-  struct tx_probs tx_probs;
-  vp9_prob dummy1[52];
-  vp9_prob coeff_probs4x4[COEFF_PROB_SIZE][COEFF_PROB_NUM];
-  vp9_prob coeff_probs8x8[COEFF_PROB_SIZE][COEFF_PROB_NUM];
-  vp9_prob coeff_probs16x16[COEFF_PROB_SIZE][COEFF_PROB_NUM];
-  vp9_prob coeff_probs32x32[COEFF_PROB_SIZE][COEFF_PROB_NUM];
-  vp9_prob dummy2[16];
-  vp9_prob skip_probs[SKIP_CONTEXTS];
-  vp9_prob inter_mode_probs[INTER_MODE_CONTEXTS][INTER_MODES - 1];
-  vp9_prob switchable_interp_prob[SWITCHABLE_FILTER_CONTEXTS]
-                                 [SWITCHABLE_FILTERS - 1];
-  vp9_prob intra_inter_prob[INTRA_INTER_CONTEXTS];
-  vp9_prob comp_inter_prob[COMP_INTER_CONTEXTS];
-  vp9_prob single_ref_prob[REF_CONTEXTS][2];
-  vp9_prob comp_ref_prob[REF_CONTEXTS];
-  vp9_prob y_mode_prob[BLOCK_SIZE_GROUPS][INTRA_MODES - 1];
-  vp9_prob partition_prob[PARTITION_CONTEXTS][PARTITION_TYPES - 1];
-  nmv_context nmvc;
-  vp9_prob dummy3[47];
-  vp9_prob uv_mode_prob[INTRA_MODES][INTRA_MODES - 1];
-  vp9_prob seg_tree_probs[SEG_TREE_PROBS];
-  vp9_prob seg_pred_probs[PREDICTION_PROBS];
-  vp9_prob dummy4[28];
-  int initialized;
+    struct tx_probs tx_probs;
+    vp9_prob dummy1[52];
+    vp9_prob coeff_probs4x4[COEFF_PROB_SIZE][COEFF_PROB_NUM];
+    vp9_prob coeff_probs8x8[COEFF_PROB_SIZE][COEFF_PROB_NUM];
+    vp9_prob coeff_probs16x16[COEFF_PROB_SIZE][COEFF_PROB_NUM];
+    vp9_prob coeff_probs32x32[COEFF_PROB_SIZE][COEFF_PROB_NUM];
+    vp9_prob dummy2[16];
+    vp9_prob skip_probs[SKIP_CONTEXTS];
+    vp9_prob inter_mode_probs[INTER_MODE_CONTEXTS][INTER_MODES - 1];
+    vp9_prob switchable_interp_prob[SWITCHABLE_FILTER_CONTEXTS]
+    [SWITCHABLE_FILTERS - 1];
+    vp9_prob intra_inter_prob[INTRA_INTER_CONTEXTS];
+    vp9_prob comp_inter_prob[COMP_INTER_CONTEXTS];
+    vp9_prob single_ref_prob[REF_CONTEXTS][2];
+    vp9_prob comp_ref_prob[REF_CONTEXTS];
+    vp9_prob y_mode_prob[BLOCK_SIZE_GROUPS][INTRA_MODES - 1];
+    vp9_prob partition_prob[PARTITION_CONTEXTS][PARTITION_TYPES - 1];
+    nmv_context nmvc;
+    vp9_prob dummy3[47];
+    vp9_prob uv_mode_prob[INTRA_MODES][INTRA_MODES - 1];
+    vp9_prob seg_tree_probs[SEG_TREE_PROBS];
+    vp9_prob seg_pred_probs[PREDICTION_PROBS];
+    vp9_prob dummy4[28];
+    int initialized;
 } FRAME_CONTEXT;
 
 
@@ -162,10 +162,10 @@ extern struct tx_probs default_tx_probs;
 extern vp9_prob default_skip_probs[SKIP_CONTEXTS];
 
 extern vp9_prob default_inter_mode_probs[INTER_MODE_CONTEXTS]
-                                        [INTER_MODES - 1];
+[INTER_MODES - 1];
 
 extern vp9_prob default_switchable_interp_prob[SWITCHABLE_FILTER_CONTEXTS]
-                                              [SWITCHABLE_FILTERS - 1];
+[SWITCHABLE_FILTERS - 1];
 
 extern vp9_prob default_intra_inter_p[INTRA_INTER_CONTEXTS];
 
@@ -186,10 +186,10 @@ extern vp9_prob default_seg_tree_probs[SEG_TREE_PROBS];
 extern vp9_prob default_seg_pred_probs[PREDICTION_PROBS];
 
 extern vp9_prob vp9_kf_partition_probs[PARTITION_CONTEXTS]
-                                      [PARTITION_TYPES - 1];
+[PARTITION_TYPES - 1];
 
 extern vp9_prob default_partition_probs[PARTITION_CONTEXTS]
-                                       [PARTITION_TYPES - 1];
+[PARTITION_TYPES - 1];
 
 extern nmv_context default_nmv_context;
 

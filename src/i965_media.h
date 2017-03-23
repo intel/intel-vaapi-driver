@@ -42,8 +42,7 @@
 
 struct decode_state;
 
-struct i965_media_context
-{
+struct i965_media_context {
     struct hw_context base;
 
     struct {

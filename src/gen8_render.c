@@ -56,7 +56,7 @@
 #define PS_MAX_THREADS          32
 
 /* Programs for Gen8 */
-static const uint32_t sf_kernel_static_gen8[][4] ={
+static const uint32_t sf_kernel_static_gen8[][4] = {
 
 };
 static const uint32_t ps_kernel_static_gen8[][4] = {
@@ -110,38 +110,38 @@ static struct i965_kernel render_kernels_gen8[] = {
     }
 };
 
-#define URB_VS_ENTRIES	      8
+#define URB_VS_ENTRIES        8
 #define URB_VS_ENTRY_SIZE     1
 
-#define URB_GS_ENTRIES	      0
+#define URB_GS_ENTRIES        0
 #define URB_GS_ENTRY_SIZE     0
 
 #define URB_CLIP_ENTRIES      0
 #define URB_CLIP_ENTRY_SIZE   0
 
-#define URB_SF_ENTRIES	      1
+#define URB_SF_ENTRIES        1
 #define URB_SF_ENTRY_SIZE     2
 
-#define URB_CS_ENTRIES	      4
+#define URB_CS_ENTRIES        4
 #define URB_CS_ENTRY_SIZE     4
 
 static void
 gen8_render_set_surface_tiling(struct gen8_surface_state *ss, uint32_t tiling)
 {
-   switch (tiling) {
-   case I915_TILING_NONE:
-      ss->ss0.tiled_surface = 0;
-      ss->ss0.tile_walk = 0;
-      break;
-   case I915_TILING_X:
-      ss->ss0.tiled_surface = 1;
-      ss->ss0.tile_walk = I965_TILEWALK_XMAJOR;
-      break;
-   case I915_TILING_Y:
-      ss->ss0.tiled_surface = 1;
-      ss->ss0.tile_walk = I965_TILEWALK_YMAJOR;
-      break;
-   }
+    switch (tiling) {
+    case I915_TILING_NONE:
+        ss->ss0.tiled_surface = 0;
+        ss->ss0.tile_walk = 0;
+        break;
+    case I915_TILING_X:
+        ss->ss0.tiled_surface = 1;
+        ss->ss0.tile_walk = I965_TILEWALK_XMAJOR;
+        break;
+    case I915_TILING_Y:
+        ss->ss0.tiled_surface = 1;
+        ss->ss0.tile_walk = I965_TILEWALK_YMAJOR;
+        break;
+    }
 }
 
 /* Set "Shader Channel Select" for GEN8+ */
@@ -171,7 +171,7 @@ gen8_render_set_surface_state(
 
     memset(ss, 0, sizeof(*ss));
 
-    switch (flags & (VA_TOP_FIELD|VA_BOTTOM_FIELD)) {
+    switch (flags & (VA_TOP_FIELD | VA_BOTTOM_FIELD)) {
     case VA_BOTTOM_FIELD:
         ss->ss0.vert_line_stride_ofs = 1;
         /* fall-through */
@@ -319,9 +319,9 @@ gen8_render_dest_surface_state(VADriverContextP ctx, int index)
     assert(index < MAX_RENDER_SURFACES);
 
     if (dest_region->cpp == 2) {
-	format = I965_SURFACEFORMAT_B5G6R5_UNORM;
+        format = I965_SURFACEFORMAT_B5G6R5_UNORM;
     } else {
-	format = I965_SURFACEFORMAT_B8G8R8A8_UNORM;
+        format = I965_SURFACEFORMAT_B8G8R8A8_UNORM;
     }
 
     dri_bo_map(ss_bo, 1);
@@ -581,19 +581,19 @@ gen8_render_initialize(VADriverContextP ctx)
     render_state->cc_viewport_size = sizeof(struct i965_cc_viewport);
 
     render_state->blend_state_size = sizeof(struct gen8_global_blend_state) +
-			16 * sizeof(struct gen8_blend_state_rt);
+                                     16 * sizeof(struct gen8_blend_state_rt);
 
     render_state->sf_clip_size = 1024;
 
     render_state->scissor_size = 1024;
 
     size = ALIGN(render_state->curbe_size, ALIGNMENT) +
-        ALIGN(render_state->sampler_size, ALIGNMENT) +
-        ALIGN(render_state->cc_viewport_size, ALIGNMENT) +
-        ALIGN(render_state->cc_state_size, ALIGNMENT) +
-        ALIGN(render_state->blend_state_size, ALIGNMENT) +
-        ALIGN(render_state->sf_clip_size, ALIGNMENT) +
-        ALIGN(render_state->scissor_size, ALIGNMENT);
+           ALIGN(render_state->sampler_size, ALIGNMENT) +
+           ALIGN(render_state->cc_viewport_size, ALIGNMENT) +
+           ALIGN(render_state->cc_state_size, ALIGNMENT) +
+           ALIGN(render_state->blend_state_size, ALIGNMENT) +
+           ALIGN(render_state->sf_clip_size, ALIGNMENT) +
+           ALIGN(render_state->scissor_size, ALIGNMENT);
 
     dri_bo_unreference(render_state->dynamic_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -655,7 +655,7 @@ gen8_render_sampler(VADriverContextP ctx)
     assert(render_state->dynamic_state.bo->virtual);
 
     cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
-			render_state->sampler_offset;
+             render_state->sampler_offset;
 
     sampler_state = (struct gen8_sampler_state *) cc_ptr;
 
@@ -685,7 +685,7 @@ gen8_render_blend_state(VADriverContextP ctx)
     assert(render_state->dynamic_state.bo->virtual);
 
     cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
-			render_state->blend_state_offset;
+             render_state->blend_state_offset;
 
     global_blend_state = (struct gen8_global_blend_state*) cc_ptr;
 
@@ -712,7 +712,7 @@ gen8_render_cc_viewport(VADriverContextP ctx)
     assert(render_state->dynamic_state.bo->virtual);
 
     cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
-			render_state->cc_viewport_offset;
+             render_state->cc_viewport_offset;
 
     cc_viewport = (struct i965_cc_viewport *) cc_ptr;
 
@@ -736,7 +736,7 @@ gen8_render_color_calc_state(VADriverContextP ctx)
     assert(render_state->dynamic_state.bo->virtual);
 
     cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
-			render_state->cc_state_offset;
+             render_state->cc_state_offset;
 
     color_calc_state = (struct gen6_color_calc_state *) cc_ptr;
 
@@ -773,7 +773,7 @@ gen8_render_upload_constants(VADriverContextP ctx,
     assert(render_state->dynamic_state.bo->virtual);
 
     cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
-			render_state->curbe_offset;
+             render_state->curbe_offset;
 
     constant_buffer = (unsigned short *) cc_ptr;
 
@@ -841,28 +841,28 @@ gen8_emit_state_base_address(VADriverContextP ctx)
     BEGIN_BATCH(batch, 16);
     OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (16 - 2));
     OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* General state base address */
-	OUT_BATCH(batch, 0);
-	OUT_BATCH(batch, 0);
-	/*DW4 */
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    /*DW4 */
     OUT_RELOC(batch, render_state->wm.surface_state_binding_table_bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
-	OUT_BATCH(batch, 0);
-
-	/*DW6*/
-    /* Dynamic state base address */
-    OUT_RELOC(batch, render_state->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
-		0, BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0);
 
-	/*DW8*/
+    /*DW6*/
+    /* Dynamic state base address */
+    OUT_RELOC(batch, render_state->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
+              0, BASE_ADDRESS_MODIFY);
+    OUT_BATCH(batch, 0);
+
+    /*DW8*/
     OUT_BATCH(batch, BASE_ADDRESS_MODIFY); /* Indirect object base address */
     OUT_BATCH(batch, 0);
 
-	/*DW10 */
+    /*DW10 */
     /* Instruction base address */
     OUT_RELOC(batch, render_state->instruction_state.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY);
     OUT_BATCH(batch, 0);
 
-	/*DW12 */
+    /*DW12 */
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* General state upper bound */
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* Dynamic state upper bound */
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY); /* Indirect object upper bound */
@@ -900,7 +900,7 @@ gen8_emit_vertices(VADriverContextP ctx)
     OUT_BATCH(batch, CMD_VERTEX_BUFFERS | (5 - 2));
     OUT_BATCH(batch,
               (0 << GEN8_VB0_BUFFER_INDEX_SHIFT) |
-	      (0 << GEN8_VB0_MOCS_SHIFT) |
+              (0 << GEN8_VB0_MOCS_SHIFT) |
               GEN7_VB0_ADDRESS_MODIFYENABLE |
               ((4 * 4) << VB0_BUFFER_PITCH_SHIFT));
     OUT_RELOC(batch, render_state->vb.vertex_buffer, I915_GEM_DOMAIN_VERTEX, 0, 0);
@@ -963,7 +963,7 @@ gen8_emit_vertex_element_state(VADriverContextP ctx)
               (I965_SURFACEFORMAT_R32G32_FLOAT << VE0_FORMAT_SHIFT) |
               (8 << VE0_OFFSET_SHIFT));
     OUT_BATCH(batch, (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_0_SHIFT) |
-	      (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_1_SHIFT) |
+              (I965_VFCOMPONENT_STORE_SRC << VE1_VFCOMPONENT_1_SHIFT) |
               (I965_VFCOMPONENT_STORE_1_FLT << VE1_VFCOMPONENT_2_SHIFT) |
               (I965_VFCOMPONENT_STORE_1_FLT << VE1_VFCOMPONENT_3_SHIFT));
 
@@ -979,9 +979,9 @@ gen8_emit_vertex_element_state(VADriverContextP ctx)
 
     /* Disable instancing for all vertex elements. */
     for (i = 0; i < 3; i++) {
-	OUT_BATCH(batch, GEN8_3DSTATE_VF_INSTANCING | (3 - 2));
-	OUT_BATCH(batch, i);
-	OUT_BATCH(batch, 0);
+        OUT_BATCH(batch, GEN8_3DSTATE_VF_INSTANCING | (3 - 2));
+        OUT_BATCH(batch, i);
+        OUT_BATCH(batch, 0);
     }
 
     /* Disable system-generated values. */
@@ -1080,8 +1080,8 @@ gen8_emit_urb(VADriverContextP ctx)
     OUT_BATCH(batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS | (2 - 2));
     /* Size is 8Kbs and base address is 0Kb */
     OUT_BATCH(batch,
-		(0 << GEN8_PUSH_CONSTANT_BUFFER_OFFSET_SHIFT) |
-		(8 << GEN8_PUSH_CONSTANT_BUFFER_SIZE_SHIFT));
+              (0 << GEN8_PUSH_CONSTANT_BUFFER_OFFSET_SHIFT) |
+              (8 << GEN8_PUSH_CONSTANT_BUFFER_SIZE_SHIFT));
     ADVANCE_BATCH(batch);
 
     BEGIN_BATCH(batch, 2);
@@ -1090,28 +1090,28 @@ gen8_emit_urb(VADriverContextP ctx)
               (num_urb_entries << GEN7_URB_ENTRY_NUMBER_SHIFT) |
               (4 - 1) << GEN7_URB_ENTRY_SIZE_SHIFT |
               (4 << GEN7_URB_STARTING_ADDRESS_SHIFT));
-   ADVANCE_BATCH(batch);
+    ADVANCE_BATCH(batch);
 
-   BEGIN_BATCH(batch, 2);
-   OUT_BATCH(batch, GEN7_3DSTATE_URB_GS | (2 - 2));
-   OUT_BATCH(batch,
-             (0 << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (5 << GEN7_URB_STARTING_ADDRESS_SHIFT));
-   ADVANCE_BATCH(batch);
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_URB_GS | (2 - 2));
+    OUT_BATCH(batch,
+              (0 << GEN7_URB_ENTRY_SIZE_SHIFT) |
+              (5 << GEN7_URB_STARTING_ADDRESS_SHIFT));
+    ADVANCE_BATCH(batch);
 
-   BEGIN_BATCH(batch, 2);
-   OUT_BATCH(batch, GEN7_3DSTATE_URB_HS | (2 - 2));
-   OUT_BATCH(batch,
-             (0 << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (6 << GEN7_URB_STARTING_ADDRESS_SHIFT));
-   ADVANCE_BATCH(batch);
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_URB_HS | (2 - 2));
+    OUT_BATCH(batch,
+              (0 << GEN7_URB_ENTRY_SIZE_SHIFT) |
+              (6 << GEN7_URB_STARTING_ADDRESS_SHIFT));
+    ADVANCE_BATCH(batch);
 
-   BEGIN_BATCH(batch, 2);
-   OUT_BATCH(batch, GEN7_3DSTATE_URB_DS | (2 - 2));
-   OUT_BATCH(batch,
-             (0 << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (7 << GEN7_URB_STARTING_ADDRESS_SHIFT));
-   ADVANCE_BATCH(batch);
+    BEGIN_BATCH(batch, 2);
+    OUT_BATCH(batch, GEN7_3DSTATE_URB_DS | (2 - 2));
+    OUT_BATCH(batch,
+              (0 << GEN7_URB_ENTRY_SIZE_SHIFT) |
+              (7 << GEN7_URB_STARTING_ADDRESS_SHIFT));
+    ADVANCE_BATCH(batch);
 }
 
 static void
@@ -1333,8 +1333,8 @@ gen8_emit_sf_state(VADriverContextP ctx)
     BEGIN_BATCH(batch, 4);
     OUT_BATCH(batch, GEN7_3DSTATE_SBE | (4 - 2));
     OUT_BATCH(batch,
-	      (GEN8_SBE_FORCE_URB_ENTRY_READ_LENGTH) |
-	      (GEN8_SBE_FORCE_URB_ENTRY_READ_OFFSET) |
+              (GEN8_SBE_FORCE_URB_ENTRY_READ_LENGTH) |
+              (GEN8_SBE_FORCE_URB_ENTRY_READ_OFFSET) |
               (1 << GEN7_SBE_NUM_OUTPUTS_SHIFT) |
               (1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT) |
               (1 << GEN8_SBE_URB_ENTRY_READ_OFFSET_SHIFT));
@@ -1383,22 +1383,22 @@ gen8_emit_wm_state(VADriverContextP ctx, int kernel)
     ADVANCE_BATCH(batch);
 
     if (kernel == PS_KERNEL) {
-	BEGIN_BATCH(batch, 2);
-	OUT_BATCH(batch, GEN8_3DSTATE_PSBLEND | (2 - 2));
-	OUT_BATCH(batch,
-		GEN8_PS_BLEND_HAS_WRITEABLE_RT);
-    	ADVANCE_BATCH(batch);
+        BEGIN_BATCH(batch, 2);
+        OUT_BATCH(batch, GEN8_3DSTATE_PSBLEND | (2 - 2));
+        OUT_BATCH(batch,
+                  GEN8_PS_BLEND_HAS_WRITEABLE_RT);
+        ADVANCE_BATCH(batch);
     } else if (kernel == PS_SUBPIC_KERNEL) {
-	BEGIN_BATCH(batch, 2);
-	OUT_BATCH(batch, GEN8_3DSTATE_PSBLEND | (2 - 2));
-	OUT_BATCH(batch,
-              	(GEN8_PS_BLEND_HAS_WRITEABLE_RT |
-		 GEN8_PS_BLEND_COLOR_BUFFER_BLEND_ENABLE |
-		 (I965_BLENDFACTOR_SRC_ALPHA << GEN8_PS_BLEND_SRC_ALPHA_BLEND_FACTOR_SHIFT) |
-		 (I965_BLENDFACTOR_INV_SRC_ALPHA << GEN8_PS_BLEND_DST_ALPHA_BLEND_FACTOR_SHIFT) |
-		 (I965_BLENDFACTOR_SRC_ALPHA << GEN8_PS_BLEND_SRC_BLEND_FACTOR_SHIFT) |
-		 (I965_BLENDFACTOR_INV_SRC_ALPHA << GEN8_PS_BLEND_DST_BLEND_FACTOR_SHIFT)));
-	ADVANCE_BATCH(batch);
+        BEGIN_BATCH(batch, 2);
+        OUT_BATCH(batch, GEN8_3DSTATE_PSBLEND | (2 - 2));
+        OUT_BATCH(batch,
+                  (GEN8_PS_BLEND_HAS_WRITEABLE_RT |
+                   GEN8_PS_BLEND_COLOR_BUFFER_BLEND_ENABLE |
+                   (I965_BLENDFACTOR_SRC_ALPHA << GEN8_PS_BLEND_SRC_ALPHA_BLEND_FACTOR_SHIFT) |
+                   (I965_BLENDFACTOR_INV_SRC_ALPHA << GEN8_PS_BLEND_DST_ALPHA_BLEND_FACTOR_SHIFT) |
+                   (I965_BLENDFACTOR_SRC_ALPHA << GEN8_PS_BLEND_SRC_BLEND_FACTOR_SHIFT) |
+                   (I965_BLENDFACTOR_INV_SRC_ALPHA << GEN8_PS_BLEND_DST_BLEND_FACTOR_SHIFT)));
+        ADVANCE_BATCH(batch);
     }
 
     BEGIN_BATCH(batch, 2);
@@ -1630,7 +1630,7 @@ gen8_subpicture_render_blend_state(VADriverContextP ctx)
     assert(render_state->dynamic_state.bo->virtual);
 
     cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
-			render_state->blend_state_offset;
+             render_state->blend_state_offset;
 
     global_blend_state = (struct gen8_global_blend_state*) cc_ptr;
 
@@ -1672,7 +1672,7 @@ gen8_subpic_render_upload_constants(VADriverContextP ctx,
     assert(render_state->dynamic_state.bo->virtual);
 
     cc_ptr = (unsigned char *) render_state->dynamic_state.bo->virtual +
-				render_state->curbe_offset;
+             render_state->curbe_offset;
 
     constant_buffer = (float *) cc_ptr;
     *constant_buffer = global_alpha;
@@ -1782,9 +1782,9 @@ gen8_render_init(VADriverContextP ctx)
     }
 
     render_state->instruction_state.bo = dri_bo_alloc(i965->intel.bufmgr,
-                                  "kernel shader",
-                                  kernel_size,
-                                  0x1000);
+                                                      "kernel shader",
+                                                      kernel_size,
+                                                      0x1000);
     if (render_state->instruction_state.bo == NULL) {
         WARN_ONCE("failure to allocate the buffer space for kernel shader\n");
         return false;
