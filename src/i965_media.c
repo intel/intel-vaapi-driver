@@ -55,7 +55,7 @@ i965_media_pipeline_select(VADriverContextP ctx, struct i965_media_context *medi
 static void
 i965_media_urb_layout(VADriverContextP ctx, struct i965_media_context *media_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx); 
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = media_context->base.batch;
     unsigned int vfe_fence, cs_fence;
 
@@ -65,7 +65,7 @@ i965_media_urb_layout(VADriverContextP ctx, struct i965_media_context *media_con
     BEGIN_BATCH(batch, 3);
     OUT_BATCH(batch, CMD_URB_FENCE | UF0_VFE_REALLOC | UF0_CS_REALLOC | 1);
     OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, 
+    OUT_BATCH(batch,
               (vfe_fence << UF2_VFE_FENCE_SHIFT) |      /* VFE_SIZE */
               (cs_fence << UF2_CS_FENCE_SHIFT));        /* CS_SIZE */
     ADVANCE_BATCH(batch);
@@ -74,7 +74,7 @@ i965_media_urb_layout(VADriverContextP ctx, struct i965_media_context *media_con
 static void
 i965_media_state_base_address(VADriverContextP ctx, struct i965_media_context *media_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx); 
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = media_context->base.batch;
 
     if (IS_IRONLAKE(i965->intel.device_info)) {
@@ -82,9 +82,9 @@ i965_media_state_base_address(VADriverContextP ctx, struct i965_media_context *m
         OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | 6);
         OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
         OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
-        
+
         if (media_context->indirect_object.bo) {
-            OUT_RELOC(batch, media_context->indirect_object.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 
+            OUT_RELOC(batch, media_context->indirect_object.bo, I915_GEM_DOMAIN_INSTRUCTION, 0,
                       media_context->indirect_object.offset | BASE_ADDRESS_MODIFY);
         } else {
             OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
@@ -102,7 +102,7 @@ i965_media_state_base_address(VADriverContextP ctx, struct i965_media_context *m
         OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
 
         if (media_context->indirect_object.bo) {
-            OUT_RELOC(batch, media_context->indirect_object.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, 
+            OUT_RELOC(batch, media_context->indirect_object.bo, I915_GEM_DOMAIN_INSTRUCTION, 0,
                       media_context->indirect_object.offset | BASE_ADDRESS_MODIFY);
         } else {
             OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
@@ -131,7 +131,7 @@ i965_media_state_pointers(VADriverContextP ctx, struct i965_media_context *media
     ADVANCE_BATCH(batch);
 }
 
-static void 
+static void
 i965_media_cs_urb_layout(VADriverContextP ctx, struct i965_media_context *media_context)
 {
     struct intel_batchbuffer *batch = media_context->base.batch;
@@ -144,7 +144,7 @@ i965_media_cs_urb_layout(VADriverContextP ctx, struct i965_media_context *media_
     ADVANCE_BATCH(batch);
 }
 
-static void 
+static void
 i965_media_pipeline_state(VADriverContextP ctx, struct i965_media_context *media_context)
 {
     i965_media_state_base_address(ctx, media_context);
@@ -162,17 +162,17 @@ i965_media_constant_buffer(VADriverContextP ctx, struct decode_state *decode_sta
     OUT_RELOC(batch, media_context->curbe.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0,
               media_context->urb.size_cs_entry - 1);
-    ADVANCE_BATCH(batch);    
+    ADVANCE_BATCH(batch);
 }
 
-static void 
+static void
 i965_media_depth_buffer(VADriverContextP ctx, struct i965_media_context *media_context)
 {
     struct intel_batchbuffer *batch = media_context->base.batch;
 
     BEGIN_BATCH(batch, 6);
     OUT_BATCH(batch, CMD_DEPTH_BUFFER | 4);
-    OUT_BATCH(batch, (I965_DEPTHFORMAT_D32_FLOAT << 18) | 
+    OUT_BATCH(batch, (I965_DEPTHFORMAT_D32_FLOAT << 18) |
               (I965_SURFACE_NULL << 29));
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
@@ -200,10 +200,10 @@ i965_media_pipeline_setup(VADriverContextP ctx,
     intel_batchbuffer_end_atomic(batch);
 }
 
-static void 
-i965_media_decode_init(VADriverContextP ctx, 
-                       VAProfile profile, 
-                       struct decode_state *decode_state, 
+static void
+i965_media_decode_init(VADriverContextP ctx,
+                       VAProfile profile,
+                       struct decode_state *decode_state,
                        struct i965_media_context *media_context)
 {
     int i;
@@ -226,7 +226,7 @@ i965_media_decode_init(VADriverContextP ctx,
 
     /* binding table */
     dri_bo_unreference(media_context->binding_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
                       "binding table",
                       MAX_MEDIA_SURFACES * sizeof(unsigned int), 32);
     assert(bo);
@@ -234,16 +234,16 @@ i965_media_decode_init(VADriverContextP ctx,
 
     /* interface descriptor remapping table */
     dri_bo_unreference(media_context->idrt.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "interface discriptor", 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "interface discriptor",
                       MAX_INTERFACE_DESC * sizeof(struct i965_interface_descriptor), 16);
     assert(bo);
     media_context->idrt.bo = bo;
 
     /* vfe state */
     dri_bo_unreference(media_context->vfe_state.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "vfe state", 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "vfe state",
                       sizeof(struct i965_vfe_state), 32);
     assert(bo);
     media_context->vfe_state.bo = bo;
@@ -256,7 +256,7 @@ i965_media_decode_init(VADriverContextP ctx,
     case VAProfileMPEG2Main:
         i965_media_mpeg2_decode_init(ctx, decode_state, media_context);
         break;
-        
+
     case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
@@ -270,8 +270,8 @@ i965_media_decode_init(VADriverContextP ctx,
 }
 
 static VAStatus
-i965_media_decode_picture(VADriverContextP ctx, 
-                          VAProfile profile, 
+i965_media_decode_picture(VADriverContextP ctx,
+                          VAProfile profile,
                           union codec_state *codec_state,
                           struct hw_context *hw_context)
 {
@@ -300,7 +300,7 @@ static void
 i965_media_context_destroy(void *hw_context)
 {
     struct i965_media_context *media_context = (struct i965_media_context *)hw_context;
-    int i; 
+    int i;
 
     if (media_context->free_private_context)
         media_context->free_private_context(&media_context->private_context);
@@ -309,7 +309,7 @@ i965_media_context_destroy(void *hw_context)
         dri_bo_unreference(media_context->surface_state[i].bo);
         media_context->surface_state[i].bo = NULL;
     }
-    
+
     dri_bo_unreference(media_context->extended_state.bo);
     media_context->extended_state.bo = NULL;
 

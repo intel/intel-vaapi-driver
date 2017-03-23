@@ -94,7 +94,7 @@ gen6_mfd_avc_phantom_slice(VADriverContextP ctx,
                            VAPictureParameterBufferH264 *pic_param,
                            VASliceParameterBufferH264 *next_slice_param,
                            struct intel_batchbuffer *batch
-);
+                          );
 
 VAStatus
 intel_decoder_sanity_check_input(VADriverContextP ctx,
@@ -167,7 +167,7 @@ intel_update_vp9_frame_store_index(VADriverContextP ctx,
 
 bool
 intel_ensure_vp8_segmentation_buffer(VADriverContextP ctx, GenBuffer *buf,
-    unsigned int mb_width, unsigned int mb_height);
+                                     unsigned int mb_width, unsigned int mb_height);
 
 void
 hevc_gen_default_iq_matrix(VAIQMatrixBufferHEVC *iq_matrix);

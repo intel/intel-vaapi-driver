@@ -40,8 +40,7 @@ struct i965_media_context;
 
 #define NUM_MPEG2_VLD_KERNELS           15
 
-struct i965_mpeg2_context
-{
+struct i965_mpeg2_context {
     struct i965_kernel vld_kernels[NUM_MPEG2_VLD_KERNELS];
     VAIQMatrixBufferMPEG2 iq_matrix;
     int wa_slice_vertical_position;

@@ -8,11 +8,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -43,11 +43,10 @@ dso_open(const char *path)
         return NULL;
 
     if (path) {
-        h->handle = dlopen(path, RTLD_LAZY|RTLD_LOCAL);
+        h->handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
         if (!h->handle)
             goto error;
-    }
-    else
+    } else
         h->handle = RTLD_DEFAULT;
     return h;
 

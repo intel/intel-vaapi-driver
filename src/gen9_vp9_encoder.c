@@ -60,8 +60,7 @@
 
 #define VP9_PIC_STATE_BUFFER_SIZE 192
 
-typedef struct _intel_kernel_header_
-{
+typedef struct _intel_kernel_header_ {
     uint32_t       reserved                        : 6;
     uint32_t       kernel_start_pointer            : 26;
 } intel_kernel_header;
@@ -94,13 +93,10 @@ struct vp9_surface_param {
 static uint32_t intel_convert_sign_mag(int val, int sign_bit_pos)
 {
     uint32_t ret_val = 0;
-    if (val < 0)
-    {
+    if (val < 0) {
         val = -val;
         ret_val = ((1 << (sign_bit_pos - 1)) | (val & ((1 << (sign_bit_pos - 1)) - 1)));
-    }
-    else
-    {
+    } else {
         ret_val = val & ((1 << (sign_bit_pos - 1)) - 1);
     }
     return ret_val;
@@ -129,28 +125,17 @@ intel_vp9_get_kernel_header_and_size(
     pinvalid_entry = &(pkh_table->VP9BRC_Update) + 1;
     next_krnoffset = binary_size;
 
-    if ((operation == INTEL_VP9_ENC_SCALING4X) || (operation == INTEL_VP9_ENC_SCALING2X))
-    {
+    if ((operation == INTEL_VP9_ENC_SCALING4X) || (operation == INTEL_VP9_ENC_SCALING2X)) {
         pcurr_header = &pkh_table->PLY_DSCALE;
-    }
-    else if (operation == INTEL_VP9_ENC_ME)
-    {
+    } else if (operation == INTEL_VP9_ENC_ME) {
         pcurr_header = &pkh_table->VP9_ME_P;
-    }
-    else if (operation == INTEL_VP9_ENC_MBENC)
-    {
+    } else if (operation == INTEL_VP9_ENC_MBENC) {
         pcurr_header = &pkh_table->VP9_Enc_I_32x32;
-    }
-    else if (operation == INTEL_VP9_ENC_DYS)
-    {
+    } else if (operation == INTEL_VP9_ENC_DYS) {
         pcurr_header = &pkh_table->VP9_DYS;
-    }
-    else if (operation == INTEL_VP9_ENC_BRC)
-    {
+    } else if (operation == INTEL_VP9_ENC_BRC) {
         pcurr_header = &pkh_table->VP9BRC_Intra_Distortion;
-    }
-    else
-    {
+    } else {
         return false;
     }
 
@@ -158,8 +143,7 @@ intel_vp9_get_kernel_header_and_size(
     ret_kernel->bin = (const BIN_PTR *)(bin_start + (pcurr_header->kernel_start_pointer << 6));
 
     pnext_header = (pcurr_header + 1);
-    if (pnext_header < pinvalid_entry)
-    {
+    if (pnext_header < pinvalid_entry) {
         next_krnoffset = pnext_header->kernel_start_pointer << 6;
     }
     ret_kernel->size = next_krnoffset - (pcurr_header->kernel_start_pointer << 6);
@@ -436,88 +420,88 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
         i965_free_gpe_resource(&vme_context->res_brc_mmdk_pak_buffer);
 
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_brc_history_buffer,
-                                 VP9_BRC_HISTORY_BUFFER_SIZE,
-                                 "Brc History buffer");
+                                                   &vme_context->res_brc_history_buffer,
+                                                   VP9_BRC_HISTORY_BUFFER_SIZE,
+                                                   "Brc History buffer");
         if (!allocate_flag)
             goto failed_allocation;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_brc_const_data_buffer,
-                                 VP9_BRC_CONSTANTSURFACE_SIZE,
-                                 "Brc Constant buffer");
+                                                   &vme_context->res_brc_const_data_buffer,
+                                                   VP9_BRC_CONSTANTSURFACE_SIZE,
+                                                   "Brc Constant buffer");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = ALIGN(sizeof(vp9_mbenc_curbe_data), 64) + 128 +
-           ALIGN(sizeof(struct gen8_interface_descriptor_data), 64) * NUM_VP9_MBENC;
+                   ALIGN(sizeof(struct gen8_interface_descriptor_data), 64) * NUM_VP9_MBENC;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_brc_mbenc_curbe_write_buffer,
-                                 res_size,
-                                 "Brc Curbe write");
+                                                   &vme_context->res_brc_mbenc_curbe_write_buffer,
+                                                   res_size,
+                                                   "Brc Curbe write");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = VP9_PIC_STATE_BUFFER_SIZE * 4;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_pic_state_brc_read_buffer,
-                                 res_size,
-                                 "Pic State Brc_read");
+                                                   &vme_context->res_pic_state_brc_read_buffer,
+                                                   res_size,
+                                                   "Pic State Brc_read");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = VP9_PIC_STATE_BUFFER_SIZE * 4;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_pic_state_brc_write_hfw_read_buffer,
-                                 res_size,
-                                 "Pic State Brc_write Hfw_Read");
+                                                   &vme_context->res_pic_state_brc_write_hfw_read_buffer,
+                                                   res_size,
+                                                   "Pic State Brc_write Hfw_Read");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = VP9_PIC_STATE_BUFFER_SIZE * 4;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_pic_state_hfw_write_buffer,
-                                 res_size,
-                                 "Pic State Hfw Write");
+                                                   &vme_context->res_pic_state_hfw_write_buffer,
+                                                   res_size,
+                                                   "Pic State Hfw Write");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = VP9_SEGMENT_STATE_BUFFER_SIZE;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_seg_state_brc_read_buffer,
-                                 res_size,
-                                 "Segment state brc_read");
+                                                   &vme_context->res_seg_state_brc_read_buffer,
+                                                   res_size,
+                                                   "Segment state brc_read");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = VP9_SEGMENT_STATE_BUFFER_SIZE;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_seg_state_brc_write_buffer,
-                                 res_size,
-                                 "Segment state brc_write");
+                                                   &vme_context->res_seg_state_brc_write_buffer,
+                                                   res_size,
+                                                   "Segment state brc_write");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = VP9_BRC_BITSTREAM_SIZE_BUFFER_SIZE;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_brc_bitstream_size_buffer,
-                                 res_size,
-                                 "Brc bitstream buffer");
+                                                   &vme_context->res_brc_bitstream_size_buffer,
+                                                   res_size,
+                                                   "Brc bitstream buffer");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = VP9_HFW_BRC_DATA_BUFFER_SIZE;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_brc_hfw_data_buffer,
-                                 res_size,
-                                 "mfw Brc data");
+                                                   &vme_context->res_brc_hfw_data_buffer,
+                                                   res_size,
+                                                   "mfw Brc data");
         if (!allocate_flag)
             goto failed_allocation;
 
         res_size = VP9_BRC_MMDK_PAK_BUFFER_SIZE;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_brc_mmdk_pak_buffer,
-                                 res_size,
-                                 "Brc mmdk_pak");
+                                                   &vme_context->res_brc_mmdk_pak_buffer,
+                                                   res_size,
+                                                   "Brc mmdk_pak");
         if (!allocate_flag)
             goto failed_allocation;
     }
@@ -537,89 +521,89 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_hvd_line_buffer);
     res_size = frame_width_in_sb * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_hvd_line_buffer,
-                                 res_size,
-                                 "VP9 hvd line line");
+                                               &vme_context->res_hvd_line_buffer,
+                                               res_size,
+                                               "VP9 hvd line line");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_hvd_tile_line_buffer);
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_hvd_tile_line_buffer,
-                                 res_size,
-                                 "VP9 hvd tile_line line");
+                                               &vme_context->res_hvd_tile_line_buffer,
+                                               res_size,
+                                               "VP9 hvd tile_line line");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_deblocking_filter_line_buffer);
     res_size = frame_width_in_sb * 18 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_deblocking_filter_line_buffer,
-                                 res_size,
-                                 "VP9 deblocking filter line");
+                                               &vme_context->res_deblocking_filter_line_buffer,
+                                               res_size,
+                                               "VP9 deblocking filter line");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_deblocking_filter_tile_line_buffer);
     res_size = frame_width_in_sb * 18 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_deblocking_filter_tile_line_buffer,
-                                 res_size,
-                                 "VP9 deblocking tile line");
+                                               &vme_context->res_deblocking_filter_tile_line_buffer,
+                                               res_size,
+                                               "VP9 deblocking tile line");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_deblocking_filter_tile_col_buffer);
     res_size = frame_height_in_sb * 17 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_deblocking_filter_tile_col_buffer,
-                                 res_size,
-                                 "VP9 deblocking tile col");
+                                               &vme_context->res_deblocking_filter_tile_col_buffer,
+                                               res_size,
+                                               "VP9 deblocking tile col");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_metadata_line_buffer);
     res_size = frame_width_in_sb * 5 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_metadata_line_buffer,
-                                 res_size,
-                                 "VP9 metadata line");
+                                               &vme_context->res_metadata_line_buffer,
+                                               res_size,
+                                               "VP9 metadata line");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_metadata_tile_line_buffer);
     res_size = frame_width_in_sb * 5 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_metadata_tile_line_buffer,
-                                 res_size,
-                                 "VP9 metadata tile line");
+                                               &vme_context->res_metadata_tile_line_buffer,
+                                               res_size,
+                                               "VP9 metadata tile line");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_metadata_tile_col_buffer);
     res_size = frame_height_in_sb * 5 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_metadata_tile_col_buffer,
-                                 res_size,
-                                 "VP9 metadata tile col");
+                                               &vme_context->res_metadata_tile_col_buffer,
+                                               res_size,
+                                               "VP9 metadata tile col");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_prob_buffer);
     res_size = 2048;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_prob_buffer,
-                                 res_size,
-                                 "VP9 prob");
+                                               &vme_context->res_prob_buffer,
+                                               res_size,
+                                               "VP9 prob");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_segmentid_buffer);
     res_size = frame_sb_num * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_segmentid_buffer,
-                                 res_size,
-                                 "VP9 segment id");
+                                               &vme_context->res_segmentid_buffer,
+                                               res_size,
+                                               "VP9 segment id");
     if (!allocate_flag)
         goto failed_allocation;
 
@@ -628,9 +612,9 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_prob_delta_buffer);
     res_size = 29 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_prob_delta_buffer,
-                                 res_size,
-                                 "VP9 prob delta");
+                                               &vme_context->res_prob_delta_buffer,
+                                               res_size,
+                                               "VP9 prob delta");
     if (!allocate_flag)
         goto failed_allocation;
 
@@ -639,45 +623,45 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_prob_delta_buffer);
     res_size = 29 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_prob_delta_buffer,
-                                 res_size,
-                                 "VP9 prob delta");
+                                               &vme_context->res_prob_delta_buffer,
+                                               res_size,
+                                               "VP9 prob delta");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_compressed_input_buffer);
     res_size = 32 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_compressed_input_buffer,
-                                 res_size,
-                                 "VP9 compressed_input buffer");
+                                               &vme_context->res_compressed_input_buffer,
+                                               res_size,
+                                               "VP9 compressed_input buffer");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_prob_counter_buffer);
     res_size = 193 * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_prob_counter_buffer,
-                                 res_size,
-                                 "VP9 prob counter");
+                                               &vme_context->res_prob_counter_buffer,
+                                               res_size,
+                                               "VP9 prob counter");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_tile_record_streamout_buffer);
     res_size = frame_sb_num * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_tile_record_streamout_buffer,
-                                 res_size,
-                                 "VP9 tile record stream_out");
+                                               &vme_context->res_tile_record_streamout_buffer,
+                                               res_size,
+                                               "VP9 tile record stream_out");
     if (!allocate_flag)
         goto failed_allocation;
 
     i965_free_gpe_resource(&vme_context->res_cu_stat_streamout_buffer);
     res_size = frame_sb_num * 64;
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_cu_stat_streamout_buffer,
-                                 res_size,
-                                 "VP9 CU stat stream_out");
+                                               &vme_context->res_cu_stat_streamout_buffer,
+                                               res_size,
+                                               "VP9 CU stat stream_out");
     if (!allocate_flag)
         goto failed_allocation;
 
@@ -685,10 +669,10 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     height = vp9_state->downscaled_height_4x_in_mb * 16;
     i965_free_gpe_resource(&vme_context->s4x_memv_data_buffer);
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                 &vme_context->s4x_memv_data_buffer,
-                                 width, height,
-                                 ALIGN(width, 64),
-                                 "VP9 4x MEMV data");
+                                                  &vme_context->s4x_memv_data_buffer,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 4x MEMV data");
     if (!allocate_flag)
         goto failed_allocation;
 
@@ -696,10 +680,10 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     height = vp9_state->downscaled_height_4x_in_mb * 16;
     i965_free_gpe_resource(&vme_context->s4x_memv_distortion_buffer);
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                 &vme_context->s4x_memv_distortion_buffer,
-                                 width, height,
-                                 ALIGN(width, 64),
-                                 "VP9 4x MEMV distorion");
+                                                  &vme_context->s4x_memv_distortion_buffer,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 4x MEMV distorion");
     if (!allocate_flag)
         goto failed_allocation;
 
@@ -707,10 +691,10 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     height = vp9_state->downscaled_height_16x_in_mb * 16;
     i965_free_gpe_resource(&vme_context->s16x_memv_data_buffer);
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                 &vme_context->s16x_memv_data_buffer,
-                                 width, height,
-                                 width,
-                                 "VP9 16x MEMV data");
+                                                  &vme_context->s16x_memv_data_buffer,
+                                                  width, height,
+                                                  width,
+                                                  "VP9 16x MEMV data");
     if (!allocate_flag)
         goto failed_allocation;
 
@@ -718,10 +702,10 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     height = vp9_state->frame_height_in_mb * 8;
     i965_free_gpe_resource(&vme_context->res_output_16x16_inter_modes);
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                 &vme_context->res_output_16x16_inter_modes,
-                                 width, height,
-                                 ALIGN(width, 64),
-                                 "VP9 output inter_mode");
+                                                  &vme_context->res_output_16x16_inter_modes,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 output inter_mode");
     if (!allocate_flag)
         goto failed_allocation;
 
@@ -730,9 +714,9 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     for (i = 0; i < 2; i++) {
         i965_free_gpe_resource(&vme_context->res_mode_decision[i]);
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                   &vme_context->res_mode_decision[i],
-                                   res_size,
-                                   "VP9 mode decision");
+                                                   &vme_context->res_mode_decision[i],
+                                                   res_size,
+                                                   "VP9 mode decision");
         if (!allocate_flag)
             goto failed_allocation;
 
@@ -742,9 +726,9 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     for (i = 0; i < 2; i++) {
         i965_free_gpe_resource(&vme_context->res_mv_temporal_buffer[i]);
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                   &vme_context->res_mv_temporal_buffer[i],
-                                   res_size,
-                                   "VP9 temporal mv");
+                                                   &vme_context->res_mv_temporal_buffer[i],
+                                                   res_size,
+                                                   "VP9 temporal mv");
         if (!allocate_flag)
             goto failed_allocation;
     }
@@ -753,18 +737,18 @@ gen9_vp9_allocate_resources(VADriverContextP ctx,
     res_size = vp9_state->mb_data_offset + frame_sb_num * 64 * 64 + 1000;
     i965_free_gpe_resource(&vme_context->res_mb_code_surface);
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_mb_code_surface,
-                                 ALIGN(res_size, 4096),
-                                 "VP9 mb_code surface");
+                                               &vme_context->res_mb_code_surface,
+                                               ALIGN(res_size, 4096),
+                                               "VP9 mb_code surface");
     if (!allocate_flag)
         goto failed_allocation;
 
     res_size = 128;
     i965_free_gpe_resource(&vme_context->res_pak_uncompressed_input_buffer);
     allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                 &vme_context->res_pak_uncompressed_input_buffer,
-                                 ALIGN(res_size, 4096),
-                                 "VP9 pak_uncompressed_input");
+                                               &vme_context->res_pak_uncompressed_input_buffer,
+                                               ALIGN(res_size, 4096),
+                                               "VP9 pak_uncompressed_input");
     if (!allocate_flag)
         goto failed_allocation;
 
@@ -1024,13 +1008,10 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
 
     memset(cmd, 0, sizeof(vp9_brc_curbe_data));
 
-    if (!vp9_state->dys_enabled)
-    {
+    if (!vp9_state->dys_enabled) {
         cmd->dw0.frame_width  = pic_param->frame_width_src;
         cmd->dw0.frame_height = pic_param->frame_height_src;
-    }
-    else
-    {
+    } else {
         cmd->dw0.frame_width  = pic_param->frame_width_dst;
         cmd->dw0.frame_height = pic_param->frame_height_dst;
     }
@@ -1040,154 +1021,145 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
     cmd->dw1.ref_frame_flags      = vp9_state->ref_frame_flag;
     cmd->dw1.num_tlevels          = 1;
 
-    switch(param->media_state_type)
-    {
-        case VP9_MEDIA_STATE_BRC_INIT_RESET:
-        {
-            cmd->dw3.max_level_ratiot0 = 0;
-            cmd->dw3.max_level_ratiot1 = 0;
-            cmd->dw3.max_level_ratiot2 = 0;
-            cmd->dw3.max_level_ratiot3 = 0;
+    switch (param->media_state_type) {
+    case VP9_MEDIA_STATE_BRC_INIT_RESET: {
+        cmd->dw3.max_level_ratiot0 = 0;
+        cmd->dw3.max_level_ratiot1 = 0;
+        cmd->dw3.max_level_ratiot2 = 0;
+        cmd->dw3.max_level_ratiot3 = 0;
 
-            cmd->dw4.profile_level_max_frame    = seq_param->max_frame_width *
-                               seq_param->max_frame_height;
-            cmd->dw5.init_buf_fullness         = vp9_state->init_vbv_buffer_fullness_in_bit;
-            cmd->dw6.buf_size                  = vp9_state->vbv_buffer_size_in_bit;
-            cmd->dw7.target_bit_rate           = (vp9_state->target_bit_rate  + VP9_BRC_KBPS - 1) / VP9_BRC_KBPS *
-                                                  VP9_BRC_KBPS;
-            cmd->dw8.max_bit_rate           = (vp9_state->max_bit_rate  + VP9_BRC_KBPS - 1) / VP9_BRC_KBPS *
-                                                  VP9_BRC_KBPS;
-            cmd->dw9.min_bit_rate           = (vp9_state->min_bit_rate  + VP9_BRC_KBPS - 1) / VP9_BRC_KBPS *
-                                                  VP9_BRC_KBPS;
-            cmd->dw10.frame_ratem           = vp9_state->framerate.num;
-            cmd->dw11.frame_rated           = vp9_state->framerate.den;
+        cmd->dw4.profile_level_max_frame    = seq_param->max_frame_width *
+                                              seq_param->max_frame_height;
+        cmd->dw5.init_buf_fullness         = vp9_state->init_vbv_buffer_fullness_in_bit;
+        cmd->dw6.buf_size                  = vp9_state->vbv_buffer_size_in_bit;
+        cmd->dw7.target_bit_rate           = (vp9_state->target_bit_rate  + VP9_BRC_KBPS - 1) / VP9_BRC_KBPS *
+                                             VP9_BRC_KBPS;
+        cmd->dw8.max_bit_rate           = (vp9_state->max_bit_rate  + VP9_BRC_KBPS - 1) / VP9_BRC_KBPS *
+                                          VP9_BRC_KBPS;
+        cmd->dw9.min_bit_rate           = (vp9_state->min_bit_rate  + VP9_BRC_KBPS - 1) / VP9_BRC_KBPS *
+                                          VP9_BRC_KBPS;
+        cmd->dw10.frame_ratem           = vp9_state->framerate.num;
+        cmd->dw11.frame_rated           = vp9_state->framerate.den;
 
-            cmd->dw14.avbr_accuracy         = 30;
-            cmd->dw14.avbr_convergence      = 150;
+        cmd->dw14.avbr_accuracy         = 30;
+        cmd->dw14.avbr_convergence      = 150;
 
-            if (encoder_context->rate_control_mode == VA_RC_CBR)
-            {
-                cmd->dw12.brc_flag    = BRC_KERNEL_CBR;
-                cmd->dw8.max_bit_rate  = cmd->dw7.target_bit_rate;
-                cmd->dw9.min_bit_rate  = 0;
-            }
-            else if (encoder_context->rate_control_mode == VA_RC_VBR)
-            {
-                cmd->dw12.brc_flag    = BRC_KERNEL_VBR;
-            }
-            else
-            {
-                cmd->dw12.brc_flag = BRC_KERNEL_CQL;
-                cmd->dw16.cq_level = 30;
-            }
-            cmd->dw12.gopp = seq_param->intra_period - 1;
-
-            cmd->dw13.init_frame_width   = pic_param->frame_width_src;
-            cmd->dw13.init_frame_height   = pic_param->frame_height_src;
-
-            cmd->dw15.min_qp          = 0;
-            cmd->dw15.max_qp          = 255;
-
-            cmd->dw16.cq_level            = 30;
-
-            cmd->dw17.enable_dynamic_scaling = vp9_state->dys_in_use;
-            cmd->dw17.brc_overshoot_cbr_pct = 150;
-
-            dInputBitsPerFrame = (double)cmd->dw8.max_bit_rate * (double)vp9_state->framerate.den / (double)vp9_state->framerate.num;
-            dbps_ratio         = dInputBitsPerFrame / ((double)vp9_state->vbv_buffer_size_in_bit / 30.0);
-            if (dbps_ratio < 0.1)
-                dbps_ratio = 0.1;
-            if (dbps_ratio > 3.5)
-                dbps_ratio = 3.5;
-
-            *param->pbrc_init_reset_buf_size_in_bits  = cmd->dw6.buf_size;
-            *param->pbrc_init_reset_input_bits_per_frame  = dInputBitsPerFrame;
-
-            cmd->dw18.pframe_deviation_threshold0 = (uint32_t)(-50 * pow(0.90, dbps_ratio));
-            cmd->dw18.pframe_deviation_threshold1  = (uint32_t)(-50 * pow(0.66, dbps_ratio));
-            cmd->dw18.pframe_deviation_threshold2  = (uint32_t)(-50 * pow(0.46, dbps_ratio));
-            cmd->dw18.pframe_deviation_threshold3  = (uint32_t)(-50 * pow(0.3, dbps_ratio));
-            cmd->dw19.pframe_deviation_threshold4  = (uint32_t)(50 * pow(0.3, dbps_ratio));
-            cmd->dw19.pframe_deviation_threshold5  = (uint32_t)(50 * pow(0.46, dbps_ratio));
-            cmd->dw19.pframe_deviation_threshold6  = (uint32_t)(50 * pow(0.7, dbps_ratio));
-            cmd->dw19.pframe_deviation_threshold7  = (uint32_t)(50 * pow(0.9, dbps_ratio));
-
-            cmd->dw20.vbr_deviation_threshold0     = (uint32_t)(-50 * pow(0.9, dbps_ratio));
-            cmd->dw20.vbr_deviation_threshold1     = (uint32_t)(-50 * pow(0.7, dbps_ratio));
-            cmd->dw20.vbr_deviation_threshold2     = (uint32_t)(-50 * pow(0.5, dbps_ratio));
-            cmd->dw20.vbr_deviation_threshold3     = (uint32_t)(-50 * pow(0.3, dbps_ratio));
-            cmd->dw21.vbr_deviation_threshold4     = (uint32_t)(100 * pow(0.4, dbps_ratio));
-            cmd->dw21.vbr_deviation_threshold5     = (uint32_t)(100 * pow(0.5, dbps_ratio));
-            cmd->dw21.vbr_deviation_threshold6     = (uint32_t)(100 * pow(0.75, dbps_ratio));
-            cmd->dw21.vbr_deviation_threshold7     = (uint32_t)(100 * pow(0.9, dbps_ratio));
-
-            cmd->dw22.kframe_deviation_threshold0  = (uint32_t)(-50 * pow(0.8, dbps_ratio));
-            cmd->dw22.kframe_deviation_threshold1  = (uint32_t)(-50 * pow(0.6, dbps_ratio));
-            cmd->dw22.kframe_deviation_threshold2  = (uint32_t)(-50 * pow(0.34, dbps_ratio));
-            cmd->dw22.kframe_deviation_threshold3  = (uint32_t)(-50 * pow(0.2, dbps_ratio));
-            cmd->dw23.kframe_deviation_threshold4  = (uint32_t)(50 * pow(0.2, dbps_ratio));
-            cmd->dw23.kframe_deviation_threshold5  = (uint32_t)(50 * pow(0.4, dbps_ratio));
-            cmd->dw23.kframe_deviation_threshold6  = (uint32_t)(50 * pow(0.66, dbps_ratio));
-            cmd->dw23.kframe_deviation_threshold7  = (uint32_t)(50 * pow(0.9, dbps_ratio));
-
-            break;
+        if (encoder_context->rate_control_mode == VA_RC_CBR) {
+            cmd->dw12.brc_flag    = BRC_KERNEL_CBR;
+            cmd->dw8.max_bit_rate  = cmd->dw7.target_bit_rate;
+            cmd->dw9.min_bit_rate  = 0;
+        } else if (encoder_context->rate_control_mode == VA_RC_VBR) {
+            cmd->dw12.brc_flag    = BRC_KERNEL_VBR;
+        } else {
+            cmd->dw12.brc_flag = BRC_KERNEL_CQL;
+            cmd->dw16.cq_level = 30;
         }
-        case VP9_MEDIA_STATE_BRC_UPDATE:
-        {
-            cmd->dw15.min_qp          = 0;
-            cmd->dw15.max_qp          = 255;
+        cmd->dw12.gopp = seq_param->intra_period - 1;
 
-            cmd->dw25.frame_number    = param->frame_number;
+        cmd->dw13.init_frame_width   = pic_param->frame_width_src;
+        cmd->dw13.init_frame_height   = pic_param->frame_height_src;
 
-            // Used in dynamic scaling. set to zero for now
-            cmd->dw27.hrd_buffer_fullness_upper_limit = 0;
-            cmd->dw28.hrd_buffer_fullness_lower_limit = 0;
+        cmd->dw15.min_qp          = 0;
+        cmd->dw15.max_qp          = 255;
 
-            if (pic_param->pic_flags.bits.segmentation_enabled) {
-                cmd->dw32.seg_delta_qp0              = segment_param->seg_data[0].segment_qindex_delta;
-                cmd->dw32.seg_delta_qp1              = segment_param->seg_data[1].segment_qindex_delta;
-                cmd->dw32.seg_delta_qp2              = segment_param->seg_data[2].segment_qindex_delta;
-                cmd->dw32.seg_delta_qp3              = segment_param->seg_data[3].segment_qindex_delta;
+        cmd->dw16.cq_level            = 30;
 
-                cmd->dw33.seg_delta_qp4              = segment_param->seg_data[4].segment_qindex_delta;
-                cmd->dw33.seg_delta_qp5              = segment_param->seg_data[5].segment_qindex_delta;
-                cmd->dw33.seg_delta_qp6              = segment_param->seg_data[6].segment_qindex_delta;
-                cmd->dw33.seg_delta_qp7              = segment_param->seg_data[7].segment_qindex_delta;
-            }
+        cmd->dw17.enable_dynamic_scaling = vp9_state->dys_in_use;
+        cmd->dw17.brc_overshoot_cbr_pct = 150;
 
-            //cmd->dw34.temporal_id                = pPicParams->temporal_idi;
-            cmd->dw34.temporal_id                = 0;
-            cmd->dw34.multi_ref_qp_check         = param->multi_ref_qp_check;
+        dInputBitsPerFrame = (double)cmd->dw8.max_bit_rate * (double)vp9_state->framerate.den / (double)vp9_state->framerate.num;
+        dbps_ratio         = dInputBitsPerFrame / ((double)vp9_state->vbv_buffer_size_in_bit / 30.0);
+        if (dbps_ratio < 0.1)
+            dbps_ratio = 0.1;
+        if (dbps_ratio > 3.5)
+            dbps_ratio = 3.5;
 
-            cmd->dw35.max_num_pak_passes         = param->brc_num_pak_passes;
-            cmd->dw35.sync_async                 = 0;
-            cmd->dw35.mbrc                       = param->mbbrc_enabled;
-            if (*param->pbrc_init_current_target_buf_full_in_bits >
-                 ((double)(*param->pbrc_init_reset_buf_size_in_bits))) {
-                *param->pbrc_init_current_target_buf_full_in_bits -=
-                     (double)(*param->pbrc_init_reset_buf_size_in_bits);
-                cmd->dw35.overflow = 1;
-            }
-            else
-                cmd->dw35.overflow = 0;
+        *param->pbrc_init_reset_buf_size_in_bits  = cmd->dw6.buf_size;
+        *param->pbrc_init_reset_input_bits_per_frame  = dInputBitsPerFrame;
 
-            cmd->dw24.target_size                 = (uint32_t)(*param->pbrc_init_current_target_buf_full_in_bits);
+        cmd->dw18.pframe_deviation_threshold0 = (uint32_t)(-50 * pow(0.90, dbps_ratio));
+        cmd->dw18.pframe_deviation_threshold1  = (uint32_t)(-50 * pow(0.66, dbps_ratio));
+        cmd->dw18.pframe_deviation_threshold2  = (uint32_t)(-50 * pow(0.46, dbps_ratio));
+        cmd->dw18.pframe_deviation_threshold3  = (uint32_t)(-50 * pow(0.3, dbps_ratio));
+        cmd->dw19.pframe_deviation_threshold4  = (uint32_t)(50 * pow(0.3, dbps_ratio));
+        cmd->dw19.pframe_deviation_threshold5  = (uint32_t)(50 * pow(0.46, dbps_ratio));
+        cmd->dw19.pframe_deviation_threshold6  = (uint32_t)(50 * pow(0.7, dbps_ratio));
+        cmd->dw19.pframe_deviation_threshold7  = (uint32_t)(50 * pow(0.9, dbps_ratio));
 
-            cmd->dw36.segmentation               = pic_param->pic_flags.bits.segmentation_enabled;
+        cmd->dw20.vbr_deviation_threshold0     = (uint32_t)(-50 * pow(0.9, dbps_ratio));
+        cmd->dw20.vbr_deviation_threshold1     = (uint32_t)(-50 * pow(0.7, dbps_ratio));
+        cmd->dw20.vbr_deviation_threshold2     = (uint32_t)(-50 * pow(0.5, dbps_ratio));
+        cmd->dw20.vbr_deviation_threshold3     = (uint32_t)(-50 * pow(0.3, dbps_ratio));
+        cmd->dw21.vbr_deviation_threshold4     = (uint32_t)(100 * pow(0.4, dbps_ratio));
+        cmd->dw21.vbr_deviation_threshold5     = (uint32_t)(100 * pow(0.5, dbps_ratio));
+        cmd->dw21.vbr_deviation_threshold6     = (uint32_t)(100 * pow(0.75, dbps_ratio));
+        cmd->dw21.vbr_deviation_threshold7     = (uint32_t)(100 * pow(0.9, dbps_ratio));
 
-            *param->pbrc_init_current_target_buf_full_in_bits += *param->pbrc_init_reset_input_bits_per_frame;
+        cmd->dw22.kframe_deviation_threshold0  = (uint32_t)(-50 * pow(0.8, dbps_ratio));
+        cmd->dw22.kframe_deviation_threshold1  = (uint32_t)(-50 * pow(0.6, dbps_ratio));
+        cmd->dw22.kframe_deviation_threshold2  = (uint32_t)(-50 * pow(0.34, dbps_ratio));
+        cmd->dw22.kframe_deviation_threshold3  = (uint32_t)(-50 * pow(0.2, dbps_ratio));
+        cmd->dw23.kframe_deviation_threshold4  = (uint32_t)(50 * pow(0.2, dbps_ratio));
+        cmd->dw23.kframe_deviation_threshold5  = (uint32_t)(50 * pow(0.4, dbps_ratio));
+        cmd->dw23.kframe_deviation_threshold6  = (uint32_t)(50 * pow(0.66, dbps_ratio));
+        cmd->dw23.kframe_deviation_threshold7  = (uint32_t)(50 * pow(0.9, dbps_ratio));
 
-            cmd->dw38.qdelta_ydc  = pic_param->luma_dc_qindex_delta;
-            cmd->dw38.qdelta_uvdc = pic_param->chroma_dc_qindex_delta;
-            cmd->dw38.qdelta_uvac = pic_param->chroma_ac_qindex_delta;
+        break;
+    }
+    case VP9_MEDIA_STATE_BRC_UPDATE: {
+        cmd->dw15.min_qp          = 0;
+        cmd->dw15.max_qp          = 255;
 
-            break;
+        cmd->dw25.frame_number    = param->frame_number;
+
+        // Used in dynamic scaling. set to zero for now
+        cmd->dw27.hrd_buffer_fullness_upper_limit = 0;
+        cmd->dw28.hrd_buffer_fullness_lower_limit = 0;
+
+        if (pic_param->pic_flags.bits.segmentation_enabled) {
+            cmd->dw32.seg_delta_qp0              = segment_param->seg_data[0].segment_qindex_delta;
+            cmd->dw32.seg_delta_qp1              = segment_param->seg_data[1].segment_qindex_delta;
+            cmd->dw32.seg_delta_qp2              = segment_param->seg_data[2].segment_qindex_delta;
+            cmd->dw32.seg_delta_qp3              = segment_param->seg_data[3].segment_qindex_delta;
+
+            cmd->dw33.seg_delta_qp4              = segment_param->seg_data[4].segment_qindex_delta;
+            cmd->dw33.seg_delta_qp5              = segment_param->seg_data[5].segment_qindex_delta;
+            cmd->dw33.seg_delta_qp6              = segment_param->seg_data[6].segment_qindex_delta;
+            cmd->dw33.seg_delta_qp7              = segment_param->seg_data[7].segment_qindex_delta;
         }
-        case VP9_MEDIA_STATE_ENC_I_FRAME_DIST:
-            cmd->dw2.intra_mode_disable        = 0;
-            break;
-        default:
-            break;
+
+        //cmd->dw34.temporal_id                = pPicParams->temporal_idi;
+        cmd->dw34.temporal_id                = 0;
+        cmd->dw34.multi_ref_qp_check         = param->multi_ref_qp_check;
+
+        cmd->dw35.max_num_pak_passes         = param->brc_num_pak_passes;
+        cmd->dw35.sync_async                 = 0;
+        cmd->dw35.mbrc                       = param->mbbrc_enabled;
+        if (*param->pbrc_init_current_target_buf_full_in_bits >
+            ((double)(*param->pbrc_init_reset_buf_size_in_bits))) {
+            *param->pbrc_init_current_target_buf_full_in_bits -=
+                (double)(*param->pbrc_init_reset_buf_size_in_bits);
+            cmd->dw35.overflow = 1;
+        } else
+            cmd->dw35.overflow = 0;
+
+        cmd->dw24.target_size                 = (uint32_t)(*param->pbrc_init_current_target_buf_full_in_bits);
+
+        cmd->dw36.segmentation               = pic_param->pic_flags.bits.segmentation_enabled;
+
+        *param->pbrc_init_current_target_buf_full_in_bits += *param->pbrc_init_reset_input_bits_per_frame;
+
+        cmd->dw38.qdelta_ydc  = pic_param->luma_dc_qindex_delta;
+        cmd->dw38.qdelta_uvdc = pic_param->chroma_dc_qindex_delta;
+        cmd->dw38.qdelta_uvac = pic_param->chroma_ac_qindex_delta;
+
+        break;
+    }
+    case VP9_MEDIA_STATE_ENC_I_FRAME_DIST:
+        cmd->dw2.intra_mode_disable        = 0;
+        break;
+    default:
+        break;
     }
 
     cmd->dw48.brc_y4x_input_bti                = VP9_BTI_BRC_SRCY4X_G9;
@@ -1272,11 +1244,11 @@ gen9_vp9_brc_init_reset_kernel(VADriverContextP ctx,
     brc_initreset_curbe.frame_width         = vp9_state->frame_width;
     brc_initreset_curbe.frame_height        = vp9_state->frame_height;
     brc_initreset_curbe.pbrc_init_current_target_buf_full_in_bits =
-                          &vp9_state->brc_init_current_target_buf_full_in_bits;
+        &vp9_state->brc_init_current_target_buf_full_in_bits;
     brc_initreset_curbe.pbrc_init_reset_buf_size_in_bits =
-                          &vp9_state->brc_init_reset_buf_size_in_bits;
+        &vp9_state->brc_init_reset_buf_size_in_bits;
     brc_initreset_curbe.pbrc_init_reset_input_bits_per_frame =
-                          &vp9_state->brc_init_reset_input_bits_per_frame;
+        &vp9_state->brc_init_reset_input_bits_per_frame;
     brc_initreset_curbe.picture_coding_type  = vp9_state->picture_coding_type;
     brc_initreset_curbe.initbrc            = !vp9_state->brc_inited;
     brc_initreset_curbe.mbbrc_enabled      = 0;
@@ -1318,7 +1290,7 @@ gen9_brc_intra_dist_add_surfaces_vp9(VADriverContextP ctx,
                             0, 1,
                             I965_SURFACEFORMAT_R8_UNORM,
                             VP9_BTI_BRC_SRCY4X_G9
-                            );
+                           );
 
     gen9_add_adv_gpe_surface(ctx, gpe_context,
                              obj_surface,
@@ -1331,7 +1303,7 @@ gen9_brc_intra_dist_add_surfaces_vp9(VADriverContextP ctx,
                                    I965_SURFACEFORMAT_R8_UNORM,
                                    VP9_BTI_BRC_DISTORTION_G9);
 
-     return;
+    return;
 }
 
 /* The function related with BRC */
@@ -1371,11 +1343,11 @@ gen9_vp9_brc_intra_dist_kernel(VADriverContextP ctx,
     brc_intra_dist_curbe.frame_width         = vp9_state->frame_width;
     brc_intra_dist_curbe.frame_height        = vp9_state->frame_height;
     brc_intra_dist_curbe.pbrc_init_current_target_buf_full_in_bits =
-                          &vp9_state->brc_init_current_target_buf_full_in_bits;
+        &vp9_state->brc_init_current_target_buf_full_in_bits;
     brc_intra_dist_curbe.pbrc_init_reset_buf_size_in_bits =
-                          &vp9_state->brc_init_reset_buf_size_in_bits;
+        &vp9_state->brc_init_reset_buf_size_in_bits;
     brc_intra_dist_curbe.pbrc_init_reset_input_bits_per_frame =
-                          &vp9_state->brc_init_reset_input_bits_per_frame;
+        &vp9_state->brc_init_reset_input_bits_per_frame;
     brc_intra_dist_curbe.picture_coding_type  = vp9_state->picture_coding_type;
     brc_intra_dist_curbe.initbrc            = !vp9_state->brc_inited;
     brc_intra_dist_curbe.mbbrc_enabled      = 0;
@@ -1409,9 +1381,9 @@ gen9_vp9_brc_intra_dist_kernel(VADriverContextP ctx,
 
 static void
 intel_vp9enc_construct_picstate_batchbuf(VADriverContextP ctx,
-                                            struct encode_state *encode_state,
-                                            struct intel_encoder_context *encoder_context,
-                                            struct i965_gpe_resource *gpe_resource)
+                                         struct encode_state *encode_state,
+                                         struct intel_encoder_context *encoder_context,
+                                         struct i965_gpe_resource *gpe_resource)
 {
     struct gen9_vp9_state *vp9_state;
     VAEncPictureParameterBufferVP9 *pic_param;
@@ -1480,40 +1452,40 @@ intel_vp9enc_construct_picstate_batchbuf(VADriverContextP ctx,
         if (i == 0)
             non_first_pass = 0;
 
-        cmd_ptr =(unsigned int *)(pdata + i * VP9_PIC_STATE_BUFFER_SIZE);
+        cmd_ptr = (unsigned int *)(pdata + i * VP9_PIC_STATE_BUFFER_SIZE);
 
         *cmd_ptr++ = (HCP_VP9_PIC_STATE | (33 - 2));
         *cmd_ptr++ = (frame_height_minus1 << 16 |
                       frame_width_minus1);
         /* dw2 */
-        *cmd_ptr++ = ( 0 << 31 | /* disable segment_in */
-                       0 << 30 | /* disable segment_out */
-                       is_lossless << 29 | /* loseless */
-                       (pic_param->pic_flags.bits.segmentation_enabled && pic_param->pic_flags.bits.segmentation_temporal_update) << 28 | /* temporal update */
-                       (pic_param->pic_flags.bits.segmentation_enabled && pic_param->pic_flags.bits.segmentation_update_map) << 27 | /* temporal update */
-                       (pic_param->pic_flags.bits.segmentation_enabled << 26) |
-                       (pic_param->sharpness_level << 23) |
-                       (pic_param->filter_level << 17) |
-                       (pic_param->pic_flags.bits.frame_parallel_decoding_mode << 16) |
-                       (pic_param->pic_flags.bits.error_resilient_mode << 15) |
-                       (pic_param->pic_flags.bits.refresh_frame_context << 14) |
-                       (last_frame_type << 13) |
-                       (vp9_state->tx_mode == TX_MODE_SELECT) << 12 |
-                       (pic_param->pic_flags.bits.comp_prediction_mode == REFERENCE_MODE_SELECT) << 11 |
-                       (use_prev_frame_mvs) << 10 |
-                       ref_flags |
-                       (pic_param->pic_flags.bits.mcomp_filter_type << 4) |
-                       (pic_param->pic_flags.bits.allow_high_precision_mv << 3) |
-                       (is_intra_only << 2) |
-                       (adapt_flag << 1) |
-                       (pic_param->pic_flags.bits.frame_type) << 0);
+        *cmd_ptr++ = (0 << 31 |  /* disable segment_in */
+                      0 << 30 | /* disable segment_out */
+                      is_lossless << 29 | /* loseless */
+                      (pic_param->pic_flags.bits.segmentation_enabled && pic_param->pic_flags.bits.segmentation_temporal_update) << 28 | /* temporal update */
+                      (pic_param->pic_flags.bits.segmentation_enabled && pic_param->pic_flags.bits.segmentation_update_map) << 27 | /* temporal update */
+                      (pic_param->pic_flags.bits.segmentation_enabled << 26) |
+                      (pic_param->sharpness_level << 23) |
+                      (pic_param->filter_level << 17) |
+                      (pic_param->pic_flags.bits.frame_parallel_decoding_mode << 16) |
+                      (pic_param->pic_flags.bits.error_resilient_mode << 15) |
+                      (pic_param->pic_flags.bits.refresh_frame_context << 14) |
+                      (last_frame_type << 13) |
+                      (vp9_state->tx_mode == TX_MODE_SELECT) << 12 |
+                      (pic_param->pic_flags.bits.comp_prediction_mode == REFERENCE_MODE_SELECT) << 11 |
+                      (use_prev_frame_mvs) << 10 |
+                      ref_flags |
+                      (pic_param->pic_flags.bits.mcomp_filter_type << 4) |
+                      (pic_param->pic_flags.bits.allow_high_precision_mv << 3) |
+                      (is_intra_only << 2) |
+                      (adapt_flag << 1) |
+                      (pic_param->pic_flags.bits.frame_type) << 0);
 
-        *cmd_ptr++ =((0 << 28) | /* VP9Profile0 */
-                     (0 << 24) | /* 8-bit depth */
-                     (0 << 22) | /* only 420 format */
-                     (0 << 0)  | /* sse statistics */
-                     (pic_param->log2_tile_rows << 8) |
-                     (pic_param->log2_tile_columns << 0));
+        *cmd_ptr++ = ((0 << 28) | /* VP9Profile0 */
+                      (0 << 24) | /* 8-bit depth */
+                      (0 << 22) | /* only 420 format */
+                      (0 << 0)  | /* sse statistics */
+                      (pic_param->log2_tile_rows << 8) |
+                      (pic_param->log2_tile_columns << 0));
 
         /* dw4..6 */
         if (pic_param->pic_flags.bits.frame_type &&
@@ -1537,7 +1509,7 @@ intel_vp9enc_construct_picstate_batchbuf(VADriverContextP ctx,
             *cmd_ptr++ = 0;
         }
         /* dw7..9 */
-        for(j = 0; j < 3; j++) {
+        for (j = 0; j < 3; j++) {
             obj_surface = encode_state->reference_objects[j];
             vp9_surface = NULL;
 
@@ -1588,9 +1560,9 @@ intel_vp9enc_construct_picstate_batchbuf(VADriverContextP ctx,
 
         /* dw17 */
         *cmd_ptr++ = vp9_state->frame_header.bit_offset_ref_lf_delta |
-                      (vp9_state->frame_header.bit_offset_mode_lf_delta << 16);
+                     (vp9_state->frame_header.bit_offset_mode_lf_delta << 16);
         *cmd_ptr++ = vp9_state->frame_header.bit_offset_qindex |
-                      (vp9_state->frame_header.bit_offset_lf_level << 16);
+                     (vp9_state->frame_header.bit_offset_lf_level << 16);
 
         /* dw19 */
         *cmd_ptr++ = (1 << 26 | (1 << 25) |
@@ -1632,10 +1604,10 @@ intel_vp9enc_construct_picstate_batchbuf(VADriverContextP ctx,
 
 static void
 gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
-                                     struct encode_state *encode_state,
-                                     struct intel_encoder_context *encoder_context,
-                                     struct i965_gpe_context *brc_gpe_context,
-                                     struct i965_gpe_context *mbenc_gpe_context)
+                                 struct encode_state *encode_state,
+                                 struct intel_encoder_context *encoder_context,
+                                 struct i965_gpe_context *brc_gpe_context,
+                                 struct i965_gpe_context *mbenc_gpe_context)
 {
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
 
@@ -1737,13 +1709,13 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                 0,
                                 VP9_BTI_BRC_HFW_DATA_G9);
 
-     return;
+    return;
 }
 
 static VAStatus
 gen9_vp9_brc_update_kernel(VADriverContextP ctx,
-                               struct encode_state *encode_state,
-                               struct intel_encoder_context *encoder_context)
+                           struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context)
 {
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
     struct vp9_brc_context *brc_context = &vme_context->brc_context;
@@ -1791,9 +1763,9 @@ gen9_vp9_brc_update_kernel(VADriverContextP ctx,
     mbenc_curbe_param.media_state_type       = mbenc_function;
 
     vme_context->pfn_set_curbe_mbenc(ctx, encode_state,
-                                mbenc_gpe_context,
-                                encoder_context,
-                                &mbenc_curbe_param);
+                                     mbenc_gpe_context,
+                                     encoder_context,
+                                     &mbenc_curbe_param);
 
     vp9_state->mbenc_curbe_set_in_brc_update = true;
 
@@ -1822,11 +1794,11 @@ gen9_vp9_brc_update_kernel(VADriverContextP ctx,
     brc_update_curbe_param.brc_num_pak_passes     = vp9_state->num_pak_passes;
 
     brc_update_curbe_param.pbrc_init_current_target_buf_full_in_bits =
-                          &vp9_state->brc_init_current_target_buf_full_in_bits;
+        &vp9_state->brc_init_current_target_buf_full_in_bits;
     brc_update_curbe_param.pbrc_init_reset_buf_size_in_bits =
-                          &vp9_state->brc_init_reset_buf_size_in_bits;
+        &vp9_state->brc_init_reset_buf_size_in_bits;
     brc_update_curbe_param.pbrc_init_reset_input_bits_per_frame =
-                          &vp9_state->brc_init_reset_input_bits_per_frame;
+        &vp9_state->brc_init_reset_input_bits_per_frame;
 
     vme_context->pfn_set_curbe_brc(ctx, encode_state,
                                    brc_gpe_context,
@@ -1835,8 +1807,7 @@ gen9_vp9_brc_update_kernel(VADriverContextP ctx,
 
 
     // Check if the constant data surface is present
-    if (vp9_state->brc_constant_buffer_supported)
-    {
+    if (vp9_state->brc_constant_buffer_supported) {
         char *brc_const_buffer;
         brc_const_buffer = i965_map_gpe_resource(&vme_context->res_brc_const_data_buffer);
 
@@ -1853,17 +1824,16 @@ gen9_vp9_brc_update_kernel(VADriverContextP ctx,
         i965_unmap_gpe_resource(&vme_context->res_brc_const_data_buffer);
     }
 
-    if (pic_param->pic_flags.bits.segmentation_enabled)
-    {
-          //reallocate the vme_state->mb_segment_map_surface
-          /* this will be added later */
+    if (pic_param->pic_flags.bits.segmentation_enabled) {
+        //reallocate the vme_state->mb_segment_map_surface
+        /* this will be added later */
     }
 
     {
         pic_param->filter_level = 0;
         // clear the filter level value in picParams ebfore programming pic state, as this value will be determined and updated by BRC.
         intel_vp9enc_construct_picstate_batchbuf(ctx, encode_state,
-                 encoder_context, &vme_context->res_pic_state_brc_read_buffer);
+                                                 encoder_context, &vme_context->res_pic_state_brc_read_buffer);
     }
 
     gen9_brc_update_add_surfaces_vp9(ctx, encode_state,
@@ -1882,10 +1852,10 @@ gen9_vp9_brc_update_kernel(VADriverContextP ctx,
 
 static
 void gen9_vp9_set_curbe_me(VADriverContextP ctx,
-                            struct encode_state *encode_state,
-                            struct i965_gpe_context *gpe_context,
-                            struct intel_encoder_context *encoder_context,
-                            struct gen9_vp9_me_curbe_param *param)
+                           struct encode_state *encode_state,
+                           struct i965_gpe_context *gpe_context,
+                           struct intel_encoder_context *encoder_context,
+                           struct gen9_vp9_me_curbe_param *param)
 {
     vp9_me_curbe_data        *me_cmd;
     int enc_media_state;
@@ -1996,12 +1966,9 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
         return;
 
     vp9_priv_surface = obj_surface->private_data;
-    if (param->use_16x_me)
-    {
+    if (param->use_16x_me) {
         gpe_resource = param->pres_16x_memv_data_buffer;
-    }
-    else
-    {
+    } else {
         gpe_resource = param->pres_4x_memv_data_buffer;
     }
 
@@ -2247,10 +2214,10 @@ gen9_vp9_me_kernel(VADriverContextP ctx,
 
 static void
 gen9_vp9_set_curbe_scaling_cm(VADriverContextP ctx,
-                            struct encode_state *encode_state,
-                            struct i965_gpe_context *gpe_context,
-                            struct intel_encoder_context *encoder_context,
-                            struct gen9_vp9_scaling_curbe_param *curbe_param)
+                              struct encode_state *encode_state,
+                              struct i965_gpe_context *gpe_context,
+                              struct intel_encoder_context *encoder_context,
+                              struct gen9_vp9_scaling_curbe_param *curbe_param)
 {
     vp9_scaling4x_curbe_data_cm *curbe_cmd;
 
@@ -2273,8 +2240,7 @@ gen9_vp9_set_curbe_scaling_cm(VADriverContextP ctx,
     curbe_cmd->dw6.enable_blk8x8_stat_output = 0;
 
     if (curbe_param->mb_variance_output_enabled ||
-        curbe_param->mb_pixel_average_output_enabled)
-    {
+        curbe_param->mb_pixel_average_output_enabled) {
         curbe_cmd->dw10.mbv_proc_stat_bti = VP9_BTI_SCALING_FRAME_MBVPROCSTATS_DST_CM;
     }
 
@@ -2356,8 +2322,7 @@ gen9_vp9_scaling_kernel(VADriverContextP ctx,
     obj_surface = encode_state->reconstructed_object;
     vp9_priv_surface = obj_surface->private_data;
 
-    if (use_16x_scaling)
-    {
+    if (use_16x_scaling) {
         downscaled_width_in_mb      = vp9_state->downscaled_width_16x_in_mb;
         downscaled_height_in_mb      = vp9_state->downscaled_height_16x_in_mb;
 
@@ -2373,8 +2338,8 @@ gen9_vp9_scaling_kernel(VADriverContextP ctx,
         downscaled_height_in_mb      = vp9_state->downscaled_height_4x_in_mb;
 
         if (vp9_state->dys_in_use &&
-               ((pic_param->frame_width_src != pic_param->frame_width_dst) ||
-                (pic_param->frame_height_src != pic_param->frame_height_dst)))
+            ((pic_param->frame_width_src != pic_param->frame_width_dst) ||
+             (pic_param->frame_height_src != pic_param->frame_height_dst)))
             input_surface               = vp9_priv_surface->dys_surface_obj;
         else
             input_surface               = encode_state->input_yuv_object;
@@ -2403,9 +2368,9 @@ gen9_vp9_scaling_kernel(VADriverContextP ctx,
     scaling_curbe_param.blk8x8_stat_enabled = 0;
 
     vme_context->pfn_set_curbe_scaling(ctx, encode_state,
-                                  gpe_context,
-                                  encoder_context,
-                                  &scaling_curbe_param);
+                                       gpe_context,
+                                       encoder_context,
+                                       &scaling_curbe_param);
 
     memset(&scaling_surface_param, 0, sizeof(scaling_surface_param));
     scaling_surface_param.p_scaling_bti = (void *)(&vme_context->scaling_context.scaling_4x_bti);
@@ -2456,7 +2421,7 @@ gen9_vp9_dys_set_sampler_state(struct i965_gpe_context *gpe_context)
         return;
 
     sampler_cmd = (struct gen9_sampler_8x8_avs *)
-       (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
+                  (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
 
     memset(sampler_cmd, 0, sizeof(struct gen9_sampler_8x8_avs));
 
@@ -2551,10 +2516,10 @@ gen9_vp9_set_curbe_dys(VADriverContextP ctx,
 
 static void
 gen9_vp9_send_dys_surface(VADriverContextP ctx,
-                       struct encode_state *encode_state,
-                       struct i965_gpe_context *gpe_context,
-                       struct intel_encoder_context *encoder_context,
-                       struct gen9_vp9_dys_surface_param *surface_param)
+                          struct encode_state *encode_state,
+                          struct i965_gpe_context *gpe_context,
+                          struct intel_encoder_context *encoder_context,
+                          struct gen9_vp9_dys_surface_param *surface_param)
 {
 
     if (surface_param->input_frame)
@@ -2586,9 +2551,9 @@ gen9_vp9_send_dys_surface(VADriverContextP ctx,
 
 static VAStatus
 gen9_vp9_dys_kernel(VADriverContextP ctx,
-                        struct encode_state *encode_state,
-                        struct intel_encoder_context *encoder_context,
-                        gen9_vp9_dys_kernel_param *dys_kernel_param)
+                    struct encode_state *encode_state,
+                    struct intel_encoder_context *encoder_context,
+                    gen9_vp9_dys_kernel_param *dys_kernel_param)
 {
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
     struct i965_gpe_context *gpe_context;
@@ -2613,9 +2578,9 @@ gen9_vp9_dys_kernel(VADriverContextP ctx,
     curbe_param.output_width = dys_kernel_param->output_width;
     curbe_param.output_height = dys_kernel_param->output_height;
     vme_context->pfn_set_curbe_dys(ctx, encode_state,
-                                  gpe_context,
-                                  encoder_context,
-                                  &curbe_param);
+                                   gpe_context,
+                                   encoder_context,
+                                   &curbe_param);
 
     // Add surface states
     memset(&surface_param, 0, sizeof(surface_param));
@@ -2652,8 +2617,8 @@ gen9_vp9_dys_kernel(VADriverContextP ctx,
 
 static VAStatus
 gen9_vp9_run_dys_refframes(VADriverContextP ctx,
-                          struct encode_state *encode_state,
-                          struct intel_encoder_context *encoder_context)
+                           struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context)
 {
     struct gen9_vp9_state *vp9_state;
     VAEncPictureParameterBufferVP9  *pic_param;
@@ -2689,7 +2654,7 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
     }
 
     if ((vp9_state->dys_ref_frame_flag & VP9_LAST_REF) &&
-         vp9_state->last_ref_obj) {
+        vp9_state->last_ref_obj) {
         obj_surface = vp9_state->last_ref_obj;
         vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -2742,7 +2707,7 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
     }
 
     if ((vp9_state->dys_ref_frame_flag & VP9_GOLDEN_REF) &&
-         vp9_state->golden_ref_obj) {
+        vp9_state->golden_ref_obj) {
         obj_surface = vp9_state->golden_ref_obj;
         vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -2795,7 +2760,7 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
     }
 
     if ((vp9_state->dys_ref_frame_flag & VP9_ALT_REF) &&
-         vp9_state->alt_ref_obj) {
+        vp9_state->alt_ref_obj) {
         obj_surface = vp9_state->alt_ref_obj;
         vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -2886,13 +2851,10 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
 
     memset(curbe_cmd, 0, sizeof(vp9_mbenc_curbe_data));
 
-    if (vp9_state->dys_in_use)
-    {
+    if (vp9_state->dys_in_use) {
         curbe_cmd->dw0.frame_width = pic_param->frame_width_dst;
         curbe_cmd->dw0.frame_height = pic_param->frame_height_dst;
-    }
-    else
-    {
+    } else {
         curbe_cmd->dw0.frame_width = pic_param->frame_width_src;
         curbe_cmd->dw0.frame_height = pic_param->frame_height_src;
     }
@@ -2908,10 +2870,8 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
     curbe_cmd->dw1.ref_frame_flags = curbe_param->ref_frame_flag;
 
     //right now set them to normal settings
-    if (curbe_param->picture_coding_type)
-    {
-        switch (vp9_state->target_usage)
-        {
+    if (curbe_param->picture_coding_type) {
+        switch (vp9_state->target_usage) {
         case INTEL_ENC_VP9_TU_QUALITY:
             curbe_cmd->dw1.min_16for32_check    = 0x00;
             curbe_cmd->dw2.multi_pred           = 0x02;
@@ -2923,8 +2883,8 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
             curbe_cmd->dw4.disable_mr_threshold = 0x000C;
 
             memcpy(&curbe_cmd->dw16,
-                    vp9_diamond_ime_search_path_delta,
-                    14 * sizeof(unsigned int));
+                   vp9_diamond_ime_search_path_delta,
+                   14 * sizeof(unsigned int));
             break;
         case INTEL_ENC_VP9_TU_PERFORMANCE:
             curbe_cmd->dw1.min_16for32_check    = 0x02;
@@ -2937,8 +2897,8 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
             curbe_cmd->dw4.disable_mr_threshold = 0x0016;
 
             memcpy(&curbe_cmd->dw16,
-                    vp9_fullspiral_ime_search_path_delta,
-                    14 * sizeof(unsigned int));
+                   vp9_fullspiral_ime_search_path_delta,
+                   14 * sizeof(unsigned int));
 
             break;
         default:  // normal settings
@@ -2952,8 +2912,8 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
             curbe_cmd->dw4.disable_mr_threshold = 0x0011;
 
             memcpy(&curbe_cmd->dw16,
-                    vp9_diamond_ime_search_path_delta,
-                    14 * sizeof(unsigned int));
+                   vp9_diamond_ime_search_path_delta,
+                   14 * sizeof(unsigned int));
             break;
         }
 
@@ -2967,8 +2927,7 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
     curbe_cmd->dw5.intra_round = 4;
     curbe_cmd->dw5.frame_qpindex = pic_param->luma_ac_qindex;
 
-    for (i = 0; i < segment_count; i++)
-    {
+    for (i = 0; i < segment_count; i++) {
         seg_qindex = pic_param->luma_ac_qindex + pic_param->luma_dc_qindex_delta
                      + seg_param->seg_data[i].segment_qindex_delta;
 
@@ -2984,26 +2943,21 @@ gen9_vp9_set_curbe_mbenc(VADriverContextP ctx,
                    16 * sizeof(unsigned int));
     }
 
-    if (curbe_param->picture_coding_type)
-    {
-        if (curbe_cmd->dw3.multi_ref_qp_check)
-        {
-            if (curbe_param->ref_frame_flag & 0x01)
-            {
+    if (curbe_param->picture_coding_type) {
+        if (curbe_cmd->dw3.multi_ref_qp_check) {
+            if (curbe_param->ref_frame_flag & 0x01) {
                 obj_surface = curbe_param->last_ref_obj;
                 vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
                 curbe_cmd->dw8.last_ref_qp = vp9_quant_dc[vp9_priv_surface->qp_value];
             }
 
-            if (curbe_param->ref_frame_flag & 0x02)
-            {
+            if (curbe_param->ref_frame_flag & 0x02) {
                 obj_surface = curbe_param->golden_ref_obj;
                 vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
                 curbe_cmd->dw8.golden_ref_qp = vp9_quant_dc[vp9_priv_surface->qp_value];
             }
 
-            if (curbe_param->ref_frame_flag & 0x04)
-            {
+            if (curbe_param->ref_frame_flag & 0x04) {
                 obj_surface = curbe_param->alt_ref_obj;
                 vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
                 curbe_cmd->dw9.alt_ref_qp = vp9_quant_dc[vp9_priv_surface->qp_value];
@@ -3050,10 +3004,8 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
     frame_height_in_sb = ALIGN(mbenc_param->frame_height, 64) / 64;
     media_function = mbenc_param->media_state_type;
 
-    switch (media_function)
-    {
-    case VP9_MEDIA_STATE_MBENC_I_32x32:
-    {
+    switch (media_function) {
+    case VP9_MEDIA_STATE_MBENC_I_32x32: {
         obj_surface = mbenc_param->curr_frame_obj;
 
         gen9_add_2d_gpe_surface(ctx,
@@ -3073,19 +3025,18 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                 VP9_BTI_MBENC_CURR_UV_G9);
 
 
-        if (mbenc_param->segmentation_enabled)
-        {
-           gen9_add_buffer_2d_gpe_surface(ctx,
-                                   gpe_context,
-                                   mbenc_param->pres_segmentation_map,
-                                   1,
-                                   I965_SURFACEFORMAT_R8_UNORM,
-                                   VP9_BTI_MBENC_SEGMENTATION_MAP_G9);
+        if (mbenc_param->segmentation_enabled) {
+            gen9_add_buffer_2d_gpe_surface(ctx,
+                                           gpe_context,
+                                           mbenc_param->pres_segmentation_map,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           VP9_BTI_MBENC_SEGMENTATION_MAP_G9);
 
         }
 
         res_size = 16 * mbenc_param->frame_width_in_mb *
-                 mbenc_param->frame_height_in_mb * sizeof(unsigned int);
+                   mbenc_param->frame_height_in_mb * sizeof(unsigned int);
         gen9_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision,
@@ -3096,8 +3047,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         break;
     }
-    case VP9_MEDIA_STATE_MBENC_I_16x16:
-    {
+    case VP9_MEDIA_STATE_MBENC_I_16x16: {
         obj_surface = mbenc_param->curr_frame_obj;
 
         gen9_add_2d_gpe_surface(ctx,
@@ -3120,19 +3070,18 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                  obj_surface,
                                  VP9_BTI_MBENC_CURR_NV12_G9);
 
-        if (mbenc_param->segmentation_enabled)
-        {
-           gen9_add_buffer_2d_gpe_surface(ctx,
-                                   gpe_context,
-                                   mbenc_param->pres_segmentation_map,
-                                   1,
-                                   I965_SURFACEFORMAT_R8_UNORM,
-                                   VP9_BTI_MBENC_SEGMENTATION_MAP_G9);
+        if (mbenc_param->segmentation_enabled) {
+            gen9_add_buffer_2d_gpe_surface(ctx,
+                                           gpe_context,
+                                           mbenc_param->pres_segmentation_map,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           VP9_BTI_MBENC_SEGMENTATION_MAP_G9);
 
         }
 
         res_size = 16 * mbenc_param->frame_width_in_mb *
-                 mbenc_param->frame_height_in_mb * sizeof(unsigned int);
+                   mbenc_param->frame_height_in_mb * sizeof(unsigned int);
         gen9_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision,
@@ -3153,8 +3102,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         break;
     }
-    case VP9_MEDIA_STATE_MBENC_P:
-    {
+    case VP9_MEDIA_STATE_MBENC_P: {
         obj_surface = mbenc_param->curr_frame_obj;
 
         gen9_add_2d_gpe_surface(ctx,
@@ -3176,8 +3124,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                  obj_surface,
                                  VP9_BTI_MBENC_CURR_NV12_G9);
 
-        if (mbenc_param->last_ref_obj)
-        {
+        if (mbenc_param->last_ref_obj) {
             obj_surface = mbenc_param->last_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -3189,17 +3136,16 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                 tmp_input = obj_surface;
 
             gen9_add_adv_gpe_surface(ctx, gpe_context,
-                                 tmp_input,
-                                 VP9_BTI_MBENC_LAST_NV12_G9);
+                                     tmp_input,
+                                     VP9_BTI_MBENC_LAST_NV12_G9);
 
             gen9_add_adv_gpe_surface(ctx, gpe_context,
-                                 tmp_input,
-                                 VP9_BTI_MBENC_LAST_NV12_G9 + 1);
+                                     tmp_input,
+                                     VP9_BTI_MBENC_LAST_NV12_G9 + 1);
 
         }
 
-        if (mbenc_param->golden_ref_obj)
-        {
+        if (mbenc_param->golden_ref_obj) {
             obj_surface = mbenc_param->golden_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -3211,17 +3157,16 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                 tmp_input = obj_surface;
 
             gen9_add_adv_gpe_surface(ctx, gpe_context,
-                                 tmp_input,
-                                 VP9_BTI_MBENC_GOLD_NV12_G9);
+                                     tmp_input,
+                                     VP9_BTI_MBENC_GOLD_NV12_G9);
 
             gen9_add_adv_gpe_surface(ctx, gpe_context,
-                                 tmp_input,
-                                 VP9_BTI_MBENC_GOLD_NV12_G9 + 1);
+                                     tmp_input,
+                                     VP9_BTI_MBENC_GOLD_NV12_G9 + 1);
 
         }
 
-        if (mbenc_param->alt_ref_obj)
-        {
+        if (mbenc_param->alt_ref_obj) {
             obj_surface = mbenc_param->alt_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -3233,43 +3178,41 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                 tmp_input = obj_surface;
 
             gen9_add_adv_gpe_surface(ctx, gpe_context,
-                                 tmp_input,
-                                 VP9_BTI_MBENC_ALTREF_NV12_G9);
+                                     tmp_input,
+                                     VP9_BTI_MBENC_ALTREF_NV12_G9);
 
             gen9_add_adv_gpe_surface(ctx, gpe_context,
-                                 tmp_input,
-                                 VP9_BTI_MBENC_ALTREF_NV12_G9 + 1);
+                                     tmp_input,
+                                     VP9_BTI_MBENC_ALTREF_NV12_G9 + 1);
 
         }
 
-        if (mbenc_param->hme_enabled)
-        {
+        if (mbenc_param->hme_enabled) {
             gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
-                                       mbenc_param->ps4x_memv_data_buffer,
-                                       1,
-                                       I965_SURFACEFORMAT_R8_UNORM,
-                                       VP9_BTI_MBENC_HME_MV_DATA_G9);
+                                           mbenc_param->ps4x_memv_data_buffer,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           VP9_BTI_MBENC_HME_MV_DATA_G9);
 
             gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
-                                       mbenc_param->ps4x_memv_distortion_buffer,
-                                       1,
-                                       I965_SURFACEFORMAT_R8_UNORM,
-                                       VP9_BTI_MBENC_HME_DISTORTION_G9);
+                                           mbenc_param->ps4x_memv_distortion_buffer,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           VP9_BTI_MBENC_HME_DISTORTION_G9);
         }
 
-        if (mbenc_param->segmentation_enabled)
-        {
-           gen9_add_buffer_2d_gpe_surface(ctx,
-                                   gpe_context,
-                                   mbenc_param->pres_segmentation_map,
-                                   1,
-                                   I965_SURFACEFORMAT_R8_UNORM,
-                                   VP9_BTI_MBENC_SEGMENTATION_MAP_G9);
+        if (mbenc_param->segmentation_enabled) {
+            gen9_add_buffer_2d_gpe_surface(ctx,
+                                           gpe_context,
+                                           mbenc_param->pres_segmentation_map,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           VP9_BTI_MBENC_SEGMENTATION_MAP_G9);
 
         }
 
         res_size = 16 * mbenc_param->frame_width_in_mb *
-                 mbenc_param->frame_height_in_mb * sizeof(unsigned int);
+                   mbenc_param->frame_height_in_mb * sizeof(unsigned int);
         gen9_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision_prev,
@@ -3287,11 +3230,11 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                     VP9_BTI_MBENC_MODE_DECISION_G9);
 
         gen9_add_buffer_2d_gpe_surface(ctx,
-                                   gpe_context,
-                                   mbenc_param->pres_output_16x16_inter_modes,
-                                   1,
-                                   I965_SURFACEFORMAT_R8_UNORM,
-                                   VP9_BTI_MBENC_OUT_16x16_INTER_MODES_G9);
+                                       gpe_context,
+                                       mbenc_param->pres_output_16x16_inter_modes,
+                                       1,
+                                       I965_SURFACEFORMAT_R8_UNORM,
+                                       VP9_BTI_MBENC_OUT_16x16_INTER_MODES_G9);
 
         res_size = 160;
 
@@ -3306,8 +3249,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         break;
     }
-    case VP9_MEDIA_STATE_MBENC_TX:
-    {
+    case VP9_MEDIA_STATE_MBENC_TX: {
         obj_surface = mbenc_param->curr_frame_obj;
 
         gen9_add_2d_gpe_surface(ctx,
@@ -3326,19 +3268,18 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                 I965_SURFACEFORMAT_R16_UINT,
                                 VP9_BTI_MBENC_CURR_UV_G9);
 
-        if (mbenc_param->segmentation_enabled)
-        {
-           gen9_add_buffer_2d_gpe_surface(ctx,
-                                   gpe_context,
-                                   mbenc_param->pres_segmentation_map,
-                                   1,
-                                   I965_SURFACEFORMAT_R8_UNORM,
-                                   VP9_BTI_MBENC_SEGMENTATION_MAP_G9);
+        if (mbenc_param->segmentation_enabled) {
+            gen9_add_buffer_2d_gpe_surface(ctx,
+                                           gpe_context,
+                                           mbenc_param->pres_segmentation_map,
+                                           1,
+                                           I965_SURFACEFORMAT_R8_UNORM,
+                                           VP9_BTI_MBENC_SEGMENTATION_MAP_G9);
 
         }
 
         res_size = 16 * mbenc_param->frame_width_in_mb *
-                 mbenc_param->frame_height_in_mb * sizeof(unsigned int);
+                   mbenc_param->frame_height_in_mb * sizeof(unsigned int);
         gen9_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision,
@@ -3402,27 +3343,26 @@ gen9_vp9_mbenc_kernel(VADriverContextP ctx,
 
     pic_param = vp9_state->pic_param;
 
-    switch (media_function)
-    {
-        case VP9_MEDIA_STATE_MBENC_I_32x32:
-            mbenc_gpe_index = VP9_MBENC_IDX_KEY_32x32;
-            break;
+    switch (media_function) {
+    case VP9_MEDIA_STATE_MBENC_I_32x32:
+        mbenc_gpe_index = VP9_MBENC_IDX_KEY_32x32;
+        break;
 
-        case VP9_MEDIA_STATE_MBENC_I_16x16:
-            mbenc_gpe_index = VP9_MBENC_IDX_KEY_16x16;
-            break;
+    case VP9_MEDIA_STATE_MBENC_I_16x16:
+        mbenc_gpe_index = VP9_MBENC_IDX_KEY_16x16;
+        break;
 
-        case VP9_MEDIA_STATE_MBENC_P:
-            mbenc_gpe_index = VP9_MBENC_IDX_INTER;
-            break;
+    case VP9_MEDIA_STATE_MBENC_P:
+        mbenc_gpe_index = VP9_MBENC_IDX_INTER;
+        break;
 
-        case VP9_MEDIA_STATE_MBENC_TX:
-            mbenc_gpe_index = VP9_MBENC_IDX_TX;
-            break;
+    case VP9_MEDIA_STATE_MBENC_TX:
+        mbenc_gpe_index = VP9_MBENC_IDX_TX;
+        break;
 
-        default:
-            va_status = VA_STATUS_ERROR_OPERATION_FAILED;
-            return va_status;
+    default:
+        va_status = VA_STATUS_ERROR_OPERATION_FAILED;
+        return va_status;
     }
 
     gpe_context = &(vme_context->mbenc_context.gpe_contexts[mbenc_gpe_index]);
@@ -3431,11 +3371,9 @@ gen9_vp9_mbenc_kernel(VADriverContextP ctx,
     gen9_gpe_reset_binding_table(ctx, gpe_context);
 
     // Set curbe
-    if (!vp9_state->mbenc_curbe_set_in_brc_update)
-    {
-        if(media_function == VP9_MEDIA_STATE_MBENC_I_32x32 ||
-           media_function == VP9_MEDIA_STATE_MBENC_P)
-        {
+    if (!vp9_state->mbenc_curbe_set_in_brc_update) {
+        if (media_function == VP9_MEDIA_STATE_MBENC_I_32x32 ||
+            media_function == VP9_MEDIA_STATE_MBENC_P) {
             memset(&curbe_param, 0, sizeof(curbe_param));
             curbe_param.ppic_param            = vp9_state->pic_param;
             curbe_param.pseq_param            = vp9_state->seq_param;
@@ -3472,9 +3410,9 @@ gen9_vp9_mbenc_kernel(VADriverContextP ctx,
     surface_param.ps4x_memv_data_buffer        = &vme_context->s4x_memv_data_buffer;
     surface_param.ps4x_memv_distortion_buffer  = &vme_context->s4x_memv_distortion_buffer;
     surface_param.pres_mode_decision           =
-              &vme_context->res_mode_decision[vp9_state->curr_mode_decision_index];
+        &vme_context->res_mode_decision[vp9_state->curr_mode_decision_index];
     surface_param.pres_mode_decision_prev      =
-              &vme_context->res_mode_decision[!vp9_state->curr_mode_decision_index];
+        &vme_context->res_mode_decision[!vp9_state->curr_mode_decision_index];
     surface_param.pres_output_16x16_inter_modes = &vme_context->res_output_16x16_inter_modes;
     surface_param.pres_mbenc_curbe_buffer      = NULL;
     surface_param.last_ref_obj               = vp9_state->last_ref_obj;
@@ -3637,8 +3575,8 @@ gen9_init_vfe_scoreboard_vp9(struct i965_gpe_context *gpe_context,
 
 static VAStatus
 gen9_encode_vp9_check_parameter(VADriverContextP ctx,
-                              struct encode_state *encode_state,
-                              struct intel_encoder_context *encoder_context)
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_vp9_state *vp9_state;
@@ -3755,7 +3693,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
             return VA_STATUS_ERROR_INVALID_PARAMETER;
         }
         seg_param = (VAEncMiscParameterTypeVP9PerSegmantParam *)
-                           encode_state->q_matrix->buffer;
+                    encode_state->q_matrix->buffer;
     }
 
     seq_param = NULL;
@@ -3777,8 +3715,8 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
         return VA_STATUS_ERROR_INVALID_SURFACE;
 
     if (!vp9_state->dys_enabled &&
-         ((pic_param->frame_width_src != pic_param->frame_width_dst) ||
-          (pic_param->frame_height_src != pic_param->frame_height_dst)))
+        ((pic_param->frame_width_src != pic_param->frame_width_dst) ||
+         (pic_param->frame_height_src != pic_param->frame_height_dst)))
         return VA_STATUS_ERROR_UNIMPLEMENTED;
 
     if (vp9_state->brc_enabled) {
@@ -3837,8 +3775,8 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
     vp9_state->downscaled_height_16x_in_mb = vp9_state->frame_height_16x / 16;
 
     vp9_state->dys_in_use = 0;
-    if(pic_param->frame_width_src != pic_param->frame_width_dst ||
-       pic_param->frame_height_src != pic_param->frame_height_dst)
+    if (pic_param->frame_width_src != pic_param->frame_width_dst ||
+        pic_param->frame_height_src != pic_param->frame_height_dst)
         vp9_state->dys_in_use = 1;
     vp9_state->dys_ref_frame_flag = 0;
     /* check the dys setting. The dys is supported by default. */
@@ -3847,7 +3785,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
         vp9_state->dys_ref_frame_flag = vp9_state->ref_frame_flag;
 
         if ((vp9_state->ref_frame_flag & VP9_LAST_REF) &&
-             vp9_state->last_ref_obj) {
+            vp9_state->last_ref_obj) {
             obj_surface = vp9_state->last_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -3856,7 +3794,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                 vp9_state->dys_ref_frame_flag &= ~(VP9_LAST_REF);
         }
         if ((vp9_state->ref_frame_flag & VP9_GOLDEN_REF) &&
-             vp9_state->golden_ref_obj) {
+            vp9_state->golden_ref_obj) {
             obj_surface = vp9_state->golden_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -3865,7 +3803,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
                 vp9_state->dys_ref_frame_flag &= ~(VP9_GOLDEN_REF);
         }
         if ((vp9_state->ref_frame_flag & VP9_ALT_REF) &&
-             vp9_state->alt_ref_obj) {
+            vp9_state->alt_ref_obj) {
             obj_surface = vp9_state->alt_ref_obj;
             vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
@@ -3916,8 +3854,8 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
 
 static VAStatus
 gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
-                              struct encode_state *encode_state,
-                              struct intel_encoder_context *encoder_context)
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
 {
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
     struct vp9_surface_param surface_param;
@@ -3953,7 +3891,7 @@ gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
             driver_header_flag = 0;
 
             vp9_state->frame_header.bit_offset_first_partition_size =
-                          pic_param->bit_offset_first_partition_size;
+                pic_param->bit_offset_first_partition_size;
             vp9_state->header_length = ALIGN(length_in_bits, 8) >> 3;
             vp9_state->alias_insert_data = header_data;
 
@@ -3977,12 +3915,12 @@ gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
     }
 
     va_status = i965_check_alloc_surface_bo(ctx, encode_state->input_yuv_object,
-                                    1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+                                            1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
     if (va_status != VA_STATUS_SUCCESS)
         return va_status;
 
     va_status = i965_check_alloc_surface_bo(ctx, encode_state->reconstructed_object,
-                                    1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+                                            1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
     if (va_status != VA_STATUS_SUCCESS)
         return va_status;
@@ -4004,8 +3942,8 @@ gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
         surface_param.frame_width = pic_param->frame_width_dst;
         surface_param.frame_height = pic_param->frame_height_dst;
         va_status = gen9_vp9_check_dys_surfaces(ctx,
-                                    encode_state->reconstructed_object,
-                                    &surface_param);
+                                                encode_state->reconstructed_object,
+                                                &surface_param);
 
         if (va_status)
             return va_status;
@@ -4013,37 +3951,37 @@ gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
 
     if (vp9_state->dys_ref_frame_flag) {
         if ((vp9_state->dys_ref_frame_flag & VP9_LAST_REF) &&
-             vp9_state->last_ref_obj) {
+            vp9_state->last_ref_obj) {
             obj_surface = vp9_state->last_ref_obj;
             surface_param.frame_width = vp9_state->frame_width;
             surface_param.frame_height = vp9_state->frame_height;
             va_status = gen9_vp9_check_dys_surfaces(ctx,
-                                    obj_surface,
-                                    &surface_param);
+                                                    obj_surface,
+                                                    &surface_param);
 
             if (va_status)
                 return va_status;
         }
         if ((vp9_state->dys_ref_frame_flag & VP9_GOLDEN_REF) &&
-             vp9_state->golden_ref_obj) {
+            vp9_state->golden_ref_obj) {
             obj_surface = vp9_state->golden_ref_obj;
             surface_param.frame_width = vp9_state->frame_width;
             surface_param.frame_height = vp9_state->frame_height;
             va_status = gen9_vp9_check_dys_surfaces(ctx,
-                                    obj_surface,
-                                    &surface_param);
+                                                    obj_surface,
+                                                    &surface_param);
 
             if (va_status)
                 return va_status;
         }
         if ((vp9_state->dys_ref_frame_flag & VP9_ALT_REF) &&
-             vp9_state->alt_ref_obj) {
+            vp9_state->alt_ref_obj) {
             obj_surface = vp9_state->alt_ref_obj;
             surface_param.frame_width = vp9_state->frame_width;
             surface_param.frame_height = vp9_state->frame_height;
             va_status = gen9_vp9_check_dys_surfaces(ctx,
-                                    obj_surface,
-                                    &surface_param);
+                                                    obj_surface,
+                                                    &surface_param);
 
             if (va_status)
                 return va_status;
@@ -4059,8 +3997,8 @@ gen9_vme_gpe_kernel_prepare_vp9(VADriverContextP ctx,
 
 static VAStatus
 gen9_vme_gpe_kernel_init_vp9(VADriverContextP ctx,
-                              struct encode_state *encode_state,
-                              struct intel_encoder_context *encoder_context)
+                             struct encode_state *encode_state,
+                             struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
@@ -4082,7 +4020,7 @@ gen9_vme_gpe_kernel_init_vp9(VADriverContextP ctx,
      * curbe_buffer.
      */
     ds_param.bo_size = ALIGN(sizeof(vp9_mbenc_curbe_data), 64) + 128 +
-           ALIGN(sizeof(struct gen8_interface_descriptor_data), 64) * NUM_VP9_MBENC;
+                       ALIGN(sizeof(struct gen8_interface_descriptor_data), 64) * NUM_VP9_MBENC;
     mbenc_context->mbenc_bo_dys = dri_bo_alloc(i965->intel.bufmgr,
                                                "mbenc_dys",
                                                ds_param.bo_size,
@@ -4094,7 +4032,7 @@ gen9_vme_gpe_kernel_init_vp9(VADriverContextP ctx,
     ds_param.sampler_offset = ALIGN(sizeof(vp9_mbenc_curbe_data), 64);
     for (i = 0; i < NUM_VP9_MBENC; i++) {
         ds_param.idrt_offset = ds_param.sampler_offset + 128 +
-                   ALIGN(sizeof(struct gen8_interface_descriptor_data), 64) * i;
+                               ALIGN(sizeof(struct gen8_interface_descriptor_data), 64) * i;
 
         gen8_gpe_context_set_dynamic_buffer(ctx,
                                             &mbenc_context->gpe_contexts[i],
@@ -4123,8 +4061,8 @@ gen9_vme_gpe_kernel_final_vp9(VADriverContextP ctx,
 
 static VAStatus
 gen9_vme_gpe_kernel_run_vp9(VADriverContextP ctx,
-                              struct encode_state *encode_state,
-                              struct intel_encoder_context *encoder_context)
+                            struct encode_state *encode_state,
+                            struct intel_encoder_context *encoder_context)
 {
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
     struct gen9_vp9_state *vp9_state;
@@ -4208,9 +4146,9 @@ gen9_vme_gpe_kernel_run_vp9(VADriverContextP ctx,
 
 static VAStatus
 gen9_vme_pipeline_vp9(VADriverContextP ctx,
-                       VAProfile profile,
-                       struct encode_state *encode_state,
-                       struct intel_encoder_context *encoder_context)
+                      VAProfile profile,
+                      struct encode_state *encode_state,
+                      struct intel_encoder_context *encoder_context)
 {
     VAStatus va_status;
     struct gen9_vp9_state *vp9_state;
@@ -4225,8 +4163,8 @@ gen9_vme_pipeline_vp9(VADriverContextP ctx,
         return va_status;
 
     va_status = gen9_vp9_allocate_resources(ctx, encode_state,
-                            encoder_context,
-                            !vp9_state->brc_allocated);
+                                            encoder_context,
+                                            !vp9_state->brc_allocated);
 
     if (va_status != VA_STATUS_SUCCESS)
         return va_status;
@@ -4321,8 +4259,8 @@ gen9_vme_context_destroy_vp9(void *context)
 
 static void
 gen9_vme_scaling_context_init_vp9(VADriverContextP ctx,
-                                   struct gen9_encoder_context_vp9 *vme_context,
-                                   struct vp9_scaling_context *scaling_context)
+                                  struct gen9_encoder_context_vp9 *vme_context,
+                                  struct vp9_scaling_context *scaling_context)
 {
     struct i965_gpe_context *gpe_context = NULL;
     struct vp9_encoder_kernel_parameter kernel_param;
@@ -4346,7 +4284,7 @@ gen9_vme_scaling_context_init_vp9(VADriverContextP ctx,
     scaling_context->scaling_4x_bti.scaling_frame_src_y = VP9_BTI_SCALING_FRAME_SRC_Y;
     scaling_context->scaling_4x_bti.scaling_frame_dst_y = VP9_BTI_SCALING_FRAME_DST_Y;
     scaling_context->scaling_4x_bti.scaling_frame_mbv_proc_stat_dst =
-                           VP9_BTI_SCALING_FRAME_MBVPROCSTATS_DST_CM;
+        VP9_BTI_SCALING_FRAME_MBVPROCSTATS_DST_CM;
 
     memset(&scale_kernel, 0, sizeof(scale_kernel));
 
@@ -4429,8 +4367,8 @@ gen9_vme_me_context_init_vp9(VADriverContextP ctx,
 
 static void
 gen9_vme_mbenc_context_init_vp9(VADriverContextP ctx,
-                                 struct gen9_encoder_context_vp9 *vme_context,
-                                 struct vp9_mbenc_context *mbenc_context)
+                                struct gen9_encoder_context_vp9 *vme_context,
+                                struct vp9_mbenc_context *mbenc_context)
 {
     struct i965_gpe_context *gpe_context = NULL;
     struct vp9_encoder_kernel_parameter kernel_param;
@@ -4462,10 +4400,10 @@ gen9_vme_mbenc_context_init_vp9(VADriverContextP ctx,
         memset(&scale_kernel, 0, sizeof(scale_kernel));
 
         intel_vp9_get_kernel_header_and_size((void *)media_vp9_kernels,
-                                         sizeof(media_vp9_kernels),
-                                         INTEL_VP9_ENC_MBENC,
-                                         i,
-                                         &scale_kernel);
+                                             sizeof(media_vp9_kernels),
+                                             INTEL_VP9_ENC_MBENC,
+                                             i,
+                                             &scale_kernel);
 
         gen8_gpe_load_kernels(ctx,
                               gpe_context,
@@ -4502,10 +4440,10 @@ gen9_vme_brc_context_init_vp9(VADriverContextP ctx,
         memset(&scale_kernel, 0, sizeof(scale_kernel));
 
         intel_vp9_get_kernel_header_and_size((void *)media_vp9_kernels,
-                                         sizeof(media_vp9_kernels),
-                                         INTEL_VP9_ENC_BRC,
-                                         i,
-                                         &scale_kernel);
+                                             sizeof(media_vp9_kernels),
+                                             INTEL_VP9_ENC_BRC,
+                                             i,
+                                             &scale_kernel);
 
         gen8_gpe_load_kernels(ctx,
                               gpe_context,
@@ -4516,8 +4454,8 @@ gen9_vme_brc_context_init_vp9(VADriverContextP ctx,
 
 static void
 gen9_vme_dys_context_init_vp9(VADriverContextP ctx,
-                               struct gen9_encoder_context_vp9 *vme_context,
-                               struct vp9_dys_context *dys_context)
+                              struct gen9_encoder_context_vp9 *vme_context,
+                              struct vp9_dys_context *dys_context)
 {
     struct i965_gpe_context *gpe_context = NULL;
     struct vp9_encoder_kernel_parameter kernel_param;
@@ -4556,8 +4494,8 @@ gen9_vme_dys_context_init_vp9(VADriverContextP ctx,
 
 static Bool
 gen9_vme_kernels_context_init_vp9(VADriverContextP ctx,
-                                   struct intel_encoder_context *encoder_context,
-                                   struct gen9_encoder_context_vp9 *vme_context)
+                                  struct intel_encoder_context *encoder_context,
+                                  struct gen9_encoder_context_vp9 *vme_context)
 {
     gen9_vme_scaling_context_init_vp9(ctx, vme_context, &vme_context->scaling_context);
     gen9_vme_me_context_init_vp9(ctx, vme_context, &vme_context->me_context);
@@ -4592,12 +4530,12 @@ void gen9_vp9_write_compressed_element(char *buffer,
     if (index % 2) {
         vp9_element->b_valid = 1;
         vp9_element->b_probdiff_select = 1;
-        vp9_element->b_prob_select = (prob == 252) ? 1: 0;
+        vp9_element->b_prob_select = (prob == 252) ? 1 : 0;
         vp9_element->b_bin = value;
     } else {
         vp9_element->a_valid = 1;
         vp9_element->a_probdiff_select = 1;
-        vp9_element->a_prob_select = (prob == 252) ? 1: 0;
+        vp9_element->a_prob_select = (prob == 252) ? 1 : 0;
         vp9_element->a_bin = value;
     }
 }
@@ -4620,7 +4558,7 @@ intel_vp9enc_refresh_frame_internal_buffers(VADriverContextP ctx,
     pic_param = vp9_state->pic_param;
     if ((pic_param->pic_flags.bits.frame_type == HCP_VP9_KEY_FRAME) ||
         (pic_param->pic_flags.bits.intra_only) ||
-         pic_param->pic_flags.bits.error_resilient_mode) {
+        pic_param->pic_flags.bits.error_resilient_mode) {
         /* reset current frame_context */
         intel_init_default_vp9_probs(&vp9_state->vp9_current_fc);
         if ((pic_param->pic_flags.bits.frame_type == HCP_VP9_KEY_FRAME) ||
@@ -4654,93 +4592,89 @@ intel_vp9enc_refresh_frame_internal_buffers(VADriverContextP ctx,
         (pic_param->chroma_dc_qindex_delta == 0)) {
         /* lossless flag */
         /* nothing is needed */
-            gen9_vp9_write_compressed_element(buffer,
+        gen9_vp9_write_compressed_element(buffer,
                                           0, 128, 0);
-            gen9_vp9_write_compressed_element(buffer,
+        gen9_vp9_write_compressed_element(buffer,
                                           1, 128, 0);
-            gen9_vp9_write_compressed_element(buffer,
+        gen9_vp9_write_compressed_element(buffer,
                                           2, 128, 0);
     } else {
         if (vp9_state->tx_mode == TX_MODE_SELECT) {
             gen9_vp9_write_compressed_element(buffer,
-                                          0, 128, 1);
+                                              0, 128, 1);
             gen9_vp9_write_compressed_element(buffer,
-                                          1, 128, 1);
+                                              1, 128, 1);
             gen9_vp9_write_compressed_element(buffer,
-                                          2, 128, 1);
+                                              2, 128, 1);
         } else if (vp9_state->tx_mode == ALLOW_32X32) {
             gen9_vp9_write_compressed_element(buffer,
-                                          0, 128, 1);
+                                              0, 128, 1);
             gen9_vp9_write_compressed_element(buffer,
-                                          1, 128, 1);
+                                              1, 128, 1);
             gen9_vp9_write_compressed_element(buffer,
-                                          2, 128, 0);
+                                              2, 128, 0);
         } else {
             unsigned int tx_mode;
 
             tx_mode = vp9_state->tx_mode;
             gen9_vp9_write_compressed_element(buffer,
-                                          0, 128, ((tx_mode) & 2));
+                                              0, 128, ((tx_mode) & 2));
             gen9_vp9_write_compressed_element(buffer,
-                                          1, 128, ((tx_mode) & 1));
+                                              1, 128, ((tx_mode) & 1));
             gen9_vp9_write_compressed_element(buffer,
-                                          2, 128, 0);
+                                              2, 128, 0);
         }
 
         if (vp9_state->tx_mode == TX_MODE_SELECT) {
 
             gen9_vp9_write_compressed_element(buffer,
-                                          3, 128, 0);
+                                              3, 128, 0);
 
             gen9_vp9_write_compressed_element(buffer,
-                                          7, 128, 0);
+                                              7, 128, 0);
 
             gen9_vp9_write_compressed_element(buffer,
-                                          15, 128, 0);
+                                              15, 128, 0);
         }
     }
-     /*Setup all the input&output object*/
+    /*Setup all the input&output object*/
 
     {
         /* update the coeff_update flag */
         gen9_vp9_write_compressed_element(buffer,
-                                      27, 128, 0);
+                                          27, 128, 0);
         gen9_vp9_write_compressed_element(buffer,
-                                      820, 128, 0);
+                                          820, 128, 0);
         gen9_vp9_write_compressed_element(buffer,
-                                      1613, 128, 0);
+                                          1613, 128, 0);
         gen9_vp9_write_compressed_element(buffer,
-                                      2406, 128, 0);
+                                          2406, 128, 0);
     }
 
 
-    if (pic_param->pic_flags.bits.frame_type && !pic_param->pic_flags.bits.intra_only)
-    {
+    if (pic_param->pic_flags.bits.frame_type && !pic_param->pic_flags.bits.intra_only) {
         bool allow_comp = !(
-            (pic_param->ref_flags.bits.ref_last_sign_bias && pic_param->ref_flags.bits.ref_gf_sign_bias && pic_param->ref_flags.bits.ref_arf_sign_bias) ||
-            (!pic_param->ref_flags.bits.ref_last_sign_bias && !pic_param->ref_flags.bits.ref_gf_sign_bias && !pic_param->ref_flags.bits.ref_arf_sign_bias)
-            );
+                              (pic_param->ref_flags.bits.ref_last_sign_bias && pic_param->ref_flags.bits.ref_gf_sign_bias && pic_param->ref_flags.bits.ref_arf_sign_bias) ||
+                              (!pic_param->ref_flags.bits.ref_last_sign_bias && !pic_param->ref_flags.bits.ref_gf_sign_bias && !pic_param->ref_flags.bits.ref_arf_sign_bias)
+                          );
 
-        if (allow_comp)
-        {
+        if (allow_comp) {
             if (pic_param->pic_flags.bits.comp_prediction_mode == REFERENCE_MODE_SELECT) {
                 gen9_vp9_write_compressed_element(buffer,
-                                          3271, 128, 1);
+                                                  3271, 128, 1);
                 gen9_vp9_write_compressed_element(buffer,
-                                          3272, 128, 1);
-            }
-            else if (pic_param->pic_flags.bits.comp_prediction_mode == COMPOUND_REFERENCE) {
+                                                  3272, 128, 1);
+            } else if (pic_param->pic_flags.bits.comp_prediction_mode == COMPOUND_REFERENCE) {
                 gen9_vp9_write_compressed_element(buffer,
-                                          3271, 128, 1);
+                                                  3271, 128, 1);
                 gen9_vp9_write_compressed_element(buffer,
-                                          3272, 128, 0);
-            }
-            else {
+                                                  3272, 128, 0);
+            } else {
 
                 gen9_vp9_write_compressed_element(buffer,
-                                          3271, 128, 0);
+                                                  3271, 128, 0);
                 gen9_vp9_write_compressed_element(buffer,
-                                          3272, 128, 0);
+                                                  3272, 128, 0);
             }
         }
     }
@@ -4751,9 +4685,9 @@ intel_vp9enc_refresh_frame_internal_buffers(VADriverContextP ctx,
 
 static void
 gen9_pak_vp9_pipe_mode_select(VADriverContextP ctx,
-                           struct encode_state *encode_state,
-                           struct intel_encoder_context *encoder_context,
-                           struct gen9_hcpe_pipe_mode_select_param *pipe_mode_param)
+                              struct encode_state *encode_state,
+                              struct intel_encoder_context *encoder_context,
+                              struct gen9_hcpe_pipe_mode_select_param *pipe_mode_param)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
@@ -4776,9 +4710,9 @@ gen9_pak_vp9_pipe_mode_select(VADriverContextP ctx,
 
 static void
 gen9_vp9_add_surface_state(VADriverContextP ctx,
-                       struct encode_state *encode_state,
-                       struct intel_encoder_context *encoder_context,
-                       hcp_surface_state *hcp_state)
+                           struct encode_state *encode_state,
+                           struct intel_encoder_context *encoder_context,
+                           hcp_surface_state *hcp_state)
 {
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     if (!hcp_state)
@@ -4812,7 +4746,7 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
     vp9_state = (struct gen9_vp9_state *)(encoder_context->enc_priv_state);
 
     if (!vp9_state || !vp9_state->pic_param)
-         return;
+        return;
 
 
     BEGIN_BCS_BATCH(batch, 104);
@@ -4945,9 +4879,9 @@ gen9_pak_vp9_pipe_buf_addr_state(VADriverContextP ctx,
     if (vp9_state->picture_coding_type) {
         int prev_index = vp9_state->curr_mv_temporal_index ^ 0x01;
         OUT_RELOC64(batch,
-                pak_context->res_mv_temporal_buffer[prev_index].bo,
-                I915_GEM_DOMAIN_INSTRUCTION, 0,
-                0);
+                    pak_context->res_mv_temporal_buffer[prev_index].bo,
+                    I915_GEM_DOMAIN_INSTRUCTION, 0,
+                    0);
     } else {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
@@ -5046,16 +4980,16 @@ gen9_pak_vp9_ind_obj_base_addr_state(VADriverContextP ctx,
 
     /* DW 9..11, PAK-BSE */
     OUT_RELOC64(batch,
-                  pak_context->indirect_pak_bse_object.bo,
-                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  pak_context->indirect_pak_bse_object.offset);
+                pak_context->indirect_pak_bse_object.bo,
+                I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                pak_context->indirect_pak_bse_object.offset);
     OUT_BCS_BATCH(batch, i965->intel.mocs_state);
 
     /* DW 12..13 upper bound */
     OUT_RELOC64(batch,
-                  pak_context->indirect_pak_bse_object.bo,
-                  I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-                  pak_context->indirect_pak_bse_object.end_offset);
+                pak_context->indirect_pak_bse_object.bo,
+                I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                pak_context->indirect_pak_bse_object.end_offset);
 
     /* DW 14..16 compressed header buffer */
     OUT_RELOC64(batch,
@@ -5124,7 +5058,7 @@ gen9_pak_vp9_segment_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch,
                   (seg_param->seg_flags.bits.segment_reference_enabled << 3) |
                   (batch_value << 1) |
-                  (seg_param->seg_flags.bits.segment_reference_skipped <<0)
+                  (seg_param->seg_flags.bits.segment_reference_skipped << 0)
                  );
 
     /* DW 3..6 is not used for encoder */
@@ -5146,8 +5080,8 @@ gen9_pak_vp9_segment_state(VADriverContextP ctx,
 
 static void
 intel_vp9enc_construct_pak_insertobj_batchbuffer(VADriverContextP ctx,
-                                 struct intel_encoder_context *encoder_context,
-                                 struct i965_gpe_resource *obj_batch_buffer)
+                                                 struct intel_encoder_context *encoder_context,
+                                                 struct i965_gpe_resource *obj_batch_buffer)
 {
     struct gen9_encoder_context_vp9 *pak_context = encoder_context->mfc_context;
     struct gen9_vp9_state *vp9_state;
@@ -5219,21 +5153,18 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
     pic_param = vp9_state->pic_param;
     seg_param = vp9_state->segment_param;
 
-    if (vp9_state->curr_pak_pass == 0)
-    {
+    if (vp9_state->curr_pak_pass == 0) {
         intel_vp9enc_construct_pak_insertobj_batchbuffer(ctx, encoder_context,
-                           &pak_context->res_pak_uncompressed_input_buffer);
+                                                         &pak_context->res_pak_uncompressed_input_buffer);
 
         // Check if driver already programmed pic state as part of BRC update kernel programming.
-        if (!vp9_state->brc_enabled)
-        {
+        if (!vp9_state->brc_enabled) {
             intel_vp9enc_construct_picstate_batchbuf(ctx, encode_state,
-                 encoder_context, &pak_context->res_pic_state_brc_write_hfw_read_buffer);
+                                                     encoder_context, &pak_context->res_pic_state_brc_write_hfw_read_buffer);
         }
     }
 
-    if (vp9_state->curr_pak_pass == 0)
-    {
+    if (vp9_state->curr_pak_pass == 0) {
         intel_vp9enc_refresh_frame_internal_buffers(ctx, encoder_context);
     }
 
@@ -5253,13 +5184,13 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
             /* copy the current fc to vp9_prob buffer */
             memcpy(prob_ptr, &vp9_state->vp9_current_fc, sizeof(FRAME_CONTEXT));
             if ((pic_param->pic_flags.bits.frame_type == HCP_VP9_KEY_FRAME) ||
-                 pic_param->pic_flags.bits.intra_only) {
-                 FRAME_CONTEXT *frame_ptr = (FRAME_CONTEXT *)prob_ptr;
+                pic_param->pic_flags.bits.intra_only) {
+                FRAME_CONTEXT *frame_ptr = (FRAME_CONTEXT *)prob_ptr;
 
-                 memcpy(frame_ptr->partition_prob, vp9_kf_partition_probs,
-                        sizeof(vp9_kf_partition_probs));
-                 memcpy(frame_ptr->uv_mode_prob, vp9_kf_uv_mode_prob,
-                        sizeof(vp9_kf_uv_mode_prob));
+                memcpy(frame_ptr->partition_prob, vp9_kf_partition_probs,
+                       sizeof(vp9_kf_partition_probs));
+                memcpy(frame_ptr->uv_mode_prob, vp9_kf_uv_mode_prob,
+                       sizeof(vp9_kf_uv_mode_prob));
             }
             i965_unmap_gpe_resource(&pak_context->res_prob_buffer);
         }
@@ -5321,7 +5252,7 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
             hcp_surface.dw2.surface_format = SURFACE_FORMAT_PLANAR_420_8;
             hcp_surface.dw2.y_cb_offset = obj_surface->y_cb_offset;
             gen9_vp9_add_surface_state(ctx, encode_state, encoder_context,
-                               &hcp_surface);
+                                       &hcp_surface);
         }
         if (vp9_state->golden_ref_obj) {
             obj_surface = vp9_state->golden_ref_obj;
@@ -5330,7 +5261,7 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
             hcp_surface.dw2.surface_format = SURFACE_FORMAT_PLANAR_420_8;
             hcp_surface.dw2.y_cb_offset = obj_surface->y_cb_offset;
             gen9_vp9_add_surface_state(ctx, encode_state, encoder_context,
-                               &hcp_surface);
+                                       &hcp_surface);
         }
         if (vp9_state->alt_ref_obj) {
             obj_surface = vp9_state->alt_ref_obj;
@@ -5339,7 +5270,7 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
             hcp_surface.dw2.surface_format = SURFACE_FORMAT_PLANAR_420_8;
             hcp_surface.dw2.y_cb_offset = obj_surface->y_cb_offset;
             gen9_vp9_add_surface_state(ctx, encode_state, encoder_context,
-                               &hcp_surface);
+                                       &hcp_surface);
         }
     }
 
@@ -5368,8 +5299,7 @@ gen9_vp9_pak_picture_level(VADriverContextP ctx,
         memset(&tmp_seg_param, 0, sizeof(tmp_seg_param));
         seg_param = &tmp_seg_param;
     }
-    for (i = 0; i < segment_count; i++)
-    {
+    for (i = 0; i < segment_count; i++) {
         gen9_pak_vp9_segment_state(ctx, encode_state,
                                    encoder_context,
                                    &seg_param->seg_data[i], i);
@@ -5426,19 +5356,19 @@ gen9_vp9_read_mfc_status(VADriverContextP ctx, struct intel_encoder_context *enc
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->image_status_mask_offset;
     mi_store_reg_mem_param.mmio_offset =
-                               status_buffer->vp9_image_mask_reg_offset;
+        status_buffer->vp9_image_mask_reg_offset;
     gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = status_buffer->bo;
     mi_store_reg_mem_param.offset = status_buffer->image_status_ctrl_offset;
     mi_store_reg_mem_param.mmio_offset =
-                               status_buffer->vp9_image_ctrl_reg_offset;
+        status_buffer->vp9_image_ctrl_reg_offset;
     gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     mi_store_reg_mem_param.bo = pak_context->res_brc_bitstream_size_buffer.bo;
     mi_store_reg_mem_param.offset = 4;
     mi_store_reg_mem_param.mmio_offset =
-                               status_buffer->vp9_image_ctrl_reg_offset;
+        status_buffer->vp9_image_ctrl_reg_offset;
     gen8_gpe_mi_store_register_mem(ctx, batch, &mi_store_reg_mem_param);
 
     gen8_gpe_mi_flush_dw(ctx, batch, &mi_flush_dw_param);
@@ -5534,7 +5464,7 @@ gen9_vp9_pak_pipeline_prepare(VADriverContextP ctx,
 
 static void
 gen9_vp9_pak_brc_prepare(struct encode_state *encode_state,
-                          struct intel_encoder_context *encoder_context)
+                         struct intel_encoder_context *encoder_context)
 {
 }
 
@@ -5553,7 +5483,7 @@ gen9_vp9_pak_context_destroy(void *context)
     dri_bo_unreference(pak_context->indirect_pak_bse_object.bo);
     pak_context->indirect_pak_bse_object.bo = NULL;
 
-    for (i = 0; i < 8; i++){
+    for (i = 0; i < 8; i++) {
         dri_bo_unreference(pak_context->reference_surfaces[i].bo);
         pak_context->reference_surfaces[i].bo = NULL;
     }
@@ -5563,9 +5493,9 @@ gen9_vp9_pak_context_destroy(void *context)
 
 static VAStatus
 gen9_vp9_pak_pipeline(VADriverContextP ctx,
-                       VAProfile profile,
-                       struct encode_state *encode_state,
-                       struct intel_encoder_context *encoder_context)
+                      VAProfile profile,
+                      struct encode_state *encode_state,
+                      struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;

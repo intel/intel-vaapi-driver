@@ -95,8 +95,7 @@ static unsigned long avc_ildb_kernel_offset_gen5[] = {
     AVC_ILDB_CHILD_UV_ILDB_MBAFF_IP_GEN5 * INST_UNIT_GEN5
 };
 
-struct avc_ildb_root_input
-{
+struct avc_ildb_root_input {
     unsigned int blocks_per_row : 16;
     unsigned int blocks_per_column : 16;
 
@@ -111,7 +110,7 @@ struct avc_ildb_root_input
     unsigned int pad0 : 12;
 
     unsigned int ramp_constant_0;
-    
+
     unsigned int ramp_constant_1;
 
     int constant_0 : 8;
@@ -152,7 +151,7 @@ i965_avc_ildb_surface_state(VADriverContextP ctx,
     avc_ildb_context->surface[SURFACE_EDGE_CONTROL_DATA].depth = (((avc_ildb_context->mbs_per_picture * EDGE_CONTROL_DATA_IN_DWS - 1) >> 20) & 0x7f);
     avc_ildb_context->surface[SURFACE_EDGE_CONTROL_DATA].pitch = EDGE_CONTROL_DATA_IN_BTYES - 1;
     avc_ildb_context->surface[SURFACE_EDGE_CONTROL_DATA].is_target = 0;
-    
+
     avc_ildb_context->surface[SURFACE_SRC_Y].s_bo = obj_surface->bo;
     dri_bo_reference(avc_ildb_context->surface[SURFACE_SRC_Y].s_bo);
     avc_ildb_context->surface[SURFACE_SRC_Y].offset = 0;
@@ -165,7 +164,7 @@ i965_avc_ildb_surface_state(VADriverContextP ctx,
     avc_ildb_context->surface[SURFACE_SRC_Y].vert_line_stride = !!(va_pic->flags & (VA_PICTURE_H264_TOP_FIELD | VA_PICTURE_H264_BOTTOM_FIELD));
     avc_ildb_context->surface[SURFACE_SRC_Y].vert_line_stride_ofs = !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD);
     avc_ildb_context->surface[SURFACE_SRC_Y].is_target = 0;
-    
+
     avc_ildb_context->surface[SURFACE_SRC_UV].s_bo = obj_surface->bo;
     dri_bo_reference(avc_ildb_context->surface[SURFACE_SRC_UV].s_bo);
     avc_ildb_context->surface[SURFACE_SRC_UV].offset = obj_surface->width * obj_surface->height;
@@ -221,7 +220,7 @@ i965_avc_ildb_surface_state(VADriverContextP ctx,
         ss->ss3.depth = avc_ildb_context->surface[i].depth;
         ss->ss3.pitch = avc_ildb_context->surface[i].pitch;
         dri_bo_emit_reloc(bo,
-                          I915_GEM_DOMAIN_RENDER, 
+                          I915_GEM_DOMAIN_RENDER,
                           avc_ildb_context->surface[i].is_target ? I915_GEM_DOMAIN_RENDER : 0,
                           avc_ildb_context->surface[i].offset,
                           offsetof(struct i965_surface_state, ss1),
@@ -271,14 +270,14 @@ i965_avc_ildb_interface_descriptor_table(VADriverContextP ctx, struct i965_h264_
     for (i = 0; i < NUM_AVC_ILDB_INTERFACES; i++) {
         int kernel_offset = avc_ildb_kernel_offset[i];
         memset(desc, 0, sizeof(*desc));
-        desc->desc0.grf_reg_blocks = 7; 
+        desc->desc0.grf_reg_blocks = 7;
         desc->desc0.kernel_start_pointer = (i965_h264_context->avc_kernels[H264_AVC_COMBINED].bo->offset + kernel_offset) >> 6; /* reloc */
         desc->desc1.const_urb_entry_read_offset = 0;
         desc->desc1.const_urb_entry_read_len = ((i == AVC_ILDB_ROOT_Y_ILDB_FRAME ||
                                                  i == AVC_ILDB_ROOT_Y_ILDB_FIELD ||
                                                  i == AVC_ILDB_ROOT_Y_ILDB_MBAFF) ? 1 : 0);
         desc->desc3.binding_table_entry_count = 0;
-        desc->desc3.binding_table_pointer = 
+        desc->desc3.binding_table_pointer =
             avc_ildb_context->binding_table.bo->offset >> 5; /*reloc */
 
         dri_bo_emit_reloc(bo,
@@ -315,7 +314,7 @@ i965_avc_ildb_vfe_state(VADriverContextP ctx, struct i965_h264_context *i965_h26
     vfe_state->vfe1.num_urb_entries = avc_ildb_context->urb.num_vfe_entries;
     vfe_state->vfe1.vfe_mode = VFE_GENERIC_MODE;
     vfe_state->vfe1.children_present = 1;
-    vfe_state->vfe2.interface_descriptor_base = 
+    vfe_state->vfe2.interface_descriptor_base =
         avc_ildb_context->idrt.bo->offset >> 4; /* reloc */
     dri_bo_emit_reloc(bo,
                       I915_GEM_DOMAIN_INSTRUCTION, 0,
@@ -359,18 +358,18 @@ i965_avc_ildb_upload_constants(VADriverContextP ctx,
 
     avc_ildb_context->picture_type = root_input->picture_type;
     root_input->blocks_per_row = pic_param->picture_width_in_mbs_minus1 + 1;
-    root_input->blocks_per_column = (pic_param->picture_height_in_mbs_minus1 + 1) / 
-        (1 + (root_input->picture_type != PICTURE_FRAME));
+    root_input->blocks_per_column = (pic_param->picture_height_in_mbs_minus1 + 1) /
+                                    (1 + (root_input->picture_type != PICTURE_FRAME));
     avc_ildb_context->mbs_per_picture = (pic_param->picture_width_in_mbs_minus1 + 1) *
-        (pic_param->picture_height_in_mbs_minus1 + 1);
-    
+                                        (pic_param->picture_height_in_mbs_minus1 + 1);
+
     root_input->mbaff_frame_flag = (root_input->picture_type == PICTURE_MBAFF);
     root_input->bottom_field_flag = !!(pic_param->CurrPic.flags & VA_PICTURE_H264_BOTTOM_FIELD);
     root_input->control_data_expansion_flag = 1; /* Always 1 on G4x+ */
     root_input->chroma_format = (pic_param->seq_fields.bits.chroma_format_idc != 1); /* 0=4:0:0, 1=4:2:0 */
-    
+
     root_input->ramp_constant_0 = 0x03020100;
-    
+
     root_input->ramp_constant_1 = 0x07060504;
 
     root_input->constant_0 = -2;
@@ -415,7 +414,7 @@ i965_avc_ildb_urb_layout(VADriverContextP ctx, struct i965_h264_context *i965_h2
     BEGIN_BATCH(batch, 3);
     OUT_BATCH(batch, CMD_URB_FENCE | UF0_VFE_REALLOC | UF0_CS_REALLOC | 1);
     OUT_BATCH(batch, 0);
-    OUT_BATCH(batch, 
+    OUT_BATCH(batch,
               (vfe_fence << UF2_VFE_FENCE_SHIFT) |      /* VFE_SIZE */
               (cs_fence << UF2_CS_FENCE_SHIFT));        /* CS_SIZE */
     ADVANCE_BATCH(batch);
@@ -424,7 +423,7 @@ i965_avc_ildb_urb_layout(VADriverContextP ctx, struct i965_h264_context *i965_h2
 static void
 i965_avc_ildb_state_base_address(VADriverContextP ctx, struct i965_h264_context *i965_h264_context)
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx); 
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965_h264_context->batch;
 
     if (IS_IRONLAKE(i965->intel.device_info)) {
@@ -463,7 +462,7 @@ i965_avc_ildb_state_pointers(VADriverContextP ctx, struct i965_h264_context *i96
     ADVANCE_BATCH(batch);
 }
 
-static void 
+static void
 i965_avc_ildb_cs_urb_layout(VADriverContextP ctx, struct i965_h264_context *i965_h264_context)
 {
     struct i965_avc_ildb_context *avc_ildb_context = &i965_h264_context->avc_ildb_context;
@@ -488,7 +487,7 @@ i965_avc_ildb_constant_buffer(VADriverContextP ctx, struct i965_h264_context *i9
     OUT_RELOC(batch, avc_ildb_context->curbe.bo,
               I915_GEM_DOMAIN_INSTRUCTION, 0,
               avc_ildb_context->urb.size_cs_entry - 1);
-    ADVANCE_BATCH(batch);    
+    ADVANCE_BATCH(batch);
 }
 
 static void
@@ -569,22 +568,22 @@ i965_avc_ildb_decode_init(VADriverContextP ctx, void *h264_context)
     avc_ildb_context->curbe.bo = bo;
 
     dri_bo_unreference(avc_ildb_context->binding_table.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
                       "binding table",
                       NUM_AVC_ILDB_SURFACES * sizeof(unsigned int), 32);
     assert(bo);
     avc_ildb_context->binding_table.bo = bo;
 
     dri_bo_unreference(avc_ildb_context->idrt.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "interface discriptor", 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "interface discriptor",
                       NUM_AVC_ILDB_INTERFACES * sizeof(struct i965_interface_descriptor), 16);
     assert(bo);
     avc_ildb_context->idrt.bo = bo;
 
     dri_bo_unreference(avc_ildb_context->vfe_state.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "vfe state", 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "vfe state",
                       sizeof(struct i965_vfe_state), 32);
     assert(bo);
     avc_ildb_context->vfe_state.bo = bo;
@@ -594,9 +593,9 @@ i965_avc_ildb_decode_init(VADriverContextP ctx, void *h264_context)
     avc_ildb_context->urb.num_cs_entries = 1;
     avc_ildb_context->urb.size_cs_entry = 1;
     avc_ildb_context->urb.vfe_start = 0;
-    avc_ildb_context->urb.cs_start = avc_ildb_context->urb.vfe_start + 
-        avc_ildb_context->urb.num_vfe_entries * avc_ildb_context->urb.size_vfe_entry;
-    assert(avc_ildb_context->urb.cs_start + 
+    avc_ildb_context->urb.cs_start = avc_ildb_context->urb.vfe_start +
+                                     avc_ildb_context->urb.num_vfe_entries * avc_ildb_context->urb.size_vfe_entry;
+    assert(avc_ildb_context->urb.cs_start +
            avc_ildb_context->urb.num_cs_entries * avc_ildb_context->urb.size_cs_entry <= i965->intel.device_info->urb_size);
 
     for (i = 0; i < NUM_AVC_ILDB_SURFACES; i++) {
@@ -604,8 +603,8 @@ i965_avc_ildb_decode_init(VADriverContextP ctx, void *h264_context)
         avc_ildb_context->surface[i].s_bo = NULL;
 
         dri_bo_unreference(avc_ildb_context->surface[i].ss_bo);
-        bo = dri_bo_alloc(i965->intel.bufmgr, 
-                          "surface state", 
+        bo = dri_bo_alloc(i965->intel.bufmgr,
+                          "surface state",
                           sizeof(struct i965_surface_state), 32);
         assert(bo);
         avc_ildb_context->surface[i].ss_bo = bo;
@@ -621,7 +620,7 @@ i965_avc_ildb_decode_init(VADriverContextP ctx, void *h264_context)
     }
 }
 
-Bool 
+Bool
 i965_avc_ildb_ternimate(struct i965_avc_ildb_context *avc_ildb_context)
 {
     int i;

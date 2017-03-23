@@ -29,8 +29,7 @@
 #ifndef __I965_AVC_HW_SCOREBOARD_H__
 #define __I965_AVC_HW_SCOREBOARD_H__
 
-struct i965_avc_hw_scoreboard_context
-{
+struct i965_avc_hw_scoreboard_context {
     struct {
         unsigned int num_mb_cmds;
         unsigned int starting_mb_number;

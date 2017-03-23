@@ -73,7 +73,7 @@ enum {
     FRAME_STORE_COUNT,
 };
 
-enum SURFACE_FORMAT{
+enum SURFACE_FORMAT {
     YCRCB_NORMAL = 0,
     YCRCB_SWAPUVY,
     YCRCB_SWAPUV,
@@ -104,14 +104,13 @@ typedef struct veb_buffer {
     unsigned char  valid;
 } VEBBuffer;
 
-struct intel_vebox_context
-{
+struct intel_vebox_context {
     struct intel_batchbuffer *batch;
 
     struct object_surface *surface_input_object;
     struct object_surface *surface_output_object;
     VASurfaceID surface_input_vebox;
-    struct object_surface *surface_input_vebox_object;    
+    struct object_surface *surface_input_vebox_object;
     VASurfaceID surface_output_vebox;
     struct object_surface *surface_output_vebox_object;
     VASurfaceID surface_output_scaled;
@@ -159,17 +158,17 @@ struct intel_vebox_context
 };
 
 VAStatus gen75_vebox_process_picture(VADriverContextP ctx,
-                         struct intel_vebox_context *proc_ctx);
+                                     struct intel_vebox_context *proc_ctx);
 
-void gen75_vebox_context_destroy(VADriverContextP ctx, 
-                          struct intel_vebox_context *proc_ctx);
+void gen75_vebox_context_destroy(VADriverContextP ctx,
+                                 struct intel_vebox_context *proc_ctx);
 
 struct intel_vebox_context * gen75_vebox_context_init(VADriverContextP ctx);
 
 VAStatus gen8_vebox_process_picture(VADriverContextP ctx,
-                         struct intel_vebox_context *proc_ctx);
+                                    struct intel_vebox_context *proc_ctx);
 
 VAStatus gen9_vebox_process_picture(VADriverContextP ctx,
-                         struct intel_vebox_context *proc_ctx);
+                                    struct intel_vebox_context *proc_ctx);
 
 #endif

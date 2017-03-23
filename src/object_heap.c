@@ -8,11 +8,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -29,16 +29,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define ASSERT	assert
+#define ASSERT  assert
 
-#define LAST_FREE	-1
-#define ALLOCATED	-2
+#define LAST_FREE   -1
+#define ALLOCATED   -2
 
 /*
  * Expands the heap
  * Return 0 on success, -1 on error
  */
-static int object_heap_expand( object_heap_p heap )
+static int object_heap_expand(object_heap_p heap)
 {
     int i;
     void *new_heap_index;
@@ -59,17 +59,15 @@ static int object_heap_expand( object_heap_p heap )
         heap->bucket = new_bucket;
     }
 
-    new_heap_index = (void *) malloc( heap->heap_increment * heap->object_size );
-    if ( NULL == new_heap_index )
-    {
+    new_heap_index = (void *) malloc(heap->heap_increment * heap->object_size);
+    if (NULL == new_heap_index) {
         return -1; /* Out of memory */
     }
 
     heap->bucket[bucket_index] = new_heap_index;
     next_free = heap->next_free;
-    for(i = new_heap_size; i-- > heap->heap_size; )
-    {
-        object_base_p obj = (object_base_p) (new_heap_index + (i - heap->heap_size) * heap->object_size);
+    for (i = new_heap_size; i-- > heap->heap_size;) {
+        object_base_p obj = (object_base_p)(new_heap_index + (i - heap->heap_size) * heap->object_size);
         obj->id = i + heap->id_offset;
         obj->next_free = next_free;
         next_free = i;
@@ -82,7 +80,7 @@ static int object_heap_expand( object_heap_p heap )
 /*
  * Return 0 on success, -1 on error
  */
-int object_heap_init( object_heap_p heap, int object_size, int id_offset)
+int object_heap_init(object_heap_p heap, int object_size, int id_offset)
 {
     heap->object_size = object_size;
     heap->id_offset = id_offset & OBJECT_HEAP_OFFSET_MASK;
@@ -110,29 +108,27 @@ int object_heap_init( object_heap_p heap, int object_size, int id_offset)
  * Allocates an object
  * Returns the object ID on success, returns -1 on error
  */
-int object_heap_allocate( object_heap_p heap )
+int object_heap_allocate(object_heap_p heap)
 {
     object_base_p obj;
     int bucket_index, obj_index;
 
     _i965LockMutex(&heap->mutex);
-    if ( LAST_FREE == heap->next_free )
-    {
-        if( -1 == object_heap_expand( heap ) )
-        {
+    if (LAST_FREE == heap->next_free) {
+        if (-1 == object_heap_expand(heap)) {
             _i965UnlockMutex(&heap->mutex);
             return -1; /* Out of memory */
         }
     }
-    ASSERT( heap->next_free >= 0 );
+    ASSERT(heap->next_free >= 0);
 
     bucket_index = heap->next_free / heap->heap_increment;
     obj_index = heap->next_free % heap->heap_increment;
 
-    obj = (object_base_p) (heap->bucket[bucket_index] + obj_index * heap->object_size);
+    obj = (object_base_p)(heap->bucket[bucket_index] + obj_index * heap->object_size);
     heap->next_free = obj->next_free;
     _i965UnlockMutex(&heap->mutex);
-    
+
     obj->next_free = ALLOCATED;
     return obj->id;
 }
@@ -141,26 +137,24 @@ int object_heap_allocate( object_heap_p heap )
  * Lookup an object by object ID
  * Returns a pointer to the object on success, returns NULL on error
  */
-object_base_p object_heap_lookup( object_heap_p heap, int id )
+object_base_p object_heap_lookup(object_heap_p heap, int id)
 {
     object_base_p obj;
     int bucket_index, obj_index;
 
     _i965LockMutex(&heap->mutex);
-    if ( (id < heap->id_offset) || (id > (heap->heap_size+heap->id_offset)) )
-    {
+    if ((id < heap->id_offset) || (id > (heap->heap_size + heap->id_offset))) {
         _i965UnlockMutex(&heap->mutex);
         return NULL;
     }
     id &= OBJECT_HEAP_ID_MASK;
     bucket_index = id / heap->heap_increment;
     obj_index = id % heap->heap_increment;
-    obj = (object_base_p) (heap->bucket[bucket_index] + obj_index * heap->object_size);
+    obj = (object_base_p)(heap->bucket[bucket_index] + obj_index * heap->object_size);
     _i965UnlockMutex(&heap->mutex);
 
-	/* Check if the object has in fact been allocated */
-	if ( obj->next_free != ALLOCATED )
-    {
+    /* Check if the object has in fact been allocated */
+    if (obj->next_free != ALLOCATED) {
         return NULL;
     }
     return obj;
@@ -170,31 +164,29 @@ object_base_p object_heap_lookup( object_heap_p heap, int id )
  * Iterate over all objects in the heap.
  * Returns a pointer to the first object on the heap, returns NULL if heap is empty.
  */
-object_base_p object_heap_first( object_heap_p heap, object_heap_iterator *iter )
+object_base_p object_heap_first(object_heap_p heap, object_heap_iterator *iter)
 {
     *iter = -1;
-    return object_heap_next( heap, iter );
+    return object_heap_next(heap, iter);
 }
 
 /*
  * Iterate over all objects in the heap.
  * Returns a pointer to the next object on the heap, returns NULL if heap is empty.
  */
-object_base_p object_heap_next( object_heap_p heap, object_heap_iterator *iter )
+object_base_p object_heap_next(object_heap_p heap, object_heap_iterator *iter)
 {
     object_base_p obj;
     int i = *iter + 1;
     int bucket_index, obj_index;
 
     _i965LockMutex(&heap->mutex);
-    while ( i < heap->heap_size)
-    {
+    while (i < heap->heap_size) {
         bucket_index = i / heap->heap_increment;
         obj_index = i % heap->heap_increment;
 
-        obj = (object_base_p) (heap->bucket[bucket_index] + obj_index * heap->object_size);
-        if (obj->next_free == ALLOCATED)
-        {
+        obj = (object_base_p)(heap->bucket[bucket_index] + obj_index * heap->object_size);
+        if (obj->next_free == ALLOCATED) {
             _i965UnlockMutex(&heap->mutex);
             *iter = i;
             return obj;
@@ -211,14 +203,13 @@ object_base_p object_heap_next( object_heap_p heap, object_heap_iterator *iter )
 /*
  * Frees an object
  */
-void object_heap_free( object_heap_p heap, object_base_p obj )
+void object_heap_free(object_heap_p heap, object_base_p obj)
 {
     /* Don't complain about NULL pointers */
-    if (NULL != obj)
-    {
+    if (NULL != obj) {
         /* Check if the object has in fact been allocated */
-        ASSERT( obj->next_free == ALLOCATED );
-    
+        ASSERT(obj->next_free == ALLOCATED);
+
         _i965LockMutex(&heap->mutex);
         obj->next_free = heap->next_free;
         heap->next_free = obj->id & OBJECT_HEAP_ID_MASK;
@@ -229,7 +220,7 @@ void object_heap_free( object_heap_p heap, object_base_p obj )
 /*
  * Destroys a heap, the heap must be empty.
  */
-void object_heap_destroy( object_heap_p heap )
+void object_heap_destroy(object_heap_p heap)
 {
     object_base_p obj;
     int i;
@@ -239,13 +230,12 @@ void object_heap_destroy( object_heap_p heap )
         _i965DestroyMutex(&heap->mutex);
 
         /* Check if heap is empty */
-        for (i = 0; i < heap->heap_size; i++)
-        {
+        for (i = 0; i < heap->heap_size; i++) {
             /* Check if object is not still allocated */
             bucket_index = i / heap->heap_increment;
             obj_index = i % heap->heap_increment;
-            obj = (object_base_p) (heap->bucket[bucket_index] + obj_index * heap->object_size);
-            ASSERT( obj->next_free != ALLOCATED );
+            obj = (object_base_p)(heap->bucket[bucket_index] + obj_index * heap->object_size);
+            ASSERT(obj->next_free != ALLOCATED);
         }
 
         for (i = 0; i < heap->heap_size / heap->heap_increment; i++) {

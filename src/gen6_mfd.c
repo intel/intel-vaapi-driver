@@ -48,7 +48,7 @@ static const uint32_t zigzag_direct[64] = {
 };
 
 static void
-gen6_mfd_init_avc_surface(VADriverContextP ctx, 
+gen6_mfd_init_avc_surface(VADriverContextP ctx,
                           VAPictureParameterBufferH264 *pic_param,
                           struct object_surface *obj_surface)
 {
@@ -135,7 +135,7 @@ gen6_mfd_surface_state(VADriverContextP ctx,
     unsigned int surface_format;
 
     surface_format = obj_surface->fourcc == VA_FOURCC_Y800 ?
-        MFX_SURFACE_MONOCHROME : MFX_SURFACE_PLANAR_420_8;
+                     MFX_SURFACE_MONOCHROME : MFX_SURFACE_PLANAR_420_8;
 
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFX_SURFACE_STATE | (6 - 2));
@@ -333,12 +333,12 @@ gen6_mfd_avc_img_state(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 13);
     OUT_BCS_BATCH(batch, MFX_AVC_IMG_STATE | (13 - 2));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   ((width_in_mbs * height_in_mbs) & 0x7fff));
-    OUT_BCS_BATCH(batch, 
-                  (height_in_mbs << 16) | 
+    OUT_BCS_BATCH(batch,
+                  (height_in_mbs << 16) |
                   (width_in_mbs << 0));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   ((pic_param->second_chroma_qp_index_offset & 0x1f) << 24) |
                   ((pic_param->chroma_qp_index_offset & 0x1f) << 16) |
                   (0 << 14) | /* Max-bit conformance Intra flag ??? FIXME */
@@ -395,11 +395,11 @@ gen6_mfd_avc_qm_state(VADriverContextP ctx,
     OUT_BCS_BATCH(batch, MFX_AVC_QM_STATE | (cmd_len - 2));
 
     if (pic_param->pic_fields.bits.transform_8x8_mode_flag)
-        OUT_BCS_BATCH(batch, 
+        OUT_BCS_BATCH(batch,
                       (0x0  << 8) | /* don't use default built-in matrices */
                       (0xff << 0)); /* six 4x4 and two 8x8 scaling matrices */
     else
-        OUT_BCS_BATCH(batch, 
+        OUT_BCS_BATCH(batch,
                       (0x0  << 8) | /* don't use default built-in matrices */
                       (0x3f << 0)); /* six 4x4 scaling matrices */
 
@@ -478,8 +478,8 @@ gen6_mfd_avc_directmode_state(VADriverContextP ctx,
 
         if (obj_surface) {
             const VAPictureH264 * const va_pic = avc_find_picture(
-                obj_surface->base.id, pic_param->ReferenceFrames,
-                ARRAY_ELEMS(pic_param->ReferenceFrames));
+                                                     obj_surface->base.id, pic_param->ReferenceFrames,
+                                                     ARRAY_ELEMS(pic_param->ReferenceFrames));
 
             assert(va_pic != NULL);
             OUT_BCS_BATCH(batch, va_pic->TopFieldOrderCnt);
@@ -522,7 +522,7 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
     } else if (slice_param->slice_type == SLICE_TYPE_P ||
                slice_param->slice_type == SLICE_TYPE_SP) {
         slice_type = SLICE_TYPE_P;
-    } else { 
+    } else {
         assert(slice_param->slice_type == SLICE_TYPE_B);
         slice_type = SLICE_TYPE_B;
     }
@@ -553,7 +553,7 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
     }
 
     first_mb_in_slice = slice_param->first_mb_in_slice;
-    slice_hor_pos = first_mb_in_slice % width_in_mbs; 
+    slice_hor_pos = first_mb_in_slice % width_in_mbs;
     slice_ver_pos = first_mb_in_slice / width_in_mbs;
 
     if (mbaff_picture)
@@ -561,7 +561,7 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
 
     if (next_slice_param) {
         first_mb_in_next_slice = next_slice_param->first_mb_in_slice;
-        next_slice_hor_pos = first_mb_in_next_slice % width_in_mbs; 
+        next_slice_hor_pos = first_mb_in_next_slice % width_in_mbs;
         next_slice_ver_pos = first_mb_in_next_slice / width_in_mbs;
 
         if (mbaff_picture)
@@ -574,12 +574,12 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 11); /* FIXME: is it 10??? */
     OUT_BCS_BATCH(batch, MFX_AVC_SLICE_STATE | (11 - 2));
     OUT_BCS_BATCH(batch, slice_type);
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   (num_ref_idx_l1 << 24) |
                   (num_ref_idx_l0 << 16) |
                   (chroma_log2_weight_denom << 8) |
                   (luma_log2_weight_denom << 0));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   (weighted_pred_idc << 30) |
                   (slice_param->direct_spatial_mv_pred_flag << 29) |
                   (slice_param->disable_deblocking_filter_idc << 27) |
@@ -587,14 +587,14 @@ gen6_mfd_avc_slice_state(VADriverContextP ctx,
                   ((pic_param->pic_init_qp_minus26 + 26 + slice_param->slice_qp_delta) << 16) |
                   ((slice_param->slice_beta_offset_div2 & 0xf) << 8) |
                   ((slice_param->slice_alpha_c0_offset_div2 & 0xf) << 0));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   (slice_ver_pos << 24) |
-                  (slice_hor_pos << 16) | 
+                  (slice_hor_pos << 16) |
                   (first_mb_in_slice << 0));
     OUT_BCS_BATCH(batch,
                   (next_slice_ver_pos << 16) |
                   (next_slice_hor_pos << 0));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   (next_slice_param == NULL) << 19); /* last slice flag */
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
@@ -631,7 +631,7 @@ gen6_mfd_avc_weightoffset_state(VADriverContextP ctx,
         (pic_param->pic_fields.bits.weighted_pred_flag == 1)) {
         num_weight_offset_table = 1;
     }
-    
+
     if ((slice_param->slice_type == SLICE_TYPE_B) &&
         (pic_param->pic_fields.bits.weighted_bipred_idc == 1)) {
         num_weight_offset_table = 2;
@@ -678,14 +678,14 @@ gen6_mfd_avc_bsd_object(VADriverContextP ctx,
     unsigned int slice_data_bit_offset;
 
     slice_data_bit_offset = avc_get_first_mb_bit_offset(
-        slice_data_bo,
-        slice_param,
-        pic_param->pic_fields.bits.entropy_coding_mode_flag
-    );
+                                slice_data_bo,
+                                slice_param,
+                                pic_param->pic_fields.bits.entropy_coding_mode_flag
+                            );
 
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFD_AVC_BSD_OBJECT | (6 - 2));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   (slice_param->slice_data_size - slice_param->slice_data_offset));
     OUT_BCS_BATCH(batch, slice_param->slice_data_offset);
     OUT_BCS_BATCH(batch,
@@ -757,7 +757,7 @@ gen6_mfd_avc_decode_init(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
     intel_update_avc_frame_store_index(ctx, decode_state, pic_param,
-        gen6_mfd_context->reference_surface, &gen6_mfd_context->fs_ctx);
+                                       gen6_mfd_context->reference_surface, &gen6_mfd_context->fs_ctx);
     width_in_mbs = ((pic_param->picture_width_in_mbs_minus1 + 1) & 0xff);
 
     /* Current decoded picture */
@@ -854,9 +854,9 @@ gen6_mfd_avc_decode_picture(VADriverContextP ctx,
         else
             next_slice_group_param = (VASliceParameterBufferH264 *)decode_state->slice_params[j + 1]->buffer;
 
-            if (j == 0 &&
-                slice_param->first_mb_in_slice)
-                gen6_mfd_avc_phantom_slice_first(ctx, pic_param, slice_param, gen6_mfd_context);
+        if (j == 0 &&
+            slice_param->first_mb_in_slice)
+            gen6_mfd_avc_phantom_slice_first(ctx, pic_param, slice_param, gen6_mfd_context);
 
         for (i = 0; i < decode_state->slice_params[j]->num_elements; i++) {
             assert(slice_param->slice_data_flag == VA_SLICE_DATA_FLAG_ALL);
@@ -879,7 +879,7 @@ gen6_mfd_avc_decode_picture(VADriverContextP ctx,
             slice_param++;
         }
     }
-    
+
     gen6_mfd_avc_phantom_slice_last(ctx, pic_param, gen6_mfd_context);
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
@@ -964,7 +964,7 @@ gen6_mfd_mpeg2_pic_state(VADriverContextP ctx,
                   pic_param->picture_coding_extension.bits.frame_pred_frame_dct << 10 |
                   pic_param->picture_coding_extension.bits.concealment_motion_vectors << 9 |
                   pic_param->picture_coding_extension.bits.q_scale_type << 8 |
-                  pic_param->picture_coding_extension.bits.intra_vlc_format << 7 | 
+                  pic_param->picture_coding_extension.bits.intra_vlc_format << 7 |
                   pic_param->picture_coding_extension.bits.alternate_scan << 6);
     OUT_BCS_BATCH(batch,
                   pic_param->picture_coding_type << 9);
@@ -1043,7 +1043,7 @@ gen6_mfd_mpeg2_bsd_object(VADriverContextP ctx,
         pic_param->picture_coding_extension.bits.picture_structure == MPEG_BOTTOM_FIELD)
         is_field_pic = 1;
     is_field_pic_wa = is_field_pic &&
-        gen6_mfd_context->wa_mpeg2_slice_vertical_position > 0;
+                      gen6_mfd_context->wa_mpeg2_slice_vertical_position > 0;
 
     vpos0 = slice_param->slice_vertical_position / (1 + is_field_pic_wa);
     hpos0 = slice_param->slice_horizontal_position;
@@ -1060,9 +1060,9 @@ gen6_mfd_mpeg2_bsd_object(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 5);
     OUT_BCS_BATCH(batch, MFD_MPEG2_BSD_OBJECT | (5 - 2));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   slice_param->slice_data_size - (slice_param->macroblock_offset >> 3));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   slice_param->slice_data_offset + (slice_param->macroblock_offset >> 3));
     OUT_BCS_BATCH(batch,
                   hpos0 << 24 |
@@ -1141,7 +1141,7 @@ static const int b_picture_scale_factor[21] = {
     128, 85,  170, 64,  192,
     51,  102, 153, 204, 43,
     215, 37,  74,  111, 148,
-    185, 222, 32,  96,  160, 
+    185, 222, 32,  96,  160,
     224,
 };
 
@@ -1158,7 +1158,7 @@ static const int va_to_gen6_vc1_profile[4] = {
     GEN6_VC1_ADVANCED_PROFILE
 };
 
-static void 
+static void
 gen6_mfd_free_vc1_surface(void **data)
 {
     struct gen6_vc1_surface *gen6_vc1_surface = *data;
@@ -1172,7 +1172,7 @@ gen6_mfd_free_vc1_surface(void **data)
 }
 
 static void
-gen6_mfd_init_vc1_surface(VADriverContextP ctx, 
+gen6_mfd_init_vc1_surface(VADriverContextP ctx,
                           VAPictureParameterBufferVC1 *pic_param,
                           struct object_surface *obj_surface)
 {
@@ -1270,7 +1270,7 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
 
     gen6_mfd_context->bitplane_read_buffer.valid = !!pic_param->bitplane_present.value;
     dri_bo_unreference(gen6_mfd_context->bitplane_read_buffer.bo);
-    
+
     if (gen6_mfd_context->bitplane_read_buffer.valid) {
         int width_in_mbs = ALIGN(pic_param->coded_width, 16) / 16;
         int height_in_mbs = ALIGN(pic_param->coded_height, 16) / 16;
@@ -1293,7 +1293,7 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
         dst = bo->virtual;
 
         for (src_h = 0; src_h < height_in_mbs; src_h++) {
-            for(src_w = 0; src_w < width_in_mbs; src_w++) {
+            for (src_w = 0; src_w < width_in_mbs; src_w++) {
                 int src_index, dst_index;
                 int src_shift;
                 uint8_t src_value;
@@ -1302,7 +1302,7 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
                 src_shift = !((src_h * width_in_mbs + src_w) & 1) * 4;
                 src_value = ((src[src_index] >> src_shift) & 0xf);
 
-                if (picture_type == GEN6_VC1_SKIPPED_PICTURE){
+                if (picture_type == GEN6_VC1_SKIPPED_PICTURE) {
                     src_value |= 0x2;
                 }
 
@@ -1381,7 +1381,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                     alt_pquant_edge_mask = 0;
                 }
                 break;
-                
+
             case 0:
                 alt_pquant_edge_mask = 0xf;
                 break;
@@ -1423,8 +1423,8 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
         scale_factor = b_picture_scale_factor[pic_param->b_picture_fraction];
 
     picture_type = va_to_gen6_vc1_pic_type[pic_param->picture_fields.bits.picture_type];
-    
-    if (profile == GEN6_VC1_ADVANCED_PROFILE && 
+
+    if (profile == GEN6_VC1_ADVANCED_PROFILE &&
         picture_type == GEN6_VC1_I_PICTURE)
         picture_type = GEN6_VC1_BI_PICTURE;
 
@@ -1452,7 +1452,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
         if (obj_surface)
             gen6_vc1_surface = obj_surface->private_data;
 
-        if (!gen6_vc1_surface || 
+        if (!gen6_vc1_surface ||
             (va_to_gen6_vc1_pic_type[gen6_vc1_surface->picture_type] == GEN6_VC1_I_PICTURE ||
              va_to_gen6_vc1_pic_type[gen6_vc1_surface->picture_type] == GEN6_VC1_BI_PICTURE))
             dmv_surface_valid = 0;
@@ -1484,19 +1484,19 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
 
     if (overlap) {
         overlap = 0;
-        if (profile != GEN6_VC1_ADVANCED_PROFILE){
+        if (profile != GEN6_VC1_ADVANCED_PROFILE) {
             if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9 &&
                 pic_param->picture_fields.bits.picture_type != GEN6_VC1_B_PICTURE) {
                 overlap = 1;
             }
-        }else {
+        } else {
             if (pic_param->picture_fields.bits.picture_type == GEN6_VC1_P_PICTURE &&
-                pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9){
+                pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9) {
                 overlap = 1;
             }
             if (pic_param->picture_fields.bits.picture_type == GEN6_VC1_I_PICTURE ||
-                pic_param->picture_fields.bits.picture_type == GEN6_VC1_BI_PICTURE){
-                if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9){
+                pic_param->picture_fields.bits.picture_type == GEN6_VC1_BI_PICTURE) {
+                if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9) {
                     overlap = 1;
                 } else if (va_to_gen6_vc1_condover[pic_param->conditional_overlap_flag] == 2 ||
                            va_to_gen6_vc1_condover[pic_param->conditional_overlap_flag] == 3) {
@@ -1504,7 +1504,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                 }
             }
         }
-    } 
+    }
 
     assert(pic_param->conditional_overlap_flag < 3);
     assert(pic_param->mv_fields.bits.mv_table < 4); /* FIXME: interlace mode */
@@ -1656,7 +1656,7 @@ gen6_mfd_vc1_directmode_state(VADriverContextP ctx,
                       0);
     else
         OUT_BCS_BATCH(batch, 0);
-                  
+
     ADVANCE_BCS_BATCH(batch);
 }
 
@@ -1697,7 +1697,7 @@ gen6_mfd_vc1_bsd_object(VADriverContextP ctx,
 
     dri_bo_map(slice_data_bo, 0);
     slice_data = (uint8_t *)(slice_data_bo->virtual + slice_param->slice_data_offset);
-    macroblock_offset = gen6_mfd_vc1_get_macroblock_bit_offset(slice_data, 
+    macroblock_offset = gen6_mfd_vc1_get_macroblock_bit_offset(slice_data,
                                                                slice_param->macroblock_offset,
                                                                pic_param->sequence_fields.bits.profile);
     dri_bo_unmap(slice_data_bo);
@@ -1709,9 +1709,9 @@ gen6_mfd_vc1_bsd_object(VADriverContextP ctx,
 
     BEGIN_BCS_BATCH(batch, 4);
     OUT_BCS_BATCH(batch, MFD_VC1_BSD_OBJECT | (4 - 2));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   slice_param->slice_data_size - (macroblock_offset >> 3));
-    OUT_BCS_BATCH(batch, 
+    OUT_BCS_BATCH(batch,
                   slice_param->slice_data_offset + (macroblock_offset >> 3));
     OUT_BCS_BATCH(batch,
                   slice_param->slice_vertical_position << 24 |
@@ -1774,8 +1774,8 @@ gen6_mfd_vc1_decode_picture(VADriverContextP ctx,
 }
 
 static VAStatus
-gen6_mfd_decode_picture(VADriverContextP ctx, 
-                        VAProfile profile, 
+gen6_mfd_decode_picture(VADriverContextP ctx,
+                        VAProfile profile,
                         union codec_state *codec_state,
                         struct hw_context *hw_context)
 
@@ -1796,7 +1796,7 @@ gen6_mfd_decode_picture(VADriverContextP ctx,
     case VAProfileMPEG2Main:
         gen6_mfd_mpeg2_decode_picture(ctx, decode_state, gen6_mfd_context);
         break;
-        
+
     case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
@@ -1872,6 +1872,6 @@ gen6_dec_hw_context_init(VADriverContextP ctx, struct object_config *obj_config)
     }
 
     gen6_mfd_context->wa_mpeg2_slice_vertical_position = -1;
-    
+
     return (struct hw_context *)gen6_mfd_context;
 }
