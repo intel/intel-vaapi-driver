@@ -4,7 +4,39 @@ Intel-vaapi-driver is an open source project licensed under the [MIT License] (h
 
 ## Coding Style
 
-Intel-vaapi-driver does not have a defined coding style at this time, but that will be updated.
+In our project we follow the Linux coding style with a few changes. You may run 'astyle --style=linux -cnpUH -s4 -M120 <file>'
+to format/indent a single file or run './style_unify' in the top-level directory to handle all .c/.h files in the src directory.
+
+You will fail to commit your patch if your patch doesn't follow the coding style and the pre-commit hook will prompt you to fix
+the coding style.
+
+For example:
+
+```
+Checking coding style...
+
+--- .merge_file_tZMQ4C  2017-03-31 11:02:36.244617415 +0800
++++ /tmp/.merge_file_tZMQ4C.D0V 2017-03-31 11:02:36.274617276 +0800
+@@ -438,8 +438,7 @@ intel_batchbuffer_align(struct intel_bat
+     assert((pad_size & 3) == 0);
+     assert(intel_batchbuffer_space(batch) >= pad_size);
+
+-    while (pad_size >= 4)
+-    {
++    while (pad_size >= 4) {
+         intel_batchbuffer_emit_dword(batch, 0);
+         pad_size -= 4;
+     }
+
+**************************************************************************
+ Coding style error in src/intel_batchbuffer.c
+
+ Please fix the coding style before committing. You may run the command
+ below to fix the coding style from the top-level directory
+
+ astyle --style=linux -cnpUH -s4 -M120 src/intel_batchbuffer.c
+**************************************************************************
+```
 
 ## Certificate of Origin
 
