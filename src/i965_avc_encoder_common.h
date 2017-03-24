@@ -286,7 +286,7 @@ struct avc_enc_state {
 
     uint8_t  non_ftq_skip_threshold_lut[52];
     uint8_t  ftq_skip_threshold_lut[52];
-    uint8_t  lamda_value_lut[52][2];
+    uint32_t  lamda_value_lut[52][2];
 
 
     uint32_t intra_refresh_qp_threshold;
