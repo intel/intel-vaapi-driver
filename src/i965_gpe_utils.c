@@ -738,7 +738,8 @@ gen8_gpe_set_surface2_state(VADriverContextP ctx,
     unsigned int tiling, swizzle;
 
     assert(obj_surface->bo);
-    assert(obj_surface->fourcc == VA_FOURCC_NV12);
+    assert(obj_surface->fourcc == VA_FOURCC_NV12
+           || obj_surface->fourcc == VA_FOURCC_P010);
 
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
     w = obj_surface->orig_width;
@@ -899,7 +900,8 @@ gen8_gpe_media_chroma_surface_setup(VADriverContextP ctx,
     dri_bo *bo;
     int cbcr_offset;
 
-	assert(obj_surface->fourcc == VA_FOURCC_NV12);
+    assert(obj_surface->fourcc == VA_FOURCC_NV12
+           || obj_surface->fourcc == VA_FOURCC_P010);
     bo = gpe_context->surface_state_binding_table.bo;
     dri_bo_map(bo, True);
     assert(bo->virtual);
