@@ -1962,10 +1962,9 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
     int i = 0;
 
     struct object_surface *obj_surface;
-    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
     VAEncSliceParameterBufferH264 * slice_param = avc_state->slice_param[0];
     VASurfaceID surface_id;
-    unsigned int transform_8x8_mode_flag = pic_param->pic_fields.bits.transform_8x8_mode_flag;
+    unsigned int transform_8x8_mode_flag = avc_state->transform_8x8_mode_enable;
 
     gpe_resource = &(avc_ctx->res_brc_const_data_buffer);
     assert(gpe_resource);
@@ -2129,9 +2128,8 @@ gen9_avc_init_brc_const_data_old(VADriverContextP ctx,
     unsigned int * data_tmp = NULL;
     unsigned int size = 0;
     unsigned int table_idx = 0;
-    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
     unsigned int block_based_skip_enable = avc_state->block_based_skip_enable;
-    unsigned int transform_8x8_mode_flag = pic_param->pic_fields.bits.transform_8x8_mode_flag;
+    unsigned int transform_8x8_mode_flag = avc_state->transform_8x8_mode_enable;
     int i = 0;
 
     gpe_resource = &(avc_ctx->res_brc_const_data_buffer);
@@ -3074,7 +3072,6 @@ gen9_avc_load_mb_brc_const_data(VADriverContextP ctx,
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context * )vme_context->private_enc_ctx;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
-    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
 
     struct i965_gpe_resource *gpe_resource = NULL;
     unsigned int * data =NULL;
@@ -3082,7 +3079,7 @@ gen9_avc_load_mb_brc_const_data(VADriverContextP ctx,
     unsigned int size = 16 * 52;
     unsigned int table_idx = 0;
     unsigned int block_based_skip_enable = avc_state->block_based_skip_enable;
-    unsigned int transform_8x8_mode_flag = pic_param->pic_fields.bits.transform_8x8_mode_flag;
+    unsigned int transform_8x8_mode_flag = avc_state->transform_8x8_mode_enable;
     int i = 0;
 
     gpe_resource = &(avc_ctx->res_mbbrc_const_data_buffer);
@@ -3267,8 +3264,8 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
 
     cmd.g9->dw0.adaptive_enable = gen9_avc_enable_adaptive_search[preset];
     cmd.g9->dw37.adaptive_enable = gen9_avc_enable_adaptive_search[preset];
-    cmd.g9->dw0.t8x8_flag_for_inter_enable = pic_param->pic_fields.bits.transform_8x8_mode_flag;
-    cmd.g9->dw37.t8x8_flag_for_inter_enable = pic_param->pic_fields.bits.transform_8x8_mode_flag;
+    cmd.g9->dw0.t8x8_flag_for_inter_enable = avc_state->transform_8x8_mode_enable;
+    cmd.g9->dw37.t8x8_flag_for_inter_enable = avc_state->transform_8x8_mode_enable;
 
     cmd.g9->dw2.max_len_sp = gen9_avc_max_len_sp[preset];
     cmd.g9->dw38.max_len_sp = 0;
@@ -3347,7 +3344,7 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
     cmd.g9->dw4.use_actual_ref_qp_value = generic_state->hme_enabled && (gen9_avc_mr_disable_qp_check[preset] == 0);
 
 
-    cmd.g9->dw7.intra_part_mask = pic_param->pic_fields.bits.transform_8x8_mode_flag?0:0x02;
+    cmd.g9->dw7.intra_part_mask = avc_state->transform_8x8_mode_enable?0:0x02;
     cmd.g9->dw7.src_field_polarity = 0;//field related
 
     /*ftq_skip_threshold_lut set,dw14 /15*/
@@ -3355,11 +3352,11 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
     /*r5 disable NonFTQSkipThresholdLUT*/
     if(generic_state->frame_type == SLICE_TYPE_P)
     {
-        cmd.g9->dw32.skip_val = gen9_avc_skip_value_p[avc_state->block_based_skip_enable][pic_param->pic_fields.bits.transform_8x8_mode_flag][qp];
+        cmd.g9->dw32.skip_val = gen9_avc_skip_value_p[avc_state->block_based_skip_enable][avc_state->transform_8x8_mode_enable][qp];
 
     }else if(generic_state->frame_type == SLICE_TYPE_B)
     {
-        cmd.g9->dw32.skip_val = gen9_avc_skip_value_b[avc_state->block_based_skip_enable][pic_param->pic_fields.bits.transform_8x8_mode_flag][qp];
+        cmd.g9->dw32.skip_val = gen9_avc_skip_value_b[avc_state->block_based_skip_enable][avc_state->transform_8x8_mode_enable][qp];
 
     }
 
@@ -5357,7 +5354,6 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
     VAEncSequenceParameterBufferH264 *seq_param;
-    VAEncPictureParameterBufferH264 *pic_param ;
     VAEncSliceParameterBufferH264 * slice_param;
     int i,j;
     unsigned int preset = generic_state->preset;
@@ -5395,7 +5391,6 @@ gen9_avc_update_parameters(VADriverContextP ctx,
 
     /* how many slices support by now? 1 slice or multi slices, but row slice.not slice group. */
     seq_param = avc_state->seq_param;
-    pic_param = avc_state->pic_param;
     slice_param = avc_state->slice_param[0];
 
     generic_state->frame_type = avc_state->slice_param[0]->slice_type;
@@ -5408,7 +5403,7 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     else if(slice_param->slice_type == SLICE_TYPE_B)
         generic_state->frame_type = SLICE_TYPE_B;
     if (profile == VAProfileH264High)
-        avc_state->transform_8x8_mode_enable = !!pic_param->pic_fields.bits.transform_8x8_mode_flag;
+        avc_state->transform_8x8_mode_enable = 0;//work around for high profile to disabel pic_param->pic_fields.bits.transform_8x8_mode_flag
     else
         avc_state->transform_8x8_mode_enable = 0;
 
