@@ -2,9 +2,9 @@ intel-vaapi-driver NEWS -- summary of changes.  2017-03-xx
 Copyright (C) 2009-2017 Intel Corporation
 
 Version 1.8.0 - DD.Mar.2017
-* Improve the quality of the H.264 encoder on SKL and BXT for CQP and CBR mode
+* Improve the quality of the H.264 encoder on SKL+ for CQP and CBR mode
 * Improve the quality of the VP8 encoder on BSW+ for CQP and CBR mode
-* Add support for H.264 VBR mode on SKL and BXT
+* Add support for H.264 VBR mode on SKL+
 * Add support for VP8 VBR mode on BSW+
 * Add support for low-power H.264 encoder on BXT and KBL
 * Add support for CBR / VBR with low-power H.264 encoder on SKL+
