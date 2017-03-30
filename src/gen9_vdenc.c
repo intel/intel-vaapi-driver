@@ -2993,7 +2993,8 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
         /* For the Normal H264 */
 
         if (slice_index &&
-            IS_KBL(i965->intel.device_info)) {
+            (IS_KBL(i965->intel.device_info) ||
+             IS_GLK(i965->intel.device_info))) {
             saved_macroblock_address = slice_params->macroblock_address;
             slice_params->macroblock_address = 0;
         }
@@ -3006,7 +3007,8 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
         slice_header1 = slice_header;
 
         if (slice_index &&
-            IS_KBL(i965->intel.device_info)) {
+            (IS_KBL(i965->intel.device_info) ||
+             IS_GLK(i965->intel.device_info))) {
             slice_params->macroblock_address = saved_macroblock_address;
         }
 
@@ -3030,7 +3032,8 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
         unsigned char *slice_header1 = NULL;
 
         if (slice_index &&
-            IS_KBL(i965->intel.device_info)) {
+            (IS_KBL(i965->intel.device_info) ||
+             IS_GLK(i965->intel.device_info))) {
             slice_header_index = (encode_state->slice_header_index[0] & SLICE_PACKED_DATA_INDEX_MASK);
         }
 
@@ -3894,7 +3897,8 @@ vdenc_hw_interfaces_init(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
-    if (IS_KBL(i965->intel.device_info)) {
+    if (IS_KBL(i965->intel.device_info) ||
+        IS_GLK(i965->intel.device_info)) {
         gen95_vdenc_hw_interfaces_init(ctx, encoder_context, vdenc_context);
     } else {
         gen9_vdenc_hw_interfaces_init(ctx, encoder_context, vdenc_context);
