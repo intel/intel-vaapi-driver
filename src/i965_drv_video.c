@@ -1528,8 +1528,8 @@ i965_suface_external_memory(VADriverContextP ctx,
         ASSERT_RET(memory_attibute->pitches[1] == memory_attibute->pitches[2], VA_STATUS_ERROR_INVALID_PARAMETER);
 
         obj_surface->subsampling = SUBSAMPLE_YUV411;
-        obj_surface->y_cb_offset = 0;
-        obj_surface->y_cr_offset = 0;
+        obj_surface->y_cb_offset = obj_surface->height;
+        obj_surface->y_cr_offset = memory_attibute->offsets[2] / obj_surface->width;
         obj_surface->cb_cr_width = obj_surface->orig_width / 4;
         obj_surface->cb_cr_height = obj_surface->orig_height;
         obj_surface->cb_cr_pitch = memory_attibute->pitches[1];
