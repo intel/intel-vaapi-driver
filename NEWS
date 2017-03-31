@@ -1,13 +1,14 @@
-intel-vaapi-driver NEWS -- summary of changes.  2017-03-xx
+intel-vaapi-driver NEWS -- summary of changes.  2017-03-31
 Copyright (C) 2009-2017 Intel Corporation
 
-Version 1.8.0 - DD.Mar.2017
+Version 1.8.0 - 31.Mar.2017
 * Improve the quality of the H.264 encoder on SKL+ for CQP and CBR mode
 * Improve the quality of the VP8 encoder on BSW+ for CQP and CBR mode
 * Add support for H.264 VBR mode on SKL+
 * Add support for VP8 VBR mode on BSW+
 * Add support for low-power H.264 encoder on BXT and KBL
-* Add support for CBR / VBR with low-power H.264 encoder on SKL+
+* Add support for CBR / VBR with low-power H.264 encoder on SKL+ (A HuC Firmware and
+  a HuC supported Linux kernel are required)
 * Add support for CSC and scaling with 10bit P010/I010 surface
 * Optimize CSC and scaling with 8bit NV12 and I420 surface
 * Fix the wrong memory object cache setting on SKL+
@@ -15,6 +16,10 @@ Version 1.8.0 - DD.Mar.2017
 * Fix the wrong bit shift in H.264 encoder
 * Fix the 48bit graphics address on BSW+
 * Fix building on NetBSD
+* Known issues
+  - The new AVC encoder doesn't support MVC/SVC encoding
+  - The new AVC encoder doesn't support ROI encoding
+  - The new AVC encoder doesn't support multiple slice encoding
 
 Version 1.7.3 - 10.Nov.2016
 * Add support for HEVC 10bit encoding on KBL
