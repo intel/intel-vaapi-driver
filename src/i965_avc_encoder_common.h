@@ -57,6 +57,8 @@
 #define INTEL_AVC_WP_MODE_EXPLICIT 1
 #define INTEL_AVC_WP_MODE_IMPLICIT 2
 
+#define AVC_NAL_DELIMITER           9
+
 struct avc_param {
 
     // original width/height
