@@ -1043,18 +1043,24 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     profile == VAProfileH264Main ||
                     profile == VAProfileH264High) {
 
-                    VAConfigAttribValEncROI *roi_config =
-                        (VAConfigAttribValEncROI *)&(attrib_list[i].value);
+                    if (IS_GEN9(i965->intel.device_info)&&
+                        entrypoint == VAEntrypointEncSlice)
+                        attrib_list[i].value = 0;
+                    else {
 
-                    if(entrypoint == VAEntrypointEncSliceLP) {
-                        roi_config->bits.num_roi_regions = 3;
-                        roi_config->bits.roi_rc_priority_support = 0;
-                        roi_config->bits.roi_rc_qp_delat_support = 0;
-                    } else {
-                        roi_config->bits.num_roi_regions =
-                            I965_MAX_NUM_ROI_REGIONS;
-                        roi_config->bits.roi_rc_priority_support = 0;
-                        roi_config->bits.roi_rc_qp_delat_support = 1;
+                        VAConfigAttribValEncROI *roi_config =
+                            (VAConfigAttribValEncROI *)&(attrib_list[i].value);
+
+                        if(entrypoint == VAEntrypointEncSliceLP) {
+                            roi_config->bits.num_roi_regions = 3;
+                            roi_config->bits.roi_rc_priority_support = 0;
+                            roi_config->bits.roi_rc_qp_delat_support = 0;
+                        } else {
+                            roi_config->bits.num_roi_regions =
+                                I965_MAX_NUM_ROI_REGIONS;
+                            roi_config->bits.roi_rc_priority_support = 0;
+                            roi_config->bits.roi_rc_qp_delat_support = 1;
+                        }
                     }
                 }else {
                     attrib_list[i].value = 0;
