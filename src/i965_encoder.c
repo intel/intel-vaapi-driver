@@ -857,6 +857,9 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
         goto error;
 
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num )
+        goto error;
+
     encode_state->coded_buf_object = obj_buffer;
 
     for (i = 0; i < 16; i++) {
@@ -1100,6 +1103,9 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
     assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
 
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+        goto error;
+
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num )
         goto error;
 
     encode_state->coded_buf_object = obj_buffer;
@@ -1387,6 +1393,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
     encoder_context->quality_range = 1;
     encoder_context->layer.num_layers = 1;
+    encoder_context->max_slice_or_seg_num = 1;
 
     if (obj_config->entrypoint == VAEntrypointEncSliceLP)
         encoder_context->low_power_mode = 1;
@@ -1459,6 +1466,11 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         if (obj_config->attrib_list[i].type == VAConfigAttribEncROI) {
             if (encoder_context->codec == CODEC_H264)
                 encoder_context->context_roi = 1;
+        }
+        if (obj_config->attrib_list[i].type == VAConfigAttribEncMaxSlices) {
+            if (encoder_context->codec == CODEC_H264 ||
+                encoder_context->codec == CODEC_HEVC)
+                encoder_context->max_slice_or_seg_num = obj_config->attrib_list[i].value;
         }
     }
 

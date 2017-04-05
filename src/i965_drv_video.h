@@ -76,6 +76,7 @@
 #define ENCODER_LOW_QUALITY       2
 
 #define I965_MAX_NUM_ROI_REGIONS                     8
+#define I965_MAX_NUM_SLICE                           32
 
 #define ENCODER_LP_QUALITY_RANGE  8
 
