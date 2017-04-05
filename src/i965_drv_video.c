@@ -1068,10 +1068,14 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                  profile == VAProfileH264Main ||
                  profile == VAProfileH264High) &&
                 entrypoint == VAEntrypointEncSlice) {
-                VAConfigAttribValEncRateControlExt *val_config = (VAConfigAttribValEncRateControlExt *)&(attrib_list[i].value);
+                    if (IS_GEN9(i965->intel.device_info))
+                        attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
+                    else {
+                        VAConfigAttribValEncRateControlExt *val_config = (VAConfigAttribValEncRateControlExt *)&(attrib_list[i].value);
 
-                val_config->bits.max_num_temporal_layers_minus1 = MAX_TEMPORAL_LAYERS - 1;
-                val_config->bits.temporal_layer_bitrate_control_flag = 1;
+                        val_config->bits.max_num_temporal_layers_minus1 = MAX_TEMPORAL_LAYERS - 1;
+                        val_config->bits.temporal_layer_bitrate_control_flag = 1;
+                    }
             } else {
                 attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
             }
