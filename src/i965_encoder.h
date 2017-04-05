@@ -72,6 +72,7 @@ struct intel_encoder_context
     unsigned int num_frames_in_sequence;
     unsigned int frame_width_in_pixel;
     unsigned int frame_height_in_pixel;
+    unsigned int max_slice_or_seg_num;
 
     struct {
         unsigned int num_layers;
