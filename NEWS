@@ -1,5 +1,12 @@
-intel-vaapi-driver NEWS -- summary of changes.  2017-03-31
+intel-vaapi-driver NEWS -- summary of changes.  2017-04-xx
 Copyright (C) 2009-2017 Intel Corporation
+
+Version 1.8.1 - DD.Apr.2017
+* Add support for VAConfigAttribEncMaxSlices
+* Disable AVC multi-slice encoding on SKL+
+* Disable AVC ROI encoding on SKL+
+* Disable bitrate control per temporal layer on SKL+
+* Disable MVC encoding on SKL+
 
 Version 1.8.0 - 31.Mar.2017
 * Improve the quality of the H.264 encoder on SKL+ for CQP and CBR mode
