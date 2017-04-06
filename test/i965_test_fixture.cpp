@@ -23,7 +23,6 @@
  */
 
 #include "i965_test_fixture.h"
-
 const std::string I965TestFixture::getFullTestName() const
 {
     const ::testing::TestInfo * const info =
@@ -58,6 +57,84 @@ Surfaces I965TestFixture::createSurfaces(int w, int h, int format, size_t count,
 
     return surfaces;
 }
+
+TEST_F(I965TestFixture,testImportedSurface){
+
+    VAStatus va_status;
+    VASurfaceAttrib surfaceAttrib,surfaceAttrib2;
+    VASurfaceAttribExternalBuffers exbuffer;
+    surfaceAttrib.type = VASurfaceAttribMemoryType;
+    surfaceAttrib.flags = 2;
+    surfaceAttrib.value.type = VAGenericValueTypeInteger;
+    surfaceAttrib.value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM;
+    //surfaceAttrib.value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME;
+    surfaceAttrib2.flags = 2;
+    surfaceAttrib2.type = VASurfaceAttribExternalBufferDescriptor;
+    surfaceAttrib2.value.type = VAGenericValueTypePointer;
+    surfaceAttrib2.value.value.p = &exbuffer;
+
+    VASurfaceAttrib attributes[2] = {surfaceAttrib, surfaceAttrib2};
+    exbuffer.pitches[0] = 4096;
+    exbuffer.pitches[1] = 4096;
+    exbuffer.pitches[2] = 2048;
+    exbuffer.pixel_format = VA_FOURCC_P010;
+    exbuffer.offsets[0] = 4456448;
+    exbuffer.offsets[1] = 4456448;
+    exbuffer.offsets[2] = 64;
+    exbuffer.data_size = 6291456;
+    exbuffer.num_planes = 2;
+    exbuffer.num_buffers = 1;
+    exbuffer.width = 2048;
+    exbuffer.height = 1088;
+    int region_width = 1024;
+    int region_height = 3072;
+    unsigned int tiling_mode = 1;
+    long unsigned int pitches =  2048;
+    VADriverContextP ctx(*this);
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface = (object_surface*)malloc(sizeof(object_surface));
+    obj_surface->bo = drm_intel_bo_alloc_tiled(i965->intel.bufmgr,
+                                                    "vaapi surface",
+                                                    region_width,
+                                                    region_height,
+                                                    1,
+                                                    &tiling_mode,
+                                                    &pitches,
+                                                  (unsigned long) 0);
+
+    /*    int size = 6291456;
+    obj_surface->bo = dri_bo_alloc(i965->intel.bufmgr,
+
+                                     //"gem flinked vaapi surface",
+                                       "vaapi surface",
+                                        size,
+                                        0x1000);
+    */
+    int external_memory_type = 1;
+
+    exbuffer.buffers = new unsigned long[4];
+    if (external_memory_type == I965_SURFACE_MEM_GEM_FLINK) {
+        uint32_t name;
+        drm_intel_bo_flink(obj_surface->bo, &name);
+        exbuffer.buffers[0] = (long unsigned int)name;
+    } else if (external_memory_type == I965_SURFACE_MEM_DRM_PRIME) {
+        int name;
+        drm_intel_bo_gem_export_to_prime(obj_surface->bo,&name) ;
+        exbuffer.buffers[0] = (long unsigned int)name;
+    }
+    unsigned int num_surfaces = 1;
+    unsigned int num_attributes  = 2;
+    int w = 2048;
+    int h = 1088;
+    int format = VA_RT_FORMAT_YUV420;
+    unsigned int *surface_id = new unsigned int[1];
+
+    va_status = ctx->vtable->vaCreateSurfaces2(ctx, format, w, h,surface_id, num_surfaces, attributes, num_attributes);
+    free(obj_surface);
+    std::cout<<"va_status"<<va_status<<std::endl;
+
+}
+
 
 void I965TestFixture::destroySurfaces(Surfaces& surfaces)
 {
