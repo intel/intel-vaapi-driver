@@ -65,7 +65,9 @@ VAStatus CheckSupported(VAProfile profile, VAEntrypoint entrypoint)
     case VAProfileH264MultiviewHigh:
     case VAProfileH264StereoHigh:
         if (entrypoint == VAEntrypointEncSlice) {
-            return VA_STATUS_SUCCESS;
+            if (HAS_H264_MVC_ENCODING(i965)) {
+                return VA_STATUS_SUCCESS;
+            }
         }
         break;
 
