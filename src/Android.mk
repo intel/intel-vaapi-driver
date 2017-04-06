@@ -83,7 +83,7 @@ $(GEN): $(LOCAL_PATH)/%.h : $(LOCAL_PATH)/%.h.in $(SCRIPT)
 	$(transform-generated-source)
 LOCAL_GENERATED_SOURCES += $(GEN)
 
-LOCAL_CFLAGS := -DLINUX -DANDROID -g -Wall -Wno-unused -fvisibility=hidden
+LOCAL_CFLAGS := -DLINUX -g -Wall -Wno-unused -fvisibility=hidden
 
 LOCAL_C_INCLUDES :=             \
     $(TARGET_OUT_HEADERS)/libva \
