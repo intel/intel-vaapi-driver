@@ -85,10 +85,6 @@ LOCAL_GENERATED_SOURCES += $(GEN)
 
 LOCAL_CFLAGS := -DLINUX -g -Wall -Wno-unused -fvisibility=hidden
 
-LOCAL_C_INCLUDES :=             \
-    $(TARGET_OUT_HEADERS)/libva \
-    $(TARGET_OUT_HEADERS)/libdrm
-
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := i965_drv_video
 
