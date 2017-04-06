@@ -3806,8 +3806,8 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
      VASurfaceID surface_id;
     unsigned int mbenc_i_frame_dist_in_use = param->mbenc_i_frame_dist_in_use;
     unsigned int size = 0;
-    unsigned int w_mb = generic_state->frame_width_in_mbs;
-    unsigned int h_mb = generic_state->frame_height_in_mbs;
+    unsigned int frame_mb_size = generic_state->frame_width_in_mbs *
+        generic_state->frame_height_in_mbs;
     int i = 0;
     VAEncSliceParameterBufferH264 * slice_param = avc_state->slice_param[0];
     unsigned char is_g95 = 0;
@@ -3826,7 +3826,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     avc_priv_surface = obj_surface->private_data;
 
     /*pak obj command buffer output*/
-    size = w_mb * h_mb * 16 * 4;
+    size = frame_mb_size * 16 * 4;
     gpe_resource = &avc_priv_surface->res_mb_code_surface;
     gen9_add_buffer_gpe_surface(ctx,
                                 gpe_context,
@@ -3837,7 +3837,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
                                 GEN9_AVC_MBENC_MFC_AVC_PAK_OBJ_INDEX);
 
     /*mv data buffer output*/
-    size = w_mb * h_mb * 32 * 4;
+    size = frame_mb_size * 32 * 4;
     gpe_resource = &avc_priv_surface->res_mv_data_surface;
     gen9_add_buffer_gpe_surface(ctx,
                                 gpe_context,
@@ -3983,7 +3983,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
         {
             avc_priv_surface = obj_surface->private_data;
             /*pak obj command buffer output(mb code)*/
-            size = w_mb * h_mb * 16 * 4;
+            size = frame_mb_size * 16 * 4;
             gpe_resource = &avc_priv_surface->res_mb_code_surface;
             gen9_add_buffer_gpe_surface(ctx,
                                         gpe_context,
@@ -3994,7 +3994,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
                                         GEN9_AVC_MBENC_FWD_MB_DATA_INDEX);
 
             /*mv data buffer output*/
-            size = w_mb * h_mb * 32 * 4;
+            size = frame_mb_size * 32 * 4;
             gpe_resource = &avc_priv_surface->res_mv_data_surface;
             gen9_add_buffer_gpe_surface(ctx,
                                         gpe_context,
@@ -4043,7 +4043,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     if(param->mb_vproc_stats_enable)
     {
         /*mb status buffer input*/
-        size = w_mb * h_mb * 16 * 4;
+        size = frame_mb_size * 16 * 4;
         gpe_resource = &(avc_ctx->res_mb_status_buffer);
         gen9_add_buffer_gpe_surface(ctx,
                                     gpe_context,
