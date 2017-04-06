@@ -1082,6 +1082,33 @@ i965_GetConfigAttributes(VADriverContextP ctx,
 
             break;
 
+        case VAConfigAttribEncMaxSlices:
+            if (entrypoint == VAEntrypointEncSlice) {
+                if ((profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High) ||
+                    profile == VAProfileH264StereoHigh ||
+                    profile == VAProfileH264MultiviewHigh) {
+                        if (IS_GEN9(i965->intel.device_info))
+                            attrib_list[i].value = 1;
+                        else
+                            attrib_list[i].value = I965_MAX_NUM_SLICE;
+                }else if (profile == VAProfileHEVCMain ||
+                    profile == VAProfileHEVCMain10) {
+                        attrib_list[i].value = I965_MAX_NUM_SLICE;
+                }
+            } else if (entrypoint == VAEntrypointEncSliceLP) {
+                if ((profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High) ||
+                    profile == VAProfileH264StereoHigh ||
+                    profile == VAProfileH264MultiviewHigh)
+                    attrib_list[i].value = I965_MAX_NUM_SLICE;
+            } else
+                attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
+
+            break;
+
         default:
             /* Do nothing */
             attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
@@ -1177,6 +1204,9 @@ i965_CreateConfig(VADriverContextP ctx,
     obj_config->wrapper_config = VA_INVALID_ID;
 
     for (i = 0; i < num_attribs; i++) {
+        // add it later and ignore the user input for VAConfigAttribEncMaxSlices
+        if(attrib_list[i].type == VAConfigAttribEncMaxSlices)
+            continue;
         vaStatus = i965_ensure_config_attribute(obj_config, &attrib_list[i]);
         if (vaStatus != VA_STATUS_SUCCESS)
             break;
@@ -1191,6 +1221,38 @@ i965_CreateConfig(VADriverContextP ctx,
             vaStatus = i965_append_config_attribute(obj_config, &attrib);
         else if (!(attrib_found->value & attrib.value))
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+    }
+
+    if (vaStatus == VA_STATUS_SUCCESS) {
+        VAConfigAttrib attrib;
+        attrib.type = VAConfigAttribEncMaxSlices;
+        attrib.value = VA_ATTRIB_NOT_SUPPORTED;
+        if (entrypoint == VAEntrypointEncSlice) {
+            if ((profile == VAProfileH264ConstrainedBaseline ||
+                profile == VAProfileH264Main ||
+                profile == VAProfileH264High) ||
+                profile == VAProfileH264StereoHigh ||
+                profile == VAProfileH264MultiviewHigh) {
+                    if (IS_GEN9(i965->intel.device_info))
+                        attrib.value = 1;
+                    else
+                        attrib.value = I965_MAX_NUM_SLICE;
+            }else if (profile == VAProfileHEVCMain ||
+                profile == VAProfileHEVCMain10) {
+                attrib.value = I965_MAX_NUM_SLICE;
+            }
+        } else if (entrypoint == VAEntrypointEncSliceLP) {
+            if ((profile == VAProfileH264ConstrainedBaseline ||
+                profile == VAProfileH264Main ||
+                profile == VAProfileH264High) ||
+                profile == VAProfileH264StereoHigh ||
+                profile == VAProfileH264MultiviewHigh)
+                attrib.value = I965_MAX_NUM_SLICE;
+        } else
+            attrib.value = VA_ATTRIB_NOT_SUPPORTED;
+
+        if(attrib.value != VA_ATTRIB_NOT_SUPPORTED)
+            vaStatus = i965_append_config_attribute(obj_config, &attrib);
     }
 
     if ((vaStatus == VA_STATUS_SUCCESS) &&

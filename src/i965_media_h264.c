@@ -824,7 +824,7 @@ i965_media_h264_decode_init(VADriverContextP ctx,
     media_context->extended_state.enabled = 1;
     dri_bo_unreference(media_context->extended_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "extened vfe state", 
+                      "extended vfe state", 
                       sizeof(struct i965_vfe_state_ex), 32);
     assert(bo);
     media_context->extended_state.bo = bo;
