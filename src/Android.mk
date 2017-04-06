@@ -75,18 +75,20 @@ LOCAL_SRC_FILES :=              \
 	intel_media_common.c		\
 	$(NULL)
 
-GEN := $(LOCAL_PATH)/intel_version.h
-$(GEN): SCRIPT := $(LOCAL_PATH)/../build/gen_version.sh
-$(GEN): PRIVATE_PATH := $(LOCAL_PATH)
-$(GEN): PRIVATE_CUSTOM_TOOL = sh $(SCRIPT) $(PRIVATE_PATH)/.. $(PRIVATE_PATH) > $@
-$(GEN): $(LOCAL_PATH)/%.h : $(LOCAL_PATH)/%.h.in $(SCRIPT)
-	$(transform-generated-source)
+LOCAL_MODULE := i965_drv_video
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+
+intermediates := $(call local-generated-sources-dir)
+
+GEN := $(intermediates)/intel_version.h
+$(GEN): $(LOCAL_PATH)/intel_version.h.in $(wildcard $(LOCAL_PATH)/../.git/logs/HEAD)
+	@echo "Generating: $@ <= git"; mkdir -p $(@D)
+	$(hide) VER=`cd $(<D)/.. && git describe --tags --always --dirty || echo unknown`; \
+	sed -e "s|\@INTEL_DRIVER_GIT_VERSION\@|$$VER|" $< > $@
 LOCAL_GENERATED_SOURCES += $(GEN)
 
 LOCAL_CFLAGS := -DLINUX -g -Wall -Wno-unused -fvisibility=hidden
-
-LOCAL_MODULE_TAGS := optional
-LOCAL_MODULE := i965_drv_video
 
 LOCAL_SHARED_LIBRARIES := libdl libdrm libdrm_intel libcutils \
                libva libva-android libstdc++
