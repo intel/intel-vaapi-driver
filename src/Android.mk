@@ -78,6 +78,7 @@ LOCAL_SRC_FILES :=              \
 LOCAL_MODULE := i965_drv_video
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_RELATIVE_PATH := dri
 
 intermediates := $(call local-generated-sources-dir)
 
