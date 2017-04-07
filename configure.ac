@@ -1,7 +1,7 @@
 # intel-vaapi-driver package version number
 m4_define([intel_vaapi_driver_major_version], [1])
 m4_define([intel_vaapi_driver_minor_version], [8])
-m4_define([intel_vaapi_driver_micro_version], [0])
+m4_define([intel_vaapi_driver_micro_version], [2])
 m4_define([intel_vaapi_driver_pre_version],   [1])
 m4_define([intel_vaapi_driver_version],
           [intel_vaapi_driver_major_version.intel_vaapi_driver_minor_version.intel_vaapi_driver_micro_version])
@@ -20,7 +20,7 @@ AC_PREREQ([2.57])
 AC_INIT([intel_vaapi_driver],
         [intel_vaapi_driver_version],
         [https://github.com/01org/intel-vaapi-driver/issues/new],
-        [intel_vaapi_driver],
+        [intel-vaapi-driver],
         [https://github.com/01org/intel-vaapi-driver])
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_INIT_AUTOMAKE([1.9 tar-ustar])

@@ -41,6 +41,7 @@
 #include "gen6_mfc.h"
 
 #include "i965_post_processing.h"
+#include "i965_encoder_api.h"
 
 static struct intel_fraction
 reduce_fraction(struct intel_fraction f)
@@ -856,6 +857,9 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
         goto error;
 
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num )
+        goto error;
+
     encode_state->coded_buf_object = obj_buffer;
 
     for (i = 0; i < 16; i++) {
@@ -1099,6 +1103,9 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
     assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
 
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+        goto error;
+
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num )
         goto error;
 
     encode_state->coded_buf_object = obj_buffer;
@@ -1369,6 +1376,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
                           hw_init_func vme_context_init,
                           hw_init_func mfc_context_init)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_driver_data *intel = intel_driver_data(ctx);
     struct intel_encoder_context *encoder_context = calloc(1, sizeof(struct intel_encoder_context));
     int i;
@@ -1385,6 +1393,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
     encoder_context->quality_range = 1;
     encoder_context->layer.num_layers = 1;
+    encoder_context->max_slice_or_seg_num = 1;
 
     if (obj_config->entrypoint == VAEntrypointEncSliceLP)
         encoder_context->low_power_mode = 1;
@@ -1402,12 +1411,20 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
         if (obj_config->entrypoint == VAEntrypointEncSliceLP)
             encoder_context->quality_range = ENCODER_LP_QUALITY_RANGE;
+        else if(IS_GEN9(i965->intel.device_info)){
+            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
+        }
         else
             encoder_context->quality_range = ENCODER_QUALITY_RANGE;
         break;
 
     case VAProfileH264StereoHigh:
     case VAProfileH264MultiviewHigh:
+        if(IS_GEN9(i965->intel.device_info)){
+            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
+        }
         encoder_context->codec = CODEC_H264_MVC;
         break;
         
@@ -1449,6 +1466,11 @@ intel_enc_hw_context_init(VADriverContextP ctx,
         if (obj_config->attrib_list[i].type == VAConfigAttribEncROI) {
             if (encoder_context->codec == CODEC_H264)
                 encoder_context->context_roi = 1;
+        }
+        if (obj_config->attrib_list[i].type == VAConfigAttribEncMaxSlices) {
+            if (encoder_context->codec == CODEC_H264 ||
+                encoder_context->codec == CODEC_HEVC)
+                encoder_context->max_slice_or_seg_num = obj_config->attrib_list[i].value;
         }
     }
 

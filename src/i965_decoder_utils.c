@@ -23,7 +23,6 @@
 
 #include "sysdeps.h"
 #include <limits.h>
-#include <alloca.h>
 
 #include "intel_batchbuffer.h"
 #include "intel_media.h"
@@ -332,7 +331,7 @@ avc_get_first_mb_bit_offset_with_epb(
 {
     unsigned int in_slice_data_bit_offset = slice_param->slice_data_bit_offset;
     unsigned int out_slice_data_bit_offset;
-    unsigned int i, j, n, buf_size, data_size, header_size;
+    unsigned int i, j, n = 0, buf_size, data_size, header_size;
     uint8_t *buf;
     int ret;
 
@@ -343,7 +342,11 @@ avc_get_first_mb_bit_offset_with_epb(
     if (buf_size > data_size)
         buf_size = data_size;
 
-    buf = alloca(buf_size);
+    buf = malloc(buf_size);
+
+    if (!buf)
+        goto out;
+
     ret = dri_bo_get_subdata(
         slice_data_bo, slice_param->slice_data_offset,
         buf_size, buf
@@ -355,6 +358,9 @@ avc_get_first_mb_bit_offset_with_epb(
             i += 2, j++, n++;
     }
 
+    free(buf);
+
+out:
     out_slice_data_bit_offset = in_slice_data_bit_offset + n * 8;
 
     if (mode_flag == ENTROPY_CABAC)

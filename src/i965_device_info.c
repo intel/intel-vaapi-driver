@@ -359,7 +359,7 @@ static struct hw_codec_info skl_hw_codec_info = {
     .has_di_motion_compensated = 1,
     .has_vp8_decoding = 1,
     .has_vp8_encoding = 1,
-    .has_h264_mvc_encoding = 1,
+    .has_h264_mvc_encoding = 0,
     .has_hevc_decoding = 1,
     .has_hevc_encoding = 1,
     .has_lp_h264_encoding = 1,
@@ -414,7 +414,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .has_di_motion_compensated = 1,
     .has_vp8_decoding = 1,
     .has_vp8_encoding = 1,
-    .has_h264_mvc_encoding = 1,
+    .has_h264_mvc_encoding = 0,
     .has_hevc_decoding = 1,
     .has_hevc_encoding = 1,
     .has_hevc10_decoding = 1,
@@ -475,11 +475,75 @@ static struct hw_codec_info kbl_hw_codec_info = {
     .has_di_motion_compensated = 1,
     .has_vp8_decoding = 1,
     .has_vp8_encoding = 1,
-    .has_h264_mvc_encoding = 1,
+    .has_h264_mvc_encoding = 0,
     .has_hevc_decoding = 1,
     .has_hevc_encoding = 1,
     .has_hevc10_encoding = 1,
     .has_hevc10_decoding = 1,
+    .has_vp9_decoding = 1,
+    .has_vpp_p010 = 1,
+    .has_vp9_encoding = 1,
+    .has_lp_h264_encoding = 1,
+
+    .lp_h264_brc_mode = VA_RC_CQP,
+
+    .num_filters = 5,
+    .filters = {
+        { VAProcFilterNoiseReduction, I965_RING_VEBOX },
+        { VAProcFilterDeinterlacing, I965_RING_VEBOX },
+        { VAProcFilterSharpening, I965_RING_NULL },
+        { VAProcFilterColorBalance, I965_RING_VEBOX},
+        { VAProcFilterSkinToneEnhancement, I965_RING_VEBOX},
+    },
+};
+
+static struct hw_codec_info glk_hw_codec_info = {
+    .dec_hw_context_init = gen9_dec_hw_context_init,
+    .enc_hw_context_init = gen9_enc_hw_context_init,
+    .proc_hw_context_init = gen75_proc_context_init,
+    .render_init = gen9_render_init,
+    .post_processing_context_init = gen9_post_processing_context_init,
+
+    .max_resolution = gen9_max_resolution,
+    .preinit_hw_codec = gen9_hw_codec_preinit,
+
+    .max_width = 4096,
+    .max_height = 4096,
+    .min_linear_wpitch = 64,
+    .min_linear_hpitch = 16,
+
+    .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
+                              VA_PROFILE_MASK(H264MultiviewHigh)),
+    .vp9_dec_profiles = VP9_PROFILE_MASK(0) |
+                        VP9_PROFILE_MASK(2),
+
+    .vp9_enc_profiles = VP9_PROFILE_MASK(0),
+
+    .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
+    .jpeg_dec_chroma_formats = EXTRA_JPEG_DEC_CHROMA_FORMATS,
+    .jpeg_enc_chroma_formats = EXTRA_JPEG_ENC_CHROMA_FORMATS,
+    .hevc_dec_chroma_formats = EXTRA_HEVC_DEC_CHROMA_FORMATS,
+    .vp9_dec_chroma_formats = EXTRA_VP9_DEC_CHROMA_FORMATS,
+
+    .has_mpeg2_decoding = 1,
+    .has_h264_decoding = 1,
+    .has_h264_encoding = 1,
+    .has_vc1_decoding = 1,
+    .has_jpeg_decoding = 1,
+    .has_jpeg_encoding = 1,
+    .has_vpp = 1,
+    .has_accelerated_getimage = 1,
+    .has_accelerated_putimage = 1,
+    .has_tiled_surface = 1,
+    .has_di_motion_adptive = 1,
+    .has_di_motion_compensated = 1,
+    .has_vp8_decoding = 1,
+    .has_vp8_encoding = 1,
+    .has_h264_mvc_encoding = 0,
+    .has_hevc_decoding = 1,
+    .has_hevc_encoding = 0,
+    .has_hevc10_decoding = 1,
+    .has_hevc10_encoding = 0,
     .has_vp9_decoding = 1,
     .has_vpp_p010 = 1,
     .has_vp9_encoding = 1,
@@ -642,6 +706,15 @@ static const struct intel_device_info kbl_device_info = {
     .max_wm_threads = 64,       /* per PSD */
 
     .is_kabylake = 1,
+};
+
+static const struct intel_device_info glk_device_info = {
+    .gen = 9,
+
+    .urb_size = 4096,
+    .max_wm_threads = 64,       /* per PSD */
+
+    .is_glklake = 1,
 };
 
 const struct intel_device_info *

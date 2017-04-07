@@ -358,6 +358,10 @@ Bool i965_allocate_gpe_resource(dri_bufmgr *bufmgr,
 void i965_object_surface_to_2d_gpe_resource(struct i965_gpe_resource *res,
                                             struct object_surface *obj_surface);
 
+void i965_object_surface_to_2d_gpe_resource_with_align(struct i965_gpe_resource *res,
+                                                       struct object_surface *obj_surface,
+                                                       unsigned int alignment);
+
 void i965_dri_object_to_buffer_gpe_resource(struct i965_gpe_resource *res,
                                             dri_bo *bo);
 
@@ -411,6 +415,18 @@ void gen8_gpe_mi_batch_buffer_start(VADriverContextP ctx,
                                     struct intel_batchbuffer *batch,
                                     struct gpe_mi_batch_buffer_start_parameter *params);
 
+
+struct gpe_media_object_inline_data
+{
+    union {
+        struct {
+            unsigned int x:8;
+            unsigned int y:8;
+            unsigned int reserved:16;
+        };
+        unsigned int value;
+    };
+};
 
 struct gpe_media_object_parameter
 {
@@ -507,6 +523,25 @@ struct gpe_media_object_walker_parameter
     struct gpe_walker_xy global_inner_loop_unit;
 };
 
+enum walker_degree
+{
+    WALKER_NO_DEGREE = 0,
+    WALKER_45_DEGREE,
+    WALKER_26_DEGREE,
+    WALKER_26Z_DEGREE,
+    WALKER_45Z_DEGREE,
+};
+struct gpe_encoder_kernel_walker_parameter
+{
+    unsigned int walker_degree;
+    unsigned int use_scoreboard;
+    unsigned int scoreboard_mask;
+    unsigned int no_dependency;
+    unsigned int resolution_x;
+    unsigned int resolution_y;
+    unsigned int use_vertical_raster_scan;
+};
+
 extern void
 gen8_gpe_media_object(VADriverContextP ctx,
                       struct i965_gpe_context *gpe_context,
@@ -554,6 +589,47 @@ extern void
 gen8_gpe_pipe_control(VADriverContextP ctx,
                       struct intel_batchbuffer *batch,
                       struct gpe_pipe_control_parameter *param);
+
+extern void
+i965_init_media_object_walker_parameter(struct gpe_encoder_kernel_walker_parameter *kernel_walker_param,
+                                        struct gpe_media_object_walker_parameter *walker_param);
+
+extern void
+gen9_add_2d_gpe_surface(VADriverContextP ctx,
+                        struct i965_gpe_context *gpe_context,
+                        struct object_surface *obj_surface,
+                        int is_uv_surface,
+                        int is_media_block_rw,
+                        unsigned int format,
+                        int index);
+extern void
+gen9_add_adv_gpe_surface(VADriverContextP ctx,
+                         struct i965_gpe_context *gpe_context,
+                         struct object_surface *obj_surface,
+                         int index);
+extern void
+gen9_add_buffer_gpe_surface(VADriverContextP ctx,
+                            struct i965_gpe_context *gpe_context,
+                            struct i965_gpe_resource *gpe_buffer,
+                            int is_raw_buffer,
+                            unsigned int size,
+                            unsigned int offset,
+                            int index);
+extern void
+gen9_add_buffer_2d_gpe_surface(VADriverContextP ctx,
+                               struct i965_gpe_context *gpe_context,
+                               struct i965_gpe_resource *gpe_buffer,
+                               int is_media_block_rw,
+                               unsigned int format,
+                               int index);
+extern void
+gen9_add_dri_buffer_gpe_surface(VADriverContextP ctx,
+                                struct i965_gpe_context *gpe_context,
+                                dri_bo *bo,
+                                int is_raw_buffer,
+                                unsigned int size,
+                                unsigned int offset,
+                                int index);
 
 struct i965_gpe_table
 {

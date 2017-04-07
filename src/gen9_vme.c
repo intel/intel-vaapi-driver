@@ -44,6 +44,7 @@
 #include "intel_media.h"
 #include "gen9_vp9_encapi.h"
 #include "i965_post_processing.h"
+#include "i965_encoder_api.h"
 
 #ifdef SURFACE_STATE_PADDED_SIZE
 #undef SURFACE_STATE_PADDED_SIZE
@@ -1994,6 +1995,9 @@ Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         return gen9_vp9_vme_context_init(ctx, encoder_context);
     } else if (encoder_context->codec == CODEC_VP8) {
         return i965_encoder_vp8_vme_context_init(ctx, encoder_context);
+    } else if (encoder_context->codec == CODEC_H264 ||
+               encoder_context->codec == CODEC_H264_MVC) {
+        return gen9_avc_vme_context_init(ctx, encoder_context);
     }
 
     vme_context = calloc(1, sizeof(struct gen6_vme_context));

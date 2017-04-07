@@ -1220,7 +1220,7 @@ i965_encoder_vp8_free_surfaces(void **data)
 {
     struct i965_encoder_vp8_surface *vp8_surface;
 
-    if (!data || *data)
+    if (!data || !(*data))
         return;
 
     vp8_surface = *data;
@@ -1261,6 +1261,14 @@ i965_encoder_vp8_allocate_surfaces(VADriverContextP ctx,
     }
 
     vp8_surface = calloc(1, sizeof(struct i965_encoder_vp8_surface));
+
+    if (!vp8_surface) {
+        obj_surface->private_data = NULL;
+        obj_surface->free_private_data = NULL;
+
+        return;
+    }
+
     vp8_surface->ctx = ctx;
 
     down_scaled_width_4x = vp8_context->down_scaled_width_4x;
@@ -1272,8 +1280,10 @@ i965_encoder_vp8_allocate_surfaces(VADriverContextP ctx,
                         1,
                         &vp8_surface->scaled_4x_surface_id);
     vp8_surface->scaled_4x_surface_obj = SURFACE(vp8_surface->scaled_4x_surface_id);
-    i965_check_alloc_surface_bo(ctx, vp8_surface->scaled_4x_surface_obj, 1,
-                                VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
+
+    if (vp8_surface->scaled_4x_surface_obj)
+        i965_check_alloc_surface_bo(ctx, vp8_surface->scaled_4x_surface_obj, 1,
+                                    VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
     down_scaled_width_16x = vp8_context->down_scaled_width_16x;
     down_scaled_height_16x = vp8_context->down_scaled_height_16x;
@@ -1284,9 +1294,10 @@ i965_encoder_vp8_allocate_surfaces(VADriverContextP ctx,
                         1,
                         &vp8_surface->scaled_16x_surface_id);
     vp8_surface->scaled_16x_surface_obj = SURFACE(vp8_surface->scaled_16x_surface_id);
-    i965_check_alloc_surface_bo(ctx, vp8_surface->scaled_16x_surface_obj, 1,
-                                VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
+    if (vp8_surface->scaled_16x_surface_obj)
+        i965_check_alloc_surface_bo(ctx, vp8_surface->scaled_16x_surface_obj, 1,
+                                    VA_FOURCC('N', 'V', '1', '2'), SUBSAMPLE_YUV420);
 
     obj_surface->private_data = vp8_surface;
     obj_surface->free_private_data = i965_encoder_vp8_free_surfaces;
@@ -1777,26 +1788,50 @@ i965_encoder_vp8_vme_init_mpu_tpu_buffer(VADriverContextP ctx,
     i965_zero_gpe_resource(&vp8_context->pak_mpu_tpu_ref_mode_probs_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_ref_coeff_probs_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, vp8_default_coef_probs, sizeof(vp8_default_coef_probs));
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_ref_coeff_probs_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_entropy_cost_table_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, vp8_prob_cost, sizeof(vp8_prob_cost));
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_entropy_cost_table_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_pak_token_update_flags_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, vp8_probs_update_flag, sizeof(vp8_probs_update_flag));
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_pak_token_update_flags_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_default_token_probability_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, vp8_coef_update_probs, sizeof(vp8_coef_update_probs));
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_default_token_probability_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_key_frame_token_probability_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, vp8_default_coef_probs, sizeof(vp8_default_coef_probs));
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_key_frame_token_probability_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_updated_token_probability_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, vp8_default_coef_probs, sizeof(vp8_default_coef_probs));
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_updated_token_probability_buffer);
 }
@@ -2374,6 +2409,9 @@ i965_encoder_vp8_vme_brc_init_reset_set_curbe(VADriverContextP ctx,
     struct vp8_brc_init_reset_curbe_data *pcmd = i965_gpe_context_map_curbe(gpe_context);
     double input_bits_per_frame, bps_ratio;
 
+    if (!pcmd)
+        return;
+
     memset(pcmd, 0, sizeof(*pcmd));
 
     pcmd->dw0.profile_level_max_frame = vp8_context->frame_width * vp8_context->frame_height;
@@ -2551,6 +2589,9 @@ i965_encoder_vp8_vme_scaling_set_curbe(VADriverContextP ctx,
 {
     struct vp8_scaling_curbe_data *pcmd = i965_gpe_context_map_curbe(gpe_context);
 
+    if (!pcmd)
+        return;
+
     memset(pcmd, 0, sizeof(*pcmd));
 
     pcmd->dw0.input_picture_width = params->input_picture_width;
@@ -2717,6 +2758,9 @@ i965_encoder_vp8_vme_me_set_curbe(VADriverContextP ctx,
     struct i965_encoder_vp8_context *vp8_context = encoder_context->vme_context;
     struct vp8_me_curbe_data *pcmd = i965_gpe_context_map_curbe(gpe_context);
     int me_mode, me_method;
+
+    if (!pcmd)
+        return;
 
     if (vp8_context->hme_16x_enabled) {
         if (params->use_16x_me)
@@ -3092,6 +3136,9 @@ i965_encoder_vp8_vme_mbenc_set_i_frame_curbe(VADriverContextP ctx,
     unsigned int segmentation_enabled = pic_param->pic_flags.bits.segmentation_enabled;
     unsigned short y_quanta_dc_idx, uv_quanta_dc_idx, uv_quanta_ac_idx;
 
+    if (!pcmd)
+        return;
+
     memset(pcmd, 0, sizeof(*pcmd));
 
     pcmd->dw0.frame_width = vp8_context->frame_width;
@@ -3311,6 +3358,9 @@ i965_encoder_vp8_vme_mbenc_set_p_frame_curbe(VADriverContextP ctx,
     unsigned int segmentation_enabled = pic_param->pic_flags.bits.segmentation_enabled;
     unsigned short qp_seg0, qp_seg1, qp_seg2, qp_seg3;
     unsigned char me_method = (encoder_context->quality_level == ENCODER_DEFAULT_QUALITY) ? 6 : 4;
+
+    if (!pcmd)
+        return;
 
     memset(pcmd, 0, sizeof(*pcmd));
 
@@ -3844,10 +3894,18 @@ i965_encoder_vp8_vme_mbenc_init_constant_buffer(VADriverContextP ctx,
     i965_zero_gpe_resource(&vp8_context->block_mode_cost_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->mb_mode_cost_luma_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, mb_mode_cost_luma_vp8, sizeof(mb_mode_cost_luma_vp8));
     i965_unmap_gpe_resource(&vp8_context->mb_mode_cost_luma_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->block_mode_cost_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, block_mode_cost_vp8, sizeof(block_mode_cost_vp8));
     i965_unmap_gpe_resource(&vp8_context->block_mode_cost_buffer);
 }
@@ -4001,6 +4059,9 @@ i965_encoder_vp8_vme_brc_update_set_curbe(VADriverContextP ctx,
     VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     VAQMatrixBufferVP8 *quant_param = (VAQMatrixBufferVP8 *)encode_state->q_matrix->buffer;
     int is_intra = (vp8_context->frame_type == MPEG_I_PICTURE);
+
+    if (!pcmd)
+        return;
 
     memset(pcmd, 0, sizeof(*pcmd));
 
@@ -4280,6 +4341,9 @@ i965_encoder_vp8_vme_init_brc_update_constant_data(VADriverContextP ctx,
 
     pbuffer = i965_map_gpe_resource(&vp8_context->brc_vp8_constant_data_buffer);
 
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer,
            brc_qpadjustment_distthreshold_maxframethreshold_distqpadjustment_ipb_vp8,
            sizeof(brc_qpadjustment_distthreshold_maxframethreshold_distqpadjustment_ipb_vp8));
@@ -4435,6 +4499,9 @@ i965_encoder_vp8_vme_mpu_set_curbe(VADriverContextP ctx,
     VAEncSequenceParameterBufferVP8 *seq_param = (VAEncSequenceParameterBufferVP8 *)encode_state->seq_param_ext->buffer;
     VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     VAQMatrixBufferVP8 *quant_param = (VAQMatrixBufferVP8 *)encode_state->q_matrix->buffer;
+
+    if (!pcmd)
+        return;
 
     memset(pcmd, 0, sizeof(*pcmd));
 
@@ -4681,16 +4748,35 @@ i965_encoder_vp8_vme_update_key_frame_mpu_tpu_buffer(VADriverContextP ctx,
     char *key_buffer, *pbuffer;
 
     key_buffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_key_frame_token_probability_buffer);
+
+    if (!key_buffer)
+        return;
+
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_coeff_probs_buffer);
+
+    if (!pbuffer) {
+        i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_key_frame_token_probability_buffer);
+
+        return;
+    }
+
     memcpy(pbuffer, key_buffer, VP8_COEFFS_PROPABILITIES_SIZE);
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_coeff_probs_buffer);
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_key_frame_token_probability_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_ref_coeff_probs_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, vp8_default_coef_probs, sizeof(vp8_default_coef_probs));
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_ref_coeff_probs_buffer);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_hw_token_probability_pak_pass_2_buffer);
+
+    if (!pbuffer)
+        return;
+
     memcpy(pbuffer, vp8_default_coef_probs, sizeof(vp8_default_coef_probs));
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_hw_token_probability_pak_pass_2_buffer);
 }
@@ -4713,6 +4799,10 @@ i965_encoder_vp8_vme_init_mfx_config_command(VADriverContextP ctx,
                                  vp8_context->internal_rate_mode == I965_BRC_VBR);
 
     pbuffer = i965_map_gpe_resource(params->config_buffer);
+
+    if (!pbuffer)
+        return;
+
     pbuffer += params->command_offset;
     memset(pbuffer, 0, params->buffer_size);
 
@@ -4893,6 +4983,9 @@ i965_encoder_vp8_vme_set_status_buffer(VADriverContextP ctx,
     encode_status_buffer->image_status_ctrl_offset = offsetof(struct vp8_encode_status, image_status_ctrl);
 
     dri_bo_map(encode_status_buffer->bo, 1);
+
+    if (!encode_status_buffer->bo->virtual)
+        return;
 
     pbuffer = encode_status_buffer->bo->virtual;
     pbuffer += encode_status_buffer->base_offset;
@@ -5663,6 +5756,10 @@ i965_encoder_vp8_pak_slice_level_brc(VADriverContextP ctx,
     i965_encoder_vp8_read_pak_statistics(ctx, encoder_context, ipass);
 
     pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_picture_state_buffer);
+
+    if (!pbuffer)
+        return;
+
     pbuffer += 38;
     *pbuffer = 0x05000000;
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_picture_state_buffer);
@@ -5688,6 +5785,10 @@ i965_encoder_vp8_pak_slice_level(VADriverContextP ctx,
 
             /* Workaround: */
             pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_picture_state_buffer);
+
+            if (!pbuffer)
+                return;
+
             pbuffer += 38;
             *pbuffer = 0x05000000;
             i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_picture_state_buffer);
@@ -5710,6 +5811,10 @@ i965_encoder_vp8_pak_slice_level(VADriverContextP ctx,
             }
 
             pbuffer = i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_picture_state_buffer);
+
+            if (!pbuffer)
+                return;
+
             pbuffer += 38;
             *pbuffer = 0x05000000;
             i965_map_gpe_resource(&vp8_context->pak_mpu_tpu_picture_state_buffer);
@@ -5729,6 +5834,9 @@ i965_encoder_vp8_pak_tpu_set_curbe(VADriverContextP ctx,
     struct vp8_tpu_curbe_data *pcmd = i965_gpe_context_map_curbe(gpe_context);
     VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     VAQMatrixBufferVP8 *quant_param = (VAQMatrixBufferVP8 *)encode_state->q_matrix->buffer;
+
+    if (!pcmd)
+        return;
 
     memset(pcmd, 0, sizeof(*pcmd));
 
@@ -6039,6 +6147,10 @@ i965_encoder_vp8_pak_pipeline_prepare(VADriverContextP ctx,
 
     /* set the internal flag to 0 to indicate the coded size is unknown */
     dri_bo_map(bo, 1);
+
+    if (!bo->virtual)
+        return;
+
     coded_buffer_segment = (struct i965_coded_buffer_segment *)bo->virtual;
     coded_buffer_segment->mapped = 0;
     coded_buffer_segment->codec = encoder_context->codec;
