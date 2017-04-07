@@ -527,10 +527,10 @@ static struct hw_codec_info glk_hw_codec_info = {
 
     .has_mpeg2_decoding = 1,
     .has_h264_decoding = 1,
-    .has_h264_encoding = 0,
+    .has_h264_encoding = 1,
     .has_vc1_decoding = 1,
     .has_jpeg_decoding = 1,
-    .has_jpeg_encoding = 0,
+    .has_jpeg_encoding = 1,
     .has_vpp = 1,
     .has_accelerated_getimage = 1,
     .has_accelerated_putimage = 1,
@@ -538,7 +538,7 @@ static struct hw_codec_info glk_hw_codec_info = {
     .has_di_motion_adptive = 1,
     .has_di_motion_compensated = 1,
     .has_vp8_decoding = 1,
-    .has_vp8_encoding = 0,
+    .has_vp8_encoding = 1,
     .has_h264_mvc_encoding = 0,
     .has_hevc_decoding = 1,
     .has_hevc_encoding = 0,
@@ -546,7 +546,10 @@ static struct hw_codec_info glk_hw_codec_info = {
     .has_hevc10_encoding = 0,
     .has_vp9_decoding = 1,
     .has_vpp_p010 = 1,
-    .has_vp9_encoding = 0,
+    .has_vp9_encoding = 1,
+    .has_lp_h264_encoding = 1,
+
+    .lp_h264_brc_mode = VA_RC_CQP,
 
     .num_filters = 5,
     .filters = {

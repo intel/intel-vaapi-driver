@@ -2098,7 +2098,8 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
         memcpy(data,(unsigned char *)gen9_avc_intra_scaling_factor,size * sizeof(unsigned char));
     }
 
-    if (IS_KBL(i965->intel.device_info))
+    if (IS_KBL(i965->intel.device_info)||
+        IS_GLK(i965->intel.device_info))
     {
         data += size;
 
@@ -2572,8 +2573,9 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
     if (IS_SKL(i965->intel.device_info)||
         IS_BXT(i965->intel.device_info))
         is_g95 = 0;
-    else if (IS_KBL(i965->intel.device_info))
-        is_g95 = 1;
+    else if (IS_KBL(i965->intel.device_info)||
+             IS_GLK(i965->intel.device_info))
+             is_g95 = 1;
 
     /* brc history buffer*/
     gen9_add_buffer_gpe_surface(ctx,
@@ -3226,7 +3228,8 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
 
         }
     }
-    else if (IS_KBL(i965->intel.device_info))
+    else if (IS_KBL(i965->intel.device_info)||
+             IS_GLK(i965->intel.device_info))
     {
         cmd.g95 = (gen95_avc_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
         if(!cmd.g95)
@@ -3766,8 +3769,9 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     if (IS_SKL(i965->intel.device_info)||
         IS_BXT(i965->intel.device_info))
         is_g95 = 0;
-    else if (IS_KBL(i965->intel.device_info))
-        is_g95 = 1;
+    else if (IS_KBL(i965->intel.device_info)||
+             IS_GLK(i965->intel.device_info))
+             is_g95 = 1;
 
     obj_surface = encode_state->reconstructed_object;
 
@@ -5022,7 +5026,8 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
         kernel_param.curbe_size = sizeof(gen9_avc_scaling4x_curbe_data);
         kernel_param.inline_data_size = sizeof(gen9_avc_scaling4x_curbe_data);
     }
-    else if (IS_KBL(i965->intel.device_info))
+    else if (IS_KBL(i965->intel.device_info)||
+             IS_GLK(i965->intel.device_info))
     {
         kernel_param.curbe_size = sizeof(gen95_avc_scaling4x_curbe_data);
         kernel_param.inline_data_size = sizeof(gen95_avc_scaling4x_curbe_data);
@@ -5140,7 +5145,8 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
         IS_BXT(i965->intel.device_info)) {
         curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
     }
-    else if (IS_KBL(i965->intel.device_info)) {
+    else if (IS_KBL(i965->intel.device_info) ||
+             IS_GLK(i965->intel.device_info)) {
         curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
     }
 
@@ -6210,7 +6216,8 @@ gen9_avc_kernel_init(VADriverContextP ctx,
     if (IS_SKL(i965->intel.device_info)||
         IS_BXT(i965->intel.device_info))
         generic_ctx->pfn_set_curbe_scaling4x = gen9_avc_set_curbe_scaling4x;
-    else if (IS_KBL(i965->intel.device_info))
+    else if (IS_KBL(i965->intel.device_info)||
+             IS_GLK(i965->intel.device_info))
         generic_ctx->pfn_set_curbe_scaling4x = gen95_avc_set_curbe_scaling4x;
 
 }
@@ -7809,7 +7816,8 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
         generic_ctx->enc_kernel_ptr = (void *)skl_avc_encoder_kernels;
         generic_ctx->enc_kernel_size = sizeof(skl_avc_encoder_kernels);
     }
-    else if (IS_KBL(i965->intel.device_info)) {
+    else if (IS_KBL(i965->intel.device_info) ||
+             IS_GLK(i965->intel.device_info)) {
         generic_ctx->enc_kernel_ptr = (void *)kbl_avc_encoder_kernels;
         generic_ctx->enc_kernel_size = sizeof(kbl_avc_encoder_kernels);
     }
@@ -8004,7 +8012,8 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
         avc_state->brc_const_data_surface_width = 64;
         avc_state->brc_const_data_surface_height = 44;
     }
-    else if (IS_KBL(i965->intel.device_info)) {
+    else if (IS_KBL(i965->intel.device_info)||
+             IS_GLK(i965->intel.device_info)) {
         avc_state->brc_const_data_surface_width = 64;
         avc_state->brc_const_data_surface_height = 53;
         //gen95
