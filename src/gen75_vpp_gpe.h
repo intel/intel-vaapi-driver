@@ -37,36 +37,36 @@
 
 #define MAX_SURF_IN_SUM 5
 
-enum VPP_GPE_TYPE{
-   VPP_GPE_SHARPENING,
-   VPP_GPE_BLENDING,
-   VPP_GPE_SCENE_CHANGE_DETECTION,
-   VPP_GPE_FILTER_SUM,
+enum VPP_GPE_TYPE {
+    VPP_GPE_SHARPENING,
+    VPP_GPE_BLENDING,
+    VPP_GPE_SCENE_CHANGE_DETECTION,
+    VPP_GPE_FILTER_SUM,
 };
 
-typedef struct _KernelParameterBase{
-   unsigned short pic_width;
-   unsigned short pic_height;
-}KernelParameterBase;
+typedef struct _KernelParameterBase {
+    unsigned short pic_width;
+    unsigned short pic_height;
+} KernelParameterBase;
 
-typedef struct _KernelParameterSharpening{
-   KernelParameterBase base;
-}KernelParameterSharpening;
+typedef struct _KernelParameterSharpening {
+    KernelParameterBase base;
+} KernelParameterSharpening;
 
-typedef struct _ThreadParameterBase{
-  unsigned int pic_width;
-  unsigned int pic_height;
-  unsigned int v_pos;
-  unsigned int h_pos;
-}ThreadParameterBase;
+typedef struct _ThreadParameterBase {
+    unsigned int pic_width;
+    unsigned int pic_height;
+    unsigned int v_pos;
+    unsigned int h_pos;
+} ThreadParameterBase;
 
-typedef struct _ThreadParameterSharpenig{
-   ThreadParameterBase base;
-   unsigned int l_amount;
-   unsigned int d_amount;
-}ThreadParameterSharpening;
+typedef struct _ThreadParameterSharpenig {
+    ThreadParameterBase base;
+    unsigned int l_amount;
+    unsigned int d_amount;
+} ThreadParameterSharpening;
 
-struct vpp_gpe_context{
+struct vpp_gpe_context {
     struct intel_batchbuffer *batch;
     struct i965_gpe_context gpe_ctx;
     struct i965_buffer_surface vpp_batchbuffer;
@@ -76,11 +76,11 @@ struct vpp_gpe_context{
     enum VPP_GPE_TYPE filter_type;
     unsigned int sub_shader_index;
     unsigned int sub_shader_sum;
-  
-    unsigned char * kernel_param;  
+
+    unsigned char * kernel_param;
     unsigned int kernel_param_size;
 
-    unsigned char * thread_param;  
+    unsigned char * thread_param;
     unsigned int thread_param_size;
     unsigned int thread_num;
 
@@ -111,7 +111,7 @@ struct vpp_gpe_context{
 struct vpp_gpe_context *
 vpp_gpe_context_init(VADriverContextP ctx);
 
-void 
+void
 vpp_gpe_context_destroy(VADriverContextP ctx,
                         struct vpp_gpe_context* vpp_context);
 

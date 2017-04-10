@@ -243,7 +243,7 @@ extern int intel_hcpe_brc_postpack(struct encode_state *encode_state,
                                    int frame_bits);
 
 extern void intel_hcpe_hrd_context_update(struct encode_state *encode_state,
-        struct gen9_hcpe_context *hcpe_context);
+                                          struct gen9_hcpe_context *hcpe_context);
 
 extern int intel_hcpe_interlace_check(VADriverContextP ctx,
                                       struct encode_state *encode_state,
@@ -254,9 +254,9 @@ extern void intel_hcpe_brc_prepare(struct encode_state *encode_state,
 
 /* HEVC HCP pipeline */
 extern void intel_hcpe_hevc_pipeline_header_programing(VADriverContextP ctx,
-        struct encode_state *encode_state,
-        struct intel_encoder_context *encoder_context,
-        struct intel_batchbuffer *slice_batch);
+                                                       struct encode_state *encode_state,
+                                                       struct intel_encoder_context *encoder_context,
+                                                       struct intel_batchbuffer *slice_batch);
 
 extern VAStatus intel_hcpe_hevc_prepare(VADriverContextP ctx,
                                         struct encode_state *encode_state,

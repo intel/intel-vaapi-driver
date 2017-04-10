@@ -23,8 +23,7 @@ enum {
     MBAFF_MOTION,
 };
 
-struct intra_kernel_header
-{
+struct intra_kernel_header {
     /* R1.0 */
     unsigned char intra_4x4_luma_mode_0_offset;
     unsigned char intra_4x4_luma_mode_1_offset;
@@ -79,8 +78,7 @@ struct intra_kernel_header
     unsigned int intra_4x4_pred_mode_offset;
 };
 
-struct inter_kernel_header
-{
+struct inter_kernel_header {
     unsigned short weight_offset;
     unsigned char weight_offset_flag;
     unsigned char pad0;
@@ -148,9 +146,9 @@ struct intra_kernel_header intra_kernel_header_gen4 = {
 
     0x00020406,
 
-    (intra_Pred_4x4_Y_IP - ADD_ERROR_SB3_IP) * 0x1000000 + 
-    (intra_Pred_4x4_Y_IP - ADD_ERROR_SB2_IP) * 0x10000 + 
-    (intra_Pred_4x4_Y_IP - ADD_ERROR_SB1_IP) * 0x100 + 
+    (intra_Pred_4x4_Y_IP - ADD_ERROR_SB3_IP) * 0x1000000 +
+    (intra_Pred_4x4_Y_IP - ADD_ERROR_SB2_IP) * 0x10000 +
+    (intra_Pred_4x4_Y_IP - ADD_ERROR_SB1_IP) * 0x100 +
     (intra_Pred_4x4_Y_IP - ADD_ERROR_SB0_IP)
 };
 
@@ -243,9 +241,9 @@ struct intra_kernel_header intra_kernel_header_gen5 = {
 
     0x00020406,
 
-    (intra_Pred_4x4_Y_IP_GEN5 - ADD_ERROR_SB3_IP_GEN5) * 0x1000000 + 
-    (intra_Pred_4x4_Y_IP_GEN5 - ADD_ERROR_SB2_IP_GEN5) * 0x10000 + 
-    (intra_Pred_4x4_Y_IP_GEN5 - ADD_ERROR_SB1_IP_GEN5) * 0x100 + 
+    (intra_Pred_4x4_Y_IP_GEN5 - ADD_ERROR_SB3_IP_GEN5) * 0x1000000 +
+    (intra_Pred_4x4_Y_IP_GEN5 - ADD_ERROR_SB2_IP_GEN5) * 0x10000 +
+    (intra_Pred_4x4_Y_IP_GEN5 - ADD_ERROR_SB1_IP_GEN5) * 0x100 +
     (intra_Pred_4x4_Y_IP_GEN5 - ADD_ERROR_SB0_IP_GEN5)
 };
 
@@ -281,10 +279,10 @@ static unsigned long *avc_mc_kernel_offset = NULL;
 static struct intra_kernel_header *intra_kernel_header = NULL;
 
 static void
-i965_media_h264_surface_state(VADriverContextP ctx, 
+i965_media_h264_surface_state(VADriverContextP ctx,
                               int index,
                               struct object_surface *obj_surface,
-                              unsigned long offset, 
+                              unsigned long offset,
                               int w, int h, int pitch,
                               Bool is_dst,
                               int vert_line_stride,
@@ -300,7 +298,7 @@ i965_media_h264_surface_state(VADriverContextP ctx,
     assert(obj_surface->bo);
 
     bo = dri_bo_alloc(i965->intel.bufmgr,
-                      "surface state", 
+                      "surface state",
                       sizeof(struct i965_surface_state), 32);
     assert(bo);
     dri_bo_map(bo, 1);
@@ -335,8 +333,8 @@ i965_media_h264_surface_state(VADriverContextP ctx,
     media_context->surface_state[index].bo = bo;
 }
 
-static void 
-i965_media_h264_surfaces_setup(VADriverContextP ctx, 
+static void
+i965_media_h264_surfaces_setup(VADriverContextP ctx,
                                struct decode_state *decode_state,
                                struct i965_media_context *media_context)
 {
@@ -361,14 +359,14 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
     field_picture = !!(va_pic->flags & (VA_PICTURE_H264_TOP_FIELD | VA_PICTURE_H264_BOTTOM_FIELD));
     i965_media_h264_surface_state(ctx, 0, obj_surface,
                                   0, w / 4, h / (1 + field_picture), w,
-                                  1, 
+                                  1,
                                   field_picture,
                                   !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD),
                                   I965_SURFACEFORMAT_R8_SINT,   /* Y */
                                   media_context);
     i965_media_h264_surface_state(ctx, 1, obj_surface,
                                   w * h, w / 4, h / 2 / (1 + field_picture), w,
-                                  1, 
+                                  1,
                                   field_picture,
                                   !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD),
                                   I965_SURFACEFORMAT_R8G8_SINT, /* INTERLEAVED U/V */
@@ -377,12 +375,12 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
     /* Reference Pictures */
     for (i = 0; i < ARRAY_ELEMS(i965_h264_context->fsid_list); i++) {
         struct object_surface * const obj_surface =
-            i965_h264_context->fsid_list[i].obj_surface;
+                    i965_h264_context->fsid_list[i].obj_surface;
 
         if (obj_surface) {
             const VAPictureH264 * const va_pic = avc_find_picture(
-                obj_surface->base.id, pic_param->ReferenceFrames,
-                ARRAY_ELEMS(pic_param->ReferenceFrames));
+                                                     obj_surface->base.id, pic_param->ReferenceFrames,
+                                                     ARRAY_ELEMS(pic_param->ReferenceFrames));
 
             assert(va_pic != NULL);
             w = obj_surface->width;
@@ -390,14 +388,14 @@ i965_media_h264_surfaces_setup(VADriverContextP ctx,
             field_picture = !!(va_pic->flags & (VA_PICTURE_H264_TOP_FIELD | VA_PICTURE_H264_BOTTOM_FIELD));
             i965_media_h264_surface_state(ctx, 2 + i, obj_surface,
                                           0, w / 4, h / (1 + field_picture), w,
-                                          0, 
+                                          0,
                                           field_picture,
                                           !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD),
                                           I965_SURFACEFORMAT_R8_SINT,   /* Y */
                                           media_context);
             i965_media_h264_surface_state(ctx, 18 + i, obj_surface,
                                           w * h, w / 4, h / 2 / (1 + field_picture), w,
-                                          0, 
+                                          0,
                                           field_picture,
                                           !!(va_pic->flags & VA_PICTURE_H264_BOTTOM_FIELD),
                                           I965_SURFACEFORMAT_R8G8_SINT, /* INTERLEAVED U/V */
@@ -432,7 +430,7 @@ i965_media_h264_binding_table(VADriverContextP ctx, struct i965_media_context *m
     dri_bo_unmap(media_context->binding_table.bo);
 }
 
-static void 
+static void
 i965_media_h264_interface_descriptor_remap_table(VADriverContextP ctx, struct i965_media_context *media_context)
 {
     struct i965_h264_context *i965_h264_context = (struct i965_h264_context *)media_context->private_context;
@@ -448,12 +446,12 @@ i965_media_h264_interface_descriptor_remap_table(VADriverContextP ctx, struct i9
     for (i = 0; i < NUM_AVC_MC_INTERFACES; i++) {
         int kernel_offset = avc_mc_kernel_offset[i];
         memset(desc, 0, sizeof(*desc));
-        desc->desc0.grf_reg_blocks = 7; 
+        desc->desc0.grf_reg_blocks = 7;
         desc->desc0.kernel_start_pointer = (i965_h264_context->avc_kernels[H264_AVC_COMBINED].bo->offset + kernel_offset) >> 6; /* reloc */
         desc->desc1.const_urb_entry_read_offset = 0;
         desc->desc1.const_urb_entry_read_len = 2;
         desc->desc3.binding_table_entry_count = 0;
-        desc->desc3.binding_table_pointer = 
+        desc->desc3.binding_table_pointer =
             media_context->binding_table.bo->offset >> 5; /*reloc */
 
         dri_bo_emit_reloc(bo,
@@ -490,7 +488,7 @@ i965_media_h264_vfe_state(VADriverContextP ctx, struct i965_media_context *media
     vfe_state->vfe1.num_urb_entries = media_context->urb.num_vfe_entries;
     vfe_state->vfe1.vfe_mode = VFE_AVC_IT_MODE;
     vfe_state->vfe1.children_present = 0;
-    vfe_state->vfe2.interface_descriptor_base = 
+    vfe_state->vfe2.interface_descriptor_base =
         media_context->idrt.bo->offset >> 4; /* reloc */
     dri_bo_emit_reloc(bo,
                       I915_GEM_DOMAIN_INSTRUCTION, 0,
@@ -500,8 +498,8 @@ i965_media_h264_vfe_state(VADriverContextP ctx, struct i965_media_context *media
     dri_bo_unmap(bo);
 }
 
-static void 
-i965_media_h264_vfe_state_extension(VADriverContextP ctx, 
+static void
+i965_media_h264_vfe_state_extension(VADriverContextP ctx,
                                     struct decode_state *decode_state,
                                     struct i965_media_context *media_context)
 {
@@ -658,8 +656,8 @@ i965_media_h264_upload_constants(VADriverContextP ctx,
             slice_param->slice_type == SLICE_TYPE_SI) {
             memcpy(constant_buffer, intra_kernel_header, sizeof(*intra_kernel_header));
         } else {
-            /* FIXME: Need to upload CURBE data to inter kernel interface 
-             * to support weighted prediction work-around 
+            /* FIXME: Need to upload CURBE data to inter kernel interface
+             * to support weighted prediction work-around
              */
             *(short *)constant_buffer = i965_h264_context->weight128_offset0;
             constant_buffer += 2;
@@ -718,13 +716,13 @@ i965_media_h264_objects(VADriverContextP ctx,
 
     BEGIN_BATCH(batch, 2);
     OUT_BATCH(batch, MI_BATCH_BUFFER_START | (2 << 6));
-    OUT_RELOC(batch, i965_h264_context->avc_it_command_mb_info.bo, 
-              I915_GEM_DOMAIN_COMMAND, 0, 
+    OUT_RELOC(batch, i965_h264_context->avc_it_command_mb_info.bo,
+              I915_GEM_DOMAIN_COMMAND, 0,
               0);
     ADVANCE_BATCH(batch);
 
     /* Have to execute the batch buffer here becuase MI_BATCH_BUFFER_END
-     * will cause control to pass back to ring buffer 
+     * will cause control to pass back to ring buffer
      */
     intel_batchbuffer_end_atomic(batch);
     intel_batchbuffer_flush(batch);
@@ -732,7 +730,7 @@ i965_media_h264_objects(VADriverContextP ctx,
     i965_avc_ildb(ctx, decode_state, i965_h264_context);
 }
 
-static void 
+static void
 i965_media_h264_free_private_context(void **data)
 {
     struct i965_h264_context *i965_h264_context = *data;
@@ -760,8 +758,8 @@ i965_media_h264_free_private_context(void **data)
 }
 
 void
-i965_media_h264_decode_init(VADriverContextP ctx, 
-                            struct decode_state *decode_state, 
+i965_media_h264_decode_init(VADriverContextP ctx,
+                            struct decode_state *decode_state,
                             struct i965_media_context *media_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -772,11 +770,11 @@ i965_media_h264_decode_init(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferH264 *)decode_state->pic_param->buffer;
     i965_h264_context->picture.width_in_mbs = ((pic_param->picture_width_in_mbs_minus1 + 1) & 0xff);
-    i965_h264_context->picture.height_in_mbs = ((pic_param->picture_height_in_mbs_minus1 + 1) & 0xff) / 
-        (1 + !!pic_param->pic_fields.bits.field_pic_flag); /* picture height */
+    i965_h264_context->picture.height_in_mbs = ((pic_param->picture_height_in_mbs_minus1 + 1) & 0xff) /
+                                               (1 + !!pic_param->pic_fields.bits.field_pic_flag); /* picture height */
     i965_h264_context->picture.mbaff_frame_flag = (pic_param->seq_fields.bits.mb_adaptive_frame_field_flag &&
                                                    !pic_param->pic_fields.bits.field_pic_flag);
-    i965_h264_context->avc_it_command_mb_info.mbs = (i965_h264_context->picture.width_in_mbs * 
+    i965_h264_context->avc_it_command_mb_info.mbs = (i965_h264_context->picture.width_in_mbs *
                                                      i965_h264_context->picture.height_in_mbs);
 
     dri_bo_unreference(i965_h264_context->avc_it_command_mb_info.bo);
@@ -790,8 +788,8 @@ i965_media_h264_decode_init(VADriverContextP ctx,
     dri_bo_unreference(i965_h264_context->avc_it_data.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "avc it data",
-                      i965_h264_context->avc_it_command_mb_info.mbs * 
-                      0x800 * 
+                      i965_h264_context->avc_it_command_mb_info.mbs *
+                      0x800 *
                       (1 + !!pic_param->pic_fields.bits.field_pic_flag),
                       0x1000);
     assert(bo);
@@ -823,14 +821,14 @@ i965_media_h264_decode_init(VADriverContextP ctx,
     /* for Media pipeline */
     media_context->extended_state.enabled = 1;
     dri_bo_unreference(media_context->extended_state.bo);
-    bo = dri_bo_alloc(i965->intel.bufmgr, 
-                      "extened vfe state", 
+    bo = dri_bo_alloc(i965->intel.bufmgr,
+                      "extended vfe state",
                       sizeof(struct i965_vfe_state_ex), 32);
     assert(bo);
     media_context->extended_state.bo = bo;
 }
 
-void 
+void
 i965_media_h264_dec_context_init(VADriverContextP ctx, struct i965_media_context *media_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
@@ -840,7 +838,7 @@ i965_media_h264_dec_context_init(VADriverContextP ctx, struct i965_media_context
     i965_h264_context = calloc(1, sizeof(struct i965_h264_context));
 
     /* kernel */
-    assert(NUM_H264_AVC_KERNELS == (sizeof(h264_avc_kernels_gen5) / 
+    assert(NUM_H264_AVC_KERNELS == (sizeof(h264_avc_kernels_gen5) /
                                     sizeof(h264_avc_kernels_gen5[0])));
     assert(NUM_AVC_MC_INTERFACES == (sizeof(avc_mc_kernel_offset_gen5) /
                                      sizeof(avc_mc_kernel_offset_gen5[0])));
@@ -861,8 +859,8 @@ i965_media_h264_dec_context_init(VADriverContextP ctx, struct i965_media_context
 
     for (i = 0; i < NUM_H264_AVC_KERNELS; i++) {
         struct i965_kernel *kernel = &i965_h264_context->avc_kernels[i];
-        kernel->bo = dri_bo_alloc(i965->intel.bufmgr, 
-                                  kernel->name, 
+        kernel->bo = dri_bo_alloc(i965->intel.bufmgr,
+                                  kernel->name,
                                   kernel->size, 0x1000);
         assert(kernel->bo);
         dri_bo_subdata(kernel->bo, 0, kernel->size, kernel->bin);
@@ -891,9 +889,9 @@ i965_media_h264_dec_context_init(VADriverContextP ctx, struct i965_media_context
     media_context->urb.size_cs_entry = 1;
 
     media_context->urb.vfe_start = 0;
-    media_context->urb.cs_start = media_context->urb.vfe_start + 
-        media_context->urb.num_vfe_entries * media_context->urb.size_vfe_entry;
-    assert(media_context->urb.cs_start + 
+    media_context->urb.cs_start = media_context->urb.vfe_start +
+                                  media_context->urb.num_vfe_entries * media_context->urb.size_vfe_entry;
+    assert(media_context->urb.cs_start +
            media_context->urb.num_cs_entries * media_context->urb.size_cs_entry <= i965->intel.device_info->urb_size);
 
     /* hook functions */

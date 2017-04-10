@@ -45,10 +45,10 @@ struct encode_state;
 
 /* The space required for slice header SLICE_STATE + header.
  * Is it enough? */
-#define SLICE_HEADER			80
+#define SLICE_HEADER            80
 
 /* the space required for slice tail. */
-#define SLICE_TAIL			16
+#define SLICE_TAIL          16
 
 
 #define MFC_BATCHBUFFER_AVC_INTRA       0
@@ -81,25 +81,24 @@ struct encode_state;
 #define BRC_PI_0_5 1.5707963267948966192313216916398
 
 typedef enum {
-   VME_V_PRED = 0,
-   VME_H_PRED = 1,
-   VME_DC_PRED = 2,
-   VME_PL_PRED = 3,
+    VME_V_PRED = 0,
+    VME_H_PRED = 1,
+    VME_DC_PRED = 2,
+    VME_PL_PRED = 3,
 
-   VME_MB_INTRA_MODE_COUNT
+    VME_MB_INTRA_MODE_COUNT
 } VME_MB_INTRA_PRED_MODE;
 
 typedef enum {
-   PAK_DC_PRED = 0,
-   PAK_V_PRED = 1,
-   PAK_H_PRED = 2,
-   PAK_TM_PRED = 3,
+    PAK_DC_PRED = 0,
+    PAK_V_PRED = 1,
+    PAK_H_PRED = 2,
+    PAK_TM_PRED = 3,
 
-   PAK_MB_INTRA_MODE_COUNT
+    PAK_MB_INTRA_MODE_COUNT
 } VP8_PAK_MB_INTRA_PRED_MODE;
 
-typedef enum
-{
+typedef enum {
     VME_B_V_PRED = 0,
     VME_B_H_PRED = 1,
     VME_B_DC_PRED = 2,
@@ -113,8 +112,7 @@ typedef enum
     VME_B_INTRA_MODE_COUNT
 } VME_BLOCK_INTRA_PRED_MODE;
 
-typedef enum
-{
+typedef enum {
     PAK_B_DC_PRED = 0,
     PAK_B_TM_PRED = 1,
     PAK_B_VE_PRED = 2,
@@ -129,20 +127,17 @@ typedef enum
     PAK_B_INTRA_MODE_COUNT
 } VP8_PAK_BLOCK_INTRA_PRED_MODE;
 
-typedef struct
-{
-  int vme_intra_mb_mode;
-  int vp8_pak_intra_mb_mode;
+typedef struct {
+    int vme_intra_mb_mode;
+    int vp8_pak_intra_mb_mode;
 } vp8_intra_mb_mode_map_t;
 
-typedef struct
-{
-  int vme_intra_block_mode;
-  int vp8_pak_intra_block_mode;
+typedef struct {
+    int vme_intra_block_mode;
+    int vp8_pak_intra_block_mode;
 } vp8_intra_block_mode_map_t;
 
-typedef enum _gen6_brc_status
-{
+typedef enum _gen6_brc_status {
     BRC_NO_HRD_VIOLATION = 0,
     BRC_UNDERFLOW = 1,
     BRC_OVERFLOW = 2,
@@ -150,14 +145,12 @@ typedef enum _gen6_brc_status
     BRC_OVERFLOW_WITH_MIN_QP = 4,
 } gen6_brc_status;
 
-struct gen6_mfc_avc_surface_aux
-{
+struct gen6_mfc_avc_surface_aux {
     dri_bo *dmv_top;
     dri_bo *dmv_bottom;
 };
 
-struct gen6_mfc_context
-{
+struct gen6_mfc_context {
     struct {
         unsigned int width;
         unsigned int height;
@@ -167,19 +160,19 @@ struct gen6_mfc_context
 
     //MFX_PIPE_BUF_ADDR_STATE
     struct {
-        dri_bo *bo;                            	
-    } post_deblocking_output;           //OUTPUT: reconstructed picture                           
-    
-    struct {  
-        dri_bo *bo;							   	
-    } pre_deblocking_output;            //OUTPUT: reconstructed picture with deblocked                           
+        dri_bo *bo;
+    } post_deblocking_output;           //OUTPUT: reconstructed picture
+
+    struct {
+        dri_bo *bo;
+    } pre_deblocking_output;            //OUTPUT: reconstructed picture with deblocked
 
     struct {
         dri_bo *bo;
     } uncompressed_picture_source;      //INPUT: original compressed image
 
     struct {
-        dri_bo *bo;							  	
+        dri_bo *bo;
     } intra_row_store_scratch_buffer;   //INTERNAL:
 
     struct {
@@ -187,15 +180,15 @@ struct gen6_mfc_context
     } macroblock_status_buffer;         //INTERNAL:
 
     struct {
-        dri_bo *bo;								
+        dri_bo *bo;
     } deblocking_filter_row_store_scratch_buffer;       //INTERNAL:
 
-    struct {                                    
-        dri_bo *bo; 
+    struct {
+        dri_bo *bo;
     } reference_surfaces[MAX_MFC_REFERENCE_SURFACES];   //INTERNAL: refrence surfaces
 
     //MFX_IND_OBJ_BASE_ADDR_STATE
-    struct{
+    struct {
         dri_bo *bo;
     } mfc_indirect_mv_object;           //INPUT: the blocks' mv info
 
@@ -203,13 +196,13 @@ struct gen6_mfc_context
         dri_bo *bo;
         int offset;
         int end_offset;
-    } mfc_indirect_pak_bse_object;      //OUTPUT: the compressed bitstream 
+    } mfc_indirect_pak_bse_object;      //OUTPUT: the compressed bitstream
 
     //MFX_BSP_BUF_BASE_ADDR_STATE
     struct {
         dri_bo *bo;
     } bsd_mpc_row_store_scratch_buffer; //INTERNAL:
-	
+
     //MFX_AVC_DIRECTMODE_STATE
     struct {
         dri_bo *bo;
@@ -223,7 +216,7 @@ struct gen6_mfc_context
         unsigned char GrowInit;
         unsigned char GrowResistance;
         unsigned char ShrinkInit;
-        unsigned char ShrinkResistance; 
+        unsigned char ShrinkResistance;
     } bit_rate_control_context[3];      //INTERNAL: for I, P, B frames
 
     struct {
@@ -257,8 +250,8 @@ struct gen6_mfc_context
         int i_initial_cpb_removal_delay_length;
         int i_cpb_removal_delay_length;
         int i_dpb_output_delay_length;
-    }vui_hrd;
- 
+    } vui_hrd;
+
     struct {
         unsigned char *vp8_frame_header;
         unsigned int frame_header_bit_count;
@@ -280,7 +273,7 @@ struct gen6_mfc_context
         unsigned char prob_intra;
         unsigned char prob_last;
         unsigned char prob_gf;
-        
+
         dri_bo *frame_header_bo;
         dri_bo *intermediate_bo;
         dri_bo *final_frame_bo;
@@ -288,7 +281,7 @@ struct gen6_mfc_context
         dri_bo *coeff_probs_stream_in_bo;
         dri_bo *token_statistics_bo;
         dri_bo *mpc_row_store_bo;
-    }vp8_state;
+    } vp8_state;
 
     //"buffered_QMatrix" will be used to buffer the QMatrix if the app sends one.
     // Or else, we will load a default QMatrix from the driver for JPEG encode.
@@ -368,7 +361,7 @@ extern void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
                                                      struct intel_encoder_context *encoder_context,
                                                      struct intel_batchbuffer *slice_batch);
 
-extern VAStatus intel_mfc_avc_prepare(VADriverContextP ctx, 
+extern VAStatus intel_mfc_avc_prepare(VADriverContextP ctx,
                                       struct encode_state *encode_state,
                                       struct intel_encoder_context *encoder_context);
 
@@ -384,12 +377,12 @@ Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
 extern void
 intel_avc_slice_insert_packed_data(VADriverContextP ctx,
-                             struct encode_state *encode_state,
-                             struct intel_encoder_context *encoder_context,
-                             int slice_index,
-                             struct intel_batchbuffer *slice_batch);
+                                   struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context,
+                                   int slice_index,
+                                   struct intel_batchbuffer *slice_batch);
 
 extern
 Bool gen9_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
-#endif	/* _GEN6_MFC_BCS_H_ */
+#endif  /* _GEN6_MFC_BCS_H_ */

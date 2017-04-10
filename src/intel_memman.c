@@ -31,7 +31,7 @@
 
 #include "intel_driver.h"
 
-Bool 
+Bool
 intel_memman_init(struct intel_driver_data *intel)
 {
     intel->bufmgr = intel_bufmgr_gem_init(intel->fd, BATCH_SIZE);
@@ -39,15 +39,15 @@ intel_memman_init(struct intel_driver_data *intel)
     intel_bufmgr_gem_enable_reuse(intel->bufmgr);
 
     if (g_intel_debug_option_flags & VA_INTEL_DEBUG_OPTION_DUMP_AUB) {
-	drm_intel_bufmgr_gem_set_aub_filename(intel->bufmgr,
-					      "va.aub");
-	drm_intel_bufmgr_gem_set_aub_dump(intel->bufmgr, 1);
+        drm_intel_bufmgr_gem_set_aub_filename(intel->bufmgr,
+                                              "va.aub");
+        drm_intel_bufmgr_gem_set_aub_dump(intel->bufmgr, 1);
     }
 
     return True;
 }
 
-Bool 
+Bool
 intel_memman_terminate(struct intel_driver_data *intel)
 {
     drm_intel_bufmgr_destroy(intel->bufmgr);

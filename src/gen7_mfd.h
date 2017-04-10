@@ -60,16 +60,14 @@
 #define GEN7_YUV422H_4Y                 6
 #define GEN7_YUV422V_4Y                 7
 
-struct gen7_vc1_surface
-{
+struct gen7_vc1_surface {
     dri_bo *dmv;
     int picture_type;
 };
 
 struct hw_context;
 
-struct gen7_mfd_context
-{
+struct gen7_mfd_context {
     struct hw_context base;
 
     union {
@@ -87,7 +85,7 @@ struct gen7_mfd_context
     GenBuffer           mpr_row_store_scratch_buffer;
     GenBuffer           bitplane_read_buffer;
     GenBuffer           segmentation_buffer;
-    
+
     VASurfaceID jpeg_wa_surface_id;
     struct object_surface *jpeg_wa_surface_object;
     dri_bo *jpeg_wa_slice_data_bo;

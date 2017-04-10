@@ -23,8 +23,7 @@ enum {
 
 #define NUM_H264_AVC_KERNELS    2
 
-struct i965_h264_context
-{
+struct i965_h264_context {
     struct {
         dri_bo *bo;
         unsigned int mbs;

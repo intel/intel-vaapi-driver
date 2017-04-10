@@ -30,7 +30,7 @@
 #include <va/va.h>
 #include <va/va_vpp.h>
 
-VAProcColorStandardType i915_filter_to_color_standard (unsigned int filter);
-const float *i915_color_standard_to_coefs (VAProcColorStandardType standard, size_t *length);
+VAProcColorStandardType i915_filter_to_color_standard(unsigned int filter);
+const float *i915_color_standard_to_coefs(VAProcColorStandardType standard, size_t *length);
 
 #endif /* __I965_YUV_COEFS_H__ */

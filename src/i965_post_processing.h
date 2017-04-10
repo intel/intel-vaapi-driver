@@ -39,8 +39,7 @@
 
 struct i965_gpe_context;
 
-enum
-{
+enum {
     PP_NULL = 0,
     PP_NV12_LOAD_SAVE_N12,
     PP_NV12_LOAD_SAVE_PL3,
@@ -62,16 +61,14 @@ enum
 
 struct i965_post_processing_context;
 
-struct pp_load_save_context
-{
+struct pp_load_save_context {
     int dest_x;
     int dest_y;
     int dest_w;
     int dest_h;
 };
 
-struct pp_scaling_context
-{
+struct pp_scaling_context {
     int dest_x; /* in pixel */
     int dest_y; /* in pixel */
     int dest_w;
@@ -80,8 +77,7 @@ struct pp_scaling_context
     float src_normalized_y;
 };
 
-struct pp_avs_context
-{
+struct pp_avs_context {
     AVSState state;
     int dest_x; /* in pixel */
     int dest_y; /* in pixel */
@@ -110,8 +106,7 @@ typedef struct dndi_frame_store {
     unsigned int is_scratch_surface : 1;
 } DNDIFrameStore;
 
-struct pp_dndi_context
-{
+struct pp_dndi_context {
     int dest_w;
     int dest_h;
     DNDIFrameStore frame_store[DNDI_FRAME_STORE_COUNT];
@@ -123,56 +118,53 @@ struct pp_dndi_context
     unsigned int is_second_field        : 1;
 };
 
-struct pp_dn_context
-{
+struct pp_dn_context {
     int dest_w;
     int dest_h;
     dri_bo *stmm_bo;
 };
 
 struct i965_post_processing_context;
- 
-struct pp_module
-{
+
+struct pp_module {
     struct i965_kernel kernel;
-    
+
     /* others */
-    VAStatus (*initialize)(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
-                           const struct i965_surface *src_surface,
-                           const VARectangle *src_rect,
-                           struct i965_surface *dst_surface,
-                           const VARectangle *dst_rect,
-                           void *filter_param);
+    VAStatus(*initialize)(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
+                          const struct i965_surface *src_surface,
+                          const VARectangle *src_rect,
+                          struct i965_surface *dst_surface,
+                          const VARectangle *dst_rect,
+                          void *filter_param);
 };
 
-struct pp_static_parameter
-{
+struct pp_static_parameter {
     struct {
         /* Procamp r1.0 */
         float procamp_constant_c0;
-        
+
         /* Load and Same r1.1 */
-        unsigned int source_packed_y_offset:8;
-        unsigned int source_packed_u_offset:8;
-        unsigned int source_packed_v_offset:8;
-        unsigned int source_rgb_layout:8;       // 1 for |R|G|B|X| layout, 0 for |B|G|R|X| layout
+        unsigned int source_packed_y_offset: 8;
+        unsigned int source_packed_u_offset: 8;
+        unsigned int source_packed_v_offset: 8;
+        unsigned int source_rgb_layout: 8;      // 1 for |R|G|B|X| layout, 0 for |B|G|R|X| layout
 
         union {
             /* Load and Save r1.2 */
             struct {
-                unsigned int destination_packed_y_offset:8;
-                unsigned int destination_packed_u_offset:8;
-                unsigned int destination_packed_v_offset:8;
-                unsigned int pad0:8;
+                unsigned int destination_packed_y_offset: 8;
+                unsigned int destination_packed_u_offset: 8;
+                unsigned int destination_packed_v_offset: 8;
+                unsigned int pad0: 8;
             } load_and_save;
 
             /* CSC r1.2 */
             struct {
-                unsigned int pad0:24;
-                unsigned int destination_rgb_layout:8;  // 1 for |R|G|B|X| layout, 0 for |B|G|R|X| layout
+                unsigned int pad0: 24;
+                unsigned int destination_rgb_layout: 8; // 1 for |R|G|B|X| layout, 0 for |B|G|R|X| layout
             } csc;
         } r1_2;
-        
+
         /* Procamp r1.3 */
         float procamp_constant_c1;
 
@@ -180,14 +172,14 @@ struct pp_static_parameter
         float procamp_constant_c2;
 
         /* DI r1.5 */
-        unsigned int statistics_surface_picth:16;  /* Devided by 2 */
-        unsigned int pad1:16;
+        unsigned int statistics_surface_picth: 16; /* Devided by 2 */
+        unsigned int pad1: 16;
 
         union {
             /* DI r1.6 */
             struct {
-                unsigned int pad0:24;
-                unsigned int top_field_first:8;
+                unsigned int pad0: 24;
+                unsigned int top_field_first: 8;
             } di;
 
             /* AVS/Scaling r1.6 */
@@ -197,7 +189,7 @@ struct pp_static_parameter
         /* Procamp r1.7 */
         float procamp_constant_c5;
     } grf1;
-    
+
     struct {
         /* Procamp r2.0 */
         float procamp_constant_c3;
@@ -233,7 +225,7 @@ struct pp_static_parameter
 
         /* Blending r3.2 */
         float normalized_alpha_y_scaling;
-        
+
         /* WG+CSC r3.3 */
         float wg_csc_constant_c4;
 
@@ -241,8 +233,8 @@ struct pp_static_parameter
         float wg_csc_constant_c1;
 
         /* ALL r3.5 */
-        int horizontal_origin_offset:16;
-        int vertical_origin_offset:16;
+        int horizontal_origin_offset: 16;
+        int vertical_origin_offset: 16;
 
         /* Shared r3.6*/
         union {
@@ -268,16 +260,16 @@ struct pp_static_parameter
         union {
             /* AVS */
             struct {
-                unsigned int pad1:15;
-                unsigned int nlas:1;
-                unsigned int pad2:16;
+                unsigned int pad1: 15;
+                unsigned int nlas: 1;
+                unsigned int pad2: 16;
             } avs;
 
             /* DI */
             struct {
-                unsigned int motion_history_coefficient_m2:8;
-                unsigned int motion_history_coefficient_m1:8;
-                unsigned int pad0:16;
+                unsigned int motion_history_coefficient_m2: 8;
+                unsigned int motion_history_coefficient_m1: 8;
+                unsigned int pad0: 16;
             } di;
         } r4_2;
 
@@ -298,12 +290,11 @@ struct pp_static_parameter
     } grf4;
 };
 
-struct pp_inline_parameter
-{
+struct pp_inline_parameter {
     struct {
         /* ALL r5.0 */
-        int destination_block_horizontal_origin:16;
-        int destination_block_vertical_origin:16;
+        int destination_block_horizontal_origin: 16;
+        int destination_block_vertical_origin: 16;
 
         /* Shared r5.1 */
         union {
@@ -312,10 +303,10 @@ struct pp_inline_parameter
 
             /* FMD */
             struct {
-                unsigned int variance_surface_vertical_origin:16;
-                unsigned int pad0:16;
+                unsigned int variance_surface_vertical_origin: 16;
+                unsigned int pad0: 16;
             } fmd;
-        } r5_1; 
+        } r5_1;
 
         /* AVS/Scaling r5.2 */
         float source_surface_block_normalized_vertical_origin;
@@ -327,17 +318,17 @@ struct pp_inline_parameter
         float alpha_surface_block_normalized_vertical_origin;
 
         /* Alpha r5.5 */
-        unsigned int alpha_mask_x:16;
-        unsigned int alpha_mask_y:8;
-        unsigned int block_count_x:8;
+        unsigned int alpha_mask_x: 16;
+        unsigned int alpha_mask_y: 8;
+        unsigned int block_count_x: 8;
 
         /* r5.6 */
         /* we only support M*1 or 1*N block partitation now.
-         *   -- it means asm code only need update this mask from grf6 for the last block 
+         *   -- it means asm code only need update this mask from grf6 for the last block
          */
-        unsigned int block_horizontal_mask:16;
-        unsigned int block_vertical_mask:8;
-        unsigned int number_blocks:8;
+        unsigned int block_horizontal_mask: 16;
+        unsigned int block_vertical_mask: 8;
+        unsigned int number_blocks: 8;
 
         /* AVS/Scaling r5.7 */
         float normalized_video_x_scaling_step;
@@ -347,63 +338,62 @@ struct pp_inline_parameter
         /* AVS r6.0 */
         float video_step_delta;
 
-        /* r6.1 */    // sizeof(int) == 4?    
-        unsigned int block_horizontal_mask_right:16;
-        unsigned int block_vertical_mask_bottom:8;
-        unsigned int pad1:8;
+        /* r6.1 */    // sizeof(int) == 4?
+        unsigned int block_horizontal_mask_right: 16;
+        unsigned int block_vertical_mask_bottom: 8;
+        unsigned int pad1: 8;
 
         /* r6.2 */
-        unsigned int block_horizontal_mask_middle:16;
-        unsigned int pad2:16;
+        unsigned int block_horizontal_mask_middle: 16;
+        unsigned int pad2: 16;
 
         /* r6.3-r6.7 */
         unsigned int padx[5];
     } grf6;
 };
 
-struct gen7_pp_static_parameter
-{
+struct gen7_pp_static_parameter {
     struct {
         /* r1.0-r1.5 */
         unsigned int padx[6];
         /* r1.6 */
-        unsigned int di_statistics_surface_pitch_div2:16;
-        unsigned int di_statistics_surface_height_div4:16;
+        unsigned int di_statistics_surface_pitch_div2: 16;
+        unsigned int di_statistics_surface_height_div4: 16;
         /* r1.7 */
-        unsigned int di_top_field_first:8;
-        unsigned int pad0:16;
-        unsigned int pointer_to_inline_parameter:8; /* value: 7 */
+        unsigned int di_top_field_first: 8;
+        unsigned int pad0: 16;
+        unsigned int pointer_to_inline_parameter: 8; /* value: 7 */
     } grf1;
 
     struct {
         /* r2.0 */
-	/* Indicates whether the rgb is swapped for the src surface
-	 * 0: RGBX(MSB. X-B-G-R). 1: BGRX(MSB: X-R-G-B)
-	 */
-        unsigned int src_avs_rgb_swap:1;
-        unsigned int pad3:31;
+        /* Indicates whether the rgb is swapped for the src surface
+         * 0: RGBX(MSB. X-B-G-R). 1: BGRX(MSB: X-R-G-B)
+         */
+        unsigned int src_avs_rgb_swap: 1;
+        unsigned int pad3: 31;
 
         /* r2.1 */
-        unsigned int pad2:16;
-        unsigned int save_avs_rgb_swap:1; /* 0: RGB, 1: BGR */
-        unsigned int avs_wa_enable:1; /* must enabled for GEN7 */
-        unsigned int ief_enable:1;
-        unsigned int avs_wa_width:13;
+        unsigned int pad2: 16;
+        unsigned int save_avs_rgb_swap: 1; /* 0: RGB, 1: BGR */
+        unsigned int avs_wa_enable: 1; /* must enabled for GEN7 */
+        unsigned int ief_enable: 1;
+        unsigned int avs_wa_width: 13;
 
         /* 2.2 */
         float avs_wa_one_div_256_width;
 
         /* 2.3 */
         float avs_wa_five_div_256_width;
-        
+
         /* 2.4 - 2.6 */
         unsigned int padx[3];
 
         /* r2.7 */
-        unsigned int di_destination_packed_y_component_offset:8;
-        unsigned int di_destination_packed_u_component_offset:8;
-        unsigned int di_destination_packed_v_component_offset:8;
-        unsigned int alpha:8;
+        unsigned int di_destination_packed_y_component_offset: 8;
+        unsigned int di_destination_packed_u_component_offset: 8;
+        unsigned int di_destination_packed_v_component_offset: 8;
+        unsigned int alpha: 8;
     } grf2;
 
     struct {
@@ -414,8 +404,8 @@ struct gen7_pp_static_parameter
     struct {
         float sampler_load_vertical_scaling_step;
         unsigned int pad0;
-        unsigned int di_hoffset_svf_from_dvf:16;
-        unsigned int di_voffset_svf_from_dvf:16;
+        unsigned int di_hoffset_svf_from_dvf: 16;
+        unsigned int di_voffset_svf_from_dvf: 16;
         unsigned int padx[5];
     } grf4;
 
@@ -455,12 +445,11 @@ struct gen7_pp_static_parameter
     } grf8;
 };
 
-struct gen7_pp_inline_parameter
-{
+struct gen7_pp_inline_parameter {
     struct {
         /* r9.0 */
-        unsigned int destination_block_horizontal_origin:16;
-        unsigned int destination_block_vertical_origin:16;
+        unsigned int destination_block_horizontal_origin: 16;
+        unsigned int destination_block_vertical_origin: 16;
         /* r9.1: 0xffffffff */
         unsigned int constant_0;
         /* r9.2 */
@@ -482,8 +471,7 @@ struct gen7_pp_inline_parameter
     } grf10;
 };
 
-struct i965_post_processing_context
-{
+struct i965_post_processing_context {
     int current_pp;
     struct pp_module pp_modules[NUM_PP_MODULES];
     void *pp_static_parameter;
@@ -559,9 +547,9 @@ struct i965_post_processing_context
 
     struct intel_batchbuffer *batch;
 
-    unsigned int block_horizontal_mask_left:16;
-    unsigned int block_horizontal_mask_right:16;
-    unsigned int block_vertical_mask_bottom:8;
+    unsigned int block_horizontal_mask_left: 16;
+    unsigned int block_horizontal_mask_right: 16;
+    unsigned int block_vertical_mask_bottom: 8;
 
     struct {
         dri_bo *bo;
@@ -586,16 +574,16 @@ struct i965_post_processing_context
     unsigned int curbe_offset;
     int curbe_size;
 
-    VAStatus (*intel_post_processing)(VADriverContextP   ctx,
-				struct i965_post_processing_context *pp_context,
-				const struct i965_surface *src_surface,
-				const VARectangle *src_rect,
-				struct i965_surface *dst_surface,
-				const VARectangle *dst_rect,
-				int   pp_index,
-				void * filter_param);
+    VAStatus(*intel_post_processing)(VADriverContextP   ctx,
+                                     struct i965_post_processing_context *pp_context,
+                                     const struct i965_surface *src_surface,
+                                     const VARectangle *src_rect,
+                                     struct i965_surface *dst_surface,
+                                     const VARectangle *dst_rect,
+                                     int   pp_index,
+                                     void * filter_param);
     void (*finalize)(VADriverContextP ctx,
-        struct i965_post_processing_context *pp_context);
+                     struct i965_post_processing_context *pp_context);
 
 
     struct i965_gpe_context scaling_10bit_context;
@@ -607,8 +595,7 @@ struct i965_post_processing_context
     unsigned int scaling_8bit_initialized;
 };
 
-struct i965_proc_context
-{
+struct i965_proc_context {
     struct hw_context base;
     void *driver_context;
     struct i965_post_processing_context pp_context;

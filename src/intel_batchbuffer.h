@@ -8,8 +8,7 @@
 
 #include "intel_driver.h"
 
-struct intel_batchbuffer 
-{
+struct intel_batchbuffer {
     struct intel_driver_data *intel;
     dri_bo *buffer;
     unsigned int size;
@@ -37,12 +36,12 @@ void intel_batchbuffer_start_atomic_blt(struct intel_batchbuffer *batch, unsigne
 void intel_batchbuffer_start_atomic_veb(struct intel_batchbuffer *batch, unsigned int size);
 void intel_batchbuffer_end_atomic(struct intel_batchbuffer *batch);
 void intel_batchbuffer_emit_dword(struct intel_batchbuffer *batch, unsigned int x);
-void intel_batchbuffer_emit_reloc(struct intel_batchbuffer *batch, dri_bo *bo, 
-                                  uint32_t read_domains, uint32_t write_domains, 
-                                  uint32_t delta);
-void intel_batchbuffer_emit_reloc64(struct intel_batchbuffer *batch, dri_bo *bo,
+void intel_batchbuffer_emit_reloc(struct intel_batchbuffer *batch, dri_bo *bo,
                                   uint32_t read_domains, uint32_t write_domains,
                                   uint32_t delta);
+void intel_batchbuffer_emit_reloc64(struct intel_batchbuffer *batch, dri_bo *bo,
+                                    uint32_t read_domains, uint32_t write_domains,
+                                    uint32_t delta);
 void intel_batchbuffer_require_space(struct intel_batchbuffer *batch, unsigned int size);
 void intel_batchbuffer_data(struct intel_batchbuffer *batch, void *data, unsigned int size);
 void intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch);

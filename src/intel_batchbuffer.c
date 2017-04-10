@@ -1,29 +1,29 @@
-/**************************************************************************                                                                                  
- *                                                                                                                                                           
- * Copyright 2006 Tungsten Graphics, Inc., Cedar Park, Texas.                                                                                                
- * All Rights Reserved.                                                                                                                                      
- *                                                                                                                                                           
- * Permission is hereby granted, free of charge, to any person obtaining a                                                                                   
- * copy of this software and associated documentation files (the                                                                                             
- * "Software"), to deal in the Software without restriction, including                                                                                       
- * without limitation the rights to use, copy, modify, merge, publish,                                                                                       
- * distribute, sub license, and/or sell copies of the Software, and to                                                                                       
- * permit persons to whom the Software is furnished to do so, subject to                                                                                     
- * the following conditions:                                                                                                                                 
- *                                                                                                                                                           
- * The above copyright notice and this permission notice (including the                                                                                      
- * next paragraph) shall be included in all copies or substantial portions                                                                                   
- * of the Software.                                                                                                                                          
- *                                                                                                                                                           
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS                                                                                   
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF                                                                                                
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.                                                                                   
- * IN NO EVENT SHALL TUNGSTEN GRAPHICS AND/OR ITS SUPPLIERS BE LIABLE FOR                                                                                    
- * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,                                                                                  
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE                                                                                         
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                                                                                    
- *                                                                                                                                                           
- **************************************************************************/      
+/**************************************************************************
+ *
+ * Copyright 2006 Tungsten Graphics, Inc., Cedar Park, Texas.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sub license, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the
+ * next paragraph) shall be included in all copies or substantial portions
+ * of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+ * IN NO EVENT SHALL TUNGSTEN GRAPHICS AND/OR ITS SUPPLIERS BE LIABLE FOR
+ * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ **************************************************************************/
 
 #include <stdlib.h>
 #include <string.h>
@@ -31,18 +31,18 @@
 
 #include "intel_batchbuffer.h"
 
-#define MAX_BATCH_SIZE		0x400000
+#define MAX_BATCH_SIZE      0x400000
 
 
-#define LOCAL_I915_EXEC_BSD_MASK		(3<<13)
-#define LOCAL_I915_EXEC_BSD_DEFAULT		(0<<13)	/* default ping-pong mode */
-#define LOCAL_I915_EXEC_BSD_RING0		(1<<13)
-#define LOCAL_I915_EXEC_BSD_RING1		(2<<13)
+#define LOCAL_I915_EXEC_BSD_MASK        (3<<13)
+#define LOCAL_I915_EXEC_BSD_DEFAULT     (0<<13) /* default ping-pong mode */
+#define LOCAL_I915_EXEC_BSD_RING0       (1<<13)
+#define LOCAL_I915_EXEC_BSD_RING1       (2<<13)
 
-static void 
+static void
 intel_batchbuffer_reset(struct intel_batchbuffer *batch, int buffer_size)
 {
-    struct intel_driver_data *intel = batch->intel; 
+    struct intel_driver_data *intel = batch->intel;
     int batch_size = buffer_size;
     int ring_flag;
 
@@ -54,7 +54,7 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch, int buffer_size)
            ring_flag == I915_EXEC_VEBOX);
 
     dri_bo_unreference(batch->buffer);
-    batch->buffer = dri_bo_alloc(intel->bufmgr, 
+    batch->buffer = dri_bo_alloc(intel->bufmgr,
                                  "batch buffer",
                                  batch_size,
                                  0x1000);
@@ -74,7 +74,7 @@ intel_batchbuffer_space(struct intel_batchbuffer *batch)
 }
 
 
-struct intel_batchbuffer * 
+struct intel_batchbuffer *
 intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size)
 {
     struct intel_batchbuffer *batch = calloc(1, sizeof(*batch));
@@ -86,14 +86,14 @@ intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size
            ring_flag == I915_EXEC_BLT ||
            ring_flag == I915_EXEC_VEBOX);
 
-   if (!buffer_size || buffer_size < BATCH_SIZE) {
-	buffer_size = BATCH_SIZE;
-   }
+    if (!buffer_size || buffer_size < BATCH_SIZE) {
+        buffer_size = BATCH_SIZE;
+    }
 
-   /* the buffer size can't exceed 4M */
-   if (buffer_size > MAX_BATCH_SIZE) {
-	buffer_size = MAX_BATCH_SIZE;
-   }
+    /* the buffer size can't exceed 4M */
+    if (buffer_size > MAX_BATCH_SIZE) {
+        buffer_size = MAX_BATCH_SIZE;
+    }
 
     assert(batch);
     batch->intel = intel;
@@ -126,7 +126,7 @@ void intel_batchbuffer_free(struct intel_batchbuffer *batch)
     free(batch);
 }
 
-void 
+void
 intel_batchbuffer_flush(struct intel_batchbuffer *batch)
 {
     unsigned int used = batch->ptr - batch->map;
@@ -148,7 +148,7 @@ intel_batchbuffer_flush(struct intel_batchbuffer *batch)
     intel_batchbuffer_reset(batch, batch->size);
 }
 
-void 
+void
 intel_batchbuffer_emit_dword(struct intel_batchbuffer *batch, unsigned int x)
 {
     assert(intel_batchbuffer_space(batch) >= 4);
@@ -156,10 +156,10 @@ intel_batchbuffer_emit_dword(struct intel_batchbuffer *batch, unsigned int x)
     batch->ptr += 4;
 }
 
-void 
-intel_batchbuffer_emit_reloc(struct intel_batchbuffer *batch, dri_bo *bo, 
-                                uint32_t read_domains, uint32_t write_domains, 
-                                uint32_t delta)
+void
+intel_batchbuffer_emit_reloc(struct intel_batchbuffer *batch, dri_bo *bo,
+                             uint32_t read_domains, uint32_t write_domains,
+                             uint32_t delta)
 {
     assert(batch->ptr - batch->map < batch->size);
     dri_bo_emit_reloc(batch->buffer, read_domains, write_domains,
@@ -167,27 +167,27 @@ intel_batchbuffer_emit_reloc(struct intel_batchbuffer *batch, dri_bo *bo,
     intel_batchbuffer_emit_dword(batch, bo->offset + delta);
 }
 
-void 
+void
 intel_batchbuffer_emit_reloc64(struct intel_batchbuffer *batch, dri_bo *bo,
-                                uint32_t read_domains, uint32_t write_domains,
-                                uint32_t delta)
+                               uint32_t read_domains, uint32_t write_domains,
+                               uint32_t delta)
 {
     assert(batch->ptr - batch->map < batch->size);
     dri_bo_emit_reloc(batch->buffer, read_domains, write_domains,
                       delta, batch->ptr - batch->map, bo);
 
-   /* Using the old buffer offset, write in what the right data would be, in
-    * case the buffer doesn't move and we can short-circuit the relocation
-    * processing in the kernel.
-    */
-   uint64_t offset = bo->offset64 + delta;
-   intel_batchbuffer_emit_dword(batch, offset);
-   intel_batchbuffer_emit_dword(batch, offset >> 32);
+    /* Using the old buffer offset, write in what the right data would be, in
+     * case the buffer doesn't move and we can short-circuit the relocation
+     * processing in the kernel.
+     */
+    uint64_t offset = bo->offset64 + delta;
+    intel_batchbuffer_emit_dword(batch, offset);
+    intel_batchbuffer_emit_dword(batch, offset >> 32);
 }
 
 void
 intel_batchbuffer_require_space(struct intel_batchbuffer *batch,
-                                   unsigned int size)
+                                unsigned int size)
 {
     assert(size < batch->size - 8);
 
@@ -196,10 +196,10 @@ intel_batchbuffer_require_space(struct intel_batchbuffer *batch,
     }
 }
 
-void 
+void
 intel_batchbuffer_data(struct intel_batchbuffer *batch,
-                          void *data,
-                          unsigned int size)
+                       void *data,
+                       unsigned int size)
 {
     assert((size & 3) == 0);
     intel_batchbuffer_require_space(batch, size);
@@ -212,7 +212,7 @@ intel_batchbuffer_data(struct intel_batchbuffer *batch,
 void
 intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
 {
-    struct intel_driver_data *intel = batch->intel; 
+    struct intel_driver_data *intel = batch->intel;
     int ring_flag;
 
     ring_flag = batch->flag & I915_EXEC_RING_MASK;
@@ -271,7 +271,7 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
                 BEGIN_BATCH(batch, 4);
                 OUT_BATCH(batch, CMD_PIPE_CONTROL | (4 - 2));
 
-                OUT_BATCH(batch, 
+                OUT_BATCH(batch,
                           CMD_PIPE_CONTROL_WC_FLUSH |
                           CMD_PIPE_CONTROL_TC_FLUSH |
                           CMD_PIPE_CONTROL_DC_FLUSH |
@@ -289,7 +289,7 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
                 OUT_BLT_BATCH(batch, 0);
                 OUT_BLT_BATCH(batch, 0);
                 ADVANCE_BLT_BATCH(batch);
-            }else if (ring_flag == I915_EXEC_VEBOX) {
+            } else if (ring_flag == I915_EXEC_VEBOX) {
                 BEGIN_VEB_BATCH(batch, 4);
                 OUT_VEB_BATCH(batch, MI_FLUSH_DW);
                 OUT_VEB_BATCH(batch, 0);
@@ -310,8 +310,8 @@ intel_batchbuffer_emit_mi_flush(struct intel_batchbuffer *batch)
         if (ring_flag == I915_EXEC_RENDER) {
             BEGIN_BATCH(batch, 1);
             OUT_BATCH(batch, MI_FLUSH | MI_FLUSH_STATE_INSTRUCTION_CACHE_INVALIDATE);
-            ADVANCE_BATCH(batch);		
-         } else {
+            ADVANCE_BATCH(batch);
+        } else {
             assert(ring_flag == I915_EXEC_BSD);
             BEGIN_BCS_BATCH(batch, 1);
             OUT_BCS_BATCH(batch, MI_FLUSH | MI_FLUSH_STATE_INSTRUCTION_CACHE_INVALIDATE);
@@ -399,7 +399,7 @@ void intel_batchbuffer_start_atomic_bcs_override(struct intel_batchbuffer *batch
 {
     uint32_t ring_flag;
 
-    switch(override_flag) {
+    switch (override_flag) {
     case BSD_RING0:
         ring_flag = I915_EXEC_BSD + LOCAL_I915_EXEC_BSD_RING0;
         break;

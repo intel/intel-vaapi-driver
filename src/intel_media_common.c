@@ -33,7 +33,7 @@
 
 static pthread_mutex_t free_avc_surface_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void 
+void
 gen_free_avc_surface(void **data)
 {
     GenAvcSurface *avc_surface;
@@ -62,26 +62,25 @@ gen_free_avc_surface(void **data)
 /* This is to convert one float to the given format interger.
  * For example: 1.25 to S1.6 or U2.6 and so on
  */
-int intel_format_convert(float src, int out_int_bits, int out_frac_bits,int out_sign_flag)
+int intel_format_convert(float src, int out_int_bits, int out_frac_bits, int out_sign_flag)
 {
-     unsigned char negative_flag = (src < 0.0) ? 1 : 0;
-     float src_1 = (!negative_flag)? src: -src ;
-     unsigned int factor = 1 << out_frac_bits;
-     int output_value = 0;         
- 
-     unsigned int integer_part  = floorf(src_1);
-     unsigned int fraction_part = ((int)((src_1 - integer_part) * factor)) & (factor - 1) ;
+    unsigned char negative_flag = (src < 0.0) ? 1 : 0;
+    float src_1 = (!negative_flag) ? src : -src ;
+    unsigned int factor = 1 << out_frac_bits;
+    int output_value = 0;
 
-     output_value = (integer_part << out_frac_bits) | fraction_part;
+    unsigned int integer_part  = floorf(src_1);
+    unsigned int fraction_part = ((int)((src_1 - integer_part) * factor)) & (factor - 1) ;
 
-     if(negative_flag)
-         output_value = (~output_value + 1) & ((1 <<(out_int_bits + out_frac_bits)) -1);
+    output_value = (integer_part << out_frac_bits) | fraction_part;
 
-     if(output_value != 0 && out_sign_flag == 1 && negative_flag)
-     {
-          output_value |= negative_flag <<(out_int_bits + out_frac_bits);
-     }
-     return output_value;
+    if (negative_flag)
+        output_value = (~output_value + 1) & ((1 << (out_int_bits + out_frac_bits)) - 1);
+
+    if (output_value != 0 && out_sign_flag == 1 && negative_flag) {
+        output_value |= negative_flag << (out_int_bits + out_frac_bits);
+    }
+    return output_value;
 }
 
 static pthread_mutex_t free_hevc_surface_lock = PTHREAD_MUTEX_INITIALIZER;

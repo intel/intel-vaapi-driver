@@ -25,24 +25,25 @@
 #include "i965_yuv_coefs.h"
 
 static const float yuv_to_rgb_bt601[] = {
-    1.164,		0,	1.596,		-0.06275,
-    1.164,		-0.392,	-0.813,		-0.50196,
-    1.164,		2.017,	0,		-0.50196,
+    1.164,      0,  1.596,      -0.06275,
+    1.164,      -0.392, -0.813,     -0.50196,
+    1.164,      2.017,  0,      -0.50196,
 };
 
 static const float yuv_to_rgb_bt709[] = {
-    1.164,		0,	1.793,		-0.06275,
-    1.164,		-0.213,	-0.533,		-0.50196,
-    1.164,		2.112,	0,		-0.50196,
+    1.164,      0,  1.793,      -0.06275,
+    1.164,      -0.213, -0.533,     -0.50196,
+    1.164,      2.112,  0,      -0.50196,
 };
 
 static const float yuv_to_rgb_smpte_240[] = {
-    1.164,		0,	1.794,		-0.06275,
-    1.164,		-0.258,	-0.5425,	-0.50196,
-    1.164,		2.078,	0,		-0.50196,
+    1.164,      0,  1.794,      -0.06275,
+    1.164,      -0.258, -0.5425,    -0.50196,
+    1.164,      2.078,  0,      -0.50196,
 };
 
-VAProcColorStandardType i915_filter_to_color_standard (unsigned int filter) {
+VAProcColorStandardType i915_filter_to_color_standard(unsigned int filter)
+{
     switch (filter & VA_SRC_COLOR_MASK) {
     case VA_SRC_BT601:
         return VAProcColorStandardBT601;
@@ -55,7 +56,8 @@ VAProcColorStandardType i915_filter_to_color_standard (unsigned int filter) {
     }
 }
 
-const float *i915_color_standard_to_coefs (VAProcColorStandardType standard, size_t *length) {
+const float *i915_color_standard_to_coefs(VAProcColorStandardType standard, size_t *length)
+{
     switch (standard) {
     case VAProcColorStandardBT601:
         *length = sizeof(yuv_to_rgb_bt601);

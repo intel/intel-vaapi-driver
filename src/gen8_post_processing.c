@@ -387,7 +387,7 @@ static void
 gen8_pp_set_surface_state(VADriverContextP ctx, struct i965_post_processing_context *pp_context,
                           dri_bo *surf_bo, unsigned long surf_bo_offset,
                           int width, int height, int pitch, int format,
-			  int index, int is_target)
+                          int index, int is_target)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen8_surface_state *ss;
@@ -600,16 +600,16 @@ gen8_pp_set_media_rw_message_surface(VADriverContextP ctx, struct i965_post_proc
             break;
         }
 
-	if (fourcc_info->format == I965_COLOR_RGB) {
-    	    struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
-	    /* Only R8G8B8A8_UNORM is supported for BGRX or RGBX */
-	    format0 = SURFACE_FORMAT_R8G8B8A8_UNORM;
-	    pp_static_parameter->grf2.src_avs_rgb_swap = 0;
-	    if ((fourcc == VA_FOURCC_BGRA) ||
+        if (fourcc_info->format == I965_COLOR_RGB) {
+            struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
+            /* Only R8G8B8A8_UNORM is supported for BGRX or RGBX */
+            format0 = SURFACE_FORMAT_R8G8B8A8_UNORM;
+            pp_static_parameter->grf2.src_avs_rgb_swap = 0;
+            if ((fourcc == VA_FOURCC_BGRA) ||
                 (fourcc == VA_FOURCC_BGRX)) {
-		pp_static_parameter->grf2.src_avs_rgb_swap = 1;
-	    }
-	}
+                pp_static_parameter->grf2.src_avs_rgb_swap = 1;
+            }
+        }
 
         gen8_pp_set_surface2_state(ctx, pp_context,
                                    bo, offset[0],
@@ -710,29 +710,25 @@ static void calculate_boundary_block_mask(struct i965_post_processing_context *p
     /* x offset of dest surface must be dword aligned.
      * so we have to extend dst surface on left edge, and mask out pixels not interested
      */
-    if (dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT) {
+    if (dst_rect->x % GPU_ASM_X_OFFSET_ALIGNMENT) {
         pp_context->block_horizontal_mask_left = 0;
-        for (i=dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT; i<GPU_ASM_BLOCK_WIDTH; i++)
-        {
-            pp_context->block_horizontal_mask_left |= 1<<i;
+        for (i = dst_rect->x % GPU_ASM_X_OFFSET_ALIGNMENT; i < GPU_ASM_BLOCK_WIDTH; i++) {
+            pp_context->block_horizontal_mask_left |= 1 << i;
         }
-    }
-    else {
+    } else {
         pp_context->block_horizontal_mask_left = 0xffff;
     }
 
-    dst_width_adjust = dst_rect->width + dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;
-    if (dst_width_adjust%GPU_ASM_BLOCK_WIDTH){
-        pp_context->block_horizontal_mask_right = (1 << (dst_width_adjust%GPU_ASM_BLOCK_WIDTH)) - 1;
-    }
-    else {
+    dst_width_adjust = dst_rect->width + dst_rect->x % GPU_ASM_X_OFFSET_ALIGNMENT;
+    if (dst_width_adjust % GPU_ASM_BLOCK_WIDTH) {
+        pp_context->block_horizontal_mask_right = (1 << (dst_width_adjust % GPU_ASM_BLOCK_WIDTH)) - 1;
+    } else {
         pp_context->block_horizontal_mask_right = 0xffff;
     }
 
-    if (dst_rect->height%GPU_ASM_BLOCK_HEIGHT){
-        pp_context->block_vertical_mask_bottom = (1 << (dst_rect->height%GPU_ASM_BLOCK_HEIGHT)) - 1;
-    }
-    else {
+    if (dst_rect->height % GPU_ASM_BLOCK_HEIGHT) {
+        pp_context->block_vertical_mask_bottom = (1 << (dst_rect->height % GPU_ASM_BLOCK_HEIGHT)) - 1;
+    } else {
         pp_context->block_vertical_mask_bottom = 0xff;
     }
 
@@ -857,7 +853,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
                            const VARectangle *dst_rect,
                            void *filter_param)
 {
-/* TODO: Add the sampler_8x8 state */
+    /* TODO: Add the sampler_8x8 state */
     struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)&pp_context->pp_avs_context;
     struct gen7_pp_static_parameter *pp_static_parameter = pp_context->pp_static_parameter;
     struct gen8_sampler_8x8_avs *sampler_8x8;
@@ -889,7 +885,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     assert(pp_context->dynamic_state.bo->virtual);
 
     cc_ptr = (unsigned char *) pp_context->dynamic_state.bo->virtual +
-			pp_context->sampler_offset;
+             pp_context->sampler_offset;
     /* Currently only one gen8 sampler_8x8 is initialized */
     sampler_8x8 = (struct gen8_sampler_8x8_avs *) cc_ptr;
     memset(sampler_8x8, 0, sizeof(*sampler_8x8));
@@ -989,7 +985,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     assert(avs->config->num_phases >= 16);
     for (i = 0; i <= 16; i++) {
         struct gen8_sampler_8x8_avs_coefficients * const sampler_8x8_state =
-            &sampler_8x8->coefficients[i];
+                    &sampler_8x8->coefficients[i];
         const AVSCoeffs * const coeffs = &avs->coeffs[i];
 
         sampler_8x8_state->dw0.table_0x_filter_c0 =
@@ -1040,9 +1036,9 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
             intel_format_convert(coeffs->uv_k_h[3], 1, 6, 1);
 
         sampler_8x8_state->dw6.pad0 =
-        sampler_8x8_state->dw7.pad0 =
-        sampler_8x8_state->dw6.table_1y_filter_c2 =
-            intel_format_convert(coeffs->uv_k_v[0], 1, 6, 1);
+            sampler_8x8_state->dw7.pad0 =
+                sampler_8x8_state->dw6.table_1y_filter_c2 =
+                    intel_format_convert(coeffs->uv_k_v[0], 1, 6, 1);
         sampler_8x8_state->dw6.table_1y_filter_c3 =
             intel_format_convert(coeffs->uv_k_v[1], 1, 6, 1);
         sampler_8x8_state->dw7.table_1y_filter_c4 =
@@ -1057,9 +1053,9 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     sampler_8x8->dw153.bypass_y_adaptive_filtering = 1;
     sampler_8x8->dw153.bypass_x_adaptive_filtering = 1;
 
-    for ( ; i <= avs->config->num_phases; i++) {
+    for (; i <= avs->config->num_phases; i++) {
         struct gen8_sampler_8x8_avs_coefficients * const sampler_8x8_state =
-            &sampler_8x8->coefficients1[i - 17];
+                    &sampler_8x8->coefficients1[i - 17];
         const AVSCoeffs * const coeffs = &avs->coeffs[i];
 
         sampler_8x8_state->dw0.table_0x_filter_c0 =
@@ -1110,9 +1106,9 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
             intel_format_convert(coeffs->uv_k_h[3], 1, 6, 1);
 
         sampler_8x8_state->dw6.pad0 =
-        sampler_8x8_state->dw7.pad0 =
-        sampler_8x8_state->dw6.table_1y_filter_c2 =
-            intel_format_convert(coeffs->uv_k_v[0], 1, 6, 1);
+            sampler_8x8_state->dw7.pad0 =
+                sampler_8x8_state->dw6.table_1y_filter_c2 =
+                    intel_format_convert(coeffs->uv_k_v[0], 1, 6, 1);
         sampler_8x8_state->dw6.table_1y_filter_c3 =
             intel_format_convert(coeffs->uv_k_v[1], 1, 6, 1);
         sampler_8x8_state->dw7.table_1y_filter_c4 =
@@ -1130,7 +1126,7 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_context->private_context = &pp_context->pp_avs_context;
     pp_context->pp_set_block_parameter = gen7_pp_avs_set_block_parameter;
 
-    int dst_left_edge_extend = dst_rect->x%GPU_ASM_X_OFFSET_ALIGNMENT;
+    int dst_left_edge_extend = dst_rect->x % GPU_ASM_X_OFFSET_ALIGNMENT;
     pp_avs_context->dest_x = dst_rect->x - dst_left_edge_extend;
     pp_avs_context->dest_y = dst_rect->y;
     pp_avs_context->dest_w = ALIGN(dst_rect->width + dst_left_edge_extend, 16);
@@ -1151,15 +1147,15 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_static_parameter->grf3.sampler_load_horizontal_scaling_step_ratio = (float) pp_avs_context->src_w / dw;
     pp_static_parameter->grf4.sampler_load_vertical_scaling_step = (float) src_rect->height / src_height / dst_rect->height;
     pp_static_parameter->grf5.sampler_load_vertical_frame_origin = (float) src_rect->y / src_height -
-        (float) pp_avs_context->dest_y * pp_static_parameter->grf4.sampler_load_vertical_scaling_step;
+                                                                   (float) pp_avs_context->dest_y * pp_static_parameter->grf4.sampler_load_vertical_scaling_step;
     pp_static_parameter->grf6.sampler_load_horizontal_frame_origin = (float) src_rect->x / src_width -
-        (float) pp_avs_context->dest_x * pp_avs_context->horiz_range / dw;
+                                                                     (float) pp_avs_context->dest_x * pp_avs_context->horiz_range / dw;
 
     gen7_update_src_surface_uv_offset(ctx, pp_context, dst_surface);
 
-    yuv_to_rgb_coefs = i915_color_standard_to_coefs (i915_filter_to_color_standard (src_surface->flags &
-                                                                                    VA_SRC_COLOR_MASK),
-                                                     &yuv_to_rgb_coefs_size);
+    yuv_to_rgb_coefs = i915_color_standard_to_coefs(i915_filter_to_color_standard(src_surface->flags &
+                                                                                  VA_SRC_COLOR_MASK),
+                                                    &yuv_to_rgb_coefs_size);
     memcpy(&pp_static_parameter->grf7, yuv_to_rgb_coefs, yuv_to_rgb_coefs_size);
 
     dst_surface->flags = src_surface->flags;
@@ -1200,13 +1196,13 @@ gen8_pp_initialize(
     pp_context->sampler_size = 4 * 4096;
 
     bo_size = 4096 + pp_context->curbe_size + pp_context->sampler_size
-		+ pp_context->idrt_size;
+              + pp_context->idrt_size;
 
     dri_bo_unreference(pp_context->dynamic_state.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
                       "dynamic_state",
                       bo_size,
-		      4096);
+                      4096);
 
     assert(bo);
     pp_context->dynamic_state.bo = bo;
@@ -1271,11 +1267,11 @@ gen8_pp_interface_descriptor_table(VADriverContextP   ctx,
     cc_ptr = (unsigned char *)bo->virtual + pp_context->idrt_offset;
 
     desc = (struct gen8_interface_descriptor_data *) cc_ptr +
-		pp_context->idrt.num_interface_descriptors;
+           pp_context->idrt.num_interface_descriptors;
 
     memset(desc, 0, sizeof(*desc));
     desc->desc0.kernel_start_pointer =
-                pp_context->pp_modules[pp_index].kernel.kernel_offset >> 6; /* reloc */
+        pp_context->pp_modules[pp_index].kernel.kernel_offset >> 6; /* reloc */
     desc->desc2.single_program_flow = 1;
     desc->desc2.floating_point_mode = FLOATING_POINT_IEEE_754;
     desc->desc3.sampler_count = 0;      /* 1 - 4 samplers used */
@@ -1305,7 +1301,7 @@ gen8_pp_upload_constants(VADriverContextP ctx,
     dri_bo_map(pp_context->dynamic_state.bo, 1);
     assert(pp_context->dynamic_state.bo->virtual);
     constant_buffer = (unsigned char *) pp_context->dynamic_state.bo->virtual +
-			pp_context->curbe_offset;
+                      pp_context->curbe_offset;
 
     memcpy(constant_buffer, pp_context->pp_static_parameter, param_size);
     dri_bo_unmap(pp_context->dynamic_state.bo);
@@ -1339,23 +1335,23 @@ gen8_pp_state_base_address(VADriverContextP ctx,
 
     BEGIN_BATCH(batch, 16);
     OUT_BATCH(batch, CMD_STATE_BASE_ADDRESS | (16 - 2));
-	/* DW1 Generate state address */
+    /* DW1 Generate state address */
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
-	OUT_BATCH(batch, 0);
-	OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
 
-	/* DW4-5. Surface state address */
+    /* DW4-5. Surface state address */
     OUT_RELOC64(batch, pp_context->surface_state_binding_table.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY); /* Surface state base address */
 
-	/* DW6-7. Dynamic state address */
+    /* DW6-7. Dynamic state address */
     OUT_RELOC64(batch, pp_context->dynamic_state.bo, I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_SAMPLER,
-		0, 0 | BASE_ADDRESS_MODIFY);
+                0, 0 | BASE_ADDRESS_MODIFY);
 
-	/* DW8. Indirect object address */
+    /* DW8. Indirect object address */
     OUT_BATCH(batch, 0 | BASE_ADDRESS_MODIFY);
-	OUT_BATCH(batch, 0);
+    OUT_BATCH(batch, 0);
 
-	/* DW10-11. Instruction base address */
+    /* DW10-11. Instruction base address */
     OUT_RELOC64(batch, pp_context->instruction_state.bo, I915_GEM_DOMAIN_INSTRUCTION, 0, BASE_ADDRESS_MODIFY);
 
     OUT_BATCH(batch, 0xFFFF0000 | BASE_ADDRESS_MODIFY);
@@ -1381,9 +1377,9 @@ gen8_pp_vfe_state(VADriverContextP ctx,
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch,
               (pp_context->vfe_gpu_state.urb_entry_size) << 16 |
-                /* URB Entry Allocation Size, in 256 bits unit */
+              /* URB Entry Allocation Size, in 256 bits unit */
               (pp_context->vfe_gpu_state.curbe_allocation_size));
-		/* CURBE Allocation Size, in 256 bits unit */
+    /* CURBE Allocation Size, in 256 bits unit */
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 0);
@@ -1482,7 +1478,7 @@ gen8_pp_object_walker(VADriverContextP ctx,
     BEGIN_BATCH(batch, 3);
     OUT_BATCH(batch, MI_BATCH_BUFFER_START | (1 << 8) | (1 << 0));
     OUT_RELOC64(batch, command_buffer,
-              I915_GEM_DOMAIN_COMMAND, 0, 0);
+                I915_GEM_DOMAIN_COMMAND, 0, 0);
     ADVANCE_BATCH(batch);
 
     dri_bo_unreference(command_buffer);
@@ -1545,7 +1541,7 @@ gen8_post_processing(
 
 static void
 gen8_post_processing_context_finalize(VADriverContextP ctx,
-    struct i965_post_processing_context *pp_context)
+                                      struct i965_post_processing_context *pp_context)
 {
     if (pp_context->scaling_context_initialized) {
         gen8_gpe_context_destroy(&pp_context->scaling_10bit_context);
@@ -1557,9 +1553,9 @@ gen8_post_processing_context_finalize(VADriverContextP ctx,
         pp_context->scaling_8bit_initialized &= ~(VPPGPE_8BIT_420);
     }
 
-    if(pp_context->vebox_proc_ctx){
-       gen75_vebox_context_destroy(ctx,pp_context->vebox_proc_ctx);
-       pp_context->vebox_proc_ctx = NULL;
+    if (pp_context->vebox_proc_ctx) {
+        gen75_vebox_context_destroy(ctx, pp_context->vebox_proc_ctx);
+        pp_context->vebox_proc_ctx = NULL;
     }
 
     dri_bo_unreference(pp_context->surface_state_binding_table.bo);
@@ -1569,18 +1565,18 @@ gen8_post_processing_context_finalize(VADriverContextP ctx,
     pp_context->pp_dn_context.stmm_bo = NULL;
 
     if (pp_context->instruction_state.bo) {
-	dri_bo_unreference(pp_context->instruction_state.bo);
-	pp_context->instruction_state.bo = NULL;
+        dri_bo_unreference(pp_context->instruction_state.bo);
+        pp_context->instruction_state.bo = NULL;
     }
 
     if (pp_context->indirect_state.bo) {
-	dri_bo_unreference(pp_context->indirect_state.bo);
-	pp_context->indirect_state.bo = NULL;
+        dri_bo_unreference(pp_context->indirect_state.bo);
+        pp_context->indirect_state.bo = NULL;
     }
 
     if (pp_context->dynamic_state.bo) {
-	dri_bo_unreference(pp_context->dynamic_state.bo);
-	pp_context->dynamic_state.bo = NULL;
+        dri_bo_unreference(pp_context->dynamic_state.bo);
+        pp_context->dynamic_state.bo = NULL;
     }
 
     free(pp_context->pp_static_parameter);
@@ -1589,7 +1585,7 @@ gen8_post_processing_context_finalize(VADriverContextP ctx,
     pp_context->pp_inline_parameter = NULL;
 }
 
-#define VPP_CURBE_ALLOCATION_SIZE	32
+#define VPP_CURBE_ALLOCATION_SIZE   32
 
 void
 gen8_post_processing_context_common_init(VADriverContextP ctx,
@@ -1627,14 +1623,14 @@ gen8_post_processing_context_common_init(VADriverContextP ctx,
         pp_module = &pp_context->pp_modules[i];
 
         if (pp_module->kernel.bin && pp_module->kernel.size) {
-	    kernel_size += pp_module->kernel.size;
+            kernel_size += pp_module->kernel.size;
         }
     }
 
     pp_context->instruction_state.bo = dri_bo_alloc(i965->intel.bufmgr,
-                                  "kernel shader",
-                                  kernel_size,
-                                  0x1000);
+                                                    "kernel shader",
+                                                    kernel_size,
+                                                    0x1000);
     if (pp_context->instruction_state.bo == NULL) {
         WARN_ONCE("failure to allocate the buffer space for kernel shader in VPP\n");
         return;
@@ -1658,8 +1654,8 @@ gen8_post_processing_context_common_init(VADriverContextP ctx,
 
         if (pp_module->kernel.bin && pp_module->kernel.size) {
 
-	    memcpy(kernel_ptr + kernel_offset, pp_module->kernel.bin, pp_module->kernel.size);
-	    end_offset = kernel_offset + pp_module->kernel.size;
+            memcpy(kernel_ptr + kernel_offset, pp_module->kernel.bin, pp_module->kernel.size);
+            end_offset = kernel_offset + pp_module->kernel.size;
         }
     }
 
@@ -1794,9 +1790,9 @@ gen8_add_dri_buffer_2d_gpe_surface(VADriverContextP ctx,
 
 static void
 gen8_vpp_scaling_sample_state(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               VARectangle *src_rect,
-                               VARectangle *dst_rect)
+                              struct i965_gpe_context *gpe_context,
+                              VARectangle *src_rect,
+                              VARectangle *dst_rect)
 {
     struct gen8_sampler_state *sampler_state;
 
@@ -1810,7 +1806,7 @@ gen8_vpp_scaling_sample_state(VADriverContextP ctx,
     assert(gpe_context->sampler.bo->virtual);
 
     sampler_state = (struct gen8_sampler_state *)
-       (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
+                    (gpe_context->sampler.bo->virtual + gpe_context->sampler.offset);
 
     memset(sampler_state, 0, sizeof(*sampler_state));
 
@@ -1832,11 +1828,11 @@ gen8_vpp_scaling_sample_state(VADriverContextP ctx,
 
 static void
 gen8_gpe_context_yuv420p8_scaling_curbe(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               VARectangle *src_rect,
-                               struct i965_surface *src_surface,
-                               VARectangle *dst_rect,
-                               struct i965_surface *dst_surface)
+                                        struct i965_gpe_context *gpe_context,
+                                        VARectangle *src_rect,
+                                        struct i965_surface *src_surface,
+                                        VARectangle *dst_rect,
+                                        struct i965_surface *dst_surface)
 {
     struct scaling_input_parameter *scaling_curbe;
     float src_width, src_height;
@@ -1868,11 +1864,11 @@ gen8_gpe_context_yuv420p8_scaling_curbe(VADriverContextP ctx,
     scaling_curbe->inv_width = 1 / src_width;
     scaling_curbe->inv_height = 1 / src_height;
 
-    coeff = (float) (src_rect->width) / dst_rect->width;
+    coeff = (float)(src_rect->width) / dst_rect->width;
     scaling_curbe->x_factor = coeff / src_width;
     scaling_curbe->x_orig = (float)(src_rect->x) / src_width;
 
-    coeff = (float) (src_rect->height) / dst_rect->height;
+    coeff = (float)(src_rect->height) / dst_rect->height;
     scaling_curbe->y_factor = coeff / src_height;
     scaling_curbe->y_orig = (float)(src_rect->y) / src_height;
 
@@ -1967,11 +1963,11 @@ gen8_pp_context_get_surface_conf(VADriverContextP ctx,
 
 static void
 gen8_gpe_context_yuv420p8_scaling_surfaces(VADriverContextP ctx,
-                               struct i965_gpe_context *gpe_context,
-                               VARectangle *src_rect,
-                               struct i965_surface *src_surface,
-                               VARectangle *dst_rect,
-                               struct i965_surface *dst_surface)
+                                           struct i965_gpe_context *gpe_context,
+                                           VARectangle *src_rect,
+                                           struct i965_surface *src_surface,
+                                           VARectangle *dst_rect,
+                                           struct i965_surface *dst_surface)
 {
     unsigned int fourcc;
     int width[3], height[3], pitch[3], bo_offset[3];
@@ -2012,25 +2008,25 @@ gen8_gpe_context_yuv420p8_scaling_surfaces(VADriverContextP ctx,
                                            bti, 0);
         if (fourcc == VA_FOURCC_NV12) {
             gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 0,
-                                           I965_SURFACEFORMAT_R8G8_UNORM,
-                                           bti + 1, 0);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 0,
+                                               I965_SURFACEFORMAT_R8G8_UNORM,
+                                               bti + 1, 0);
         } else {
             gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 0,
-                                           I965_SURFACEFORMAT_R8_UNORM,
-                                           bti + 1, 0);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 0,
+                                               I965_SURFACEFORMAT_R8_UNORM,
+                                               bti + 1, 0);
 
             gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[2],
-                                           width[2], height[2],
-                                           pitch[2], 0,
-                                           I965_SURFACEFORMAT_R8_UNORM,
-                                           bti + 2, 0);
+                                               bo_offset[2],
+                                               width[2], height[2],
+                                               pitch[2], 0,
+                                               I965_SURFACEFORMAT_R8_UNORM,
+                                               bti + 2, 0);
         }
     }
 
@@ -2057,25 +2053,25 @@ gen8_gpe_context_yuv420p8_scaling_surfaces(VADriverContextP ctx,
                                            bti, 0);
         if (fourcc == VA_FOURCC_NV12) {
             gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1] * 2, height[1],
-                                           pitch[1], 1,
-                                           I965_SURFACEFORMAT_R16_UINT,
-                                           bti + 1, 0);
+                                               bo_offset[1],
+                                               width[1] * 2, height[1],
+                                               pitch[1], 1,
+                                               I965_SURFACEFORMAT_R16_UINT,
+                                               bti + 1, 0);
         } else {
             gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[1],
-                                           width[1], height[1],
-                                           pitch[1], 1,
-                                           I965_SURFACEFORMAT_R8_UINT,
-                                           bti + 1, 0);
+                                               bo_offset[1],
+                                               width[1], height[1],
+                                               pitch[1], 1,
+                                               I965_SURFACEFORMAT_R8_UINT,
+                                               bti + 1, 0);
 
             gen8_add_dri_buffer_2d_gpe_surface(ctx, gpe_context, bo,
-                                           bo_offset[2],
-                                           width[2], height[2],
-                                           pitch[2], 1,
-                                           I965_SURFACEFORMAT_R8_UINT,
-                                           bti + 2, 0);
+                                               bo_offset[2],
+                                               width[2], height[2],
+                                               pitch[2], 1,
+                                               I965_SURFACEFORMAT_R8_UINT,
+                                               bti + 2, 0);
         }
     }
 
@@ -2107,12 +2103,12 @@ gen8_yuv420p8_scaling_post_processing(
     gen8_vpp_scaling_sample_state(ctx, gpe_context, src_rect, dst_rect);
     gen8_gpe_reset_binding_table(ctx, gpe_context);
     gen8_gpe_context_yuv420p8_scaling_curbe(ctx, gpe_context,
-                                        src_rect, src_surface,
-                                        dst_rect, dst_surface);
+                                            src_rect, src_surface,
+                                            dst_rect, dst_surface);
 
     gen8_gpe_context_yuv420p8_scaling_surfaces(ctx, gpe_context,
-                                        src_rect, src_surface,
-                                        dst_rect, dst_surface);
+                                               src_rect, src_surface,
+                                               dst_rect, dst_surface);
 
     gen8_gpe_setup_interface_data(ctx, gpe_context);
 
