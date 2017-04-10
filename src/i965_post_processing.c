@@ -5852,6 +5852,9 @@ i965_proc_picture_fast(VADriverContextP ctx,
     if (!src_obj_surface->fourcc)
         return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
 
+    if (!src_obj_surface->bo)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
     if (pipeline_param->surface_region) {
         src_rect.x = pipeline_param->surface_region->x;
         src_rect.y = pipeline_param->surface_region->y;
@@ -5959,14 +5962,38 @@ i965_proc_picture(VADriverContextP ctx,
     unsigned int tiling = 0, swizzle = 0;
     int in_width, in_height;
 
-    status = i965_proc_picture_fast(ctx, proc_context, proc_state);
-    if (status != VA_STATUS_ERROR_UNIMPLEMENTED)
-        return status;
-
     if (pipeline_param->surface == VA_INVALID_ID ||
         proc_state->current_render_target == VA_INVALID_ID) {
         status = VA_STATUS_ERROR_INVALID_SURFACE;
         goto error;
+    }
+
+    obj_surface = SURFACE(proc_state->current_render_target);
+    if (!obj_surface)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    if (!obj_surface->bo) {
+        unsigned int expected_format = obj_surface->expected_format;
+        int fourcc = 0;
+        int subsample = 0;
+        int tiling = HAS_TILED_SURFACE(i965);
+        switch (expected_format) {
+        case VA_RT_FORMAT_YUV420:
+            fourcc = VA_FOURCC_NV12;
+            subsample = SUBSAMPLE_YUV420;
+            break;
+        case VA_RT_FORMAT_YUV420_10BPP:
+            fourcc = VA_FOURCC_P010;
+            subsample = SUBSAMPLE_YUV420;
+            break;
+        case VA_RT_FORMAT_RGB32:
+            fourcc = VA_FOURCC_RGBA;
+            subsample = SUBSAMPLE_RGBX;
+            break;
+        default:
+            return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+        }
+        i965_check_alloc_surface_bo(ctx, obj_surface, tiling, fourcc, subsample);
     }
 
     obj_surface = SURFACE(pipeline_param->surface);
@@ -5985,6 +6012,10 @@ i965_proc_picture(VADriverContextP ctx,
         status = VA_STATUS_ERROR_INVALID_PARAMETER;
         goto error;
     }
+
+    status = i965_proc_picture_fast(ctx, proc_context, proc_state);
+    if (status != VA_STATUS_ERROR_UNIMPLEMENTED)
+        return status;
 
     in_width = obj_surface->orig_width;
     in_height = obj_surface->orig_height;
