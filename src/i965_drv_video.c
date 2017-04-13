@@ -1155,7 +1155,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                      profile == VAProfileH264High) ||
                     profile == VAProfileH264StereoHigh ||
                     profile == VAProfileH264MultiviewHigh ||
-		    profile == VAProfileHEVCMain ||
+                    profile == VAProfileHEVCMain ||
                     profile == VAProfileHEVCMain10) {
                     attrib_list[i].value = VA_ENC_SLICE_STRUCTURE_ARBITRARY_MACROBLOCKS;
                 }
