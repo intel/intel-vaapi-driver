@@ -1076,6 +1076,7 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
 
         *param->pbrc_init_reset_buf_size_in_bits  = cmd->dw6.buf_size;
         *param->pbrc_init_reset_input_bits_per_frame  = dInputBitsPerFrame;
+        *param->pbrc_init_current_target_buf_full_in_bits = cmd->dw6.buf_size >> 1;
 
         cmd->dw18.pframe_deviation_threshold0 = (uint32_t)(-50 * pow(0.90, dbps_ratio));
         cmd->dw18.pframe_deviation_threshold1  = (uint32_t)(-50 * pow(0.66, dbps_ratio));
@@ -1365,8 +1366,8 @@ gen9_vp9_brc_intra_dist_kernel(VADriverContextP ctx,
     gen8_gpe_setup_interface_data(ctx, gpe_context);
 
     memset(&kernel_walker_param, 0, sizeof(kernel_walker_param));
-    kernel_walker_param.resolution_x = vme_context->downscaled_width_in_mb4x;
-    kernel_walker_param.resolution_y = vme_context->downscaled_height_in_mb4x;
+    kernel_walker_param.resolution_x = vp9_state->downscaled_width_4x_in_mb;
+    kernel_walker_param.resolution_y = vp9_state->downscaled_height_4x_in_mb;
     kernel_walker_param.no_dependency = 1;
 
     gen9_init_media_object_walker_parameter(encoder_context, &kernel_walker_param, &media_object_walker_param);
