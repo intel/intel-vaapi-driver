@@ -32,12 +32,9 @@
 
 #define LIBVA_X11_NAME "libva-x11.so.1"
 
-typedef struct dri_drawable *(*dri_get_drawable_func)(
-    VADriverContextP ctx, XID drawable);
-typedef union dri_buffer *(*dri_get_rendering_buffer_func)(
-        VADriverContextP ctx, struct dri_drawable *d);
-typedef void (*dri_swap_buffer_func)(
-    VADriverContextP ctx, struct dri_drawable *d);
+typedef struct dri_drawable *(*dri_get_drawable_func)(VADriverContextP ctx, XID drawable);
+typedef union dri_buffer *(*dri_get_rendering_buffer_func)(VADriverContextP ctx, struct dri_drawable *d);
+typedef void (*dri_swap_buffer_func)(VADriverContextP ctx, struct dri_drawable *d);
 
 struct dri_vtable {
     dri_get_drawable_func               get_drawable;
