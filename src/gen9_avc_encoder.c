@@ -3155,6 +3155,11 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
             }
 
         }
+    } else {
+        /* Never get here, just silence a gcc warning */
+        assert(0);
+
+        return;
     }
 
     me_method = (generic_state->frame_type == SLICE_TYPE_B) ? gen9_avc_b_me_method[preset] : gen9_avc_p_me_method[preset];
