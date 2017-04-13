@@ -1045,7 +1045,9 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                         if (IS_GEN9(i965->intel.device_info))
                             attrib_list[i].value = ENCODER_QUALITY_RANGE_AVC;
                     }
-                }
+                } else if (profile == VAProfileHEVCMain ||
+                           profile == VAProfileHEVCMain10)
+                    attrib_list[i].value = ENCODER_QUALITY_RANGE_HEVC;
                 break;
             }
             break;
