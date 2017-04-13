@@ -113,6 +113,8 @@ source_c = \
 	i965_avc_encoder_common.c \
 	gen9_avc_encoder.c \
 	gen9_hevc_enc_kernels_binary.c   \
+	gen9_hevc_encoder.c     \
+	gen9_hevc_enc_utils.c   \
 	$(NULL)
 
 source_h = \
@@ -175,6 +177,10 @@ source_h = \
 	gen9_avc_encoder_kernels.h      \
 	gen9_avc_encoder.h              \
 	i965_avc_encoder_common.h       \
+	gen9_hevc_enc_const_def.h    \
+	gen9_hevc_enc_kernels.h     \
+	gen9_hevc_enc_utils.h    \
+	gen9_hevc_encoder.h    \
 	$(NULL)
 
 # convenience library that can be linked by driver and tests

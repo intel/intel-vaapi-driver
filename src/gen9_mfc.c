@@ -64,7 +64,7 @@ Bool gen9_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
             return gen9_avc_pak_context_init(ctx, encoder_context);
 
     case CODEC_HEVC:
-        return gen9_hcpe_context_init(ctx, encoder_context);
+        return gen9_hevc_pak_context_init(ctx, encoder_context);
 
     case CODEC_VP9:
         return gen9_vp9_pak_context_init(ctx, encoder_context);
