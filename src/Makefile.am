@@ -112,6 +112,7 @@ source_c = \
 	gen9_avc_encoder_kernels.c     \
 	i965_avc_encoder_common.c \
 	gen9_avc_encoder.c \
+	gen9_hevc_enc_kernels_binary.c   \
 	$(NULL)
 
 source_h = \
