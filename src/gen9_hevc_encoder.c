@@ -2329,10 +2329,10 @@ gen9_hevc_add_pic_state(VADriverContextP ctx,
     seq_param = (VAEncSequenceParameterBufferHEVC *)encode_state->seq_param_ext->buffer;
 
     cmd_ptr = tmp_data;
-    cmd_size = IS_KBL(i965->intel.device_info) ? 31 : 19;
+    cmd_size = (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) ? 31 : 19;
     memset((void *)tmp_data, 0, 4 * cmd_size);
 
-    if (IS_KBL(i965->intel.device_info))
+    if (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info))
         *cmd_ptr++ = HCP_PIC_STATE | (31 - 2);
     else
         *cmd_ptr++ = HCP_PIC_STATE | (19 - 2);
@@ -2347,10 +2347,10 @@ gen9_hevc_add_pic_state(VADriverContextP ctx,
                   seq_param->log2_diff_max_min_luma_coding_block_size) << 2 |
                  seq_param->log2_min_luma_coding_block_size_minus3;
     *cmd_ptr++ = 0;
-    *cmd_ptr++ = (IS_KBL(i965->intel.device_info) ? 1 : 0) << 27 |
+    *cmd_ptr++ = ((IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) ? 1 : 0) << 27 |
                  seq_param->seq_fields.bits.strong_intra_smoothing_enabled_flag << 26 |
                  pic_param->pic_fields.bits.transquant_bypass_enabled_flag << 25 |
-                 (IS_KBL(i965->intel.device_info) ? 0 : priv_state->ctu_max_bitsize_allowed > 0) << 24 |
+                 ((IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) ? 0 : priv_state->ctu_max_bitsize_allowed > 0) << 24 |
                  seq_param->seq_fields.bits.amp_enabled_flag << 23 |
                  pic_param->pic_fields.bits.transform_skip_enabled_flag << 22 |
                  0 << 21 |
@@ -2371,8 +2371,8 @@ gen9_hevc_add_pic_state(VADriverContextP ctx,
                  0;
     *cmd_ptr++ = seq_param->seq_fields.bits.bit_depth_luma_minus8 << 27 |
                  seq_param->seq_fields.bits.bit_depth_chroma_minus8 << 24 |
-                 (IS_KBL(i965->intel.device_info) ? 0 : 7) << 20 |
-                 (IS_KBL(i965->intel.device_info) ? 0 : 7) << 16 |
+                 ((IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) ? 0 : 7) << 20 |
+                 ((IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) ? 0 : 7) << 16 |
                  seq_param->max_transform_hierarchy_depth_inter << 13 |
                  seq_param->max_transform_hierarchy_depth_intra << 10 |
                  (pic_param->pps_cr_qp_offset & 0x1f) << 5 |
@@ -2404,7 +2404,7 @@ gen9_hevc_add_pic_state(VADriverContextP ctx,
     *cmd_ptr++ = 0 << 30 |
                  0;
 
-    if (IS_KBL(i965->intel.device_info)) {
+    if (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) {
         int i = 0;
 
         for (i = 0; i < 12; i++)
@@ -3708,7 +3708,7 @@ gen9_hevc_8x8_b_pak_set_curbe(VADriverContextP ctx,
     cmd->dw2.roi_enable = (priv_state->num_roi > 0);
     cmd->dw2.fast_surveillance_flag = priv_state->picture_coding_type == HEVC_SLICE_I ?
                                       0 : priv_state->video_surveillance_flag;
-    cmd->dw2.kbl_control_flag = IS_KBL(i965->intel.device_info);
+    cmd->dw2.kbl_control_flag = (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info));
     cmd->dw2.enable_rolling_intra = priv_state->rolling_intra_refresh;
     cmd->dw3.widi_intra_refresh_qp_delta = priv_state->widi_intra_refresh_qp_delta;
     cmd->dw3.widi_intra_refresh_mb_num = priv_state->widi_intra_insertion_location;
@@ -4717,7 +4717,7 @@ gen9_hevc_8x8_pu_fmode_set_curbe(VADriverContextP ctx,
     cmd->dw7.qp = slice_qp;
     cmd->dw7.qp_for_inter = 0;
     cmd->dw8.simplified_flag_for_inter = 0;
-    cmd->dw8.kbl_control_flag = IS_KBL(i965->intel.device_info);
+    cmd->dw8.kbl_control_flag = (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info));
     cmd->dw9.widi_intra_refresh_qp_delta = priv_state->widi_intra_refresh_qp_delta;
     cmd->dw9.widi_intra_refresh_mb_num = priv_state->widi_intra_insertion_location;
     cmd->dw9.widi_intra_refresh_unit_in_mb = priv_state->widi_intra_insertion_size;
@@ -6204,7 +6204,7 @@ gen9_hevc_pak_add_pipe_buf_addr_state(VADriverContextP ctx,
     pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     priv_ctx = (struct gen9_hevc_encoder_context *)pak_context->private_enc_ctx;
 
-    if (IS_KBL(i965->intel.device_info)) {
+    if (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) {
         BEGIN_BCS_BATCH(batch, 104);
 
         OUT_BCS_BATCH(batch, HCP_PIPE_BUF_ADDR_STATE | (104 - 2));
@@ -6260,7 +6260,7 @@ gen9_hevc_pak_add_pipe_buf_addr_state(VADriverContextP ctx,
     OUT_BUFFER_MA_TARGET(NULL);
     OUT_BUFFER_MA_TARGET(NULL);
 
-    if (IS_KBL(i965->intel.device_info)) {
+    if (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) {
         for (i = 0; i < 9; i++)
             OUT_BCS_BATCH(batch, 0);
     }
@@ -6550,7 +6550,7 @@ gen9_hevc_pak_add_slice_state(VADriverContextP ctx,
         slice_param->slice_fields.bits.collocated_from_l0_flag)
         collocated_ref_idx = pic_param->collocated_ref_pic_index;
 
-    if (IS_KBL(i965->intel.device_info)) {
+    if (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) {
         BEGIN_BCS_BATCH(batch, 11);
 
         OUT_BCS_BATCH(batch, HCP_SLICE_STATE | (11 - 2));
@@ -6607,7 +6607,7 @@ gen9_hevc_pak_add_slice_state(VADriverContextP ctx,
                   0);
     OUT_BCS_BATCH(batch, 0);
 
-    if (IS_KBL(i965->intel.device_info)) {
+    if (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) {
         OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
     }
@@ -7312,7 +7312,7 @@ gen9_hevc_vme_context_init(VADriverContextP ctx,
     priv_state->brc_method = HEVC_BRC_CQP;
     priv_state->lcu_brc_enabled = 0;
     priv_state->parallel_brc = 0;
-    priv_state->pak_obj_size = (IS_KBL(i965->intel.device_info) ?
+    priv_state->pak_obj_size = ((IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info)) ?
                                 GEN95_HEVC_ENC_PAK_OBJ_SIZE :
                                 GEN9_HEVC_ENC_PAK_OBJ_SIZE) *
                                4;
