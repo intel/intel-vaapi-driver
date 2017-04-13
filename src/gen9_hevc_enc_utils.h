@@ -19,37 +19,25 @@
  * IN NO EVENT SHALL PRECISION INSIGHT AND/OR ITS SUPPLIERS BE LIABLE FOR
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * SOFTWAR OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * Authors:
- *     Pengfei Qu <Pengfei.Qu@intel.com>
+ *    Chen, Peng <chen.c.peng@intel.com>
  *
  */
 
-#ifndef _I965_ENCODER_API_H_
-#define _I965_ENCODER_API_H_
+#ifndef GEN9_HEVC_ENCODER_UTILS_H
+#define GEN9_HEVC_ENCODER_UTILS_H
+
+#include <drm.h>
+#include <i915_drm.h>
+#include <intel_bufmgr.h>
 
 #include <va/va.h>
 
-struct intel_encoder_context;
-struct hw_context;
+extern unsigned int
+gen9_hevc_get_profile_level_max_frame(VAEncSequenceParameterBufferHEVC *seq_param,
+                                      unsigned int user_max_frame_size,
+                                      unsigned int frame_rate);
 
-/* H264/AVC */
-extern Bool
-gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
-
-extern Bool
-gen9_avc_pak_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
-
-extern VAStatus
-gen9_avc_coded_status(VADriverContextP ctx, char *buffer, struct hw_context *hw_context);
-
-
-/* H265/HEVC */
-extern Bool
-gen9_hevc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
-
-extern Bool
-gen9_hevc_pak_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
-
-#endif  // _I965_ENCODER_API_H_
+#endif
