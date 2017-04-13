@@ -813,9 +813,11 @@ intel_encoder_check_temporal_layer_structure(VADriverContextP ctx,
 
 static VAStatus
 intel_encoder_check_misc_parameter(VADriverContextP ctx,
+                                   VAProfile profile,
                                    struct encode_state *encode_state,
                                    struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus ret = VA_STATUS_SUCCESS;
 
     if (encode_state->misc_param[VAEncMiscParameterTypeQualityLevel][0] &&
@@ -824,9 +826,28 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
         VAEncMiscParameterBufferQualityLevel* param_quality_level = (VAEncMiscParameterBufferQualityLevel*)pMiscParam->data;
         encoder_context->quality_level = param_quality_level->quality_level;
 
-        if (encoder_context->quality_level == 0)
-            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
-        else if (encoder_context->quality_level > encoder_context->quality_range) {
+        if (encoder_context->quality_level == 0) {
+            switch (profile) {
+            case VAProfileH264ConstrainedBaseline:
+            case VAProfileH264Main:
+            case VAProfileH264High:
+            case VAProfileH264MultiviewHigh:
+            case VAProfileH264StereoHigh:
+                if (IS_SKL(i965->intel.device_info) ||
+                    IS_BXT(i965->intel.device_info))
+                    encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
+                break;
+
+            case VAProfileHEVCMain:
+            case VAProfileHEVCMain10:
+                encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_HEVC;
+                break;
+
+            default:
+                encoder_context->quality_level = ENCODER_DEFAULT_QUALITY;
+                break;
+            }
+        } else if (encoder_context->quality_level > encoder_context->quality_range) {
             ret = VA_STATUS_ERROR_INVALID_PARAMETER;
             goto out;
         }
@@ -1311,7 +1332,7 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
     }
 
     if (vaStatus == VA_STATUS_SUCCESS)
-        vaStatus = intel_encoder_check_misc_parameter(ctx, encode_state, encoder_context);
+        vaStatus = intel_encoder_check_misc_parameter(ctx, profile, encode_state, encoder_context);
 
 out:
     return vaStatus;
@@ -1456,6 +1477,9 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     case VAProfileHEVCMain:
     case VAProfileHEVCMain10:
         encoder_context->codec = CODEC_HEVC;
+
+        encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_HEVC;
+        encoder_context->quality_range = ENCODER_QUALITY_RANGE_HEVC;
         break;
 
     case VAProfileVP9Profile0:
