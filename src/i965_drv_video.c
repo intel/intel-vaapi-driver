@@ -976,7 +976,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 if (profile == VAProfileVP9Profile0 ||
                     profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
-                    profile == VAProfileH264High)
+                    profile == VAProfileH264High ||
+                    profile == VAProfileHEVCMain)
                     attrib_list[i].value |= VA_RC_VBR;
 
                 break;
