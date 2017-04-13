@@ -1666,9 +1666,6 @@ struct gen9_encoder_context_vp9 {
     unsigned int hme_supported;
     unsigned int b32xme_supported;
 
-    unsigned int downscaled_width_in_mb4x;
-    unsigned int downscaled_height_in_mb4x;
-
     void (*pfn_set_sample_state_dys)(
         VADriverContextP ctx,
         struct encode_state *encode_state,
