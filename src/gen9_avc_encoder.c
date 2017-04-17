@@ -741,6 +741,52 @@ failed_allocation:
     return VA_STATUS_ERROR_ALLOCATION_FAILED;
 }
 
+static void
+gen9_avc_generate_slice_map(VADriverContextP ctx,
+                            struct encode_state *encode_state,
+                            struct intel_encoder_context *encoder_context)
+{
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context *)vme_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state *)vme_context->private_enc_state;
+
+    struct i965_gpe_resource *gpe_resource = NULL;
+    VAEncSliceParameterBufferH264 * slice_param = NULL;
+    unsigned int * data = NULL;
+    unsigned int * data_row = NULL;
+    int i, j, count = 0;
+    unsigned int pitch = ALIGN((generic_state->frame_width_in_mbs + 1) * 4, 64) / 4;
+
+    if (!avc_state->arbitrary_num_mbs_in_slice)
+        return;
+
+    gpe_resource = &(avc_ctx->res_mbenc_slice_map_surface);
+    assert(gpe_resource);
+
+    i965_zero_gpe_resource(gpe_resource);
+
+    data_row = (unsigned int *)i965_map_gpe_resource(gpe_resource);
+    assert(data_row);
+
+    data = data_row;
+    for (i = 0; i < avc_state->slice_num; i++) {
+        slice_param = avc_state->slice_param[i];
+        for (j = 0; j < slice_param->num_macroblocks; j++) {
+            *data++ = i;
+            if ((count > 0) && (count % generic_state->frame_width_in_mbs == 0)) {
+                data_row += pitch;
+                data = data_row;
+                *data++ = i;
+            }
+            count++;
+        }
+    }
+    *data++ = 0xFFFFFFFF;
+
+    i965_unmap_gpe_resource(gpe_resource);
+}
+
 static VAStatus
 gen9_avc_allocate_resources(VADriverContextP ctx,
                             struct encode_state *encode_state,
@@ -774,7 +820,7 @@ gen9_avc_allocate_resources(VADriverContextP ctx,
     if(avc_state->mb_status_supported)
     {
         i965_free_gpe_resource(&avc_ctx->res_mb_status_buffer);
-        size = (generic_state->frame_width_in_mbs * generic_state->frame_height_in_mbs * 16 * 4 + 1023)&~0x3ff;
+        size = (generic_state->frame_width_in_mbs * generic_state->frame_height_in_mbs * 16 * 4 + 1023) & ~0x3ff;
         allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
                                  &avc_ctx->res_mb_status_buffer,
                                  ALIGN(size,0x1000),
@@ -996,10 +1042,9 @@ gen9_avc_allocate_resources(VADriverContextP ctx,
     }
 
     /*     mbenc related surface. it share most of surface with other kernels     */
-    if(avc_state->arbitrary_num_mbs_in_slice)
-    {
-        width = (generic_state->frame_width_in_mbs + 1) * 64;
-        height= generic_state->frame_height_in_mbs ;
+    if (avc_state->arbitrary_num_mbs_in_slice) {
+        width = ALIGN((generic_state->frame_width_in_mbs + 1) * 4, 64);
+        height = generic_state->frame_height_in_mbs ;
         i965_free_gpe_resource(&avc_ctx->res_mbenc_slice_map_surface);
         allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                      &avc_ctx->res_mbenc_slice_map_surface,
@@ -1008,6 +1053,7 @@ gen9_avc_allocate_resources(VADriverContextP ctx,
                                      "slice map buffer");
         if (!allocate_flag)
             goto failed_allocation;
+        i965_zero_gpe_resource(&avc_ctx->res_mbenc_slice_map_surface);
 
         /*generate slice map,default one slice per frame.*/
     }
@@ -4053,6 +4099,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
                                        GEN9_AVC_MBENC_SLICEMAP_DATA_INDEX);
+        gen9_avc_generate_slice_map(ctx, encode_state, encoder_context);
     }
 
     /* BRC distortion data buffer for I frame */
@@ -5354,8 +5401,8 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state * )vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state * )vme_context->private_enc_state;
     VAEncSequenceParameterBufferH264 *seq_param;
-    VAEncSliceParameterBufferH264 * slice_param;
-    int i,j;
+    VAEncSliceParameterBufferH264 *slice_param;
+    int i, j, slice_index;
     unsigned int preset = generic_state->preset;
 
     /* seq/pic/slice parameter setting */
@@ -5365,26 +5412,14 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     avc_state->seq_param =  (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     avc_state->pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
 
-
-    avc_state->enable_avc_ildb = 0;
     avc_state->slice_num = 0;
-    for (j = 0; j < encode_state->num_slice_params_ext && avc_state->enable_avc_ildb == 0; j++) {
-        assert(encode_state->slice_params_ext && encode_state->slice_params_ext[j]->buffer);
+    slice_index = 0;
+    for (j = 0; j < encode_state->num_slice_params_ext; j++) {
         slice_param = (VAEncSliceParameterBufferH264 *)encode_state->slice_params_ext[j]->buffer;
-
         for (i = 0; i < encode_state->slice_params_ext[j]->num_elements; i++) {
-            assert((slice_param->slice_type == SLICE_TYPE_I) ||
-                   (slice_param->slice_type == SLICE_TYPE_SI) ||
-                   (slice_param->slice_type == SLICE_TYPE_P) ||
-                   (slice_param->slice_type == SLICE_TYPE_SP) ||
-                   (slice_param->slice_type == SLICE_TYPE_B));
-
-            if (slice_param->disable_deblocking_filter_idc != 1) {
-                avc_state->enable_avc_ildb = 1;
-            }
-
-            avc_state->slice_param[i] = slice_param;
+            avc_state->slice_param[slice_index] = slice_param;
             slice_param++;
+            slice_index++;
             avc_state->slice_num++;
         }
     }
@@ -5688,11 +5723,13 @@ gen9_avc_encode_check_parameter(VADriverContextP ctx,
     }
     /*slice check,all the slices use the same slice height except the last slice*/
     avc_state->arbitrary_num_mbs_in_slice = 0;
-    for(i = 0; i < avc_state->slice_num;i++)
-    {
-        assert(avc_state->slice_param[i]->num_macroblocks % generic_state->frame_width_in_mbs == 0);
-        avc_state->slice_height = avc_state->slice_param[i]->num_macroblocks / generic_state->frame_width_in_mbs;
-        /*add it later for muli slices map*/
+    for (i = 0; i < avc_state->slice_num; i++) {
+        if (avc_state->slice_param[i]->num_macroblocks % generic_state->frame_width_in_mbs > 0) {
+            avc_state->arbitrary_num_mbs_in_slice = 1;
+            avc_state->slice_height = 1; /* slice height will be ignored by kernel ans here set it as default value */
+        } else {
+            avc_state->slice_height = avc_state->slice_param[i]->num_macroblocks / generic_state->frame_width_in_mbs;
+        }
     }
 
     if(generic_state->frame_type == SLICE_TYPE_I)
@@ -7235,12 +7272,14 @@ gen9_avc_pak_slice_level(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_gpe_table *gpe = &i965->gpe_table;
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct avc_enc_state * avc_state = (struct avc_enc_state *)pak_context->private_enc_state;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gpe_mi_flush_dw_parameter mi_flush_dw_params;
     VAEncSliceParameterBufferH264 *slice_param, *next_slice_param, *next_slice_group_param;
     int i, j;
     int slice_index = 0;
-    int is_frame_level = 1;       /* check it for SKL,now single slice per frame */
+    int is_frame_level = (avc_state->slice_num > 1) ? 0 : 1;   /* check it for SKL,now single slice per frame */
     int has_tail = 0;             /* check it later */
 
     for (j = 0; j < encode_state->num_slice_params_ext; j++) {
@@ -7268,10 +7307,6 @@ gen9_avc_pak_slice_level(VADriverContextP ctx,
 
             if (is_frame_level)
                 break;
-            else {
-                /* remove assert(0) and add other commands here */
-                assert(0);
-            }
         }
 
         if (is_frame_level)
