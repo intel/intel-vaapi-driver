@@ -1905,32 +1905,24 @@ gen8_mfd_jpeg_decode_init(VADriverContextP ctx,
         int v2 = pic_param->components[1].v_sampling_factor;
         int v3 = pic_param->components[2].v_sampling_factor;
 
-        if (h1 == 2 && h2 == 1 && h3 == 1 &&
-            v1 == 2 && v2 == 1 && v3 == 1) {
+        if (h1 == 2 * h2 && h2 == h3 &&
+            v1 == 2 * v2 && v2 == v3) {
             subsampling = SUBSAMPLE_YUV420;
             fourcc = VA_FOURCC_IMC3;
-        } else if (h1 == 2 && h2 == 1 && h3 == 1 &&
-                   v1 == 1 && v2 == 1 && v3 == 1) {
+        } else if (h1 == 2 * h2  && h2 == h3 &&
+                   v1 == v2 && v2 == v3) {
             subsampling = SUBSAMPLE_YUV422H;
             fourcc = VA_FOURCC_422H;
-        } else if (h1 == 1 && h2 == 1 && h3 == 1 &&
-                   v1 == 1 && v2 == 1 && v3 == 1) {
+        } else if (h1 == h2 && h2 == h3 &&
+                   v1 == v2  && v2 == v3) {
             subsampling = SUBSAMPLE_YUV444;
             fourcc = VA_FOURCC_444P;
-        } else if (h1 == 4 && h2 == 1 && h3 == 1 &&
-                   v1 == 1 && v2 == 1 && v3 == 1) {
+        } else if (h1 == 4 * h2 && h2 ==  h3 &&
+                   v1 == v2 && v2 == v3) {
             subsampling = SUBSAMPLE_YUV411;
             fourcc = VA_FOURCC_411P;
-        } else if (h1 == 1 && h2 == 1 && h3 == 1 &&
-                   v1 == 2 && v2 == 1 && v3 == 1) {
-            subsampling = SUBSAMPLE_YUV422V;
-            fourcc = VA_FOURCC_422V;
-        } else if (h1 == 2 && h2 == 1 && h3 == 1 &&
-                   v1 == 2 && v2 == 2 && v3 == 2) {
-            subsampling = SUBSAMPLE_YUV422H;
-            fourcc = VA_FOURCC_422H;
-        } else if (h1 == 2 && h2 == 2 && h3 == 2 &&
-                   v1 == 2 && v2 == 1 && v3 == 1) {
+        } else if (h1 == h2 && h2 == h3 &&
+                   v1 == 2 * v2 && v2 == v3) {
             subsampling = SUBSAMPLE_YUV422V;
             fourcc = VA_FOURCC_422V;
         } else
@@ -1998,17 +1990,17 @@ gen8_mfd_jpeg_pic_state(VADriverContextP ctx,
         int v2 = pic_param->components[1].v_sampling_factor;
         int v3 = pic_param->components[2].v_sampling_factor;
 
-        if (h1 == 2 && h2 == 1 && h3 == 1 &&
-            v1 == 2 && v2 == 1 && v3 == 1)
+        if (h1 == 2 * h2 && h2 == h3 &&
+            v1 == 2 * v2 && v2 == v3)
             chroma_type = GEN7_YUV420;
         else if (h1 == 2 && h2 == 1 && h3 == 1 &&
                  v1 == 1 && v2 == 1 && v3 == 1)
             chroma_type = GEN7_YUV422H_2Y;
-        else if (h1 == 1 && h2 == 1 && h3 == 1 &&
-                 v1 == 1 && v2 == 1 && v3 == 1)
+        else if (h1 == h2 && h2 == h3 &&
+                 v1 == v2 && v2 == v3)
             chroma_type = GEN7_YUV444;
-        else if (h1 == 4 && h2 == 1 && h3 == 1 &&
-                 v1 == 1 && v2 == 1 && v3 == 1)
+        else if (h1 == 4 * h2 && h2 == h3 &&
+                 v1 == v2 && v2 == v3)
             chroma_type = GEN7_YUV411;
         else if (h1 == 1 && h2 == 1 && h3 == 1 &&
                  v1 == 2 && v2 == 1 && v3 == 1)
