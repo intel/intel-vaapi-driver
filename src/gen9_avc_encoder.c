@@ -7416,6 +7416,8 @@ gen9_avc_pak_pipeline(VADriverContextP ctx,
     case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
+    case VAProfileH264MultiviewHigh:
+    case VAProfileH264StereoHigh:
         vaStatus = gen9_avc_encode_picture(ctx, profile, encode_state, encoder_context);
         break;
 
