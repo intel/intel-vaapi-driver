@@ -1134,7 +1134,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     attrib_list[i].value = I965_MAX_NUM_SLICE;
                 } else if (profile == VAProfileHEVCMain ||
                            profile == VAProfileHEVCMain10) {
-                    attrib_list[i].value = 1;
+                    attrib_list[i].value = I965_MAX_NUM_SLICE;
                 }
             } else if (entrypoint == VAEntrypointEncSliceLP) {
                 if ((profile == VAProfileH264ConstrainedBaseline ||
@@ -1154,7 +1154,9 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                      profile == VAProfileH264Main ||
                      profile == VAProfileH264High) ||
                     profile == VAProfileH264StereoHigh ||
-                    profile == VAProfileH264MultiviewHigh) {
+                    profile == VAProfileH264MultiviewHigh ||
+                    profile == VAProfileHEVCMain ||
+                    profile == VAProfileHEVCMain10) {
                     attrib_list[i].value = VA_ENC_SLICE_STRUCTURE_ARBITRARY_MACROBLOCKS;
                 }
             }
@@ -1287,9 +1289,8 @@ i965_CreateConfig(VADriverContextP ctx,
                 profile == VAProfileH264MultiviewHigh) {
                 attrib.value = I965_MAX_NUM_SLICE;
             } else if (profile == VAProfileHEVCMain ||
-                       profile == VAProfileHEVCMain10) {
-                attrib.value = 1;
-            }
+                       profile == VAProfileHEVCMain10)
+                attrib.value = I965_MAX_NUM_SLICE;
         } else if (entrypoint == VAEntrypointEncSliceLP) {
             if ((profile == VAProfileH264ConstrainedBaseline ||
                  profile == VAProfileH264Main ||
@@ -1317,7 +1318,7 @@ i965_CreateConfig(VADriverContextP ctx,
             }
         }
 
-        if(attrib.value != VA_ATTRIB_NOT_SUPPORTED)
+        if (attrib.value != VA_ATTRIB_NOT_SUPPORTED)
             vaStatus = i965_append_config_attribute(obj_config, &attrib);
     }
 
