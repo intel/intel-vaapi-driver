@@ -1441,6 +1441,11 @@ i965_suface_external_memory(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     unsigned int tiling, swizzle;
 
+    if (!memory_attibute ||
+        !memory_attibute->buffers ||
+        index >= memory_attibute->num_buffers)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
     obj_surface->size = memory_attibute->data_size;
     if (external_memory_type == I965_SURFACE_MEM_GEM_FLINK)
         obj_surface->bo = drm_intel_bo_gem_create_from_name(i965->intel.bufmgr,
@@ -1455,10 +1460,6 @@ i965_suface_external_memory(VADriverContextP ctx,
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
-    if (!memory_attibute ||
-        !memory_attibute->buffers ||
-        index > memory_attibute->num_buffers)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     ASSERT_RET(obj_surface->orig_width == memory_attibute->width, VA_STATUS_ERROR_INVALID_PARAMETER);
     ASSERT_RET(obj_surface->orig_height == memory_attibute->height, VA_STATUS_ERROR_INVALID_PARAMETER);
