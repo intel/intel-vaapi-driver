@@ -1480,6 +1480,8 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
         encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_HEVC;
         encoder_context->quality_range = ENCODER_QUALITY_RANGE_HEVC;
+
+        encoder_context->max_slice_or_seg_num = I965_MAX_NUM_SLICE;
         break;
 
     case VAProfileVP9Profile0:
