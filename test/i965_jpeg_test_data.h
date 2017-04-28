@@ -439,17 +439,19 @@ namespace Encode {
             ::std::ostream&, const TestInputCreator::Shared&);
         friend ::std::ostream& operator<<(
             ::std::ostream&, const TestInputCreator::SharedConst&);
+        virtual std::array<unsigned, 2> getResolution() const = 0;
 
     protected:
-        virtual std::array<unsigned, 2> getResolution() const = 0;
         virtual void repr(::std::ostream& os) const = 0;
     };
 
     class RandomSizeCreator
         : public TestInputCreator
     {
-    protected:
+    public:
         std::array<unsigned, 2> getResolution() const;
+
+    protected:
         void repr(::std::ostream&) const;
     };
 
@@ -458,9 +460,9 @@ namespace Encode {
     {
     public:
         FixedSizeCreator(const std::array<unsigned, 2>&);
+        std::array<unsigned, 2> getResolution() const;
 
     protected:
-        std::array<unsigned, 2> getResolution() const;
         void repr(::std::ostream& os) const;
 
     private:
