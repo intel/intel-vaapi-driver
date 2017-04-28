@@ -105,6 +105,7 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
         bnum = encoder_context->brc.num_bframes_in_gop; /* Gop structure: number of I, P, B frames in the Gop. */
     int intra_period = encoder_context->brc.gop_size;
     int i;
+    int tmp_min_qp = 0;
 
     if (encoder_context->layer.num_layers > 1)
         qp1_size = 0.15 * frame_per_bits;
@@ -176,6 +177,10 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
             mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I] = encoder_context->brc.initial_qp;
             mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = encoder_context->brc.initial_qp;
             mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B] = encoder_context->brc.initial_qp;
+
+            BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I], min_qp, 51);
+            BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P], min_qp, 51);
+            BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B], min_qp, 51);
         } else {
             if ((bpf > qp51_size) && (bpf < qp1_size)) {
                 mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P] = 51 - 50 * (bpf - qp51_size) / (qp1_size - qp51_size);
@@ -186,11 +191,14 @@ static void intel_mfc_brc_init(struct encode_state *encode_state,
 
             mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P];
             mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B] = mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I];
-        }
 
-        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I], min_qp, 51);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P], min_qp, 51);
-        BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B], min_qp, 51);
+            tmp_min_qp = (min_qp < 36) ? min_qp : 36;
+            BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_I], tmp_min_qp, 36);
+            tmp_min_qp = (min_qp < 40) ? min_qp : 40;
+            BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_P], tmp_min_qp, 40);
+            tmp_min_qp = (min_qp < 45) ? min_qp : 45;
+            BRC_CLIP(mfc_context->brc.qp_prime_y[i][SLICE_TYPE_B], tmp_min_qp, 45);
+        }
     }
 }
 
