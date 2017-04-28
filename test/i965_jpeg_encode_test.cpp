@@ -74,6 +74,7 @@ class JPEGEncodeInputTest
 public:
     JPEGEncodeInputTest()
         : JPEGEncodeTest::JPEGEncodeTest()
+        , is_supported(true)
         , surfaces() // empty
         , coded(VA_INVALID_ID) // invalid
         , renderBuffers() // empty
@@ -88,14 +89,24 @@ protected:
 
         struct i965_driver_data *i965(*this);
         ASSERT_PTR(i965);
-        if (not HAS_JPEG_ENCODING(i965))
+
+        if (not HAS_JPEG_ENCODING(i965)) {
+            is_supported = false;
             return;
+        }
 
         TestInputCreator::SharedConst creator;
         std::string sFourcc;
         std::tie(creator, sFourcc) = GetParam();
 
         ASSERT_PTR(creator.get()) << "Invalid test input creator parameter";
+
+        const std::array<unsigned, 2> res = creator->getResolution();
+        bool is_big_size = (res.at(0) > 4096) or (res.at(1) > 4096);
+        if (IS_CHERRYVIEW(i965->intel.device_info) and is_big_size) {
+            is_supported = false;
+            return;
+        }
 
         ASSERT_EQ(4u, sFourcc.size())
             << "Invalid fourcc parameter '" << sFourcc << "'";
@@ -277,6 +288,7 @@ protected:
             createBuffer(context, VAEncPackedHeaderDataBufferType, 1));
     }
 
+    bool                is_supported;
     Surfaces            surfaces;
     VABufferID          coded;
     Buffers             renderBuffers;
@@ -394,9 +406,7 @@ protected:
 
 TEST_P(JPEGEncodeInputTest, Full)
 {
-    struct i965_driver_data *i965(*this);
-    ASSERT_PTR(i965);
-    if (not HAS_JPEG_ENCODING(i965)) {
+    if (not is_supported) {
         RecordProperty("skipped", true);
         std::cout << "[  SKIPPED ] " << getFullTestName()
             << " is unsupported on this hardware" << std::endl;
