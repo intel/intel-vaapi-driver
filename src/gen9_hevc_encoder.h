@@ -317,6 +317,11 @@ struct gen9_hevc_brc_context {
     struct i965_gpe_context gpe_contexts[GEN9_HEVC_ENC_BRC_NUM];
 };
 
+struct gen9_hevc_slice_map {
+    unsigned char slice_id;
+    unsigned char reserved[3];
+};
+
 // PAK paramerters
 #define GEN9_HEVC_ENC_BRC_PIC_STATE_SIZE      (128)
 #define GEN9_HEVC_ENC_BRC_PAK_STATISTCS_SIZE  (32)

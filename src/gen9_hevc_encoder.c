@@ -5783,12 +5783,44 @@ gen9_hevc_vme_gpe_init(VADriverContextP ctx,
 {
     struct encoder_vme_mfc_context *vme_context = NULL;
     struct gen9_hevc_encoder_context *priv_ctx = NULL;
+    struct gen9_hevc_encoder_state *priv_state = NULL;
+    VAEncSliceParameterBufferHEVC *slice_param = NULL;
+    int i = 0, j = 0;
 
     vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
+    priv_state = (struct gen9_hevc_encoder_state *)vme_context->private_enc_state;
 
     i965_zero_gpe_resource(&priv_ctx->res_mb_code_surface);
+
     i965_zero_gpe_resource(&priv_ctx->res_slice_map_buffer);
+    if (encode_state->num_slice_params_ext > 1) {
+        struct gen9_hevc_slice_map *pslice_map = NULL;
+        int width = priv_state->width_in_lcu;
+        int pitch = ALIGN(priv_state->frame_width_in_max_lcu >> 3, 64);
+        void *ptr_start = NULL;
+        int lcu_count = 0;
+
+        ptr_start = (void *)i965_map_gpe_resource(&priv_ctx->res_slice_map_buffer);
+
+        pslice_map = (struct gen9_hevc_slice_map *)ptr_start;
+        for (i = 0; i < encode_state->num_slice_params_ext; i++) {
+            slice_param = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[i]->buffer;
+
+            for (j = 0; j < slice_param->num_ctu_in_slice; j++) {
+                pslice_map[lcu_count++].slice_id = i;
+
+                if (lcu_count >= width) {
+                    lcu_count = 0;
+                    ptr_start += pitch;
+
+                    pslice_map = (struct gen9_hevc_slice_map *)ptr_start;
+                }
+            }
+        }
+
+        i965_unmap_gpe_resource(&priv_ctx->res_slice_map_buffer);
+    }
 
     return VA_STATUS_SUCCESS;
 }
