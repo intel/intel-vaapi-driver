@@ -1686,6 +1686,11 @@ gen9_hevc_brc_prepare(struct encode_state *encode_state,
         else
             priv_state->num_regions_in_slice = 4;
 
+        if (internal_tu_mode == HEVC_TU_BEST_SPEED)
+            priv_state->walking_pattern_26 = 1;
+        else
+            priv_state->walking_pattern_26 = 0;
+
         if (brc_method == HEVC_BRC_CQP) {
             generic_state->brc_enabled = 0;
             generic_state->num_pak_passes = 1;
@@ -3710,6 +3715,7 @@ gen9_hevc_8x8_b_pak_set_curbe(VADriverContextP ctx,
                                       0 : priv_state->video_surveillance_flag;
     cmd->dw2.kbl_control_flag = (IS_KBL(i965->intel.device_info) || IS_GLK(i965->intel.device_info));
     cmd->dw2.enable_rolling_intra = priv_state->rolling_intra_refresh;
+    cmd->dw2.simplest_intra_enable = (priv_state->tu_mode == HEVC_TU_BEST_SPEED);
     cmd->dw3.widi_intra_refresh_qp_delta = priv_state->widi_intra_refresh_qp_delta;
     cmd->dw3.widi_intra_refresh_mb_num = priv_state->widi_intra_insertion_location;
     cmd->dw3.widi_intra_refresh_unit_in_mb = priv_state->widi_intra_insertion_size;
@@ -4560,7 +4566,7 @@ gen9_hevc_8x8_b_mbenc_set_surfaces(VADriverContextP ctx,
             bti_idx++;
     }
 
-    if (priv_state->picture_coding_type == HEVC_SLICE_B) {
+    if (priv_state->picture_coding_type != HEVC_SLICE_P) {
         gen9_hevc_set_gpe_adv_surface(ctx, priv_ctx, gpe_context,
                                       HEVC_ENC_SURFACE_RAW_VME, bti_idx++,
                                       NULL);
@@ -4613,7 +4619,7 @@ gen9_hevc_8x8_b_mbenc(VADriverContextP ctx,
     struct gen9_hevc_walking_pattern_parameter param;
     struct i965_gpe_context *gpe_context = NULL;
     int media_state = HEVC_ENC_MEDIA_STATE_HEVC_B_MBENC;
-    int gpe_idx = 0;
+    int gpe_idx = HEVC_MBENC_BENC_IDX;
 
     vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
@@ -4621,8 +4627,8 @@ gen9_hevc_8x8_b_mbenc(VADriverContextP ctx,
 
     if (priv_state->picture_coding_type == HEVC_SLICE_P)
         gpe_idx = priv_state->rolling_intra_refresh ? HEVC_MBENC_P_WIDI_IDX : HEVC_MBENC_PENC_IDX;
-    else
-        gpe_idx = priv_state->rolling_intra_refresh ? HEVC_MBENC_BENC_IDX : HEVC_MBENC_MBENC_WIDI_IDX;
+    else if (priv_state->picture_coding_type != HEVC_SLICE_I)
+        gpe_idx = priv_state->rolling_intra_refresh ? HEVC_MBENC_MBENC_WIDI_IDX : HEVC_MBENC_BENC_IDX;
 
     gpe_context = &priv_ctx->mbenc_context.gpe_contexts[gpe_idx];
 
@@ -5752,24 +5758,29 @@ gen9_hevc_mbenc(VADriverContextP ctx,
 {
     struct encoder_vme_mfc_context *vme_context = NULL;
     struct gen9_hevc_encoder_state *priv_state = NULL;
+    int fast_encoding = 0;
 
     vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     priv_state = (struct gen9_hevc_encoder_state *)vme_context->private_enc_state;
+    fast_encoding = (priv_state->tu_mode == HEVC_TU_BEST_SPEED);
 
-    if (!priv_state->bit_depth_luma_minus8)
-        gen9_hevc_2x_scaling(ctx, encode_state, encoder_context);
+    if (!fast_encoding) {
+        if (!priv_state->bit_depth_luma_minus8)
+            gen9_hevc_2x_scaling(ctx, encode_state, encoder_context);
 
-    if (priv_state->picture_coding_type == HEVC_SLICE_I)
-        gen9_hevc_32x32_pu_mode(ctx, encode_state, encoder_context);
-    else
-        gen9_hevc_32x32_b_intra(ctx, encode_state, encoder_context);
+        if (priv_state->picture_coding_type == HEVC_SLICE_I)
+            gen9_hevc_32x32_pu_mode(ctx, encode_state, encoder_context);
+        else
+            gen9_hevc_32x32_b_intra(ctx, encode_state, encoder_context);
 
-    gen9_hevc_16x16_sad_pu_computation(ctx, encode_state, encoder_context);
-    gen9_hevc_16x16_pu_mode(ctx, encode_state, encoder_context);
-    gen9_hevc_8x8_pu_mode(ctx, encode_state, encoder_context);
-    gen9_hevc_8x8_pu_fmode(ctx, encode_state, encoder_context);
+        gen9_hevc_16x16_sad_pu_computation(ctx, encode_state, encoder_context);
+        gen9_hevc_16x16_pu_mode(ctx, encode_state, encoder_context);
+        gen9_hevc_8x8_pu_mode(ctx, encode_state, encoder_context);
+        gen9_hevc_8x8_pu_fmode(ctx, encode_state, encoder_context);
+    }
 
-    if (priv_state->picture_coding_type != HEVC_SLICE_I) {
+    if (priv_state->picture_coding_type != HEVC_SLICE_I ||
+        fast_encoding) {
         gen9_hevc_8x8_b_mbenc(ctx, encode_state, encoder_context);
         gen9_hevc_8x8_b_pak(ctx, encode_state, encoder_context);
     }
