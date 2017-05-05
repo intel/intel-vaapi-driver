@@ -7755,6 +7755,7 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
         IS_BXT(i965->intel.device_info)) {
         avc_state->brc_const_data_surface_width = 64;
         avc_state->brc_const_data_surface_height = 44;
+        avc_state->brc_split_enable = 1;
     } else if (IS_KBL(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
         avc_state->brc_const_data_surface_width = 64;
