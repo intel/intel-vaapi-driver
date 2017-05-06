@@ -2714,11 +2714,11 @@ i965_create_buffer_internal(VADriverContextP ctx,
         assert(buffer_store->buffer);
 
         if (!wrapper_flag) {
+            memset(buffer_store->buffer, 0, msize * num_elements);
             if (data)
                 memcpy(buffer_store->buffer, data, size * num_elements);
-            else
-                memset(buffer_store->buffer, 0, size * num_elements);
-        }
+        } else
+            memset(buffer_store->buffer, 0, 4);
     }
 
     buffer_store->num_elements = obj_buffer->num_elements;
