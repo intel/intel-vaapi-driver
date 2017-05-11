@@ -490,6 +490,7 @@ int intel_mfc_brc_postpack(struct encode_state *encode_state,
         return intel_mfc_brc_postpack_vbr(encode_state, encoder_context, frame_bits);
     }
     assert(0 && "Invalid RC mode");
+    return 1;
 }
 
 static void intel_mfc_hrd_context_init(struct encode_state *encode_state,
