@@ -860,7 +860,7 @@ gen9_vdenc_update_misc_parameters(VADriverContextP ctx,
         vdenc_context->init_vbv_buffer_fullness_in_bit = encoder_context->brc.hrd_initial_buffer_fullness;
 
         vdenc_context->max_bit_rate = ALIGN(encoder_context->brc.bits_per_second[0], 1000) / 1000;
-        vdenc_context->mb_brc_enabled = encoder_context->brc.mb_rate_control[0];
+        vdenc_context->mb_brc_enabled = encoder_context->brc.mb_rate_control[0] == 1;
         vdenc_context->brc_need_reset = (vdenc_context->brc_initted && encoder_context->brc.need_reset);
 
         if (vdenc_context->internal_rate_mode == I965_BRC_CBR) {
