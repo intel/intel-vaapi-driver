@@ -424,7 +424,7 @@ gen9_avc_update_misc_parameters(VADriverContextP ctx,
 
     if (generic_state->internal_rate_mode == VA_RC_CBR) {
         generic_state->min_bit_rate = generic_state->max_bit_rate;
-        generic_state->mb_brc_enabled = encoder_context->brc.mb_rate_control[0];
+        generic_state->mb_brc_enabled = encoder_context->brc.mb_rate_control[0] == 1;
 
         if (generic_state->target_bit_rate != generic_state->max_bit_rate) {
             generic_state->target_bit_rate = generic_state->max_bit_rate;
@@ -432,7 +432,7 @@ gen9_avc_update_misc_parameters(VADriverContextP ctx,
         }
     } else if (generic_state->internal_rate_mode == VA_RC_VBR) {
         generic_state->min_bit_rate = generic_state->max_bit_rate * (2 * encoder_context->brc.target_percentage[0] - 100) / 100;
-        generic_state->mb_brc_enabled = encoder_context->brc.mb_rate_control[0];
+        generic_state->mb_brc_enabled = encoder_context->brc.mb_rate_control[0] == 1;
 
         if (generic_state->target_bit_rate != generic_state->max_bit_rate * encoder_context->brc.target_percentage[0] / 100) {
             generic_state->target_bit_rate = generic_state->max_bit_rate * encoder_context->brc.target_percentage[0] / 100;
