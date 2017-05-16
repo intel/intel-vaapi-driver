@@ -1704,6 +1704,52 @@ intel_avc_vme_reference_state(VADriverContextP ctx,
     }
 }
 
+#define AVC_NAL_DELIMITER           9
+void
+intel_avc_insert_aud_packed_data(VADriverContextP ctx,
+                                 struct encode_state *encode_state,
+                                 struct intel_encoder_context *encoder_context,
+                                 struct intel_batchbuffer *batch)
+{
+    VAEncPackedHeaderParameterBuffer *param = NULL;
+    unsigned int length_in_bits;
+    unsigned int *header_data = NULL;
+    unsigned char *nal_type = NULL;
+    int count, i, start_index;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+
+    count = encode_state->slice_rawdata_count[0];
+    start_index = (encode_state->slice_rawdata_index[0] & SLICE_PACKED_DATA_INDEX_MASK);
+
+    for (i = 0; i < count; i++) {
+        unsigned int skip_emul_byte_cnt;
+
+        header_data = (unsigned int *)encode_state->packed_header_data_ext[start_index + i]->buffer;
+        nal_type = (unsigned char *)header_data;
+
+        param = (VAEncPackedHeaderParameterBuffer *)(encode_state->packed_header_params_ext[start_index + i]->buffer);
+
+        length_in_bits = param->bit_length;
+
+        skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+
+        if ((*(nal_type + skip_emul_byte_cnt - 1) & 0x1f) == AVC_NAL_DELIMITER) {
+            mfc_context->insert_object(ctx,
+                                       encoder_context,
+                                       header_data,
+                                       ALIGN(length_in_bits, 32) >> 5,
+                                       length_in_bits & 0x1f,
+                                       skip_emul_byte_cnt,
+                                       0,
+                                       0,
+                                       !param->has_emulation_bytes,
+                                       batch);
+            break;
+        }
+    }
+}
+
+
 void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
                                         struct encode_state *encode_state,
                                         struct intel_encoder_context *encoder_context,
@@ -1716,6 +1762,7 @@ void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
     unsigned int *header_data = NULL;
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int slice_header_index;
+    unsigned char *nal_type = NULL;
 
     if (encode_state->slice_header_index[slice_index] == 0)
         slice_header_index = -1;
@@ -1729,17 +1776,18 @@ void intel_avc_slice_insert_packed_data(VADriverContextP ctx,
         unsigned int skip_emul_byte_cnt;
 
         header_data = (unsigned int *)encode_state->packed_header_data_ext[start_index + i]->buffer;
+        nal_type = (unsigned char *)header_data;
 
         param = (VAEncPackedHeaderParameterBuffer *)
                 (encode_state->packed_header_params_ext[start_index + i]->buffer);
 
-        /* skip the slice header packed data type as it is lastly inserted */
-        if (param->type == VAEncPackedHeaderSlice)
-            continue;
-
         length_in_bits = param->bit_length;
 
         skip_emul_byte_cnt = intel_avc_find_skipemulcnt((unsigned char *)header_data, length_in_bits);
+
+        /* skip the slice header/AUD packed data type as it is lastly inserted */
+        if (param->type == VAEncPackedHeaderSlice || (*(nal_type + skip_emul_byte_cnt - 1) & 0x1f) == AVC_NAL_DELIMITER)
+            continue;
 
         /* as the slice header is still required, the last header flag is set to
          * zero.

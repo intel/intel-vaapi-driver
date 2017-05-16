@@ -1194,12 +1194,14 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
                               encode_state, encoder_context,
                               (rate_control_mode != VA_RC_CQP), qp_slice, slice_batch);
 
-    if (slice_index == 0)
+    if (slice_index == 0) {
+        intel_avc_insert_aud_packed_data(ctx, encode_state, encoder_context, slice_batch);
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
+    }
 
     intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
-    dri_bo_map(vme_context->vme_output.bo , 1);
+    dri_bo_map(vme_context->vme_output.bo, 1);
     msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
 
     if (is_intra) {
@@ -1442,7 +1444,7 @@ gen75_mfc_avc_batchbuffer_slice_command(VADriverContextP ctx,
     int mb_x, mb_y;
     int last_mb, slice_end_x, slice_end_y;
     int remaining_mb = total_mbs;
-    uint32_t fwd_ref , bwd_ref, mb_flag;
+    uint32_t fwd_ref, bwd_ref, mb_flag;
 
     last_mb = slice_param->macroblock_address + total_mbs - 1;
     slice_end_x = last_mb % width_in_mbs;
@@ -1544,8 +1546,10 @@ gen75_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                               qp_slice,
                               slice_batch);
 
-    if (slice_index == 0)
+    if (slice_index == 0) {
+        intel_avc_insert_aud_packed_data(ctx, encode_state, encoder_context, slice_batch);
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
+    }
 
     intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
@@ -2143,7 +2147,7 @@ gen75_mfc_mpeg2_pipeline_slice_group(VADriverContextP ctx,
     v_start_pos = slice_param->macroblock_address / width_in_mbs;
     assert(h_start_pos + slice_param->num_macroblocks <= width_in_mbs);
 
-    dri_bo_map(vme_context->vme_output.bo , 0);
+    dri_bo_map(vme_context->vme_output.bo, 0);
     msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
 
     if (next_slice_group_param) {
@@ -2527,7 +2531,6 @@ static VAStatus gen75_mfc_pipeline(VADriverContextP ctx,
         vaStatus = gen75_mfc_avc_encode_picture(ctx, encode_state, encoder_context);
         break;
 
-        /* FIXME: add for other profile */
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
         vaStatus = gen75_mfc_mpeg2_encode_picture(ctx, encode_state, encoder_context);
