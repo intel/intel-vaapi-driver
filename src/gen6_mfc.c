@@ -823,7 +823,7 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
 
     intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
-    dri_bo_map(vme_context->vme_output.bo , 1);
+    dri_bo_map(vme_context->vme_output.bo, 1);
     msg = (unsigned int *)vme_context->vme_output.bo->virtual;
 
     if (is_intra) {
@@ -1213,8 +1213,10 @@ gen6_mfc_avc_batchbuffer_slice(VADriverContextP ctx,
                              qp_slice,
                              slice_batch);
 
-    if (slice_index == 0)
+    if (slice_index == 0) {
+        intel_avc_insert_aud_packed_data(ctx, encode_state, encoder_context, slice_batch);
         intel_mfc_avc_pipeline_header_programing(ctx, encode_state, encoder_context, slice_batch);
+    }
 
     intel_avc_slice_insert_packed_data(ctx, encode_state, encoder_context, slice_index, slice_batch);
 
@@ -1404,7 +1406,6 @@ gen6_mfc_pipeline(VADriverContextP ctx,
         vaStatus = gen6_mfc_avc_encode_picture(ctx, encode_state, encoder_context);
         break;
 
-        /* FIXME: add for other profile */
     default:
         vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         break;
