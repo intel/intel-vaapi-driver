@@ -480,6 +480,7 @@ struct hw_codec_info {
     unsigned int has_vp9_encoding: 1;
 
     unsigned int lp_h264_brc_mode;
+    unsigned int h264_brc_mode;
 
     unsigned int num_filters;
     struct i965_filter filters[VAProcFilterCount];
