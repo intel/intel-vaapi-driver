@@ -6974,14 +6974,14 @@ gen9_mfc_avc_single_slice(VADriverContextP ctx,
     } else {
         slice_offset = avc_state->slice_batch_offset[slice_index];
     }
-    /* insert slice as second levle.*/
+    /* insert slice as second level.*/
     memset(&second_level_batch, 0, sizeof(second_level_batch));
     second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
     second_level_batch.offset = slice_offset;
     second_level_batch.bo = slice_batch->buffer;
     gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
-    /* insert mb code as second levle.*/
+    /* insert mb code as second level.*/
     obj_surface = encode_state->reconstructed_object;
     assert(obj_surface->private_data);
     avc_priv_surface = (struct gen9_surface_avc *)obj_surface->private_data;
