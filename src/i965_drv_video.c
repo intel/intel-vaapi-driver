@@ -975,11 +975,13 @@ i965_GetConfigAttributes(VADriverContextP ctx,
 
                 if (profile == VAProfileVP8Version0_3 ||
                     profile == VAProfileVP9Profile0 ||
-                    profile == VAProfileH264ConstrainedBaseline ||
-                    profile == VAProfileH264Main ||
-                    profile == VAProfileH264High ||
                     profile == VAProfileHEVCMain)
                     attrib_list[i].value |= VA_RC_VBR;
+
+                if (profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High)
+                    attrib_list[i].value = i965->codec_info->h264_brc_mode;
 
                 break;
             } else if (entrypoint == VAEntrypointEncSliceLP) {
