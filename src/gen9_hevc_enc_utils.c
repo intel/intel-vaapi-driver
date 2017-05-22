@@ -30,7 +30,7 @@
 #include "gen9_hevc_enc_utils.h"
 
 static int
-hevc_get_max_mbps(level_idc)
+hevc_get_max_mbps(unsigned int level_idc)
 {
     int max_bps = 0;
 
