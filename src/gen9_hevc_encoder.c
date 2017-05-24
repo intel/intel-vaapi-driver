@@ -878,16 +878,28 @@ gen9_hevc_init_gpe_surfaces_table(VADriverContextP ctx,
 {
     struct encoder_vme_mfc_context *vme_context = NULL;
     struct gen9_hevc_encoder_context *priv_ctx = NULL;
+    struct gen9_hevc_surface_priv *surface_priv = NULL;
 
     vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
 
-    gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y, NULL,
-                              encode_state->input_yuv_object);
-    gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y_UV, NULL,
-                              encode_state->input_yuv_object);
-    gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_VME, NULL,
-                              encode_state->input_yuv_object);
+    if (encode_state->reconstructed_object->fourcc == VA_FOURCC_P010) {
+        surface_priv = (struct gen9_hevc_surface_priv *)encode_state->reconstructed_object->private_data;
+
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y, NULL,
+                                  surface_priv->surface_obj_nv12);
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y_UV, NULL,
+                                  surface_priv->surface_obj_nv12);
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_VME, NULL,
+                                  surface_priv->surface_obj_nv12);
+    } else {
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y, NULL,
+                                  encode_state->input_yuv_object);
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y_UV, NULL,
+                                  encode_state->input_yuv_object);
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_VME, NULL,
+                                  encode_state->input_yuv_object);
+    }
 
     if (priv_ctx->scaled_2x_surface_obj) {
         gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_Y_2X, NULL,
