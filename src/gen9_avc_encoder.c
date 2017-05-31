@@ -4926,7 +4926,7 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
         curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
     } else if (IS_KBL(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
-        curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+        curbe_size = sizeof(gen95_avc_mbenc_curbe_data);
     }
 
     assert(curbe_size > 0);
