@@ -4926,7 +4926,7 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
         curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
     } else if (IS_KBL(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
-        curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+        curbe_size = sizeof(gen95_avc_mbenc_curbe_data);
     }
 
     assert(curbe_size > 0);
@@ -4978,7 +4978,7 @@ gen9_avc_kernel_init_brc(VADriverContextP ctx,
         (sizeof(gen9_avc_brc_init_reset_curbe_data)),
         (sizeof(gen9_avc_frame_brc_update_curbe_data)),
         (sizeof(gen9_avc_brc_init_reset_curbe_data)),
-        (sizeof(gen9_avc_mbenc_curbe_data)),
+        ((IS_SKL(i965->intel.device_info) || IS_BXT(i965->intel.device_info)) ? sizeof(gen9_avc_mbenc_curbe_data) : sizeof(gen95_avc_mbenc_curbe_data)),
         0,
         (sizeof(gen9_avc_mb_brc_curbe_data))
     };
