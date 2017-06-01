@@ -4974,7 +4974,7 @@ gen9_avc_kernel_init_brc(VADriverContextP ctx,
     struct i965_kernel common_kernel;
     int i = 0;
 
-    static const int brc_curbe_size[NUM_GEN9_AVC_KERNEL_BRC] = {
+    const int brc_curbe_size[NUM_GEN9_AVC_KERNEL_BRC] = {
         (sizeof(gen9_avc_brc_init_reset_curbe_data)),
         (sizeof(gen9_avc_frame_brc_update_curbe_data)),
         (sizeof(gen9_avc_brc_init_reset_curbe_data)),
