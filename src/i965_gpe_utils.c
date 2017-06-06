@@ -2677,6 +2677,11 @@ gen9_add_2d_gpe_surface(VADriverContextP ctx,
     gpe_surface.cacheability_control = i965->intel.mocs_state;
     gpe_surface.format = format;
 
+    if (gpe_surface.is_media_block_rw) {
+        if (obj_surface->fourcc == VA_FOURCC_P010)
+            gpe_surface.is_16bpp = 1;
+    }
+
     gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
     i965_free_gpe_resource(&gpe_resource);
 }
