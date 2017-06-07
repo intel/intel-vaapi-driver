@@ -3927,7 +3927,7 @@ gen9_hevc_set_control_region(VADriverContextP ctx,
     unsigned int offset_to_the_region_start[16];
     unsigned short temp_data[32][32];
     int is_arbitrary_slices = 0;
-    int slice_start_y[NUM_SLICES + 1];
+    int slice_start_y[I965_MAX_NUM_SLICE + 1];
     int max_height;
     int k = 0, i = 0;
 
@@ -3935,7 +3935,7 @@ gen9_hevc_set_control_region(VADriverContextP ctx,
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
     priv_state = (struct gen9_hevc_encoder_state *)vme_context->private_enc_state;
 
-    memset(slice_start_y, 0, sizeof(int) * (NUM_SLICES + 1));
+    memset(slice_start_y, 0, sizeof(int) * (I965_MAX_NUM_SLICE + 1));
     memset(region_start_table, 0, sizeof(region_start_table));
     memset(temp_data, 0, sizeof(temp_data));
     memset(offset_to_the_region_start, 0, sizeof(offset_to_the_region_start));
@@ -7041,7 +7041,7 @@ gen9_hevc_pak_pipeline_prepare(VADriverContextP ctx,
     if (!priv_ctx->res_pak_slice_batch_buffer)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
-    for (i = 0; i < NUM_SLICES; i++) {
+    for (i = 0; i < I965_MAX_NUM_SLICE; i++) {
         priv_state->slice_batch_offset[i] = 0;
         priv_state->slice_start_lcu[i] = 0;
     }
