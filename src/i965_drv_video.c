@@ -1280,6 +1280,27 @@ i965_CreateConfig(VADriverContextP ctx,
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
     }
 
+
+    if (vaStatus == VA_STATUS_SUCCESS) {
+        VAConfigAttrib attrib, *attrib_found;
+        attrib.type = VAConfigAttribRateControl;
+        attrib_found = i965_lookup_config_attribute(obj_config, attrib.type);
+        switch (profile) {
+        case VAProfileH264ConstrainedBaseline:
+        case VAProfileH264Main:
+        case VAProfileH264High:
+            if ((entrypoint == VAEntrypointEncSlice) &&
+                !(attrib_found->value & i965->codec_info->h264_brc_mode))
+                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
+            else if ((entrypoint == VAEntrypointEncSliceLP) &&
+                     !(attrib_found->value & i965->codec_info->lp_h264_brc_mode))
+                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
+            break;
+        default:
+            break;
+        }
+    }
+
     if (vaStatus == VA_STATUS_SUCCESS) {
         VAConfigAttrib attrib;
         attrib.type = VAConfigAttribEncMaxSlices;
