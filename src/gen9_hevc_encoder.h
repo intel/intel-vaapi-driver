@@ -433,8 +433,8 @@ struct gen9_hevc_encoder_state {
     int pak_obj_size;
     int cu_record_size;
     int pic_state_size;
-    int slice_batch_offset[NUM_SLICES];
-    int slice_start_lcu[NUM_SLICES];
+    int slice_batch_offset[I965_MAX_NUM_SLICE];
+    int slice_start_lcu[I965_MAX_NUM_SLICE];
 
     struct hevc_encode_status_buffer status_buffer;
     enum HEVC_TU_MODE tu_mode;
