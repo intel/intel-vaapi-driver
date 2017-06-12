@@ -30,7 +30,7 @@
 #include "i965_output_dri.h"
 #include "dso_utils.h"
 
-#define LIBVA_X11_NAME "libva-x11.so.1"
+#define LIBVA_X11_NAME "libva-x11.so.2"
 
 typedef struct dri_drawable *(*dri_get_drawable_func)(VADriverContextP ctx, XID drawable);
 typedef union dri_buffer *(*dri_get_rendering_buffer_func)(VADriverContextP ctx, struct dri_drawable *d);
