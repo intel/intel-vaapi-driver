@@ -376,6 +376,12 @@ extern
 Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context);
 
 extern void
+intel_avc_insert_aud_packed_data(VADriverContextP ctx,
+                                 struct encode_state *encode_state,
+                                 struct intel_encoder_context *encoder_context,
+                                 struct intel_batchbuffer *batch);
+
+extern void
 intel_avc_slice_insert_packed_data(VADriverContextP ctx,
                                    struct encode_state *encode_state,
                                    struct intel_encoder_context *encoder_context,

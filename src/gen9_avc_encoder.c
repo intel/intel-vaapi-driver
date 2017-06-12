@@ -4926,7 +4926,7 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
         curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
     } else if (IS_KBL(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
-        curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+        curbe_size = sizeof(gen95_avc_mbenc_curbe_data);
     }
 
     assert(curbe_size > 0);
@@ -4974,11 +4974,11 @@ gen9_avc_kernel_init_brc(VADriverContextP ctx,
     struct i965_kernel common_kernel;
     int i = 0;
 
-    static const int brc_curbe_size[NUM_GEN9_AVC_KERNEL_BRC] = {
+    const int brc_curbe_size[NUM_GEN9_AVC_KERNEL_BRC] = {
         (sizeof(gen9_avc_brc_init_reset_curbe_data)),
         (sizeof(gen9_avc_frame_brc_update_curbe_data)),
         (sizeof(gen9_avc_brc_init_reset_curbe_data)),
-        (sizeof(gen9_avc_mbenc_curbe_data)),
+        ((IS_SKL(i965->intel.device_info) || IS_BXT(i965->intel.device_info)) ? sizeof(gen9_avc_mbenc_curbe_data) : sizeof(gen95_avc_mbenc_curbe_data)),
         0,
         (sizeof(gen9_avc_mb_brc_curbe_data))
     };
@@ -6974,14 +6974,14 @@ gen9_mfc_avc_single_slice(VADriverContextP ctx,
     } else {
         slice_offset = avc_state->slice_batch_offset[slice_index];
     }
-    /* insert slice as second levle.*/
+    /* insert slice as second level.*/
     memset(&second_level_batch, 0, sizeof(second_level_batch));
     second_level_batch.is_second_level = 1; /* Must be the second level batch buffer */
     second_level_batch.offset = slice_offset;
     second_level_batch.bo = slice_batch->buffer;
     gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
 
-    /* insert mb code as second levle.*/
+    /* insert mb code as second level.*/
     obj_surface = encode_state->reconstructed_object;
     assert(obj_surface->private_data);
     avc_priv_surface = (struct gen9_surface_avc *)obj_surface->private_data;

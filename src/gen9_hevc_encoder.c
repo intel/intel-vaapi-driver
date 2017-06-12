@@ -878,16 +878,28 @@ gen9_hevc_init_gpe_surfaces_table(VADriverContextP ctx,
 {
     struct encoder_vme_mfc_context *vme_context = NULL;
     struct gen9_hevc_encoder_context *priv_ctx = NULL;
+    struct gen9_hevc_surface_priv *surface_priv = NULL;
 
     vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
 
-    gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y, NULL,
-                              encode_state->input_yuv_object);
-    gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y_UV, NULL,
-                              encode_state->input_yuv_object);
-    gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_VME, NULL,
-                              encode_state->input_yuv_object);
+    if (encode_state->reconstructed_object->fourcc == VA_FOURCC_P010) {
+        surface_priv = (struct gen9_hevc_surface_priv *)encode_state->reconstructed_object->private_data;
+
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y, NULL,
+                                  surface_priv->surface_obj_nv12);
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y_UV, NULL,
+                                  surface_priv->surface_obj_nv12);
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_VME, NULL,
+                                  surface_priv->surface_obj_nv12);
+    } else {
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y, NULL,
+                                  encode_state->input_yuv_object);
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_Y_UV, NULL,
+                                  encode_state->input_yuv_object);
+        gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_RAW_VME, NULL,
+                                  encode_state->input_yuv_object);
+    }
 
     if (priv_ctx->scaled_2x_surface_obj) {
         gen9_hevc_add_gpe_surface(priv_ctx, HEVC_ENC_SURFACE_Y_2X, NULL,
@@ -3915,7 +3927,7 @@ gen9_hevc_set_control_region(VADriverContextP ctx,
     unsigned int offset_to_the_region_start[16];
     unsigned short temp_data[32][32];
     int is_arbitrary_slices = 0;
-    int slice_start_y[NUM_SLICES + 1];
+    int slice_start_y[I965_MAX_NUM_SLICE + 1];
     int max_height;
     int k = 0, i = 0;
 
@@ -3923,7 +3935,7 @@ gen9_hevc_set_control_region(VADriverContextP ctx,
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
     priv_state = (struct gen9_hevc_encoder_state *)vme_context->private_enc_state;
 
-    memset(slice_start_y, 0, sizeof(int) * (NUM_SLICES + 1));
+    memset(slice_start_y, 0, sizeof(int) * (I965_MAX_NUM_SLICE + 1));
     memset(region_start_table, 0, sizeof(region_start_table));
     memset(temp_data, 0, sizeof(temp_data));
     memset(offset_to_the_region_start, 0, sizeof(offset_to_the_region_start));
@@ -7029,7 +7041,7 @@ gen9_hevc_pak_pipeline_prepare(VADriverContextP ctx,
     if (!priv_ctx->res_pak_slice_batch_buffer)
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
-    for (i = 0; i < NUM_SLICES; i++) {
+    for (i = 0; i < I965_MAX_NUM_SLICE; i++) {
         priv_state->slice_batch_offset[i] = 0;
         priv_state->slice_start_lcu[i] = 0;
     }

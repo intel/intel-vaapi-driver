@@ -147,15 +147,15 @@ i965_put_surface_dri(
     _i965LockMutex(&i965->render_mutex);
 
     dri_drawable = dri_vtable->get_drawable(ctx, (Drawable)draw);
-    assert(dri_drawable);
+    ASSERT_RET(dri_drawable, VA_STATUS_ERROR_ALLOCATION_FAILED);
 
     buffer = dri_vtable->get_rendering_buffer(ctx, dri_drawable);
-    assert(buffer);
+    ASSERT_RET(buffer, VA_STATUS_ERROR_ALLOCATION_FAILED);
 
     dest_region = render_state->draw_region;
     if (dest_region == NULL) {
         dest_region = (struct intel_region *)calloc(1, sizeof(*dest_region));
-        assert(dest_region);
+        ASSERT_RET(dest_region, VA_STATUS_ERROR_ALLOCATION_FAILED);
         render_state->draw_region = dest_region;
     }
 
@@ -172,10 +172,10 @@ i965_put_surface_dri(
         dest_region->pitch = buffer->dri2.pitch;
 
         dest_region->bo = intel_bo_gem_create_from_name(i965->intel.bufmgr, "rendering buffer", buffer->dri2.name);
-        assert(dest_region->bo);
+        ASSERT_RET(dest_region->bo, VA_STATUS_ERROR_UNKNOWN);
 
         ret = dri_bo_get_tiling(dest_region->bo, &(dest_region->tiling), &(dest_region->swizzle));
-        assert(ret == 0);
+        ASSERT_RET((ret == 0), VA_STATUS_ERROR_UNKNOWN);
     }
 
     dest_region->x = dri_drawable->x;

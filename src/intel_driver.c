@@ -106,10 +106,11 @@ intel_driver_init(VADriverContextP ctx)
     if (g_intel_debug_option_flags)
         fprintf(stderr, "g_intel_debug_option_flags:%x\n", g_intel_debug_option_flags);
 
-    assert(drm_state);
-    assert(VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI1) ||
-           VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2) ||
-           VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_CUSTOM));
+    ASSERT_RET(drm_state, false);
+    ASSERT_RET((VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI1) ||
+                VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2) ||
+                VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_CUSTOM)),
+               false);
 
     intel->fd = drm_state->fd;
     intel->dri2Enabled = (VA_CHECK_DRM_AUTH_TYPE(ctx, VA_DRM_AUTH_DRI2) ||

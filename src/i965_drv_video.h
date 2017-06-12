@@ -69,8 +69,8 @@
 #define DEFAULT_SATURATION      50
 
 #define ENCODER_QUALITY_RANGE     2
-#define ENCODER_QUALITY_RANGE_AVC     8
-#define ENCODER_QUALITY_RANGE_HEVC    8
+#define ENCODER_QUALITY_RANGE_AVC    7
+#define ENCODER_QUALITY_RANGE_HEVC   7
 #define ENCODER_DEFAULT_QUALITY   1
 #define ENCODER_DEFAULT_QUALITY_AVC   4
 #define ENCODER_DEFAULT_QUALITY_HEVC  4
@@ -259,7 +259,7 @@ struct encode_state {
     int *slice_rawdata_index;
     /* This is to store the number of packed data for one slice.
      * Both packed rawdata and slice_header data are tracked by this
-     * this variable. That is to say: When one packed slice_header is parsed,
+     * variable. That is to say: When one packed slice_header is parsed,
      * this variable will also be increased.
      */
     int *slice_rawdata_count;
