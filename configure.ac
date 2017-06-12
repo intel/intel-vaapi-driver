@@ -1,7 +1,7 @@
 # intel-vaapi-driver package version number
-m4_define([intel_vaapi_driver_major_version], [1])
-m4_define([intel_vaapi_driver_minor_version], [8])
-m4_define([intel_vaapi_driver_micro_version], [4])
+m4_define([intel_vaapi_driver_major_version], [2])
+m4_define([intel_vaapi_driver_minor_version], [0])
+m4_define([intel_vaapi_driver_micro_version], [0])
 m4_define([intel_vaapi_driver_pre_version],   [1])
 m4_define([intel_vaapi_driver_version],
           [intel_vaapi_driver_major_version.intel_vaapi_driver_minor_version.intel_vaapi_driver_micro_version])
@@ -10,8 +10,7 @@ m4_append([intel_vaapi_driver_version], intel_vaapi_driver_pre_version, [.pre])
 ])
 
 # libva minimum version requirement
-m4_define([va_api_version], [0.40.1])
-m4_define([libva_package_version], [1.7.3])
+m4_define([va_api_version], [1.0.0])
 
 # libdrm minimum version requirement
 m4_define([libdrm_version], [2.4.52])
