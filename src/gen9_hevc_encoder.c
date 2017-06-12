@@ -5826,6 +5826,9 @@ gen9_hevc_vme_gpe_init(VADriverContextP ctx,
 
         ptr_start = (void *)i965_map_gpe_resource(&priv_ctx->res_slice_map_buffer);
 
+        if (!ptr_start)
+            return VA_STATUS_ERROR_UNKNOWN;
+
         pslice_map = (struct gen9_hevc_slice_map *)ptr_start;
         for (i = 0; i < encode_state->num_slice_params_ext; i++) {
             slice_param = (VAEncSliceParameterBufferHEVC *)encode_state->slice_params_ext[i]->buffer;
