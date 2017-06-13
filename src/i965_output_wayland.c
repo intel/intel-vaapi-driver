@@ -445,6 +445,11 @@ i965_output_wayland_terminate(VADriverContextP ctx)
         wl_output->wl_drm = NULL;
     }
 
+    if (wl_output->wl_registry) {
+        wl_output->vtable.proxy_destroy((struct wl_proxy *)wl_output->wl_registry);
+        wl_output->wl_registry = NULL;
+    }
+
     if (wl_output->libegl_handle) {
         dso_close(wl_output->libegl_handle);
         wl_output->libegl_handle = NULL;
