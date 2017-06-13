@@ -16,6 +16,10 @@ m4_define([libva_package_version], [1.7.3])
 # libdrm minimum version requirement
 m4_define([libdrm_version], [2.4.52])
 
+# Wayland minimum version requirement
+# 1.11.0 for wl_proxy_create_wrapper
+m4_define([wayland_api_version], [1.11.0])
+
 AC_PREREQ([2.57])
 AC_INIT([intel_vaapi_driver],
         [intel_vaapi_driver_version],
@@ -197,7 +201,7 @@ if test "$enable_wayland" = "yes"; then
 
     if test "$USE_WAYLAND" = "yes"; then
 
-        PKG_CHECK_MODULES([WAYLAND_CLIENT], [wayland-client],
+        PKG_CHECK_MODULES([WAYLAND_CLIENT], [wayland-client >= wayland_api_version],
         [INCLUDES="$INCLUDES $WAYLAND_CLIENT_CFLAGS"], [:])
         WAYLAND_PREFIX=`$PKG_CONFIG --variable=prefix wayland-client`
         AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner],,
