@@ -883,7 +883,7 @@ gen9_vdenc_update_misc_parameters(VADriverContextP ctx,
         vdenc_context->roi[i].left = encoder_context->brc.roi[i].left >> 4;
         vdenc_context->roi[i].right = encoder_context->brc.roi[i].right >> 4;
         vdenc_context->roi[i].top = encoder_context->brc.roi[i].top >> 4;
-        vdenc_context->roi[i].bottom = encoder_context->brc.roi[i].top >> 4;
+        vdenc_context->roi[i].bottom = encoder_context->brc.roi[i].bottom >> 4;
         vdenc_context->roi[i].value = encoder_context->brc.roi[i].value;
     }
 }
