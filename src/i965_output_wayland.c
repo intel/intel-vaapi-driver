@@ -43,32 +43,43 @@
 
 typedef uint32_t (*wl_display_get_global_func)(struct wl_display *display,
                                                const char *interface, uint32_t version);
-typedef void (*wl_display_roundtrip_func)(struct wl_display *display);
-
+typedef struct wl_event_queue *(*wl_display_create_queue_func)(struct wl_display *display);
+typedef void (*wl_display_roundtrip_queue_func)(struct wl_display *display,
+                                                struct wl_event_queue *queue);
+typedef void (*wl_event_queue_destroy_func)(struct wl_event_queue *queue);
+typedef void *(*wl_proxy_create_wrapper_func)(struct wl_proxy *proxy);
+typedef void(*wl_proxy_wrapper_destroy_func)(void *proxy);
 typedef struct wl_proxy *(*wl_proxy_create_func)(struct wl_proxy *factory,
                                                  const struct wl_interface *interface);
 typedef void (*wl_proxy_destroy_func)(struct wl_proxy *proxy);
 typedef void (*wl_proxy_marshal_func)(struct wl_proxy *p, uint32_t opcode, ...);
 typedef int (*wl_proxy_add_listener_func)(struct wl_proxy *proxy,
                                           void (**implementation)(void), void *data);
+typedef void (*wl_proxy_set_queue_func)(struct wl_proxy *proxy, struct wl_event_queue *queue);
 
 struct wl_vtable {
-    const struct wl_interface  *buffer_interface;
-    const struct wl_interface  *drm_interface;
-    const struct wl_interface  *registry_interface;
-    wl_display_roundtrip_func   display_roundtrip;
-    wl_proxy_create_func        proxy_create;
-    wl_proxy_destroy_func       proxy_destroy;
-    wl_proxy_marshal_func       proxy_marshal;
-    wl_proxy_add_listener_func  proxy_add_listener;
+    const struct wl_interface        *buffer_interface;
+    const struct wl_interface        *drm_interface;
+    const struct wl_interface        *registry_interface;
+    wl_display_create_queue_func      display_create_queue;
+    wl_display_roundtrip_queue_func   display_roundtrip_queue;
+    wl_event_queue_destroy_func       event_queue_destroy;
+    wl_proxy_create_wrapper_func      proxy_create_wrapper;
+    wl_proxy_wrapper_destroy_func     proxy_wrapper_destroy;
+    wl_proxy_create_func              proxy_create;
+    wl_proxy_destroy_func             proxy_destroy;
+    wl_proxy_marshal_func             proxy_marshal;
+    wl_proxy_add_listener_func        proxy_add_listener;
+    wl_proxy_set_queue_func           proxy_set_queue;
 };
 
 struct va_wl_output {
-    struct dso_handle  *libegl_handle;
-    struct dso_handle  *libwl_client_handle;
-    struct wl_vtable    vtable;
-    struct wl_drm      *wl_drm;
-    struct wl_registry *wl_registry;
+    struct dso_handle     *libegl_handle;
+    struct dso_handle     *libwl_client_handle;
+    struct wl_vtable       vtable;
+    struct wl_event_queue *queue;
+    struct wl_drm         *wl_drm;
+    struct wl_registry    *wl_registry;
 };
 
 /* These function are copied and adapted from the version inside
@@ -160,14 +171,24 @@ ensure_wl_output(VADriverContextP ctx)
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct va_wl_output * const wl_output = i965->wl_output;
     struct wl_vtable * const wl_vtable = &wl_output->vtable;
+    struct wl_display *display_wrapper;
 
     if (wl_output->wl_drm)
         return true;
 
-    wl_output->wl_registry = display_get_registry(wl_vtable, ctx->native_dpy);
+    wl_output->queue = wl_vtable->display_create_queue(ctx->native_dpy);
+    if (!wl_output->queue)
+        return false;
+    display_wrapper = wl_vtable->proxy_create_wrapper(ctx->native_dpy);
+    if (!display_wrapper)
+        return false;
+    wl_vtable->proxy_set_queue((struct wl_proxy *) display_wrapper, wl_output->queue);
+
+    wl_output->wl_registry = display_get_registry(wl_vtable, display_wrapper);
+    wl_vtable->proxy_wrapper_destroy(display_wrapper);
     registry_add_listener(wl_vtable, wl_output->wl_registry,
                           &registry_listener, ctx);
-    wl_vtable->display_roundtrip(ctx->native_dpy);
+    wl_vtable->display_roundtrip_queue(ctx->native_dpy, wl_output->queue);
     if (!wl_output->wl_drm)
         return false;
     return true;
@@ -366,8 +387,24 @@ i965_output_wayland_init(VADriverContextP ctx)
             offsetof(struct wl_vtable, registry_interface)
         },
         {
-            "wl_display_roundtrip",
-            offsetof(struct wl_vtable, display_roundtrip)
+            "wl_display_create_queue",
+            offsetof(struct wl_vtable, display_create_queue)
+        },
+        {
+            "wl_display_roundtrip_queue",
+            offsetof(struct wl_vtable, display_roundtrip_queue)
+        },
+        {
+            "wl_event_queue_destroy",
+            offsetof(struct wl_vtable, event_queue_destroy)
+        },
+        {
+            "wl_proxy_create_wrapper",
+            offsetof(struct wl_vtable, proxy_create_wrapper)
+        },
+        {
+            "wl_proxy_wrapper_destroy",
+            offsetof(struct wl_vtable, proxy_wrapper_destroy)
         },
         {
             "wl_proxy_create",
@@ -384,6 +421,10 @@ i965_output_wayland_init(VADriverContextP ctx)
         {
             "wl_proxy_add_listener",
             offsetof(struct wl_vtable, proxy_add_listener)
+        },
+        {
+            "wl_proxy_set_queue",
+            offsetof(struct wl_vtable, proxy_set_queue)
         },
         { NULL, }
     };
@@ -443,6 +484,16 @@ i965_output_wayland_terminate(VADriverContextP ctx)
     if (wl_output->wl_drm) {
         wl_output->vtable.proxy_destroy((struct wl_proxy *)wl_output->wl_drm);
         wl_output->wl_drm = NULL;
+    }
+
+    if (wl_output->wl_registry) {
+        wl_output->vtable.proxy_destroy((struct wl_proxy *)wl_output->wl_registry);
+        wl_output->wl_registry = NULL;
+    }
+
+    if (wl_output->queue) {
+        wl_output->vtable.event_queue_destroy(wl_output->queue);
+        wl_output->queue = NULL;
     }
 
     if (wl_output->libegl_handle) {
