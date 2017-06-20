@@ -687,13 +687,12 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
     int hl_bitrate_updated = 0; // Indicate whether the bitrate for the highest level is changed in misc parameters
     unsigned int seq_bits_per_second = 0;
 
-    if (!(encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR)))
-        return VA_STATUS_SUCCESS;
+    if (encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR)) {
+        ret = intel_encoder_check_brc_sequence_parameter(ctx, encode_state, encoder_context, &seq_bits_per_second);
 
-    ret = intel_encoder_check_brc_sequence_parameter(ctx, encode_state, encoder_context, &seq_bits_per_second);
-
-    if (ret)
-        return ret;
+        if (ret)
+            return ret;
+    }
 
     for (i = 0; i < ARRAY_ELEMS(encode_state->misc_param); i++) {
         for (j = 0; j < ARRAY_ELEMS(encode_state->misc_param[0]); j++) {
@@ -701,6 +700,11 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
                 continue;
 
             misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i][j]->buffer;
+
+            if (!(encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR))) {
+                if (misc_param->type != VAEncMiscParameterTypeROI)
+                    continue;
+            }
 
             switch (misc_param->type) {
             case VAEncMiscParameterTypeFrameRate:
