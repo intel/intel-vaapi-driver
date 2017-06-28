@@ -3571,7 +3571,6 @@ gen9_init_vfe_scoreboard_vp9(struct i965_gpe_context *gpe_context,
     }
 }
 
-#define VP9_MI_BLOCK_MASK     0x07
 #define VP9_VME_REF_WIN       48
 
 static VAStatus
@@ -3595,12 +3594,6 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
         return VA_STATUS_ERROR_INVALID_PARAMETER;
     }
     pic_param = (VAEncPictureParameterBufferVP9 *)encode_state->pic_param_ext->buffer;
-
-    if (pic_param->frame_width_src & VP9_MI_BLOCK_MASK ||
-        pic_param->frame_height_src & VP9_MI_BLOCK_MASK ||
-        pic_param->frame_width_dst & VP9_MI_BLOCK_MASK ||
-        pic_param->frame_height_dst & VP9_MI_BLOCK_MASK)
-        return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     obj_buffer = BUFFER(pic_param->coded_buf);
 
