@@ -58,12 +58,12 @@ libi965_drv_video_la_LIBADD	= $(driver_libs)
 libi965_drv_video_la_SOURCES	= $(source_c)
 
 # driver module
-i965_drv_video_la_LTLIBRARIES	= i965_drv_video.la
-i965_drv_video_ladir		= $(LIBVA_DRIVERS_PATH)
-i965_drv_video_la_CFLAGS	= $(driver_cflags)
-i965_drv_video_la_LDFLAGS	= -module $(driver_ldflags)
-i965_drv_video_la_LIBADD	= libi965_drv_video.la $(driver_libs)
-i965_drv_video_la_SOURCES	=
+i965_drv_video_@LIBVA_LIB_VERSION@_la_LTLIBRARIES	= i965_drv_video-@LIBVA_LIB_VERSION@.la
+i965_drv_video_@LIBVA_LIB_VERSION@_ladir		= $(LIBVA_DRIVERS_PATH)
+i965_drv_video_@LIBVA_LIB_VERSION@_la_CFLAGS		= $(driver_cflags)
+i965_drv_video_@LIBVA_LIB_VERSION@_la_LDFLAGS		= -module $(driver_ldflags)
+i965_drv_video_@LIBVA_LIB_VERSION@_la_LIBADD		= libi965_drv_video.la $(driver_libs)
+i965_drv_video_@LIBVA_LIB_VERSION@_la_SOURCES		=
 
 noinst_HEADERS			= $(source_h)
 

@@ -37,6 +37,11 @@ AC_DEFINE([INTEL_DRIVER_PRE_VERSION], [intel_vaapi_driver_pre_version], [Prevers
 INTEL_DRIVER_LT_LDFLAGS="-avoid-version"
 AC_SUBST(INTEL_DRIVER_LT_LDFLAGS)
 
+LIBVA_LIB_VERSION=2.0
+AC_SUBST([LIBVA_LIB_VERSION])
+AC_DEFINE_UNQUOTED([LIBVA_LIB_VERSION], ["$LIBVA_LIB_VERSION"],
+  [Libva Library Version])
+
 dnl Use pretty build output with automake >= 1.11
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])], [
     AM_DEFAULT_VERBOSITY=1
@@ -100,12 +105,12 @@ AC_PATH_PROG([GIT], [git])
 AM_CONDITIONAL([HAVE_GIT], [test -n "$GIT"])
 
 dnl Check for VA-API
-PKG_CHECK_MODULES(LIBVA_DEPS,     [libva >= va_api_version])
+PKG_CHECK_MODULES(LIBVA_DEPS,     [libva-$LIBVA_LIB_VERSION >= va_api_version])
 
 dnl Check for VA/DRM API
 USE_DRM="$enable_drm"
 if test "$USE_DRM" = "yes"; then
-    PKG_CHECK_MODULES(LIBVA_DRM_DEPS, [libva-drm],
+    PKG_CHECK_MODULES(LIBVA_DRM_DEPS, [libva-drm-$LIBVA_LIB_VERSION],
       [AC_DEFINE([HAVE_VA_DRM], [1], [Defined to 1 if VA/DRM API is enabled])],
       [USE_DRM="no"])
 
@@ -125,7 +130,7 @@ fi
 
 AM_CONDITIONAL(ENABLE_TESTS, test "$enable_tests" = "yes")
 
-VA_VERSION=`$PKG_CONFIG --modversion libva`
+VA_VERSION=`$PKG_CONFIG --modversion libva-$LIBVA_LIB_VERSION`
 VA_MAJOR_VERSION=`echo "$VA_VERSION" | cut -d'.' -f1`
 VA_MINOR_VERSION=`echo "$VA_VERSION" | cut -d'.' -f2`
 VA_MICRO_VERSION=`echo "$VA_VERSION" | cut -d'.' -f3`
@@ -151,7 +156,7 @@ if test "$enable_x11" = "yes"; then
 fi
 
 if test "$USE_X11" = "yes"; then
-    PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11],
+    PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11-$LIBVA_LIB_VERSION],
       [AC_DEFINE([HAVE_VA_X11], [1], [Defined to 1 if VA/X11 API is enabled])],
       [USE_X11="no"])
 fi
@@ -161,7 +166,7 @@ dnl Check for VA-API drivers path
 AC_ARG_VAR(LIBVA_DRIVERS_PATH, [drivers install path])
 if test -z "$LIBVA_DRIVERS_PATH"; then
     AC_MSG_CHECKING([for VA drivers path])
-    LIBVA_DRIVERS_PATH=`$PKG_CONFIG libva --variable driverdir`
+    LIBVA_DRIVERS_PATH=`$PKG_CONFIG libva-$LIBVA_LIB_VERSION --variable driverdir`
 fi
 if test -z "$LIBVA_DRIVERS_PATH"; then
     LIBVA_DRIVERS_PATH="${libdir}/xorg/modules/drivers"
@@ -191,7 +196,7 @@ AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
 # Check for Wayland
 USE_WAYLAND="no"
 if test "$enable_wayland" = "yes"; then
-    PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland],
+    PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland-$LIBVA_LIB_VERSION],
         [USE_WAYLAND="yes"], [:])
 
     if test "$USE_WAYLAND" = "yes"; then
