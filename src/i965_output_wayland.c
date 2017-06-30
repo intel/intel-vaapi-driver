@@ -155,7 +155,8 @@ registry_handle_global(
 
     if (strcmp(interface, "wl_drm") == 0) {
         wl_output->wl_drm = registry_bind(wl_vtable, wl_output->wl_registry,
-                                          id, wl_vtable->drm_interface, 2);
+                                          id, wl_vtable->drm_interface,
+                                          (version < 2) ? version : 2);
     }
 }
 
