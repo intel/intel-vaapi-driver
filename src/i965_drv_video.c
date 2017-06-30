@@ -1022,9 +1022,17 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribEncMaxRefFrames:
-            if (entrypoint == VAEntrypointEncSlice)
+            if (entrypoint == VAEntrypointEncSlice) {
                 attrib_list[i].value = (1 << 16) | (1 << 0);
-            else if (entrypoint == VAEntrypointEncSliceLP) {
+                if (profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High ||
+                    profile == VAProfileH264StereoHigh ||
+                    profile == VAProfileH264MultiviewHigh) {
+                    if (IS_GEN9(i965->intel.device_info))
+                        attrib_list[i].value = (2 << 16) | (8 << 0);
+                }
+            } else if (entrypoint == VAEntrypointEncSliceLP) {
                 /* Don't support B frame for low power mode */
                 if (profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
