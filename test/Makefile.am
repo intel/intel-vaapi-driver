@@ -102,6 +102,7 @@ test_i965_drv_video_CPPFLAGS =						\
 
 test_i965_drv_video_CXXFLAGS =						\
 	-Wall -Werror							\
+	-Wno-deprecated-declarations					\
 	$(AM_CXXFLAGS)							\
 	$(NULL)
 
