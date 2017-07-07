@@ -36,7 +36,7 @@ before_install:
   - sudo apt-get install -y intel-gpu-tools
  
 install:
-  - git clone https://github.com/01org/libva.git
+  - git clone -b v2.0-branch https://github.com/01org/libva.git
   - (cd libva && ./autogen.sh && ./configure --prefix=/usr && sudo make install)
 
 addons:
