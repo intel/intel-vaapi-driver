@@ -1483,7 +1483,12 @@ i965_suface_external_memory(VADriverContextP ctx,
         index >= memory_attibute->num_buffers)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    obj_surface->size = memory_attibute->data_size;
+    if (!memory_attibute->data_size)
+        // no data_size provided by client, calculate it here
+        obj_surface->size = memory_attibute->height * memory_attibute->pitches[0];
+    else
+        obj_surface->size= memory_attibute->data_size;
+
     if (external_memory_type == I965_SURFACE_MEM_GEM_FLINK)
         obj_surface->bo = drm_intel_bo_gem_create_from_name(i965->intel.bufmgr,
                                                             "gem flinked vaapi surface",
@@ -1509,7 +1514,7 @@ i965_suface_external_memory(VADriverContextP ctx,
     ASSERT_RET(obj_surface->width >= obj_surface->orig_width * bpp_1stplane, VA_STATUS_ERROR_INVALID_PARAMETER);
 
     if (memory_attibute->num_planes == 1)
-        obj_surface->height = memory_attibute->data_size / obj_surface->width;
+        obj_surface->height = obj_surface->size / obj_surface->width;
     else
         obj_surface->height = memory_attibute->offsets[1] / obj_surface->width;
     ASSERT_RET(IS_ALIGNED(obj_surface->height, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
