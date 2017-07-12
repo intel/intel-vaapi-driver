@@ -1512,15 +1512,22 @@ i965_suface_external_memory(VADriverContextP ctx,
         obj_surface->height = memory_attibute->data_size / obj_surface->width;
     else
         obj_surface->height = memory_attibute->offsets[1] / obj_surface->width;
-    ASSERT_RET(IS_ALIGNED(obj_surface->height, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
-    ASSERT_RET(obj_surface->height >= obj_surface->orig_height, VA_STATUS_ERROR_INVALID_PARAMETER);
+
+    if (memory_attibute->num_planes > 1) {
+        ASSERT_RET(IS_ALIGNED(obj_surface->height, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(obj_surface->height >= obj_surface->orig_height, VA_STATUS_ERROR_INVALID_PARAMETER);
+    }
 
     if (tiling) {
         ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
-        ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
+
+        if (memory_attibute->num_planes > 1)
+            ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
     } else {
         ASSERT_RET(IS_ALIGNED(obj_surface->width, i965->codec_info->min_linear_wpitch), VA_STATUS_ERROR_INVALID_PARAMETER);
-        ASSERT_RET(IS_ALIGNED(obj_surface->height, i965->codec_info->min_linear_hpitch), VA_STATUS_ERROR_INVALID_PARAMETER);
+
+        if (memory_attibute->num_planes > 1)
+            ASSERT_RET(IS_ALIGNED(obj_surface->height, i965->codec_info->min_linear_hpitch), VA_STATUS_ERROR_INVALID_PARAMETER);
     }
 
     obj_surface->x_cb_offset = 0; /* X offset is always 0 */
