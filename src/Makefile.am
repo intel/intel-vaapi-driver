@@ -111,14 +111,20 @@ BUILT_SOURCES	+= intel_version.h
 EXTRA_DIST	+= Android.mk intel_version.h.in $(PKG_VERSION_FILE)
 
 # Wayland protocol
+if USE_WAYLAND
 protocol_source_h = wayland-drm-client-protocol.h
 i965_output_wayland.c: $(protocol_source_h)
 %-client-protocol.h : %.xml
 	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
 
+BUILT_SOURCES += $(protocol_source_h)
+endif
+
 EXTRA_DIST += \
 	wayland-drm.xml         \
 	$(NULL)
+
+CLEANFILES = $(BUILT_SOURCES)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in
