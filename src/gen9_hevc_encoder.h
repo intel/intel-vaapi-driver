@@ -481,6 +481,7 @@ struct gen9_hevc_encoder_state {
     unsigned int parallel_brc;
 
     unsigned int num_roi;
+    unsigned int roi_value_is_qp_delta;
     unsigned int max_delta_qp;
     unsigned int min_delta_qp;
     struct intel_roi roi[MAX_HEVC_MAX_NUM_ROI];

@@ -2688,12 +2688,12 @@ gen9_vdenc_vdenc_pipe_buf_addr_state(VADriverContextP ctx,
     /* DW22-DW27 for FWD REF0/REF1 */
 
     if (vdenc_context->list_ref_idx[0][0] != 0xFF)
-        OUT_BUFFER_3DW(batch, vdenc_context->list_scaled_4x_reference_res[vdenc_context->list_ref_idx[0][0]].bo, 0, 0, 0);
+        OUT_BUFFER_3DW(batch, vdenc_context->list_reference_res[vdenc_context->list_ref_idx[0][0]].bo, 0, 0, 0);
     else
         OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
 
     if (vdenc_context->list_ref_idx[0][1] != 0xFF)
-        OUT_BUFFER_3DW(batch, vdenc_context->list_scaled_4x_reference_res[vdenc_context->list_ref_idx[0][1]].bo, 0, 0, 0);
+        OUT_BUFFER_3DW(batch, vdenc_context->list_reference_res[vdenc_context->list_ref_idx[0][1]].bo, 0, 0, 0);
     else
         OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
 
