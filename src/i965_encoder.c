@@ -1392,6 +1392,12 @@ intel_encoder_context_destroy(void *hw_context)
         encoder_context->enc_priv_state = NULL;
     }
 
+    if (encoder_context->is_tmp_id) {
+        assert(encoder_context->input_yuv_surface != VA_INVALID_SURFACE);
+        i965_DestroySurfaces(encoder_context->ctx, &encoder_context->input_yuv_surface, 1);
+        encoder_context->is_tmp_id = 0;
+    }
+
     intel_batchbuffer_free(encoder_context->base.batch);
     free(encoder_context);
 }
@@ -1435,6 +1441,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->quality_range = 1;
     encoder_context->layer.num_layers = 1;
     encoder_context->max_slice_or_seg_num = 1;
+    encoder_context->ctx = ctx;
 
     if (obj_config->entrypoint == VAEntrypointEncSliceLP)
         encoder_context->low_power_mode = 1;
