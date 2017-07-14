@@ -61,6 +61,7 @@ struct intel_fraction {
 
 struct intel_encoder_context {
     struct hw_context base;
+    VADriverContextP ctx;
     int codec;
     VASurfaceID input_yuv_surface;
     unsigned int rate_control_mode;
