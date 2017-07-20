@@ -752,6 +752,7 @@ static VAStatus gen7_vme_prepare(VADriverContextP ctx,
 
     intel_vme_update_mbmv_cost(ctx, encode_state, encoder_context);
     intel_h264_initialize_mbmv_cost(ctx, encode_state, encoder_context);
+    intel_h264_enc_roi_config(ctx, encode_state, encoder_context);
 
     /*Setup all the memory object*/
     gen7_vme_surface_setup(ctx, encode_state, is_intra, encoder_context);
