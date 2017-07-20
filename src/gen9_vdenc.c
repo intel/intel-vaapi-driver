@@ -2166,6 +2166,7 @@ gen9_vdenc_huc_brc_update_constant_data(VADriverContextP ctx,
 {
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct huc_brc_update_constant_data *brc_buffer;
+    int i, j;
 
     brc_buffer = (struct huc_brc_update_constant_data *)
                  i965_map_gpe_resource(&vdenc_context->brc_constant_data_res);
@@ -2174,6 +2175,12 @@ gen9_vdenc_huc_brc_update_constant_data(VADriverContextP ctx,
         return;
 
     memcpy(brc_buffer, &gen9_brc_update_constant_data, sizeof(gen9_brc_update_constant_data));
+
+    for (i = 0; i < 8; i++) {
+        for (j = 0; j < 42; j++) {
+            brc_buffer->hme_mv_cost[i][j] = map_44_lut_value((vdenc_hme_cost[i][j + 10]), 0x6f);
+        }
+    }
 
     if (vdenc_context->internal_rate_mode == I965_BRC_VBR) {
         memcpy(brc_buffer->dist_qp_adj_tab_i, dist_qp_adj_tab_i_vbr, sizeof(dist_qp_adj_tab_i_vbr));
