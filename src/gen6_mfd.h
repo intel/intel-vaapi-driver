@@ -49,6 +49,9 @@
 struct gen6_vc1_surface {
     dri_bo *dmv;
     int picture_type;
+    int intensity_compensation;
+    int luma_scale;
+    int luma_shift;
 };
 
 struct hw_context;
