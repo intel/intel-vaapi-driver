@@ -58,6 +58,7 @@ TEST_P(I965ConfigTest, Create)
 
     EXPECT_STATUS_EQ(expect, actual);
 
-    if (actual != VA_STATUS_SUCCESS)
+    if (actual != VA_STATUS_SUCCESS) {
         EXPECT_INVALID_ID(config);
+    }
 }
