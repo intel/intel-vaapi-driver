@@ -44,12 +44,13 @@ Surfaces I965TestFixture::createSurfaces(int w, int h, int format, size_t count,
     } else {
         VADriverContextP ctx(*this);
         EXPECT_PTR(ctx);
-        if (ctx)
+        if (ctx) {
             EXPECT_STATUS(
                 ctx->vtable->vaCreateSurfaces2(
                     *this, format, w, h, surfaces.data(), surfaces.size(),
                     const_cast<VASurfaceAttrib*>(attributes.data()),
                     attributes.size()));
+	}
     }
 
     for (size_t i(0); i < count; ++i) {
