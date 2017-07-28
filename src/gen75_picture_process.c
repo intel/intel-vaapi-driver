@@ -88,21 +88,6 @@ gen75_vpp_vebox(VADriverContextP ctx,
     return va_status;
 }
 
-static int intel_gpe_support_10bit_scaling(struct intel_video_process_context *proc_ctx)
-{
-    struct i965_proc_context *gpe_proc_ctx;
-
-    if (!proc_ctx || !proc_ctx->vpp_fmt_cvt_ctx)
-        return 0;
-
-    gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
-
-    if (gpe_proc_ctx->pp_context.scaling_context_initialized)
-        return 1;
-    else
-        return 0;
-}
-
 static void
 rgb_to_yuv(unsigned int argb,
            unsigned char *y,
@@ -302,111 +287,33 @@ gen75_proc_picture(VADriverContextP ctx,
     }
 
     if (pipeline_param->num_filters == 0 || pipeline_param->filters == NULL) {
-        /* The Bit 2 is used to indicate that it is 10bit or 8bit.
-         * The Bit 0/1 is used to indicate the 420/422/444 format
-         */
-#define SRC_10BIT_420    (5 << 0)
-#define SRC_10BIT_422    (6 << 0)
-#define SRC_10BIT_444    (7 << 0)
-#define SRC_8BIT_420     (1 << 0)
+        VAStatus status = VA_STATUS_ERROR_UNIMPLEMENTED;
+        struct i965_proc_context *gpe_proc_ctx;
+        struct i965_surface src_surface, dst_surface;
 
-        /* The Bit 6 is used to indicate that it is 10bit or 8bit.
-         * The Bit 5/4 is used to indicate the 420/422/444 format
-         */
-#define DST_10BIT_420    (5 << 4)
-#define DST_10BIT_422    (6 << 4)
-#define DST_10BIT_444    (7 << 4)
-#define DST_8BIT_420     (1 << 4)
+        gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
+        assert(gpe_proc_ctx != NULL); // gpe_proc_ctx must be a non-NULL pointer
 
-        /* This is mainly for YUY2/RGBA. It is reserved for further */
-#define SRC_YUV_PACKED   (1 << 3)
-#define DST_YUV_PACKED   (1 << 7)
+        if ((gpe_proc_ctx->pp_context.scaling_8bit_initialized & VPPGPE_8BIT_420) &&
+            (obj_dst_surf->fourcc == VA_FOURCC_NV12) &&
+            pipeline_param->output_background_color)
+            gen8plus_vpp_clear_surface(ctx,
+                                       &gpe_proc_ctx->pp_context,
+                                       obj_dst_surf,
+                                       pipeline_param->output_background_color);
 
-#define MASK_CSC         (0xFF)
-#define SCALE_10BIT_420  (SRC_10BIT_420 | DST_10BIT_420)
-#define SCALE_8BIT_420  (SRC_8BIT_420 | DST_8BIT_420)
+        src_surface.base = (struct object_base *)obj_src_surf;
+        src_surface.type = I965_SURFACE_TYPE_SURFACE;
+        dst_surface.base = (struct object_base *)obj_dst_surf;
+        dst_surface.type = I965_SURFACE_TYPE_SURFACE;
 
-        unsigned int scale_flag;
+        status = intel_common_scaling_post_processing(ctx,
+                                                      &gpe_proc_ctx->pp_context,
+                                                      &src_surface, &src_rect,
+                                                      &dst_surface, &dst_rect);
 
-        scale_flag = 0;
-        if (obj_src_surf->fourcc == VA_FOURCC_P010 ||
-            obj_src_surf->fourcc == VA_FOURCC_I010)
-            scale_flag |= SRC_10BIT_420;
-
-        if (obj_dst_surf->fourcc == VA_FOURCC_P010 ||
-            obj_dst_surf->fourcc == VA_FOURCC_I010)
-            scale_flag |= DST_10BIT_420;
-
-        if (obj_src_surf->fourcc == VA_FOURCC_NV12 ||
-            obj_src_surf->fourcc == VA_FOURCC_I420)
-            scale_flag |= SRC_8BIT_420;
-
-        if (obj_dst_surf->fourcc == VA_FOURCC_NV12 ||
-            obj_dst_surf->fourcc == VA_FOURCC_I420)
-            scale_flag |= DST_8BIT_420;
-
-        /* If P010 is converted without resolution change,
-         * fall back to VEBOX
-         */
-        if (i965->intel.has_vebox &&
-            (obj_src_surf->fourcc == VA_FOURCC_P010) &&
-            (obj_dst_surf->fourcc == VA_FOURCC_P010) &&
-            (src_rect.width == dst_rect.width) &&
-            (src_rect.height == dst_rect.height))
-            scale_flag = 0;
-
-        if (((scale_flag & MASK_CSC) == SCALE_10BIT_420) &&
-            intel_gpe_support_10bit_scaling(proc_ctx)) {
-            struct i965_proc_context *gpe_proc_ctx;
-            struct i965_surface src_surface, dst_surface;
-            unsigned int tmp_width, tmp_x;
-
-
-            src_surface.base = (struct object_base *)obj_src_surf;
-            src_surface.type = I965_SURFACE_TYPE_SURFACE;
-            dst_surface.base = (struct object_base *)obj_dst_surf;
-            dst_surface.type = I965_SURFACE_TYPE_SURFACE;
-            gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
-
-            tmp_x = ALIGN_FLOOR(dst_rect.x, 2);
-            tmp_width = dst_rect.x + dst_rect.width;
-            tmp_width = tmp_width - tmp_x;
-            dst_rect.x = tmp_x;
-            dst_rect.width = tmp_width;
-
-            return gen9_p010_scaling_post_processing(ctx, &gpe_proc_ctx->pp_context,
-                                                     &src_surface, &src_rect,
-                                                     &dst_surface, &dst_rect);
-        }
-        if (((scale_flag & MASK_CSC) == SCALE_8BIT_420) &&
-            intel_vpp_support_yuv420p8_scaling(proc_ctx)) {
-            struct i965_proc_context *gpe_proc_ctx;
-            struct i965_surface src_surface, dst_surface;
-            unsigned int tmp_width, tmp_x;
-
-
-            src_surface.base = (struct object_base *)obj_src_surf;
-            src_surface.type = I965_SURFACE_TYPE_SURFACE;
-            dst_surface.base = (struct object_base *)obj_dst_surf;
-            dst_surface.type = I965_SURFACE_TYPE_SURFACE;
-            gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
-
-            tmp_x = ALIGN_FLOOR(dst_rect.x, 4);
-            tmp_width = dst_rect.x + dst_rect.width;
-            tmp_width = tmp_width - tmp_x;
-            dst_rect.x = tmp_x;
-            dst_rect.width = tmp_width;
-
-            if (obj_dst_surf->fourcc == VA_FOURCC_NV12 &&
-                pipeline_param->output_background_color)
-                gen8plus_vpp_clear_surface(ctx, &gpe_proc_ctx->pp_context,
-                                           obj_dst_surf,
-                                           pipeline_param->output_background_color);
-
-            return intel_yuv420p8_scaling_post_processing(ctx, &gpe_proc_ctx->pp_context,
-                                                          &src_surface, &src_rect,
-                                                          &dst_surface, &dst_rect);
-        }
+        if (status != VA_STATUS_ERROR_UNIMPLEMENTED)
+            return status;
     }
 
     proc_ctx->surface_render_output_object = obj_dst_surf;

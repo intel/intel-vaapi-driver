@@ -328,22 +328,6 @@ static const uint32_t pp_yuv420p8_scaling_gen8[][4] = {
 #include "shaders/post_processing/gen8/conv_nv12.g8b"
 };
 
-static int
-pp_get_surface_fourcc(VADriverContextP ctx, const struct i965_surface *surface)
-{
-    int fourcc;
-
-    if (surface->type == I965_SURFACE_TYPE_IMAGE) {
-        struct object_image *obj_image = (struct object_image *)surface->base;
-        fourcc = obj_image->image.format.fourcc;
-    } else {
-        struct object_surface *obj_surface = (struct object_surface *)surface->base;
-        fourcc = obj_surface->fourcc;
-    }
-
-    return fourcc;
-}
-
 static void
 gen8_pp_set_surface_tiling(struct gen8_surface_state *ss, unsigned int tiling)
 {
