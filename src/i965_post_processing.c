@@ -1405,7 +1405,7 @@ pp_dndi_context_ensure_surfaces(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
-static int
+int
 pp_get_surface_fourcc(VADriverContextP ctx, const struct i965_surface *surface)
 {
     int fourcc;

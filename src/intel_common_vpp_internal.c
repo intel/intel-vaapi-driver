@@ -37,23 +37,7 @@
 #include "intel_gen_vppapi.h"
 #include "intel_common_vpp_internal.h"
 
-int
-intel_vpp_support_yuv420p8_scaling(struct intel_video_process_context *proc_ctx)
-{
-    struct i965_proc_context *gpe_proc_ctx;
-
-    if (!proc_ctx || !proc_ctx->vpp_fmt_cvt_ctx)
-        return 0;
-
-    gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
-
-    if (gpe_proc_ctx->pp_context.scaling_8bit_initialized & VPPGPE_8BIT_420)
-        return 1;
-    else
-        return 0;
-}
-
-VAStatus
+static VAStatus
 intel_yuv420p8_scaling_post_processing(
     VADriverContextP   ctx,
     struct i965_post_processing_context *pp_context,
@@ -79,4 +63,104 @@ intel_yuv420p8_scaling_post_processing(
                                                           dst_rect);
 
     return va_status;
+}
+
+
+VAStatus
+intel_common_scaling_post_processing(VADriverContextP ctx,
+                                     struct i965_post_processing_context *pp_context,
+                                     const struct i965_surface *src_surface,
+                                     const VARectangle *src_rect,
+                                     struct i965_surface *dst_surface,
+                                     const VARectangle *dst_rect)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAStatus status = VA_STATUS_ERROR_UNIMPLEMENTED;
+    VARectangle aligned_dst_rect;
+    int src_fourcc = pp_get_surface_fourcc(ctx, src_surface);
+    int dst_fourcc = pp_get_surface_fourcc(ctx, dst_surface);
+    unsigned int scale_flag = 0;
+    unsigned int tmp_width, tmp_x;
+
+    /* The Bit 2 is used to indicate that it is 10bit or 8bit.
+     * The Bit 0/1 is used to indicate the 420/422/444 format
+     */
+#define SRC_10BIT_420    (5 << 0)
+#define SRC_10BIT_422    (6 << 0)
+#define SRC_10BIT_444    (7 << 0)
+#define SRC_8BIT_420     (1 << 0)
+
+    /* The Bit 6 is used to indicate that it is 10bit or 8bit.
+     * The Bit 5/4 is used to indicate the 420/422/444 format
+     */
+#define DST_10BIT_420    (5 << 4)
+#define DST_10BIT_422    (6 << 4)
+#define DST_10BIT_444    (7 << 4)
+#define DST_8BIT_420     (1 << 4)
+
+#define SRC_YUV_PACKED   (1 << 3)
+#define DST_YUV_PACKED   (1 << 7)
+
+#define MASK_CSC         (0xFF)
+#define SCALE_10BIT_10BIT_420   (SRC_10BIT_420 | DST_10BIT_420)
+#define SCALE_8BIT_8BIT_420     (SRC_8BIT_420 | DST_8BIT_420)
+
+    if (src_fourcc == VA_FOURCC_P010 ||
+        src_fourcc == VA_FOURCC_I010)
+        scale_flag |= SRC_10BIT_420;
+
+    if (src_fourcc == VA_FOURCC_NV12 ||
+        src_fourcc == VA_FOURCC_I420)
+        scale_flag |= SRC_8BIT_420;
+
+    if (dst_fourcc == VA_FOURCC_P010 ||
+        dst_fourcc == VA_FOURCC_I010)
+        scale_flag |= DST_10BIT_420;
+
+    if (dst_fourcc == VA_FOURCC_NV12 ||
+        dst_fourcc == VA_FOURCC_I420)
+        scale_flag |= DST_8BIT_420;
+
+    /* If P010 is converted without resolution change,
+     * fall back to VEBOX
+     */
+    if (i965->intel.has_vebox &&
+        (src_fourcc == VA_FOURCC_P010) &&
+        (dst_fourcc == VA_FOURCC_P010) &&
+        (src_rect->width == dst_rect->width) &&
+        (src_rect->height == dst_rect->height))
+        scale_flag = 0;
+
+    if (((scale_flag & MASK_CSC) == SCALE_10BIT_10BIT_420) &&
+        pp_context->scaling_context_initialized) {
+        unsigned int tmp_width, tmp_x;
+
+        tmp_x = ALIGN_FLOOR(dst_rect->x, 2);
+        tmp_width = dst_rect->x + dst_rect->width - tmp_x;
+        aligned_dst_rect.x = tmp_x;
+        aligned_dst_rect.width = tmp_width;
+        aligned_dst_rect.y = dst_rect->y;
+        aligned_dst_rect.height = dst_rect->height;
+
+        status = gen9_p010_scaling_post_processing(ctx, pp_context,
+                                                   (struct i965_surface *)src_surface, (VARectangle *)src_rect,
+                                                   dst_surface, &aligned_dst_rect);
+    }
+
+    if (((scale_flag & MASK_CSC) == SCALE_8BIT_8BIT_420) &&
+        (pp_context->scaling_8bit_initialized & VPPGPE_8BIT_420)) {
+
+        tmp_x = ALIGN_FLOOR(dst_rect->x, 4);
+        tmp_width = dst_rect->x + dst_rect->width - tmp_x;
+        aligned_dst_rect.x = tmp_x;
+        aligned_dst_rect.width = tmp_width;
+        aligned_dst_rect.y = dst_rect->y;
+        aligned_dst_rect.height = dst_rect->height;
+
+        status = intel_yuv420p8_scaling_post_processing(ctx, pp_context,
+                                                        (struct i965_surface *)src_surface, (VARectangle *)src_rect,
+                                                        dst_surface, &aligned_dst_rect);
+    }
+
+    return status;
 }

@@ -641,4 +641,7 @@ i965_proc_picture(VADriverContextP ctx,
                   union codec_state *codec_state,
                   struct hw_context *hw_context);
 
+int
+pp_get_surface_fourcc(VADriverContextP ctx, const struct i965_surface *surface);
+
 #endif /* __I965_POST_PROCESSING_H__ */

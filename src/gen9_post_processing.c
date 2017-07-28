@@ -637,22 +637,6 @@ gen9_run_kernel_media_object_walker(VADriverContextP ctx,
     return;
 }
 
-static unsigned int
-pp_get_surface_fourcc(VADriverContextP ctx, struct i965_surface *surface)
-{
-    unsigned int fourcc;
-
-    if (surface->type == I965_SURFACE_TYPE_IMAGE) {
-        struct object_image *obj_image = (struct object_image *)surface->base;
-        fourcc = obj_image->image.format.fourcc;
-    } else {
-        struct object_surface *obj_surface = (struct object_surface *)surface->base;
-        fourcc = obj_surface->fourcc;
-    }
-
-    return fourcc;
-}
-
 static void
 gen9_gpe_context_p010_scaling_curbe(VADriverContextP ctx,
                                     struct i965_gpe_context *gpe_context,
