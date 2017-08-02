@@ -40,6 +40,7 @@
 #include "i965_render.h"
 #include "i965_yuv_coefs.h"
 #include "intel_media.h"
+#include "intel_gen_vppapi.h"
 
 #include "gen75_picture_process.h"
 
@@ -5062,6 +5063,16 @@ i965_image_pl1_rgbx_processing(VADriverContextP ctx,
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus;
 
+    vaStatus = intel_common_scaling_post_processing(ctx,
+                                                    pp_context,
+                                                    src_surface,
+                                                    src_rect,
+                                                    dst_surface,
+                                                    dst_rect);
+
+    if (vaStatus != VA_STATUS_ERROR_UNIMPLEMENTED)
+        return vaStatus;
+
     switch (fourcc) {
     case VA_FOURCC_NV12:
         vaStatus = i965_post_processing_internal(ctx, i965->pp_context,
@@ -5098,6 +5109,16 @@ i965_image_pl3_processing(VADriverContextP ctx,
     struct i965_post_processing_context *pp_context = i965->pp_context;
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    vaStatus = intel_common_scaling_post_processing(ctx,
+                                                    pp_context,
+                                                    src_surface,
+                                                    src_rect,
+                                                    dst_surface,
+                                                    dst_rect);
+
+    if (vaStatus != VA_STATUS_ERROR_UNIMPLEMENTED)
+        return vaStatus;
 
     switch (fourcc) {
     case VA_FOURCC_NV12:
@@ -5161,6 +5182,16 @@ i965_image_pl2_processing(VADriverContextP ctx,
     struct i965_post_processing_context *pp_context = i965->pp_context;
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    vaStatus = intel_common_scaling_post_processing(ctx,
+                                                    pp_context,
+                                                    src_surface,
+                                                    src_rect,
+                                                    dst_surface,
+                                                    dst_rect);
+
+    if (vaStatus != VA_STATUS_ERROR_UNIMPLEMENTED)
+        return vaStatus;
 
     switch (fourcc) {
     case VA_FOURCC_NV12:
@@ -5230,6 +5261,16 @@ i965_image_pl1_processing(VADriverContextP ctx,
     struct i965_post_processing_context *pp_context = i965->pp_context;
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus;
+
+    vaStatus = intel_common_scaling_post_processing(ctx,
+                                                    pp_context,
+                                                    src_surface,
+                                                    src_rect,
+                                                    dst_surface,
+                                                    dst_rect);
+
+    if (vaStatus != VA_STATUS_ERROR_UNIMPLEMENTED)
+        return vaStatus;
 
     switch (fourcc) {
     case VA_FOURCC_NV12:
@@ -5351,6 +5392,16 @@ i965_image_p010_processing(VADriverContextP ctx,
     int fourcc = pp_get_surface_fourcc(ctx, dst_surface);
     VAStatus vaStatus = VA_STATUS_ERROR_UNIMPLEMENTED;
     int vpp_post = 0;
+
+    vaStatus = intel_common_scaling_post_processing(ctx,
+                                                    pp_context,
+                                                    src_surface,
+                                                    src_rect,
+                                                    dst_surface,
+                                                    dst_rect);
+
+    if (vaStatus != VA_STATUS_ERROR_UNIMPLEMENTED)
+        return vaStatus;
 
     if (HAS_VPP_P010(i965)) {
         vpp_post = 0;
