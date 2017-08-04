@@ -586,13 +586,14 @@ struct i965_post_processing_context {
                      struct i965_post_processing_context *pp_context);
 
 
-    struct i965_gpe_context scaling_10bit_context;
-    int scaling_context_initialized;
-    struct i965_gpe_context scaling_yuv420p8_context;
-#define VPPGPE_8BIT_420    (1 << 0)
-#define VPPGPE_8BIT_422    (1 << 1)
-#define VPPGPE_8BIT_444    (1 << 2)
-    unsigned int scaling_8bit_initialized;
+    struct i965_gpe_context scaling_gpe_context;
+
+#define VPPGPE_8BIT_8BIT        (1 << 0)
+#define VPPGPE_8BIT_10BIT       (1 << 1)
+#define VPPGPE_10BIT_10BIT      (1 << 2)
+#define VPPGPE_10BIT_8BIT       (1 << 3)
+
+    unsigned int scaling_gpe_context_initialized;
 };
 
 struct i965_proc_context {

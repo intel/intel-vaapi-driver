@@ -1527,14 +1527,9 @@ static void
 gen8_post_processing_context_finalize(VADriverContextP ctx,
                                       struct i965_post_processing_context *pp_context)
 {
-    if (pp_context->scaling_context_initialized) {
-        gen8_gpe_context_destroy(&pp_context->scaling_10bit_context);
-        pp_context->scaling_context_initialized = 0;
-    }
-
-    if (pp_context->scaling_8bit_initialized & VPPGPE_8BIT_420) {
-        gen8_gpe_context_destroy(&pp_context->scaling_yuv420p8_context);
-        pp_context->scaling_8bit_initialized &= ~(VPPGPE_8BIT_420);
+    if (pp_context->scaling_gpe_context_initialized) {
+        gen8_gpe_context_destroy(&pp_context->scaling_gpe_context);
+        pp_context->scaling_gpe_context_initialized = 0;
     }
 
     if (pp_context->vebox_proc_ctx) {
@@ -1677,7 +1672,7 @@ gen8_post_processing_context_init(VADriverContextP ctx,
      * I420 ->I420
      * I420 ->NV12
      */
-    gpe_context = &pp_context->scaling_yuv420p8_context;
+    gpe_context = &pp_context->scaling_gpe_context;
     memset(&scaling_kernel, 0, sizeof(scaling_kernel));
     scaling_kernel.bin = pp_yuv420p8_scaling_gen8;
     scaling_kernel.size = sizeof(pp_yuv420p8_scaling_gen8);
@@ -1712,7 +1707,8 @@ gen8_post_processing_context_init(VADriverContextP ctx,
     gpe_context->vfe_state.gpgpu_mode = 0;
 
     gen8_gpe_context_init(ctx, gpe_context);
-    pp_context->scaling_8bit_initialized = VPPGPE_8BIT_420;
+    pp_context->scaling_gpe_context_initialized |= VPPGPE_8BIT_8BIT;
+
     return;
 }
 
@@ -2078,10 +2074,10 @@ gen8_yuv420p8_scaling_post_processing(
     if (!pp_context || !src_surface || !src_rect || !dst_surface || !dst_rect)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    if (!(pp_context->scaling_8bit_initialized & VPPGPE_8BIT_420))
+    if (!(pp_context->scaling_gpe_context_initialized & VPPGPE_8BIT_8BIT))
         return VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    gpe_context = &pp_context->scaling_yuv420p8_context;
+    gpe_context = &pp_context->scaling_gpe_context;
 
     gen8_gpe_context_init(ctx, gpe_context);
     gen8_vpp_scaling_sample_state(ctx, gpe_context, src_rect, dst_rect);
@@ -2102,7 +2098,7 @@ gen8_yuv420p8_scaling_post_processing(
     kernel_walker_param.no_dependency = 1;
 
     intel_vpp_init_media_object_walker_parameter(&kernel_walker_param, &media_object_walker_param);
-
+    media_object_walker_param.interface_offset = 0;
     gen8_run_kernel_media_object_walker(ctx, pp_context->batch,
                                         gpe_context,
                                         &media_object_walker_param);

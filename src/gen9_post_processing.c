@@ -118,6 +118,24 @@ static const uint32_t pp_yuv420p8_scaling_gen9[][4] = {
 #include "shaders/post_processing/gen9/conv_nv12.g9b"
 };
 
+struct i965_kernel pp_common_scaling_gen9[] = {
+    {
+        "10bit to 10bit",
+        0,
+        pp_10bit_scaling_gen9,
+        sizeof(pp_10bit_scaling_gen9),
+        NULL,
+    },
+
+    {
+        "8bit to 8bit",
+        1,
+        pp_yuv420p8_scaling_gen9,
+        sizeof(pp_yuv420p8_scaling_gen9),
+        NULL,
+    },
+};
+
 static struct pp_module pp_modules_gen9[] = {
     {
         {
@@ -499,20 +517,16 @@ gen9_post_processing_context_init(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = data;
     struct i965_gpe_context *gpe_context;
-    struct i965_kernel scaling_kernel;
 
     gen8_post_processing_context_common_init(ctx, data, pp_modules_gen9, ARRAY_ELEMS(pp_modules_gen9), batch);
     avs_init_state(&pp_context->pp_avs_context.state, &gen9_avs_config);
 
     pp_context->intel_post_processing = gen9_post_processing;
 
-    gpe_context = &pp_context->scaling_10bit_context;
-    memset(&scaling_kernel, 0, sizeof(scaling_kernel));
-    scaling_kernel.bin = pp_10bit_scaling_gen9;
-    scaling_kernel.size = sizeof(pp_10bit_scaling_gen9);
-    gen8_gpe_load_kernels(ctx, gpe_context, &scaling_kernel, 1);
+    gpe_context = &pp_context->scaling_gpe_context;
+    gen8_gpe_load_kernels(ctx, gpe_context, pp_common_scaling_gen9, ARRAY_ELEMS(pp_common_scaling_gen9));
     gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
-    gpe_context->idrt.max_entries = 1;
+    gpe_context->idrt.max_entries = ALIGN(ARRAY_ELEMS(pp_common_scaling_gen9), 2);
     gpe_context->sampler.entry_size = ALIGN(sizeof(struct gen8_sampler_state), 64);
     gpe_context->sampler.max_entries = 1;
     gpe_context->curbe.length = ALIGN(sizeof(struct scaling_input_parameter), 64);
@@ -537,46 +551,8 @@ gen9_post_processing_context_init(VADriverContextP ctx,
     gpe_context->vfe_state.gpgpu_mode = 0;
 
     gen8_gpe_context_init(ctx, gpe_context);
-    pp_context->scaling_context_initialized = 1;
+    pp_context->scaling_gpe_context_initialized |= (VPPGPE_8BIT_8BIT | VPPGPE_10BIT_10BIT);
 
-    /* initialize the YUV420 8-Bit scaling context. The below is supported.
-     * NV12 ->NV12
-     * NV12 ->I420
-     * I420 ->I420
-     * I420 ->NV12
-     */
-    gpe_context = &pp_context->scaling_yuv420p8_context;
-    memset(&scaling_kernel, 0, sizeof(scaling_kernel));
-    scaling_kernel.bin = pp_yuv420p8_scaling_gen9;
-    scaling_kernel.size = sizeof(pp_yuv420p8_scaling_gen9);
-    gen8_gpe_load_kernels(ctx, gpe_context, &scaling_kernel, 1);
-    gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
-    gpe_context->idrt.max_entries = 1;
-    gpe_context->sampler.entry_size = ALIGN(sizeof(struct gen8_sampler_state), 64);
-    gpe_context->sampler.max_entries = 1;
-    gpe_context->curbe.length = ALIGN(sizeof(struct scaling_input_parameter), 32);
-
-    gpe_context->surface_state_binding_table.max_entries = MAX_SCALING_SURFACES;
-    gpe_context->surface_state_binding_table.binding_table_offset = 0;
-    gpe_context->surface_state_binding_table.surface_state_offset = ALIGN(MAX_SCALING_SURFACES * 4, 64);
-    gpe_context->surface_state_binding_table.length = ALIGN(MAX_SCALING_SURFACES * 4, 64) + ALIGN(MAX_SCALING_SURFACES * SURFACE_STATE_PADDED_SIZE_GEN9, 64);
-
-    if (i965->intel.eu_total > 0) {
-        gpe_context->vfe_state.max_num_threads = i965->intel.eu_total * 6;
-    } else {
-        if (i965->intel.has_bsd2)
-            gpe_context->vfe_state.max_num_threads = 300;
-        else
-            gpe_context->vfe_state.max_num_threads = 60;
-    }
-
-    gpe_context->vfe_state.curbe_allocation_size = 37;
-    gpe_context->vfe_state.urb_entry_size = 16;
-    gpe_context->vfe_state.num_urb_entries = 127;
-    gpe_context->vfe_state.gpgpu_mode = 0;
-
-    gen8_gpe_context_init(ctx, gpe_context);
-    pp_context->scaling_8bit_initialized = VPPGPE_8BIT_420;
     return;
 }
 
@@ -909,10 +885,10 @@ gen9_p010_scaling_post_processing(
     if (!pp_context || !src_surface || !src_rect || !dst_surface || !dst_rect)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    if (!pp_context->scaling_context_initialized)
+    if (!(pp_context->scaling_gpe_context_initialized & VPPGPE_10BIT_10BIT))
         return VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    gpe_context = &pp_context->scaling_10bit_context;
+    gpe_context = &pp_context->scaling_gpe_context;
 
     gen8_gpe_context_init(ctx, gpe_context);
     gen9_vpp_scaling_sample_state(ctx, gpe_context, src_rect, dst_rect);
@@ -933,7 +909,7 @@ gen9_p010_scaling_post_processing(
     kernel_walker_param.no_dependency = 1;
 
     intel_vpp_init_media_object_walker_parameter(&kernel_walker_param, &media_object_walker_param);
-
+    media_object_walker_param.interface_offset = 0;
     gen9_run_kernel_media_object_walker(ctx, pp_context->batch,
                                         gpe_context,
                                         &media_object_walker_param);
@@ -1134,10 +1110,10 @@ gen9_yuv420p8_scaling_post_processing(
     if (!pp_context || !src_surface || !src_rect || !dst_surface || !dst_rect)
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-    if (!(pp_context->scaling_8bit_initialized & VPPGPE_8BIT_420))
+    if (!(pp_context->scaling_gpe_context_initialized & VPPGPE_8BIT_8BIT))
         return VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    gpe_context = &pp_context->scaling_yuv420p8_context;
+    gpe_context = &pp_context->scaling_gpe_context;
 
     gen8_gpe_context_init(ctx, gpe_context);
     gen9_vpp_scaling_sample_state(ctx, gpe_context, src_rect, dst_rect);
@@ -1158,7 +1134,7 @@ gen9_yuv420p8_scaling_post_processing(
     kernel_walker_param.no_dependency = 1;
 
     intel_vpp_init_media_object_walker_parameter(&kernel_walker_param, &media_object_walker_param);
-
+    media_object_walker_param.interface_offset = 1;
     gen9_run_kernel_media_object_walker(ctx, pp_context->batch,
                                         gpe_context,
                                         &media_object_walker_param);
