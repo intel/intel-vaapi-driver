@@ -294,7 +294,7 @@ gen75_proc_picture(VADriverContextP ctx,
         gpe_proc_ctx = (struct i965_proc_context *)proc_ctx->vpp_fmt_cvt_ctx;
         assert(gpe_proc_ctx != NULL); // gpe_proc_ctx must be a non-NULL pointer
 
-        if ((gpe_proc_ctx->pp_context.scaling_8bit_initialized & VPPGPE_8BIT_420) &&
+        if ((gpe_proc_ctx->pp_context.scaling_gpe_context_initialized & VPPGPE_8BIT_8BIT) &&
             (obj_dst_surf->fourcc == VA_FOURCC_NV12) &&
             pipeline_param->output_background_color)
             gen8plus_vpp_clear_surface(ctx,

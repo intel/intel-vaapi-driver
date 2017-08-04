@@ -132,7 +132,7 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
         scale_flag = 0;
 
     if (((scale_flag & MASK_CSC) == SCALE_10BIT_10BIT_420) &&
-        pp_context->scaling_context_initialized) {
+        (pp_context->scaling_gpe_context_initialized & VPPGPE_10BIT_10BIT)) {
         unsigned int tmp_width, tmp_x;
 
         tmp_x = ALIGN_FLOOR(dst_rect->x, 2);
@@ -148,7 +148,7 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
     }
 
     if (((scale_flag & MASK_CSC) == SCALE_8BIT_8BIT_420) &&
-        (pp_context->scaling_8bit_initialized & VPPGPE_8BIT_420)) {
+        (pp_context->scaling_gpe_context_initialized & VPPGPE_8BIT_8BIT)) {
 
         tmp_x = ALIGN_FLOOR(dst_rect->x, 4);
         tmp_width = dst_rect->x + dst_rect->width - tmp_x;
