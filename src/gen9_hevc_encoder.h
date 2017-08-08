@@ -340,6 +340,9 @@ struct gen9_hevc_slice_map {
 #define GEN9_MAX_REF_SURFACES                    8
 #define GEN9_MAX_MV_TEMPORAL_BUFFERS             (GEN9_MAX_REF_SURFACES + 1)
 
+#define GEN9_HEVC_NUM_MAX_REF_L0  3
+#define GEN9_HEVC_NUM_MAX_REF_L1  1
+
 enum GEN9_HEVC_ENC_SURFACE_TYPE {
     GEN9_HEVC_ENC_SURFACE_RECON = 0,
     GEN9_HEVC_ENC_SURFACE_SOURCE = 1
