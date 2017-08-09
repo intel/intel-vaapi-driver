@@ -5992,6 +5992,12 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].type = VASurfaceAttribPixelFormat;
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC_UYVY;
+                i++;
+
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
                 attribs[i].value.value.i = VA_FOURCC_RGBA;
                 i++;
 
@@ -6123,6 +6129,12 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
                 attribs[i].value.type = VAGenericValueTypeInteger;
                 attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
                 attribs[i].value.value.i = VA_FOURCC_YUY2;
+                i++;
+
+                attribs[i].type = VASurfaceAttribPixelFormat;
+                attribs[i].value.type = VAGenericValueTypeInteger;
+                attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+                attribs[i].value.value.i = VA_FOURCC_UYVY;
                 i++;
 
                 attribs[i].type = VASurfaceAttribPixelFormat;
