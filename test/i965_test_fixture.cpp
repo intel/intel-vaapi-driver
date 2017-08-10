@@ -50,7 +50,7 @@ Surfaces I965TestFixture::createSurfaces(int w, int h, int format, size_t count,
                     *this, format, w, h, surfaces.data(), surfaces.size(),
                     const_cast<VASurfaceAttrib*>(attributes.data()),
                     attributes.size()));
-	}
+        }
     }
 
     for (size_t i(0); i < count; ++i) {
@@ -67,15 +67,20 @@ void I965TestFixture::destroySurfaces(Surfaces& surfaces)
 }
 
 VAConfigID I965TestFixture::createConfig(
-    VAProfile profile, VAEntrypoint entrypoint, const ConfigAttribs& attribs)
+    VAProfile profile, VAEntrypoint entrypoint, const ConfigAttribs& attribs,
+    const VAStatus expect)
 {
     VAConfigID id = VA_INVALID_ID;
-    EXPECT_STATUS(
+    EXPECT_STATUS_EQ(
+        expect,
         i965_CreateConfig(
             *this, profile, entrypoint,
             const_cast<VAConfigAttrib*>(attribs.data()), attribs.size(), &id));
-    EXPECT_ID(id);
-
+    if (expect == VA_STATUS_SUCCESS) {
+        EXPECT_ID(id);
+    } else {
+        EXPECT_INVALID_ID(id);
+    }
     return id;
 }
 
