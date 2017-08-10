@@ -1031,6 +1031,10 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     profile == VAProfileH264MultiviewHigh) {
                     if (IS_GEN9(i965->intel.device_info))
                         attrib_list[i].value = (2 << 16) | (8 << 0);
+                } else if (profile == VAProfileHEVCMain ||
+                           profile == VAProfileHEVCMain10) {
+                    if (IS_GEN9(i965->intel.device_info))
+                        attrib_list[i].value = (1 << 16) | (3 << 0);
                 }
             } else if (entrypoint == VAEntrypointEncSliceLP) {
                 /* Don't support B frame for low power mode */

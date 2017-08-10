@@ -1003,6 +1003,10 @@ gen9_hevc_enc_check_parameters(VADriverContextP ctx,
             (pic_param->collocated_ref_pic_index == 0xff ||
              pic_param->collocated_ref_pic_index > GEN9_MAX_REF_SURFACES))
             slice_param->slice_fields.bits.slice_temporal_mvp_enabled_flag = 0;
+
+        if (slice_param->num_ref_idx_l0_active_minus1 > GEN9_HEVC_NUM_MAX_REF_L0 - 1 ||
+            slice_param->num_ref_idx_l1_active_minus1 > GEN9_HEVC_NUM_MAX_REF_L1 - 1)
+            return VA_STATUS_ERROR_ATTR_NOT_SUPPORTED;
     }
 
     i = 1 << (seq_param->log2_diff_max_min_luma_coding_block_size +

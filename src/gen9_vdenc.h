@@ -736,7 +736,7 @@ struct gen9_vdenc_context {
     struct intel_fraction framerate;
     uint32_t    gop_size;
     uint32_t    ref_dist;
-    uint32_t    brc_target_size;
+    double      brc_target_size;
     double      brc_init_current_target_buf_full_in_bits;
     double      brc_init_reset_input_bits_per_frame;
     uint32_t    brc_init_reset_buf_size_in_bits;
