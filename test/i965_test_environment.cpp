@@ -82,8 +82,9 @@ void I965TestEnvironment::SetUp()
 
 void I965TestEnvironment::TearDown()
 {
-    if (m_vaDisplay)
+    if (m_vaDisplay) {
         EXPECT_STATUS(vaTerminate(m_vaDisplay));
+    }
 
     if (m_handle >= 0)
         close(m_handle);

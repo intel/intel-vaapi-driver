@@ -687,13 +687,12 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
     int hl_bitrate_updated = 0; // Indicate whether the bitrate for the highest level is changed in misc parameters
     unsigned int seq_bits_per_second = 0;
 
-    if (!(encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR)))
-        return VA_STATUS_SUCCESS;
+    if (encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR)) {
+        ret = intel_encoder_check_brc_sequence_parameter(ctx, encode_state, encoder_context, &seq_bits_per_second);
 
-    ret = intel_encoder_check_brc_sequence_parameter(ctx, encode_state, encoder_context, &seq_bits_per_second);
-
-    if (ret)
-        return ret;
+        if (ret)
+            return ret;
+    }
 
     for (i = 0; i < ARRAY_ELEMS(encode_state->misc_param); i++) {
         for (j = 0; j < ARRAY_ELEMS(encode_state->misc_param[0]); j++) {
@@ -701,6 +700,11 @@ intel_encoder_check_brc_parameter(VADriverContextP ctx,
                 continue;
 
             misc_param = (VAEncMiscParameterBuffer *)encode_state->misc_param[i][j]->buffer;
+
+            if (!(encoder_context->rate_control_mode & (VA_RC_CBR | VA_RC_VBR))) {
+                if (misc_param->type != VAEncMiscParameterTypeROI)
+                    continue;
+            }
 
             switch (misc_param->type) {
             case VAEncMiscParameterTypeFrameRate:
@@ -1388,6 +1392,12 @@ intel_encoder_context_destroy(void *hw_context)
         encoder_context->enc_priv_state = NULL;
     }
 
+    if (encoder_context->is_tmp_id) {
+        assert(encoder_context->input_yuv_surface != VA_INVALID_SURFACE);
+        i965_DestroySurfaces(encoder_context->ctx, &encoder_context->input_yuv_surface, 1);
+        encoder_context->is_tmp_id = 0;
+    }
+
     intel_batchbuffer_free(encoder_context->base.batch);
     free(encoder_context);
 }
@@ -1431,6 +1441,7 @@ intel_enc_hw_context_init(VADriverContextP ctx,
     encoder_context->quality_range = 1;
     encoder_context->layer.num_layers = 1;
     encoder_context->max_slice_or_seg_num = 1;
+    encoder_context->ctx = ctx;
 
     if (obj_config->entrypoint == VAEntrypointEncSliceLP)
         encoder_context->low_power_mode = 1;

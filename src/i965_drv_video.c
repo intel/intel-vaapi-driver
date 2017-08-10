@@ -1022,9 +1022,21 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribEncMaxRefFrames:
-            if (entrypoint == VAEntrypointEncSlice)
+            if (entrypoint == VAEntrypointEncSlice) {
                 attrib_list[i].value = (1 << 16) | (1 << 0);
-            else if (entrypoint == VAEntrypointEncSliceLP) {
+                if (profile == VAProfileH264ConstrainedBaseline ||
+                    profile == VAProfileH264Main ||
+                    profile == VAProfileH264High ||
+                    profile == VAProfileH264StereoHigh ||
+                    profile == VAProfileH264MultiviewHigh) {
+                    if (IS_GEN9(i965->intel.device_info))
+                        attrib_list[i].value = (2 << 16) | (8 << 0);
+                } else if (profile == VAProfileHEVCMain ||
+                           profile == VAProfileHEVCMain10) {
+                    if (IS_GEN9(i965->intel.device_info))
+                        attrib_list[i].value = (1 << 16) | (3 << 0);
+                }
+            } else if (entrypoint == VAEntrypointEncSliceLP) {
                 /* Don't support B frame for low power mode */
                 if (profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
@@ -1076,6 +1088,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
         case VAConfigAttribEncROI:
             if (entrypoint == VAEntrypointEncSlice ||
                 entrypoint == VAEntrypointEncSliceLP) {
+                VAConfigAttribValEncROI *roi_config =
+                    (VAConfigAttribValEncROI *) & (attrib_list[i].value);
 
                 if (profile == VAProfileH264ConstrainedBaseline ||
                     profile == VAProfileH264Main ||
@@ -1085,10 +1099,6 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                         entrypoint == VAEntrypointEncSlice)
                         attrib_list[i].value = 0;
                     else {
-
-                        VAConfigAttribValEncROI *roi_config =
-                            (VAConfigAttribValEncROI *) & (attrib_list[i].value);
-
                         if (entrypoint == VAEntrypointEncSliceLP) {
                             roi_config->bits.num_roi_regions = 3;
                             roi_config->bits.roi_rc_priority_support = 0;
@@ -1100,6 +1110,12 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                             roi_config->bits.roi_rc_qp_delat_support = 1;
                         }
                     }
+                } else if (profile == VAProfileHEVCMain ||
+                           profile == VAProfileHEVCMain10) {
+                    roi_config->bits.num_roi_regions =
+                        I965_MAX_NUM_ROI_REGIONS;
+                    roi_config->bits.roi_rc_priority_support = 1;
+                    roi_config->bits.roi_rc_qp_delat_support = 1;
                 } else {
                     attrib_list[i].value = 0;
                 }
@@ -1525,15 +1541,22 @@ i965_suface_external_memory(VADriverContextP ctx,
         obj_surface->height = memory_attibute->data_size / obj_surface->width;
     else
         obj_surface->height = memory_attibute->offsets[1] / obj_surface->width;
-    ASSERT_RET(IS_ALIGNED(obj_surface->height, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
-    ASSERT_RET(obj_surface->height >= obj_surface->orig_height, VA_STATUS_ERROR_INVALID_PARAMETER);
+
+    if (memory_attibute->num_planes > 1) {
+        ASSERT_RET(IS_ALIGNED(obj_surface->height, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
+        ASSERT_RET(obj_surface->height >= obj_surface->orig_height, VA_STATUS_ERROR_INVALID_PARAMETER);
+    }
 
     if (tiling) {
         ASSERT_RET(IS_ALIGNED(obj_surface->width, 128), VA_STATUS_ERROR_INVALID_PARAMETER);
-        ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
+
+        if (memory_attibute->num_planes > 1)
+            ASSERT_RET(IS_ALIGNED(obj_surface->height, 32), VA_STATUS_ERROR_INVALID_PARAMETER);
     } else {
         ASSERT_RET(IS_ALIGNED(obj_surface->width, i965->codec_info->min_linear_wpitch), VA_STATUS_ERROR_INVALID_PARAMETER);
-        ASSERT_RET(IS_ALIGNED(obj_surface->height, i965->codec_info->min_linear_hpitch), VA_STATUS_ERROR_INVALID_PARAMETER);
+
+        if (memory_attibute->num_planes > 1)
+            ASSERT_RET(IS_ALIGNED(obj_surface->height, i965->codec_info->min_linear_hpitch), VA_STATUS_ERROR_INVALID_PARAMETER);
     }
 
     obj_surface->x_cb_offset = 0; /* X offset is always 0 */

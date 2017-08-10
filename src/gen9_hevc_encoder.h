@@ -340,6 +340,9 @@ struct gen9_hevc_slice_map {
 #define GEN9_MAX_REF_SURFACES                    8
 #define GEN9_MAX_MV_TEMPORAL_BUFFERS             (GEN9_MAX_REF_SURFACES + 1)
 
+#define GEN9_HEVC_NUM_MAX_REF_L0  3
+#define GEN9_HEVC_NUM_MAX_REF_L1  1
+
 enum GEN9_HEVC_ENC_SURFACE_TYPE {
     GEN9_HEVC_ENC_SURFACE_RECON = 0,
     GEN9_HEVC_ENC_SURFACE_SOURCE = 1
@@ -481,6 +484,7 @@ struct gen9_hevc_encoder_state {
     unsigned int parallel_brc;
 
     unsigned int num_roi;
+    unsigned int roi_value_is_qp_delta;
     unsigned int max_delta_qp;
     unsigned int min_delta_qp;
     struct intel_roi roi[MAX_HEVC_MAX_NUM_ROI];

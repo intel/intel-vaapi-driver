@@ -6387,6 +6387,8 @@ gen9_mfc_avc_insert_aud_packed_data(VADriverContextP ctx,
         nal_type = (unsigned char *)header_data;
 
         param = (VAEncPackedHeaderParameterBuffer *)(encode_state->packed_header_params_ext[start_index + i]->buffer);
+        if (param->type != VAEncPackedHeaderRawData)
+            continue;
 
         length_in_bits = param->bit_length;
 

@@ -859,7 +859,7 @@ gen9_vdenc_update_misc_parameters(VADriverContextP ctx,
         vdenc_context->vbv_buffer_size_in_bit = encoder_context->brc.hrd_buffer_size;
         vdenc_context->init_vbv_buffer_fullness_in_bit = encoder_context->brc.hrd_initial_buffer_fullness;
 
-        vdenc_context->max_bit_rate = ALIGN(encoder_context->brc.bits_per_second[0], 1000) / 1000;
+        vdenc_context->max_bit_rate = encoder_context->brc.bits_per_second[0];
         vdenc_context->mb_brc_enabled = encoder_context->brc.mb_rate_control[0] == 1;
         vdenc_context->brc_need_reset = (vdenc_context->brc_initted && encoder_context->brc.need_reset);
 
@@ -883,7 +883,7 @@ gen9_vdenc_update_misc_parameters(VADriverContextP ctx,
         vdenc_context->roi[i].left = encoder_context->brc.roi[i].left >> 4;
         vdenc_context->roi[i].right = encoder_context->brc.roi[i].right >> 4;
         vdenc_context->roi[i].top = encoder_context->brc.roi[i].top >> 4;
-        vdenc_context->roi[i].bottom = encoder_context->brc.roi[i].top >> 4;
+        vdenc_context->roi[i].bottom = encoder_context->brc.roi[i].bottom >> 4;
         vdenc_context->roi[i].value = encoder_context->brc.roi[i].value;
     }
 }
@@ -1599,11 +1599,11 @@ gen9_vdenc_calculate_initial_qp(VADriverContextP ctx,
     frame_size = (vdenc_context->frame_width * vdenc_context->frame_height * 3 / 2);
     qp = (int)(1.0 / 1.2 * pow(10.0,
                                (log10(frame_size * 2.0 / 3.0 * vdenc_context->framerate.num /
-                                      ((double)vdenc_context->target_bit_rate * 1000.0 * vdenc_context->framerate.den)) - x0) *
+                                      ((double)vdenc_context->target_bit_rate * vdenc_context->framerate.den)) - x0) *
                                (y1 - y0) / (x1 - x0) + y0) + 0.5);
     qp += 2;
     delat_qp = (int)(9 - (vdenc_context->vbv_buffer_size_in_bit * ((double)vdenc_context->framerate.num) /
-                          ((double)vdenc_context->target_bit_rate * 1000.0 * vdenc_context->framerate.den)));
+                          ((double)vdenc_context->target_bit_rate * vdenc_context->framerate.den)));
     if (delat_qp > 0)
         qp += delat_qp;
 
@@ -1628,7 +1628,7 @@ gen9_vdenc_update_huc_brc_init_dmem(VADriverContextP ctx,
     int i;
 
     vdenc_context->brc_init_reset_input_bits_per_frame =
-        ((double)vdenc_context->max_bit_rate * 1000.0 * vdenc_context->framerate.den) / vdenc_context->framerate.num;
+        ((double)vdenc_context->max_bit_rate * vdenc_context->framerate.den) / vdenc_context->framerate.num;
     vdenc_context->brc_init_current_target_buf_full_in_bits = vdenc_context->brc_init_reset_input_bits_per_frame;
     vdenc_context->brc_target_size = vdenc_context->init_vbv_buffer_fullness_in_bit;
 
@@ -1644,9 +1644,9 @@ gen9_vdenc_update_huc_brc_init_dmem(VADriverContextP ctx,
     dmem->frame_width = vdenc_context->frame_width;
     dmem->frame_height = vdenc_context->frame_height;
 
-    dmem->target_bitrate = vdenc_context->target_bit_rate * 1000;
-    dmem->min_rate = vdenc_context->min_bit_rate * 1000;
-    dmem->max_rate = vdenc_context->max_bit_rate * 1000;
+    dmem->target_bitrate = vdenc_context->target_bit_rate;
+    dmem->min_rate = vdenc_context->min_bit_rate;
+    dmem->max_rate = vdenc_context->max_bit_rate;
     dmem->buffer_size = vdenc_context->vbv_buffer_size_in_bit;
     dmem->init_buffer_fullness = vdenc_context->init_vbv_buffer_fullness_in_bit;
 
@@ -1669,7 +1669,7 @@ gen9_vdenc_update_huc_brc_init_dmem(VADriverContextP ctx,
     dmem->min_qp = 10;
     dmem->max_qp = 51;
 
-    input_bits_per_frame = ((double)vdenc_context->max_bit_rate * 1000.0 * vdenc_context->framerate.den) / vdenc_context->framerate.num;
+    input_bits_per_frame = ((double)vdenc_context->max_bit_rate * vdenc_context->framerate.den) / vdenc_context->framerate.num;
     bps_ratio = input_bits_per_frame /
                 ((double)vdenc_context->vbv_buffer_size_in_bit * vdenc_context->framerate.den / vdenc_context->framerate.num);
 
@@ -2166,6 +2166,7 @@ gen9_vdenc_huc_brc_update_constant_data(VADriverContextP ctx,
 {
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct huc_brc_update_constant_data *brc_buffer;
+    int i, j;
 
     brc_buffer = (struct huc_brc_update_constant_data *)
                  i965_map_gpe_resource(&vdenc_context->brc_constant_data_res);
@@ -2174,6 +2175,12 @@ gen9_vdenc_huc_brc_update_constant_data(VADriverContextP ctx,
         return;
 
     memcpy(brc_buffer, &gen9_brc_update_constant_data, sizeof(gen9_brc_update_constant_data));
+
+    for (i = 0; i < 8; i++) {
+        for (j = 0; j < 42; j++) {
+            brc_buffer->hme_mv_cost[i][j] = map_44_lut_value((vdenc_hme_cost[i][j + 10]), 0x6f);
+        }
+    }
 
     if (vdenc_context->internal_rate_mode == I965_BRC_VBR) {
         memcpy(brc_buffer->dist_qp_adj_tab_i, dist_qp_adj_tab_i_vbr, sizeof(dist_qp_adj_tab_i_vbr));
@@ -2688,12 +2695,12 @@ gen9_vdenc_vdenc_pipe_buf_addr_state(VADriverContextP ctx,
     /* DW22-DW27 for FWD REF0/REF1 */
 
     if (vdenc_context->list_ref_idx[0][0] != 0xFF)
-        OUT_BUFFER_3DW(batch, vdenc_context->list_scaled_4x_reference_res[vdenc_context->list_ref_idx[0][0]].bo, 0, 0, 0);
+        OUT_BUFFER_3DW(batch, vdenc_context->list_reference_res[vdenc_context->list_ref_idx[0][0]].bo, 0, 0, 0);
     else
         OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
 
     if (vdenc_context->list_ref_idx[0][1] != 0xFF)
-        OUT_BUFFER_3DW(batch, vdenc_context->list_scaled_4x_reference_res[vdenc_context->list_ref_idx[0][1]].bo, 0, 0, 0);
+        OUT_BUFFER_3DW(batch, vdenc_context->list_reference_res[vdenc_context->list_ref_idx[0][1]].bo, 0, 0, 0);
     else
         OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
 

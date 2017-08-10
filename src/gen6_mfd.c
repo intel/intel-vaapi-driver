@@ -1193,6 +1193,9 @@ gen6_mfd_init_vc1_surface(VADriverContextP ctx,
     }
 
     gen6_vc1_surface->picture_type = pic_param->picture_fields.bits.picture_type;
+    gen6_vc1_surface->intensity_compensation = 0;
+    gen6_vc1_surface->luma_scale = 0;
+    gen6_vc1_surface->luma_shift = 0;
 
     if (gen6_vc1_surface->dmv == NULL) {
         gen6_vc1_surface->dmv = dri_bo_alloc(i965->intel.bufmgr,
@@ -1213,16 +1216,32 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
     dri_bo *bo;
     int width_in_mbs;
     int picture_type;
+    int intensity_compensation;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
     width_in_mbs = ALIGN(pic_param->coded_width, 16) / 16;
     picture_type = pic_param->picture_fields.bits.picture_type;
+    intensity_compensation = (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation);
 
     intel_update_vc1_frame_store_index(ctx,
                                        decode_state,
                                        pic_param,
                                        gen6_mfd_context->reference_surface);
+
+    /* Forward reference picture */
+    obj_surface = decode_state->reference_objects[0];
+    if (pic_param->forward_reference_picture != VA_INVALID_ID &&
+        obj_surface &&
+        obj_surface->private_data) {
+        if (picture_type == 1 && intensity_compensation) { /* P picture */
+            struct gen6_vc1_surface *gen6_vc1_surface = obj_surface->private_data;
+
+            gen6_vc1_surface->intensity_compensation = intensity_compensation;
+            gen6_vc1_surface->luma_scale = pic_param->luma_scale;
+            gen6_vc1_surface->luma_shift = pic_param->luma_shift;
+        }
+    }
 
     /* Current decoded picture */
     obj_surface = decode_state->render_object;
@@ -1573,11 +1592,15 @@ gen6_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen6_mfd_context->base.batch;
     VAPictureParameterBufferVC1 *pic_param;
+    int picture_type;
     int interpolation_mode = 0;
-    int intensitycomp_single;
+    int intensitycomp_single_fwd = 0;
+    int luma_scale1 = 0;
+    int luma_shift1 = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
+    picture_type = pic_param->picture_fields.bits.picture_type;
 
     if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPelBilinear ||
         (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
@@ -1592,7 +1615,16 @@ gen6_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
-    intensitycomp_single = (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation);
+
+    if (gen6_mfd_context->reference_surface[0].surface_id != VA_INVALID_ID) {
+        if (picture_type == 1 || picture_type == 2) { /* P/B picture */
+            struct gen6_vc1_surface *gen6_vc1_surface = gen6_mfd_context->reference_surface[0].obj_surface->private_data;
+
+            intensitycomp_single_fwd = gen6_vc1_surface->intensity_compensation;
+            luma_scale1 = gen6_vc1_surface->luma_scale;
+            luma_shift1 = gen6_vc1_surface->luma_shift;
+        }
+    }
 
     BEGIN_BCS_BATCH(batch, 7);
     OUT_BCS_BATCH(batch, MFX_VC1_PRED_PIPE_STATE | (7 - 2));
@@ -1601,8 +1633,8 @@ gen6_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
                   pic_param->rounding_control << 4 |
                   va_to_gen6_vc1_profile[pic_param->sequence_fields.bits.profile] << 2);
     OUT_BCS_BATCH(batch,
-                  pic_param->luma_shift << 16 |
-                  pic_param->luma_scale << 0); /* FIXME: Luma Scaling */
+                  luma_shift1 << 16 |
+                  luma_scale1 << 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
     OUT_BCS_BATCH(batch, 0);
@@ -1613,8 +1645,8 @@ gen6_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
                   pic_param->range_reduction_frame << 16 |
                   0 << 6 | /* FIXME: double ??? */
                   0 << 4 |
-                  intensitycomp_single << 2 |
-                  intensitycomp_single << 0);
+                  intensitycomp_single_fwd << 2 |
+                  0 << 0);
     ADVANCE_BCS_BATCH(batch);
 }
 

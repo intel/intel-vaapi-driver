@@ -29,3 +29,6 @@ config.sub
 configure
 depcomp
 TAGS
+/src/intel_version.h
+/src/wayland-drm-client-protocol.h
+.VERSION*
