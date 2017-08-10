@@ -1305,10 +1305,10 @@ i965_CreateConfig(VADriverContextP ctx,
         case VAProfileH264ConstrainedBaseline:
         case VAProfileH264Main:
         case VAProfileH264High:
-            if ((entrypoint == VAEntrypointEncSlice) &&
+            if ((entrypoint == VAEntrypointEncSlice) && attrib_found &&
                 !(attrib_found->value & i965->codec_info->h264_brc_mode))
                 vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
-            else if ((entrypoint == VAEntrypointEncSliceLP) &&
+            else if ((entrypoint == VAEntrypointEncSliceLP) && attrib_found &&
                      !(attrib_found->value & i965->codec_info->lp_h264_brc_mode))
                 vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
             break;
