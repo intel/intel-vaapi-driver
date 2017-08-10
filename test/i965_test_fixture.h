@@ -77,7 +77,8 @@ public:
      * test assertion failure.
      */
     VAConfigID createConfig(VAProfile, VAEntrypoint,
-        const ConfigAttribs& = ConfigAttribs());
+        const ConfigAttribs& = ConfigAttribs(),
+        const VAStatus = VA_STATUS_SUCCESS);
 
     /**
      * Convenience wrapper for i965_DestroyConfig.  May generate a non-fatal
