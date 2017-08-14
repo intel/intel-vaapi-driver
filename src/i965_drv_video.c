@@ -1031,6 +1031,10 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     profile == VAProfileH264MultiviewHigh) {
                     if (IS_GEN9(i965->intel.device_info))
                         attrib_list[i].value = (2 << 16) | (8 << 0);
+                } else if (profile == VAProfileHEVCMain ||
+                           profile == VAProfileHEVCMain10) {
+                    if (IS_GEN9(i965->intel.device_info))
+                        attrib_list[i].value = (1 << 16) | (3 << 0);
                 }
             } else if (entrypoint == VAEntrypointEncSliceLP) {
                 /* Don't support B frame for low power mode */
@@ -1290,6 +1294,27 @@ i965_CreateConfig(VADriverContextP ctx,
             vaStatus = i965_append_config_attribute(obj_config, &attrib);
         else if (!(attrib_found->value & attrib.value))
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+    }
+
+
+    if (vaStatus == VA_STATUS_SUCCESS) {
+        VAConfigAttrib attrib, *attrib_found;
+        attrib.type = VAConfigAttribRateControl;
+        attrib_found = i965_lookup_config_attribute(obj_config, attrib.type);
+        switch (profile) {
+        case VAProfileH264ConstrainedBaseline:
+        case VAProfileH264Main:
+        case VAProfileH264High:
+            if ((entrypoint == VAEntrypointEncSlice) && attrib_found &&
+                !(attrib_found->value & i965->codec_info->h264_brc_mode))
+                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
+            else if ((entrypoint == VAEntrypointEncSliceLP) && attrib_found &&
+                     !(attrib_found->value & i965->codec_info->lp_h264_brc_mode))
+                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
+            break;
+        default:
+            break;
+        }
     }
 
     if (vaStatus == VA_STATUS_SUCCESS) {
