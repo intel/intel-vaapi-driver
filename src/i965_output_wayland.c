@@ -79,6 +79,7 @@ struct va_wl_output {
     struct wl_vtable       vtable;
     struct wl_event_queue *queue;
     struct wl_drm         *wl_drm;
+    uint32_t               wl_drm_name;
     struct wl_registry    *wl_registry;
 };
 
@@ -143,7 +144,7 @@ static void
 registry_handle_global(
     void               *data,
     struct wl_registry *registry,
-    uint32_t            id,
+    uint32_t            name,
     const char         *interface,
     uint32_t            version
 )
@@ -154,15 +155,33 @@ registry_handle_global(
     struct wl_vtable * const wl_vtable = &wl_output->vtable;
 
     if (strcmp(interface, "wl_drm") == 0) {
+        wl_output->wl_drm_name = name;
         wl_output->wl_drm = registry_bind(wl_vtable, wl_output->wl_registry,
-                                          id, wl_vtable->drm_interface,
+                                          name, wl_vtable->drm_interface,
                                           (version < 2) ? version : 2);
+    }
+}
+
+static void
+registry_handle_global_remove(
+    void               *data,
+    struct wl_registry *registry,
+    uint32_t            name
+)
+{
+    VADriverContextP ctx = data;
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    struct va_wl_output * const wl_output = i965->wl_output;
+
+    if (wl_output->wl_drm && name == wl_output->wl_drm_name) {
+        wl_output->vtable.proxy_destroy((struct wl_proxy *)wl_output->wl_drm);
+        wl_output->wl_drm = NULL;
     }
 }
 
 static const struct wl_registry_listener registry_listener = {
     registry_handle_global,
-    NULL
+    registry_handle_global_remove
 };
 
 /* Ensure wl_drm instance is created */
@@ -177,14 +196,23 @@ ensure_wl_output(VADriverContextP ctx)
     if (wl_output->wl_drm)
         return true;
 
+    if (wl_output->queue) {
+        wl_output->vtable.event_queue_destroy(wl_output->queue);
+        wl_output->queue = NULL;
+    }
     wl_output->queue = wl_vtable->display_create_queue(ctx->native_dpy);
     if (!wl_output->queue)
         return false;
+
     display_wrapper = wl_vtable->proxy_create_wrapper(ctx->native_dpy);
     if (!display_wrapper)
         return false;
     wl_vtable->proxy_set_queue((struct wl_proxy *) display_wrapper, wl_output->queue);
 
+    if (wl_output->wl_registry) {
+        wl_output->vtable.proxy_destroy((struct wl_proxy *)wl_output->wl_registry);
+        wl_output->wl_registry = NULL;
+    }
     wl_output->wl_registry = display_get_registry(wl_vtable, display_wrapper);
     wl_vtable->proxy_wrapper_destroy(display_wrapper);
     registry_add_listener(wl_vtable, wl_output->wl_registry,
