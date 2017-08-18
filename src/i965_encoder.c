@@ -1359,6 +1359,21 @@ intel_encoder_end_picture(VADriverContextP ctx,
 
     encoder_context->mfc_brc_prepare(encode_state, encoder_context);
 
+    /* VME or PAK stages are separately invoked if middleware configured the corresponding
+     * FEI modes through confgiruation attributes. On the other hand, ENC_PAK mode
+     * will invoke both VME and PAK similar to the non fei use case */
+    if (encoder_context->fei_enabled) {
+        if (encoder_context->fei_function_mode == VA_FEI_FUNCTION_ENC) {
+            if ((encoder_context->vme_context && encoder_context->vme_pipeline))
+                return encoder_context->vme_pipeline(ctx, profile, encode_state, encoder_context);
+        } else if (encoder_context->fei_function_mode == VA_FEI_FUNCTION_PAK) {
+            if ((encoder_context->mfc_context && encoder_context->mfc_pipeline))
+                return encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
+        }
+        /* Setting ENC and PAK as ENC|PAK is invalid */
+        assert(encoder_context->fei_function_mode != (VA_FEI_FUNCTION_ENC | VA_FEI_FUNCTION_PAK));
+    }
+
     if ((encoder_context->vme_context && encoder_context->vme_pipeline)) {
         vaStatus = encoder_context->vme_pipeline(ctx, profile, encode_state, encoder_context);
         if (vaStatus != VA_STATUS_SUCCESS)
