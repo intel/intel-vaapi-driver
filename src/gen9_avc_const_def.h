@@ -23,6 +23,7 @@
  *
  * Authors:
  *    Pengfei Qu <Pengfei.qu@intel.com>
+ *    Sreerenj Balachandran <sreerenj.balachandran@intel.com>
  *
  */
 
@@ -37,6 +38,7 @@
 #define GEN9_AVC_NUM_REF_CHECK_WIDTH      3840
 #define GEN9_AVC_NUM_REF_CHECK_HEIGHT     2160
 #define GEN9_AVC_MBENC_CURBE_SIZE    88
+#define GEN9_AVC_FEI_MBENC_CURBE_SIZE    104
 #define AVC_QP_MAX    52
 #define PRESET_NUM    8
 #define GEN95_AVC_MAX_LAMBDA              0xEFFF
@@ -114,6 +116,14 @@ extern const unsigned int gen9_avc_b_search_x[PRESET_NUM];
 extern const unsigned int gen9_avc_b_search_y[PRESET_NUM];
 extern const unsigned char gen9_avc_enable_adaptive_tx_decision[PRESET_NUM];
 extern const unsigned char gen9_avc_kernel_mode[PRESET_NUM];
+
+/*==== GEN9 (SKL) AVC FEI specific constants ====*/
+
+/* GEN9 AVC FEI MBEnc CURBE init data  */
+extern const unsigned int gen9_avc_fei_mbenc_curbe_i_frame_init_data[GEN9_AVC_FEI_MBENC_CURBE_SIZE];
+extern const unsigned int gen9_avc_fei_mbenc_curbe_p_frame_init_data[GEN9_AVC_FEI_MBENC_CURBE_SIZE];
+extern const unsigned int gen9_avc_fei_mbenc_curbe_b_frame_init_data[GEN9_AVC_FEI_MBENC_CURBE_SIZE];
+extern const unsigned int gen9_avc_fei_mbenc_curbe_i_frame_dist_init_data[GEN9_AVC_FEI_MBENC_CURBE_SIZE];
 
 /* Gen95  */
 extern const unsigned int gen95_avc_trellis_quantization_rounding[PRESET_NUM];
