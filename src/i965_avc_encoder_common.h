@@ -195,7 +195,7 @@ struct avc_enc_state {
     VAEncPictureParameterBufferH264  *pic_param;
     VAEncSliceParameterBufferH264    *slice_param[MAX_AVC_SLICE_NUM];
     VAEncMacroblockParameterBufferH264 *mb_param;
-
+    VAEncMiscParameterFEIFrameControlH264 *fei_framectl_param;
     uint32_t mad_enable: 1;
     //mb skip
     uint32_t mb_disable_skip_map_enable: 1;

@@ -238,6 +238,13 @@ struct generic_encoder_context {
         uint32_t end_offset;
     } compressed_bitstream;
 
+    bool (*get_kernel_header_and_size)(
+        void *pvbinary,
+        int binary_size,
+        INTEL_GENERIC_ENC_OPERATION operation,
+        int krnstate_idx,
+        struct i965_kernel *ret_kernel);
+
     //curbe set function pointer
     void (*pfn_set_curbe_scaling2x)(
         VADriverContextP ctx,
