@@ -832,20 +832,6 @@ gen7_pp_avs_y_steps(void *private_context)
     return pp_avs_context->dest_h / 16;
 }
 
-static int
-gen7_pp_avs_set_block_parameter(struct i965_post_processing_context *pp_context, int x, int y)
-{
-    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)pp_context->private_context;
-    struct gen7_pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
-
-    pp_inline_parameter->grf9.destination_block_horizontal_origin = x * 16 + pp_avs_context->dest_x;
-    pp_inline_parameter->grf9.destination_block_vertical_origin = y * 16 + pp_avs_context->dest_y;
-    pp_inline_parameter->grf9.constant_0 = 0xffffffff;
-    pp_inline_parameter->grf9.sampler_load_main_video_x_scaling_step = pp_avs_context->horiz_range / pp_avs_context->src_w;
-
-    return 0;
-}
-
 static void gen7_update_src_surface_uv_offset(VADriverContextP    ctx,
                                               struct i965_post_processing_context *pp_context,
                                               const struct i965_surface *surface)
@@ -1206,7 +1192,6 @@ gen8_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
     pp_context->pp_x_steps = gen7_pp_avs_x_steps;
     pp_context->pp_y_steps = gen7_pp_avs_y_steps;
     pp_context->private_context = &pp_context->pp_avs_context;
-    pp_context->pp_set_block_parameter = gen7_pp_avs_set_block_parameter;
 
     int dst_left_edge_extend = dst_rect->x % GPU_ASM_X_OFFSET_ALIGNMENT;
     pp_avs_context->dest_x = dst_rect->x - dst_left_edge_extend;
@@ -1516,6 +1501,12 @@ gen8_pp_object_walker(VADriverContextP ctx,
     dri_bo *command_buffer;
     unsigned int *command_ptr;
 
+    struct pp_avs_context *pp_avs_context = (struct pp_avs_context *)pp_context->private_context;
+    struct gen7_pp_inline_parameter *pp_inline_parameter = pp_context->pp_inline_parameter;
+
+    pp_inline_parameter->grf9.constant_0 = 0xffffffff;
+    pp_inline_parameter->grf9.sampler_load_main_video_x_scaling_step = pp_avs_context->horiz_range / pp_avs_context->src_w;
+
     param_size = sizeof(struct gen7_pp_inline_parameter);
 
     x_steps = pp_context->pp_x_steps(pp_context->private_context);
@@ -1532,20 +1523,20 @@ gen8_pp_object_walker(VADriverContextP ctx,
 
     for (y = 0; y < y_steps; y++) {
         for (x = 0; x < x_steps; x++) {
-            if (!pp_context->pp_set_block_parameter(pp_context, x, y)) {
+            pp_inline_parameter->grf9.destination_block_horizontal_origin = x * 16 + pp_avs_context->dest_x;
+            pp_inline_parameter->grf9.destination_block_vertical_origin = y * 16 + pp_avs_context->dest_y;
 
-                *command_ptr++ = (CMD_MEDIA_OBJECT | (command_length_in_dws - 2));
-                *command_ptr++ = 0;
-                *command_ptr++ = 0;
-                *command_ptr++ = 0;
-                *command_ptr++ = 0;
-                *command_ptr++ = 0;
-                memcpy(command_ptr, pp_context->pp_inline_parameter, param_size);
-                command_ptr += (param_size >> 2);
+            *command_ptr++ = (CMD_MEDIA_OBJECT | (command_length_in_dws - 2));
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+            *command_ptr++ = 0;
+            memcpy(command_ptr, pp_context->pp_inline_parameter, param_size);
+            command_ptr += (param_size >> 2);
 
-                *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
-                *command_ptr++ = 0;
-            }
+            *command_ptr++ = CMD_MEDIA_STATE_FLUSH;
+            *command_ptr++ = 0;
         }
     }
 
