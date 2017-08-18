@@ -23,6 +23,7 @@
  *
  * Authors:
  *    Pengfei Qu <Pengfei.qu@intel.com>
+ *    Sreerenj Balachandran <sreerenj.balachandran@intel.com>
  *
  */
 
@@ -73,6 +74,14 @@
         OUT_BUFFER_2DW(batch, bo, is_target, delta);            \
         OUT_BCS_BATCH(batch, attr);                             \
     } while (0)
+
+/* FEI specific buffer sizes per MB in bytes for gen9 */
+#define FEI_AVC_MB_CODE_BUFFER_SIZE      64
+#define FEI_AVC_MV_DATA_BUFFER_SIZE      128
+#define FEI_AVC_MB_CONTROL_BUFFER_SIZE   16
+#define FEI_AVC_MV_PREDICTOR_BUFFER_SIZE 40
+#define FEI_AVC_DISTORTION_BUFFER_SIZE   48
+#define FEI_AVC_QP_BUFFER_SIZE           1
 
 static const uint32_t qm_flat[16] = {
     0x10101010, 0x10101010, 0x10101010, 0x10101010,
@@ -530,6 +539,52 @@ intel_avc_get_kernel_header_and_size(void *pvbinary,
 
     return true;
 }
+
+static bool
+intel_avc_fei_get_kernel_header_and_size(
+    void                             *pvbinary,
+    int                              binary_size,
+    INTEL_GENERIC_ENC_OPERATION      operation,
+    int                              krnstate_idx,
+    struct i965_kernel               *ret_kernel)
+{
+    typedef uint32_t BIN_PTR[4];
+
+    char *bin_start;
+    gen9_avc_fei_encoder_kernel_header      *pkh_table;
+    kernel_header          *pcurr_header, *pinvalid_entry, *pnext_header;
+    int next_krnoffset;
+
+    if (!pvbinary || !ret_kernel)
+        return false;
+
+    bin_start = (char *)pvbinary;
+    pkh_table = (gen9_avc_fei_encoder_kernel_header *)pvbinary;
+    pinvalid_entry = &(pkh_table->ply_2xdscale_2f_ply_2f) + 1;
+    next_krnoffset = binary_size;
+
+    if (operation == INTEL_GENERIC_ENC_SCALING4X) {
+        pcurr_header = &pkh_table->ply_2xdscale_ply;
+    } else if (operation == INTEL_GENERIC_ENC_ME) {
+        pcurr_header = &pkh_table->me_p;
+    } else if (operation == INTEL_GENERIC_ENC_MBENC) {
+        pcurr_header = &pkh_table->mbenc_i;
+    } else {
+        return false;
+    }
+
+    pcurr_header += krnstate_idx;
+    ret_kernel->bin = (const BIN_PTR *)(bin_start + (pcurr_header->kernel_start_pointer << 6));
+
+    pnext_header = (pcurr_header + 1);
+    if (pnext_header < pinvalid_entry) {
+        next_krnoffset = pnext_header->kernel_start_pointer << 6;
+    }
+    ret_kernel->size = next_krnoffset - (pcurr_header->kernel_start_pointer << 6);
+
+    return true;
+}
+
 static void
 gen9_free_surfaces_avc(void **data)
 {
@@ -561,6 +616,15 @@ gen9_free_surfaces_avc(void **data)
     i965_free_gpe_resource(&avc_surface->res_mb_code_surface);
     i965_free_gpe_resource(&avc_surface->res_mv_data_surface);
     i965_free_gpe_resource(&avc_surface->res_ref_pic_select_surface);
+
+    /* FEI specific resources */
+    /* since the driver previously taken an extra reference to the drm_bo
+     * in case the buffers were supplied by middleware, there shouldn't
+     * be any memory handling issue */
+    i965_free_gpe_resource(&avc_surface->res_fei_mb_cntrl_surface);
+    i965_free_gpe_resource(&avc_surface->res_fei_mv_predictor_surface);
+    i965_free_gpe_resource(&avc_surface->res_fei_vme_distortion_surface);
+    i965_free_gpe_resource(&avc_surface->res_fei_mb_qp_surface);
 
     dri_bo_unreference(avc_surface->dmv_top);
     avc_surface->dmv_top = NULL;
@@ -669,21 +733,23 @@ gen9_avc_init_check_surfaces(VADriverContextP ctx,
     }
 
     /*mb code and mv data for each frame*/
-    size = frame_mb_nums * 16 * 4;
-    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                               &avc_surface->res_mb_code_surface,
-                                               ALIGN(size, 0x1000),
-                                               "mb code buffer");
-    if (!allocate_flag)
-        goto failed_allocation;
+    if (!encoder_context->fei_enabled) {
+        size = frame_mb_nums * 16 * 4;
+        allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                                   &avc_surface->res_mb_code_surface,
+                                                   ALIGN(size, 0x1000),
+                                                   "mb code buffer");
+        if (!allocate_flag)
+            goto failed_allocation;
 
-    size = frame_mb_nums * 32 * 4;
-    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
-                                               &avc_surface->res_mv_data_surface,
-                                               ALIGN(size, 0x1000),
-                                               "mv data buffer");
-    if (!allocate_flag)
-        goto failed_allocation;
+        size = frame_mb_nums * 32 * 4;
+        allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                                   &avc_surface->res_mv_data_surface,
+                                                   ALIGN(size, 0x1000),
+                                                   "mv data buffer");
+        if (!allocate_flag)
+            goto failed_allocation;
+    }
 
     /* ref pic list*/
     if (avc_state->ref_pic_select_list_supported) {
@@ -3596,6 +3662,455 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
 }
 
 static void
+gen9_avc_fei_set_curbe_mbenc(VADriverContextP ctx,
+                             struct encode_state *encode_state,
+                             struct i965_gpe_context *gpe_context,
+                             struct intel_encoder_context *encoder_context,
+                             void * param)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    gen9_avc_fei_mbenc_curbe_data *cmd;
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state *)vme_context->private_enc_state;
+    VASurfaceID surface_id;
+    struct object_surface *obj_surface;
+    VAEncSliceParameterBufferH264 * slice_param = avc_state->slice_param[0];
+    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
+    VAEncMiscParameterFEIFrameControlH264 *fei_param = avc_state->fei_framectl_param;
+
+    struct mbenc_param * curbe_param = (struct mbenc_param *)param ;
+    unsigned char qp = 0;
+    unsigned char me_method = 0;
+    unsigned int mbenc_i_frame_dist_in_use = curbe_param->mbenc_i_frame_dist_in_use;
+    unsigned int table_idx = 0;
+    int ref_width, ref_height, len_sp;
+    int is_bframe = (generic_state->frame_type == SLICE_TYPE_B);
+    int is_pframe = (generic_state->frame_type == SLICE_TYPE_P);
+    unsigned int preset = generic_state->preset;
+
+    qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
+
+    cmd = (gen9_avc_fei_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
+    memset(cmd, 0, sizeof(gen9_avc_fei_mbenc_curbe_data));
+
+    if (mbenc_i_frame_dist_in_use) {
+        memcpy(cmd, gen9_avc_fei_mbenc_curbe_i_frame_dist_init_data, sizeof(gen9_avc_fei_mbenc_curbe_data));
+
+    } else {
+        switch (generic_state->frame_type) {
+        case SLICE_TYPE_I:
+            memcpy(cmd, gen9_avc_fei_mbenc_curbe_i_frame_init_data, sizeof(gen9_avc_fei_mbenc_curbe_data));
+            break;
+        case SLICE_TYPE_P:
+            memcpy(cmd, gen9_avc_fei_mbenc_curbe_p_frame_init_data, sizeof(gen9_avc_fei_mbenc_curbe_data));
+            break;
+        case SLICE_TYPE_B:
+            memcpy(cmd, gen9_avc_fei_mbenc_curbe_b_frame_init_data, sizeof(gen9_avc_fei_mbenc_curbe_data));
+            break;
+        default:
+            assert(0);
+        }
+
+    }
+    /* 4 means full search, 6 means diamand search */
+    me_method  = (fei_param->search_window == 5) ||
+                 (fei_param->search_window == 8) ? 4 : 6;
+
+    ref_width    = fei_param->ref_width;
+    ref_height   = fei_param->ref_height;
+    len_sp       = fei_param->len_sp;
+    /* If there is a serch_window, discard user provided ref_width, ref_height
+     * and search_path length */
+    switch (fei_param->search_window) {
+    case 0:
+        /*  not use predefined search window, there should be a search_path input */
+        if ((fei_param->search_path != 0) &&
+            (fei_param->search_path != 1) &&
+            (fei_param->search_path != 2)) {
+            WARN_ONCE("Invalid input search_path for SearchWindow=0  \n");
+            assert(0);
+        }
+        /* 4 means full search, 6 means diamand search */
+        me_method = (fei_param->search_path == 1) ? 6 : 4;
+        if (((ref_width * ref_height) > 2048) || (ref_width > 64) || (ref_height > 64)) {
+            WARN_ONCE("Invalid input ref_width/ref_height in"
+                      "SearchWindow=0 case! \n");
+            assert(0);
+        }
+        break;
+
+    case 1:
+        /* Tiny - 4 SUs 24x24 window */
+        ref_width  = 24;
+        ref_height = 24;
+        len_sp     = 4;
+        break;
+
+    case 2:
+        /* Small - 9 SUs 28x28 window */
+        ref_width  = 28;
+        ref_height = 28;
+        len_sp     = 9;
+        break;
+    case 3:
+        /* Diamond - 16 SUs 48x40 window */
+        ref_width  = 48;
+        ref_height = 40;
+        len_sp     = 16;
+        break;
+    case 4:
+        /* Large Diamond - 32 SUs 48x40 window */
+        ref_width  = 48;
+        ref_height = 40;
+        len_sp     = 32;
+        break;
+    case 5:
+        /* Exhaustive - 48 SUs 48x40 window */
+        ref_width  = 48;
+        ref_height = 40;
+        len_sp     = 48;
+        break;
+    case 6:
+        /* Diamond - 16 SUs 64x32 window */
+        ref_width  = 64;
+        ref_height = 32;
+        len_sp     = 16;
+        break;
+    case 7:
+        /* Large Diamond - 32 SUs 64x32 window */
+        ref_width  = 64;
+        ref_height = 32;
+        len_sp     = 32;
+        break;
+    case 8:
+        /* Exhaustive - 48 SUs 64x32 window */
+        ref_width  = 64;
+        ref_height = 32;
+        len_sp     = 48;
+        break;
+
+    default:
+        assert(0);
+    }
+
+    /* ref_width*ref_height = Max 64x32 one direction, Max 32x32 two directions */
+    if (is_bframe) {
+        CLIP(ref_width, 4, 32);
+        CLIP(ref_height, 4, 32);
+    } else if (is_pframe) {
+        CLIP(ref_width, 4, 64);
+        CLIP(ref_height, 4, 32);
+    }
+
+    cmd->dw0.adaptive_enable =
+        cmd->dw37.adaptive_enable = fei_param->adaptive_search;
+    cmd->dw0.t8x8_flag_for_inter_enable = cmd->dw37.t8x8_flag_for_inter_enable
+                                          = avc_state->transform_8x8_mode_enable;
+    cmd->dw2.max_len_sp = len_sp;
+    cmd->dw38.max_len_sp = 0; // HLD mandates this field to be Zero
+    cmd->dw2.max_num_su = cmd->dw38.max_num_su = 57;
+    cmd->dw3.src_access =
+        cmd->dw3.ref_access = 0; // change it to (is_frame ? 0: 1) when interlace is suppoted
+
+    if (avc_state->ftq_enable && (generic_state->frame_type != SLICE_TYPE_I)) {
+        if (avc_state->ftq_override) {
+            cmd->dw3.ft_enable = avc_state->ftq_enable;
+        } else {
+            if (generic_state->frame_type == SLICE_TYPE_P) {
+                cmd->dw3.ft_enable = gen9_avc_max_ftq_based_skip[preset] & 0x01;
+            } else {
+                cmd->dw3.ft_enable = (gen9_avc_max_ftq_based_skip[preset] >> 1) & 0x01;
+            }
+        }
+    } else {
+        cmd->dw3.ft_enable = 0;
+    }
+
+    if (avc_state->disable_sub_mb_partion)
+        cmd->dw3.sub_mb_part_mask = 0x7;
+
+    if (mbenc_i_frame_dist_in_use) {
+        /* Fixme: Not supported, no brc in fei */
+        assert(0);
+        cmd->dw2.pic_width = generic_state->downscaled_width_4x_in_mb;
+        cmd->dw4.pic_height_minus1 = generic_state->downscaled_height_4x_in_mb - 1;
+        cmd->dw5.slice_mb_height = (avc_state->slice_height + 4 - 1) / 4;
+        cmd->dw6.batch_buffer_end = 0;
+        cmd->dw31.intra_compute_type = 1;
+    }
+
+    cmd->dw2.pic_width = generic_state->frame_width_in_mbs;
+    cmd->dw4.pic_height_minus1 = generic_state->frame_height_in_mbs - 1;
+    cmd->dw5.slice_mb_height = (avc_state->arbitrary_num_mbs_in_slice) ?
+                               generic_state->frame_height_in_mbs : avc_state->slice_height;
+    cmd->dw3.sub_mb_part_mask = fei_param->sub_mb_part_mask;
+    cmd->dw3.sub_pel_mode = fei_param->sub_pel_mode;
+    cmd->dw3.inter_sad = fei_param->inter_sad;
+    cmd->dw3.Intra_sad = fei_param->intra_sad;
+    cmd->dw3.search_ctrl = (is_bframe) ? 7 : 0;
+    cmd->dw4.enable_fbr_bypass = avc_state->fbr_bypass_enable;
+    cmd->dw4.enable_intra_cost_scaling_for_static_frame =
+        avc_state->sfd_enable && generic_state->hme_enabled;
+    cmd->dw4.true_distortion_enable = fei_param->distortion_type == 0 ? 1 : 0;
+    cmd->dw4.constrained_intra_pred_flag =
+        pic_param->pic_fields.bits.constrained_intra_pred_flag;
+    cmd->dw4.hme_enable = 0;
+    cmd->dw4.picture_type = slice_type_kernel[generic_state->frame_type];
+    cmd->dw4.use_actual_ref_qp_value =
+        generic_state->hme_enabled && (gen9_avc_mr_disable_qp_check[preset] == 0);
+    cmd->dw7.intra_part_mask = fei_param->intra_part_mask;
+    cmd->dw7.src_field_polarity = 0;
+
+    /* mv mode cost */
+    memcpy(&(cmd->dw8), gen9_avc_mode_mv_cost_table[slice_type_kernel[generic_state->frame_type]][qp], 8 * sizeof(unsigned int));
+    if ((generic_state->frame_type == SLICE_TYPE_I) && avc_state->old_mode_cost_enable) {
+        // cmd->dw8 = gen9_avc_old_intra_mode_cost[qp];
+    } else if (avc_state->skip_bias_adjustment_enable) {
+        // Load different MvCost for P picture when SkipBiasAdjustment is enabled
+        // No need to check for P picture as the flag is only enabled for P picture
+        cmd->dw11.value = gen9_avc_mv_cost_p_skip_adjustment[qp];
+    }
+
+    //dw16
+    /* search path tables */
+    table_idx = (generic_state->frame_type == SLICE_TYPE_B) ? 1 : 0;
+    memcpy(&(cmd->dw16), table_enc_search_path[table_idx][me_method], 16 * sizeof(unsigned int));
+
+    //ftq_skip_threshold_lut set,dw14 /15
+
+    //r5 disable NonFTQSkipThresholdLUT
+    if (generic_state->frame_type == SLICE_TYPE_P) {
+        cmd->dw32.skip_val = gen9_avc_skip_value_p[avc_state->block_based_skip_enable][avc_state->transform_8x8_mode_enable][qp];
+    } else if (generic_state->frame_type == SLICE_TYPE_B) {
+        cmd->dw32.skip_val =
+            gen9_avc_skip_value_b[avc_state->block_based_skip_enable][avc_state->transform_8x8_mode_enable][qp];
+    }
+    cmd->dw13.qp_prime_y = qp;
+    cmd->dw13.qp_prime_cb = qp;
+    cmd->dw13.qp_prime_cr = qp;
+    cmd->dw13.target_size_in_word = 0xff; /* hardcoded for brc disable */
+
+    if ((generic_state->frame_type != SLICE_TYPE_I) && avc_state->multi_pre_enable) {
+        cmd->dw32.mult_pred_l0_disable = fei_param->multi_pred_l0 ? 0x01 : 0x80;
+        cmd->dw32.mult_pred_l1_disable = ((generic_state->frame_type == SLICE_TYPE_B) && fei_param->multi_pred_l1) ? 0x01 : 0x80;
+    } else {
+        /* disable */
+        cmd->dw32.mult_pred_l0_disable = 0x80;
+        cmd->dw32.mult_pred_l1_disable = 0x80;
+    }
+    /* no field pic setting, not supported */
+
+    //dw34 58
+    if (avc_state->adaptive_transform_decision_enable) {
+        if (generic_state->frame_type != SLICE_TYPE_I) {
+            cmd->dw34.enable_adaptive_tx_decision = 1;
+        }
+
+        cmd->dw58.mb_texture_threshold = 1024;
+        cmd->dw58.tx_decision_threshold = 128;
+    }
+    if (generic_state->frame_type == SLICE_TYPE_B) {
+        cmd->dw34.list1_ref_id0_frm_field_parity = 0; //frame only
+        cmd->dw34.list1_ref_id1_frm_field_parity = 0;
+        cmd->dw34.b_direct_mode = slice_param->direct_spatial_mv_pred_flag;
+    }
+    cmd->dw34.enable_mb_flatness_check_optimization = avc_state->flatness_check_enable;
+    cmd->dw34.roi_enable_flag = generic_state->brc_roi_enable;
+    cmd->dw34.mad_enable_falg = avc_state->mad_enable;
+    cmd->dw34.mb_brc_enable = avc_state->mb_qp_data_enable && generic_state->mb_brc_enabled;
+    cmd->dw34.arbitray_num_mbs_per_slice = avc_state->arbitrary_num_mbs_in_slice;
+    cmd->dw34.force_non_skip_check = avc_state->mb_disable_skip_map_enable;
+
+    if (cmd->dw34.force_non_skip_check) {
+        cmd->dw34.disable_enc_skip_check = avc_state->skip_check_disable;
+    }
+    cmd->dw36.check_all_fractional_enable = avc_state->caf_enable;
+    cmd->dw38.ref_threshold = 400;
+    cmd->dw39.hme_ref_windows_comb_threshold = (generic_state->frame_type == SLICE_TYPE_B) ? gen9_avc_hme_b_combine_len[preset] : gen9_avc_hme_combine_len[preset];
+    // Default:2 used for MBBRC (MB QP Surface width and height are 4x downscaled picture in MB unit * 4  bytes)
+    // 0 used for MBQP data surface (MB QP Surface width and height are same as the input picture size in MB unit * 1bytes)
+    // starting GEN9, BRC use split kernel, MB QP surface is same size as input picture
+    cmd->dw47.mb_qp_read_factor = (avc_state->mb_qp_data_enable || generic_state->mb_brc_enabled) ? 0 : 2;
+    if (mbenc_i_frame_dist_in_use) {
+        cmd->dw13.qp_prime_y = 0;
+        cmd->dw13.qp_prime_cb = 0;
+        cmd->dw13.qp_prime_cr = 0;
+        cmd->dw33.intra_16x16_nondc_penalty = 0;
+        cmd->dw33.intra_8x8_nondc_penalty = 0;
+        cmd->dw33.intra_4x4_nondc_penalty = 0;
+    }
+    if (cmd->dw4.use_actual_ref_qp_value) {
+        cmd->dw44.actual_qp_value_for_ref_id0_list0 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 0, 0);
+        cmd->dw44.actual_qp_value_for_ref_id1_list0 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 0, 1);
+        cmd->dw44.actual_qp_value_for_ref_id2_list0 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 0, 2);
+        cmd->dw44.actual_qp_value_for_ref_id3_list0 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 0, 3);
+        cmd->dw45.actual_qp_value_for_ref_id4_list0 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 0, 4);
+        cmd->dw45.actual_qp_value_for_ref_id5_list0 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 0, 5);
+        cmd->dw45.actual_qp_value_for_ref_id6_list0 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 0, 6);
+        cmd->dw45.actual_qp_value_for_ref_id7_list0 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 0, 7);
+        cmd->dw46.actual_qp_value_for_ref_id0_list1 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 1, 0);
+        cmd->dw46.actual_qp_value_for_ref_id1_list1 =  gen9_avc_get_qp_from_ref_list(ctx, slice_param, 1, 1);
+    }
+
+    table_idx = slice_type_kernel[generic_state->frame_type];
+    cmd->dw46.ref_cost = gen9_avc_ref_cost[table_idx][qp];
+
+    if (generic_state->frame_type == SLICE_TYPE_I) {
+        cmd->dw0.skip_mode_enable = 0;
+        cmd->dw37.skip_mode_enable = 0;
+        cmd->dw36.hme_combine_overlap = 0;
+        cmd->dw36.check_all_fractional_enable = 0;
+        cmd->dw47.intra_cost_sf = 16;/* not used, but recommended to set 16 by kernel team */
+        cmd->dw34.enable_direct_bias_adjustment = 0;
+        cmd->dw34.enable_global_motion_bias_adjustment = 0;
+
+    } else if (generic_state->frame_type == SLICE_TYPE_P) {
+        cmd->dw1.max_num_mvs = i965_avc_get_max_mv_per_2mb(avc_state->seq_param->level_idc) / 2;
+        cmd->dw3.bme_disable_fbr = 1;
+        cmd->dw5.ref_width = cmd->dw39.ref_width = ref_width;
+        cmd->dw5.ref_height = cmd->dw39.ref_height = ref_height;
+        cmd->dw7.non_skip_zmv_added = 1;
+        cmd->dw7.non_skip_mode_added = 1;
+        cmd->dw7.skip_center_mask = 1;
+
+        cmd->dw47.intra_cost_sf =
+            (avc_state->adaptive_intra_scaling_enable) ?
+            gen9_avc_adaptive_intra_scaling_factor[preset] :
+            gen9_avc_intra_scaling_factor[preset];
+
+        cmd->dw47.max_vmv_r =
+            i965_avc_get_max_mv_len(avc_state->seq_param->level_idc) * 4;//frame only
+
+        cmd->dw36.hme_combine_overlap = 1;
+        cmd->dw36.num_ref_idx_l0_minus_one = (avc_state->multi_pre_enable) ? slice_param->num_ref_idx_l0_active_minus1 : 0;
+        cmd->dw36.check_all_fractional_enable = fei_param->repartition_check_enable;
+        cmd->dw34.enable_direct_bias_adjustment = 0;
+        cmd->dw34.enable_global_motion_bias_adjustment = avc_state->global_motion_bias_adjustment_enable;
+        if (avc_state->global_motion_bias_adjustment_enable)
+            cmd->dw59.hme_mv_cost_scaling_factor = avc_state->hme_mv_cost_scaling_factor;
+
+        cmd->dw64.num_mv_predictors_l0 = fei_param->num_mv_predictors_l0;
+
+    } else { /* B slice */
+
+        cmd->dw1.max_num_mvs = i965_avc_get_max_mv_per_2mb(avc_state->seq_param->level_idc) / 2;
+        cmd->dw1.bi_Weight = avc_state->bi_weight;
+        cmd->dw3.search_ctrl = 7;
+        cmd->dw3.skip_type = 1;
+        cmd->dw5.ref_width = cmd->dw39.ref_width = ref_width;
+        cmd->dw5.ref_height = cmd->dw39.ref_height = ref_height;
+        cmd->dw7.skip_center_mask = 0xff;
+
+        cmd->dw47.intra_cost_sf = avc_state->adaptive_intra_scaling_enable ?
+                                  gen9_avc_adaptive_intra_scaling_factor[qp] :
+                                  gen9_avc_intra_scaling_factor[qp];
+
+        cmd->dw47.max_vmv_r =
+            i965_avc_get_max_mv_len(avc_state->seq_param->level_idc) * 4;//frame only
+
+        cmd->dw36.hme_combine_overlap = 1;
+
+        //check is_fwd_frame_short_term_ref
+        surface_id = slice_param->RefPicList1[0].picture_id;
+        obj_surface = SURFACE(surface_id);
+        if (!obj_surface) {
+            WARN_ONCE("Invalid backward reference frame\n");
+            if (gpe_context)
+                i965_gpe_context_unmap_curbe(gpe_context);
+            return;
+        }
+        cmd->dw36.is_fwd_frame_short_term_ref = !!(slice_param->RefPicList1[0].flags & VA_PICTURE_H264_SHORT_TERM_REFERENCE);
+
+        cmd->dw36.num_ref_idx_l0_minus_one =
+            (avc_state->multi_pre_enable) ? slice_param->num_ref_idx_l0_active_minus1
+            : 0;
+        cmd->dw36.num_ref_idx_l1_minus_one =
+            (avc_state->multi_pre_enable) ? slice_param->num_ref_idx_l1_active_minus1
+            : 0;
+        cmd->dw36.check_all_fractional_enable = fei_param->repartition_check_enable;
+
+        cmd->dw40.dist_scale_factor_ref_id0_list0 = avc_state->dist_scale_factor_list0[0];
+        cmd->dw40.dist_scale_factor_ref_id1_list0 = avc_state->dist_scale_factor_list0[1];
+        cmd->dw41.dist_scale_factor_ref_id2_list0 = avc_state->dist_scale_factor_list0[2];
+        cmd->dw41.dist_scale_factor_ref_id3_list0 = avc_state->dist_scale_factor_list0[3];
+        cmd->dw42.dist_scale_factor_ref_id4_list0 = avc_state->dist_scale_factor_list0[4];
+        cmd->dw42.dist_scale_factor_ref_id5_list0 = avc_state->dist_scale_factor_list0[5];
+        cmd->dw43.dist_scale_factor_ref_id6_list0 = avc_state->dist_scale_factor_list0[6];
+        cmd->dw43.dist_scale_factor_ref_id7_list0 = avc_state->dist_scale_factor_list0[7];
+
+        cmd->dw34.enable_direct_bias_adjustment = avc_state->direct_bias_adjustment_enable;
+        if (cmd->dw34.enable_direct_bias_adjustment) {
+            cmd->dw7.non_skip_mode_added = 1;
+            cmd->dw7.non_skip_zmv_added = 1;
+        }
+
+        cmd->dw34.enable_global_motion_bias_adjustment =
+            avc_state->global_motion_bias_adjustment_enable;
+        if (avc_state->global_motion_bias_adjustment_enable)
+            cmd->dw59.hme_mv_cost_scaling_factor = avc_state->hme_mv_cost_scaling_factor;
+
+        cmd->dw64.num_mv_predictors_l0 = fei_param->num_mv_predictors_l0;
+        cmd->dw64.num_mv_predictors_l1 = fei_param->num_mv_predictors_l1;
+    }
+
+    avc_state->block_based_skip_enable = cmd->dw3.block_based_skip_enable;
+
+    if (avc_state->rolling_intra_refresh_enable) {
+        //Not supported
+        cmd->dw34.widi_intra_refresh_en = avc_state->rolling_intra_refresh_enable;
+
+    } else {
+        cmd->dw34.widi_intra_refresh_en = 0;
+    }
+    cmd->dw34.enable_per_mb_static_check = avc_state->sfd_enable && generic_state->hme_enabled;
+    cmd->dw34.enable_adaptive_search_window_size = avc_state->adaptive_search_window_enable;
+
+    /* Fixme: Skipped ROI stuffs for now */
+
+    /* r64: FEI specific fields */
+    cmd->dw64.fei_enable = 1;
+    cmd->dw64.multiple_mv_predictor_per_mb_enable = fei_param->mv_predictor_enable;
+    if (fei_param->distortion != VA_INVALID_ID)
+        cmd->dw64.vme_distortion_output_enable = 1;
+    cmd->dw64.per_mb_qp_enable = fei_param->mb_qp;
+    cmd->dw64.mb_input_enable = fei_param->mb_input;
+
+    // FEI mode is disabled when external MVP is available
+    if (fei_param->mv_predictor_enable)
+        cmd->dw64.fei_mode = 0;
+    else
+        cmd->dw64.fei_mode = 1;
+
+    cmd->dw80.mb_data_surf_index = GEN9_AVC_MBENC_MFC_AVC_PAK_OBJ_INDEX;
+    cmd->dw81.mv_data_surf_index = GEN9_AVC_MBENC_IND_MV_DATA_INDEX;
+    cmd->dw82.i_dist_surf_index = GEN9_AVC_MBENC_BRC_DISTORTION_INDEX;
+    cmd->dw83.src_y_surf_index = GEN9_AVC_MBENC_CURR_Y_INDEX;
+    cmd->dw84.mb_specific_data_surf_index = GEN9_AVC_MBENC_MB_SPECIFIC_DATA_INDEX;
+    cmd->dw85.aux_vme_out_surf_index = GEN9_AVC_MBENC_AUX_VME_OUT_INDEX;
+    cmd->dw86.curr_ref_pic_sel_surf_index = GEN9_AVC_MBENC_REFPICSELECT_L0_INDEX;
+    cmd->dw87.hme_mv_pred_fwd_bwd_surf_index = GEN9_AVC_MBENC_MV_DATA_FROM_ME_INDEX;
+    cmd->dw88.hme_dist_surf_index = GEN9_AVC_MBENC_4XME_DISTORTION_INDEX;
+    cmd->dw89.slice_map_surf_index = GEN9_AVC_MBENC_SLICEMAP_DATA_INDEX;
+    cmd->dw90.fwd_frm_mb_data_surf_index = GEN9_AVC_MBENC_FWD_MB_DATA_INDEX;
+    cmd->dw91.fwd_frm_mv_surf_index = GEN9_AVC_MBENC_FWD_MV_DATA_INDEX;
+    cmd->dw92.mb_qp_buffer = GEN9_AVC_MBENC_MBQP_INDEX;
+    cmd->dw93.mb_brc_lut = GEN9_AVC_MBENC_MBBRC_CONST_DATA_INDEX;
+    cmd->dw94.vme_inter_prediction_surf_index = GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX;
+    cmd->dw95.vme_inter_prediction_mr_surf_index = GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX;
+    cmd->dw96.mb_stats_surf_index = GEN9_AVC_MBENC_MB_STATS_INDEX;
+    cmd->dw97.mad_surf_index = GEN9_AVC_MBENC_MAD_DATA_INDEX;
+    cmd->dw98.force_non_skip_mb_map_surface = GEN9_AVC_MBENC_FORCE_NONSKIP_MB_MAP_INDEX;
+    cmd->dw99.widi_wa_surf_index = GEN9_AVC_MBENC_WIDI_WA_INDEX;
+    cmd->dw100.brc_curbe_surf_index = GEN9_AVC_MBENC_BRC_CURBE_DATA_INDEX;
+    cmd->dw101.static_detection_cost_table_index = GEN9_AVC_MBENC_SFD_COST_TABLE_INDEX;
+    cmd->dw102.fei_mv_predictor_surf_index = GEN9_AVC_MBENC_MV_PREDICTOR_INDEX;
+    i965_gpe_context_unmap_curbe(gpe_context);
+
+    return;
+}
+
+static void
 gen9_avc_send_surface_mbenc(VADriverContextP ctx,
                             struct encode_state *encode_state,
                             struct i965_gpe_context *gpe_context,
@@ -3926,6 +4441,325 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     return;
 }
 
+static void
+gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct i965_gpe_context *gpe_context,
+                                struct intel_encoder_context *encoder_context,
+                                void * param_mbenc)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state *)vme_context->private_enc_state;
+    VAEncSliceParameterBufferH264 * slice_param = avc_state->slice_param[0];
+    VAEncMiscParameterFEIFrameControlH264 *fei_param = NULL;
+    struct object_buffer *obj_buffer = NULL;
+    struct buffer_store *buffer_store = NULL;
+    struct object_surface *obj_surface = NULL;
+    struct gen9_surface_avc *avc_priv_surface;
+    struct i965_gpe_resource *gpe_resource;
+    VASurfaceID surface_id;
+    unsigned int size = 0;
+    unsigned int frame_mb_nums;
+    int i = 0, allocate_flag = 1;
+
+    obj_surface = encode_state->reconstructed_object;
+    if (!obj_surface || !obj_surface->private_data)
+        return;
+    avc_priv_surface = obj_surface->private_data;
+
+    frame_mb_nums = generic_state->frame_width_in_mbs *
+                    generic_state->frame_height_in_mbs;
+    fei_param = avc_state->fei_framectl_param;
+
+    assert(fei_param != NULL);
+
+    /* res_mb_code_surface for MB code */
+    size = frame_mb_nums * FEI_AVC_MB_CODE_BUFFER_SIZE;
+    if (avc_priv_surface->res_mb_code_surface.bo != NULL)
+        i965_free_gpe_resource(&avc_priv_surface->res_mb_code_surface);
+    if (fei_param->mb_code_data != VA_INVALID_ID) {
+        obj_buffer = BUFFER(fei_param->mb_code_data);
+        buffer_store = obj_buffer->buffer_store;
+        assert(size <= buffer_store->bo->size);
+        i965_dri_object_to_buffer_gpe_resource(
+            &avc_priv_surface->res_mb_code_surface,
+            buffer_store->bo);
+    } else {
+        allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                                   &avc_priv_surface->res_mb_code_surface,
+                                                   ALIGN(size, 0x1000),
+                                                   "mb code buffer");
+        assert(allocate_flag != 0);
+    }
+
+    /* res_mv_data_surface for MV data */
+    size = frame_mb_nums * FEI_AVC_MV_DATA_BUFFER_SIZE;
+    if (avc_priv_surface->res_mv_data_surface.bo != NULL)
+        i965_free_gpe_resource(&avc_priv_surface->res_mv_data_surface);
+    if (fei_param->mv_data != VA_INVALID_ID) {
+        obj_buffer = BUFFER(fei_param->mv_data);
+        buffer_store = obj_buffer->buffer_store;
+        assert(size <= buffer_store->bo->size);
+        i965_dri_object_to_buffer_gpe_resource(
+            &avc_priv_surface->res_mv_data_surface,
+            buffer_store->bo);
+    } else {
+        allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                                   &avc_priv_surface->res_mv_data_surface,
+                                                   ALIGN(size, 0x1000),
+                                                   "mv data buffer");
+        assert(allocate_flag != 0);
+    }
+
+    /* fei mb control data surface */
+    size = frame_mb_nums * FEI_AVC_MB_CONTROL_BUFFER_SIZE;
+    if (fei_param->mb_input | fei_param->mb_size_ctrl) {
+        assert(fei_param->mb_ctrl != VA_INVALID_ID);
+        obj_buffer = BUFFER(fei_param->mb_ctrl);
+        buffer_store = obj_buffer->buffer_store;
+        assert(size <= buffer_store->bo->size);
+        if (avc_priv_surface->res_fei_mb_cntrl_surface.bo != NULL)
+            i965_free_gpe_resource(&avc_priv_surface->res_fei_mb_cntrl_surface);
+        i965_dri_object_to_buffer_gpe_resource(
+            &avc_priv_surface->res_fei_mb_cntrl_surface,
+            buffer_store->bo);
+    }
+
+    /* fei mv predictor surface*/
+    size = frame_mb_nums * FEI_AVC_MV_PREDICTOR_BUFFER_SIZE;
+    if (fei_param->mv_predictor_enable &&
+        (fei_param->mv_predictor != VA_INVALID_ID)) {
+        obj_buffer = BUFFER(fei_param->mv_predictor);
+        buffer_store = obj_buffer->buffer_store;
+        assert(size <= buffer_store->bo->size);
+        if (avc_priv_surface->res_fei_mv_predictor_surface.bo != NULL)
+            i965_free_gpe_resource(&avc_priv_surface->res_fei_mv_predictor_surface);
+        i965_dri_object_to_buffer_gpe_resource(
+            &avc_priv_surface->res_fei_mv_predictor_surface,
+            buffer_store->bo);
+    } else {
+        if (fei_param->mv_predictor_enable)
+            assert(fei_param->mv_predictor != VA_INVALID_ID);
+    }
+
+    /* fei vme distortion */
+    size = frame_mb_nums * FEI_AVC_DISTORTION_BUFFER_SIZE;
+    if (avc_priv_surface->res_fei_vme_distortion_surface.bo != NULL)
+        i965_free_gpe_resource(&avc_priv_surface->res_fei_vme_distortion_surface);
+    if (fei_param->distortion != VA_INVALID_ID) {
+        obj_buffer = BUFFER(fei_param->distortion);
+        buffer_store = obj_buffer->buffer_store;
+        assert(size <= buffer_store->bo->size);
+        i965_dri_object_to_buffer_gpe_resource(
+            &avc_priv_surface->res_fei_vme_distortion_surface,
+            buffer_store->bo);
+    } else {
+        allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                                   &avc_priv_surface->res_fei_vme_distortion_surface,
+                                                   ALIGN(size, 0x1000),
+                                                   "fei vme distortion");
+        assert(allocate_flag != 0);
+    }
+
+    /* fei mb qp  */
+    /* Fixme/Confirm:  not sure why we need 3 byte padding here */
+    size = frame_mb_nums * FEI_AVC_QP_BUFFER_SIZE + 3;
+    if (fei_param->mb_qp && (fei_param->qp != VA_INVALID_ID)) {
+        obj_buffer = BUFFER(fei_param->qp);
+        buffer_store = obj_buffer->buffer_store;
+        assert((size - 3) <= buffer_store->bo->size);
+        if (avc_priv_surface->res_fei_mb_qp_surface.bo != NULL)
+            i965_free_gpe_resource(&avc_priv_surface->res_fei_mb_qp_surface);
+        i965_dri_object_to_buffer_gpe_resource(
+            &avc_priv_surface->res_fei_mb_qp_surface,
+            buffer_store->bo);
+    } else {
+        if (fei_param->mb_qp)
+            assert(fei_param->qp != VA_INVALID_ID);
+    }
+
+    /*==== pak obj command buffer output ====*/
+    size = frame_mb_nums * FEI_AVC_MB_CODE_BUFFER_SIZE;
+    gpe_resource = &avc_priv_surface->res_mb_code_surface;
+    gen9_add_buffer_gpe_surface(ctx,
+                                gpe_context,
+                                gpe_resource,
+                                0,
+                                size / 4,
+                                0,
+                                GEN9_AVC_MBENC_MFC_AVC_PAK_OBJ_INDEX);
+
+
+    /*=== mv data buffer output */
+    size = frame_mb_nums * FEI_AVC_MV_DATA_BUFFER_SIZE;
+    gpe_resource = &avc_priv_surface->res_mv_data_surface;
+    gen9_add_buffer_gpe_surface(ctx,
+                                gpe_context,
+                                gpe_resource,
+                                0,
+                                size / 4,
+                                0,
+                                GEN9_AVC_MBENC_IND_MV_DATA_INDEX);
+
+
+    /* === current input Y (binding table offset = 3)=== */
+    obj_surface = encode_state->input_yuv_object;
+    gen9_add_2d_gpe_surface(ctx,
+                            gpe_context,
+                            obj_surface,
+                            0,
+                            1,
+                            I965_SURFACEFORMAT_R8_UNORM,
+                            GEN9_AVC_MBENC_CURR_Y_INDEX);
+
+    /* === current input UV === (binding table offset == 4)*/
+    gen9_add_2d_gpe_surface(ctx,
+                            gpe_context,
+                            obj_surface,
+                            1,
+                            1,
+                            I965_SURFACEFORMAT_R16_UINT,
+                            GEN9_AVC_MBENC_CURR_UV_INDEX);
+
+    /* === input current YUV surface, (binding table offset == 15) === */
+    gen9_add_adv_gpe_surface(ctx, gpe_context,
+                             obj_surface,
+                             GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX);
+
+
+    /*== input current  YUV surface, (binding table offset == 32)*/
+    gen9_add_adv_gpe_surface(ctx, gpe_context,
+                             obj_surface,
+                             GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX);
+
+    /* list 0 references */
+    for (i = 0; i < slice_param->num_ref_idx_l0_active_minus1 + 1; i++) {
+
+        surface_id = slice_param->RefPicList0[i].picture_id;
+        obj_surface = SURFACE(surface_id);
+        if (!obj_surface || !obj_surface->private_data)
+            break;
+        gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                 obj_surface,
+                                 GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX + i * 2 + 1);
+    }
+
+
+    /* list 1 references */
+    for (i = 0; i < slice_param->num_ref_idx_l1_active_minus1 + 1; i++) {
+        if (i > 0) break; // only  one ref supported here for B frame
+        surface_id = slice_param->RefPicList1[i].picture_id;
+        obj_surface = SURFACE(surface_id);
+        if (!obj_surface || !obj_surface->private_data)
+            break;
+
+        gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                 obj_surface,
+                                 GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX + i * 2 + 2);
+        if (i == 0) {
+            avc_priv_surface = obj_surface->private_data;
+            /* mb code of Backward reference frame */
+            size = frame_mb_nums * FEI_AVC_MB_CODE_BUFFER_SIZE;
+            gpe_resource = &avc_priv_surface->res_mb_code_surface;
+            gen9_add_buffer_gpe_surface(ctx,
+                                        gpe_context,
+                                        gpe_resource,
+                                        0,
+                                        size / 4,
+                                        0,
+                                        GEN9_AVC_MBENC_FWD_MB_DATA_INDEX);
+
+            /* mv data of backward ref frame */
+            size = frame_mb_nums * FEI_AVC_MV_DATA_BUFFER_SIZE;
+            gpe_resource = &avc_priv_surface->res_mv_data_surface;
+            gen9_add_buffer_gpe_surface(ctx,
+                                        gpe_context,
+                                        gpe_resource,
+                                        0,
+                                        size / 4,
+                                        0,
+                                        GEN9_AVC_MBENC_FWD_MV_DATA_INDEX);
+
+        }
+        //again
+        if (i < INTEL_AVC_MAX_BWD_REF_NUM) {
+            gen9_add_adv_gpe_surface(ctx, gpe_context,
+                                     obj_surface,
+                                     GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX + i * 2 + 1);
+        }
+    }
+
+    /* as ref frame ,update later RefPicSelect of Current Picture*/
+    obj_surface = encode_state->reconstructed_object;
+    avc_priv_surface = obj_surface->private_data;
+    if (avc_state->ref_pic_select_list_supported && avc_priv_surface->is_as_ref) {
+        gpe_resource = &(avc_priv_surface->res_ref_pic_select_surface);
+        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                                       gpe_resource,
+                                       1,
+                                       I965_SURFACEFORMAT_R8_UNORM,
+                                       GEN9_AVC_MBENC_REFPICSELECT_L0_INDEX);
+
+    }
+
+
+    /* mb specific data, macroblock control parameters */
+    if ((fei_param->mb_input | fei_param->mb_size_ctrl) &&
+        (fei_param->mb_ctrl != VA_INVALID_ID)) {
+        size = frame_mb_nums * FEI_AVC_MB_CONTROL_BUFFER_SIZE;
+        gpe_resource = &avc_priv_surface->res_fei_mb_cntrl_surface;
+        gen9_add_buffer_gpe_surface(ctx,
+                                    gpe_context,
+                                    gpe_resource,
+                                    0,
+                                    size / 4,
+                                    0,
+                                    GEN9_AVC_MBENC_MB_SPECIFIC_DATA_INDEX);
+    }
+
+    /* multi mv predictor surface */
+    if (fei_param->mv_predictor_enable && (fei_param->mv_predictor != VA_INVALID_ID)) {
+        size = frame_mb_nums * 48; //sizeof (VAEncMVPredictorH264Intel) == 40
+        gpe_resource = &avc_priv_surface->res_fei_mv_predictor_surface;
+        gen9_add_buffer_gpe_surface(ctx,
+                                    gpe_context,
+                                    gpe_resource,
+                                    0,
+                                    size / 4,
+                                    0,
+                                    GEN9_AVC_MBENC_MV_PREDICTOR_INDEX);
+    }
+
+    /* mb qp */
+    if (fei_param->mb_qp && (fei_param->qp != VA_INVALID_ID)) {
+        size = frame_mb_nums  + 3;
+        gpe_resource = &avc_priv_surface->res_fei_mb_qp_surface,
+        gen9_add_buffer_gpe_surface(ctx,
+                                    gpe_context,
+                                    gpe_resource,
+                                    0,
+                                    size / 4,
+                                    0,
+                                    GEN9_AVC_MBENC_MBQP_INDEX);
+    }
+
+
+    /*=== FEI distortion surface ====*/
+    size = frame_mb_nums * 48; //sizeof (VAEncFEIDistortionBufferH264Intel) == 48
+    gpe_resource = &avc_priv_surface->res_fei_vme_distortion_surface;
+    gen9_add_buffer_gpe_surface(ctx,
+                                gpe_context,
+                                gpe_resource,
+                                0,
+                                size / 4,
+                                0,
+                                GEN9_AVC_MBENC_AUX_VME_OUT_INDEX);
+
+    return;
+}
+
 static VAStatus
 gen9_avc_kernel_mbenc(VADriverContextP ctx,
                       struct encode_state *encode_state,
@@ -3997,6 +4831,11 @@ gen9_avc_kernel_mbenc(VADriverContextP ctx,
         default:
             assert(0);
 
+        }
+
+        if (encoder_context->fei_enabled) {
+            media_function = INTEL_MEDIA_STATE_ENC_NORMAL;
+            kernel_idx = MBENC_KERNEL_BASE + GEN9_AVC_FEI_KERNEL_I;
         }
 
         if (generic_state->frame_type == SLICE_TYPE_P) {
@@ -4910,7 +5749,8 @@ gen9_avc_kernel_init_me(VADriverContextP ctx,
 static void
 gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
                            struct generic_encoder_context *generic_context,
-                           struct gen_avc_mbenc_context *kernel_context)
+                           struct gen_avc_mbenc_context *kernel_context,
+                           int fei_enabled)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_gpe_table *gpe = &i965->gpe_table;
@@ -4920,13 +5760,21 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
     struct i965_kernel common_kernel;
     int i = 0;
     unsigned int curbe_size = 0;
+    unsigned int num_mbenc_kernels = 0;
 
     if (IS_SKL(i965->intel.device_info) ||
         IS_BXT(i965->intel.device_info)) {
-        curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+        if (!fei_enabled) {
+            curbe_size = sizeof(gen9_avc_mbenc_curbe_data);
+            num_mbenc_kernels = NUM_GEN9_AVC_KERNEL_MBENC;
+        } else {
+            curbe_size = sizeof(gen9_avc_fei_mbenc_curbe_data);
+            num_mbenc_kernels = NUM_GEN9_AVC_FEI_KERNEL_MBENC;
+        }
     } else if (IS_KBL(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
         curbe_size = sizeof(gen95_avc_mbenc_curbe_data);
+        num_mbenc_kernels = NUM_GEN9_AVC_KERNEL_MBENC;
     }
 
     assert(curbe_size > 0);
@@ -4940,18 +5788,18 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
     scoreboard_param.type = generic_context->use_hw_non_stalling_scoreboard;
     scoreboard_param.walkpat_flag = 0;
 
-    for (i = 0; i < NUM_GEN9_AVC_KERNEL_MBENC ; i++) {
+    for (i = 0; i < num_mbenc_kernels ; i++) {
         gpe_context = &kernel_context->gpe_contexts[i];
         gen9_init_gpe_context_avc(ctx, gpe_context, &kernel_param);
         gen9_init_vfe_scoreboard_avc(gpe_context, &scoreboard_param);
 
         memset(&common_kernel, 0, sizeof(common_kernel));
 
-        intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
-                                             generic_context->enc_kernel_size,
-                                             INTEL_GENERIC_ENC_MBENC,
-                                             i,
-                                             &common_kernel);
+        generic_context->get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                                    generic_context->enc_kernel_size,
+                                                    INTEL_GENERIC_ENC_MBENC,
+                                                    i,
+                                                    &common_kernel);
 
         gpe->load_kernels(ctx,
                           gpe_context,
@@ -5140,8 +5988,10 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     struct avc_enc_state * avc_state = (struct avc_enc_state *)vme_context->private_enc_state;
     VAEncSequenceParameterBufferH264 *seq_param;
     VAEncSliceParameterBufferH264 *slice_param;
+    VAEncMiscParameterBuffer *fei_misc_param;
     int i, j, slice_index;
     unsigned int preset = generic_state->preset;
+    unsigned int fei_enabled = encoder_context->fei_enabled;
 
     /* seq/pic/slice parameter setting */
     generic_state->b16xme_supported = gen9_avc_super_hme[preset];
@@ -5149,6 +5999,13 @@ gen9_avc_update_parameters(VADriverContextP ctx,
 
     avc_state->seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     avc_state->pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
+
+    if (fei_enabled &&
+        encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl]) {
+        fei_misc_param = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl][0]->buffer;
+        avc_state->fei_framectl_param =
+            (VAEncMiscParameterFEIFrameControlH264 *)fei_misc_param->data;
+    }
 
     avc_state->slice_num = 0;
     slice_index = 0;
@@ -5743,13 +6600,14 @@ gen9_avc_vme_gpe_kernel_run(VADriverContextP ctx,
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state *)vme_context->private_enc_state;
+    int fei_enabled = encoder_context->fei_enabled;
 
     VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
     VAEncSliceParameterBufferH264 *slice_param = avc_state->slice_param[0];
     int sfd_in_use = 0;
 
     /* BRC init/reset needs to be called before HME since it will reset the Brc Distortion surface*/
-    if (generic_state->brc_enabled && (!generic_state->brc_inited || generic_state->brc_need_reset)) {
+    if (!fei_enabled && generic_state->brc_enabled && (!generic_state->brc_inited || generic_state->brc_need_reset)) {
         gen9_avc_kernel_brc_init_reset(ctx, encode_state, encoder_context);
     }
 
@@ -5897,41 +6755,52 @@ gen9_avc_kernel_init(VADriverContextP ctx,
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context *)vme_context->private_enc_ctx;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context *)vme_context->generic_enc_ctx;
+    int fei_enabled = encoder_context->fei_enabled;
 
-    gen9_avc_kernel_init_scaling(ctx, generic_ctx, &avc_ctx->context_scaling);
-    gen9_avc_kernel_init_brc(ctx, generic_ctx, &avc_ctx->context_brc);
-    gen9_avc_kernel_init_me(ctx, generic_ctx, &avc_ctx->context_me);
-    gen9_avc_kernel_init_mbenc(ctx, generic_ctx, &avc_ctx->context_mbenc);
-    gen9_avc_kernel_init_wp(ctx, generic_ctx, &avc_ctx->context_wp);
-    gen9_avc_kernel_init_sfd(ctx, generic_ctx, &avc_ctx->context_sfd);
+    generic_ctx->get_kernel_header_and_size = fei_enabled ?
+                                              intel_avc_fei_get_kernel_header_and_size :
+                                              intel_avc_get_kernel_header_and_size ;
 
-    //function pointer
-    generic_ctx->pfn_set_curbe_scaling2x = gen9_avc_set_curbe_scaling2x;
-    generic_ctx->pfn_set_curbe_scaling4x = gen9_avc_set_curbe_scaling4x;
-    generic_ctx->pfn_set_curbe_me = gen9_avc_set_curbe_me;
-    generic_ctx->pfn_set_curbe_mbenc = gen9_avc_set_curbe_mbenc;
-    generic_ctx->pfn_set_curbe_brc_init_reset = gen9_avc_set_curbe_brc_init_reset;
-    generic_ctx->pfn_set_curbe_brc_frame_update = gen9_avc_set_curbe_brc_frame_update;
-    generic_ctx->pfn_set_curbe_brc_mb_update = gen9_avc_set_curbe_brc_mb_update;
-    generic_ctx->pfn_set_curbe_sfd = gen9_avc_set_curbe_sfd;
-    generic_ctx->pfn_set_curbe_wp = gen9_avc_set_curbe_wp;
+    gen9_avc_kernel_init_mbenc(ctx, generic_ctx, &avc_ctx->context_mbenc,
+                               encoder_context->fei_enabled);
 
-    generic_ctx->pfn_send_scaling_surface = gen9_avc_send_surface_scaling;
-    generic_ctx->pfn_send_me_surface = gen9_avc_send_surface_me;
-    generic_ctx->pfn_send_mbenc_surface = gen9_avc_send_surface_mbenc;
-    generic_ctx->pfn_send_brc_init_reset_surface = gen9_avc_send_surface_brc_init_reset;
-    generic_ctx->pfn_send_brc_frame_update_surface = gen9_avc_send_surface_brc_frame_update;
-    generic_ctx->pfn_send_brc_mb_update_surface = gen9_avc_send_surface_brc_mb_update;
-    generic_ctx->pfn_send_sfd_surface = gen9_avc_send_surface_sfd;
-    generic_ctx->pfn_send_wp_surface = gen9_avc_send_surface_wp;
+    if (!fei_enabled) {
+        gen9_avc_kernel_init_scaling(ctx, generic_ctx, &avc_ctx->context_scaling);
+        gen9_avc_kernel_init_brc(ctx, generic_ctx, &avc_ctx->context_brc);
+        gen9_avc_kernel_init_me(ctx, generic_ctx, &avc_ctx->context_me);
+        gen9_avc_kernel_init_wp(ctx, generic_ctx, &avc_ctx->context_wp);
+        gen9_avc_kernel_init_sfd(ctx, generic_ctx, &avc_ctx->context_sfd);
 
-    if (IS_SKL(i965->intel.device_info) ||
-        IS_BXT(i965->intel.device_info))
+        //function pointer
+        generic_ctx->pfn_set_curbe_scaling2x = gen9_avc_set_curbe_scaling2x;
         generic_ctx->pfn_set_curbe_scaling4x = gen9_avc_set_curbe_scaling4x;
-    else if (IS_KBL(i965->intel.device_info) ||
-             IS_GLK(i965->intel.device_info))
-        generic_ctx->pfn_set_curbe_scaling4x = gen95_avc_set_curbe_scaling4x;
+        generic_ctx->pfn_set_curbe_me = gen9_avc_set_curbe_me;
+        generic_ctx->pfn_set_curbe_mbenc = gen9_avc_set_curbe_mbenc;
+        generic_ctx->pfn_set_curbe_brc_init_reset = gen9_avc_set_curbe_brc_init_reset;
+        generic_ctx->pfn_set_curbe_brc_frame_update = gen9_avc_set_curbe_brc_frame_update;
+        generic_ctx->pfn_set_curbe_brc_mb_update = gen9_avc_set_curbe_brc_mb_update;
+        generic_ctx->pfn_set_curbe_sfd = gen9_avc_set_curbe_sfd;
+        generic_ctx->pfn_set_curbe_wp = gen9_avc_set_curbe_wp;
 
+        generic_ctx->pfn_send_scaling_surface = gen9_avc_send_surface_scaling;
+        generic_ctx->pfn_send_me_surface = gen9_avc_send_surface_me;
+        generic_ctx->pfn_send_mbenc_surface = gen9_avc_send_surface_mbenc;
+        generic_ctx->pfn_send_brc_init_reset_surface = gen9_avc_send_surface_brc_init_reset;
+        generic_ctx->pfn_send_brc_frame_update_surface = gen9_avc_send_surface_brc_frame_update;
+        generic_ctx->pfn_send_brc_mb_update_surface = gen9_avc_send_surface_brc_mb_update;
+        generic_ctx->pfn_send_sfd_surface = gen9_avc_send_surface_sfd;
+        generic_ctx->pfn_send_wp_surface = gen9_avc_send_surface_wp;
+
+        if (IS_SKL(i965->intel.device_info) ||
+            IS_BXT(i965->intel.device_info))
+            generic_ctx->pfn_set_curbe_scaling4x = gen9_avc_set_curbe_scaling4x;
+        else if (IS_KBL(i965->intel.device_info) ||
+                 IS_GLK(i965->intel.device_info))
+            generic_ctx->pfn_set_curbe_scaling4x = gen95_avc_set_curbe_scaling4x;
+    } else {
+        generic_ctx->pfn_set_curbe_mbenc = gen9_avc_fei_set_curbe_mbenc;
+        generic_ctx->pfn_send_mbenc_surface = gen9_avc_fei_send_surface_mbenc;
+    }
 }
 
 /*
@@ -5939,6 +6808,46 @@ PAK pipeline related function
 */
 extern int
 intel_avc_enc_slice_type_fixup(int slice_type);
+
+/* Allocate resources needed for PAK only mode (get invoked only in FEI encode) */
+static VAStatus
+gen9_avc_allocate_pak_resources(VADriverContextP ctx,
+                                struct encode_state *encode_state,
+                                struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context *)vme_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
+    unsigned int size  = 0;
+    int allocate_flag = 1;
+
+    /*second level batch buffer for image state write when cqp etc*/
+    i965_free_gpe_resource(&avc_ctx->res_image_state_batch_buffer_2nd_level);
+    size = INTEL_AVC_IMAGE_STATE_CMD_SIZE ;
+    allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                               &avc_ctx->res_image_state_batch_buffer_2nd_level,
+                                               ALIGN(size, 0x1000),
+                                               "second levle batch (image state write) buffer");
+    if (!allocate_flag)
+        goto failed_allocation;
+
+    if (!generic_state->brc_allocated) {
+        i965_free_gpe_resource(&avc_ctx->res_brc_pre_pak_statistics_output_buffer);
+        size = 64;//44
+        allocate_flag = i965_allocate_gpe_resource(i965->intel.bufmgr,
+                                                   &avc_ctx->res_brc_pre_pak_statistics_output_buffer,
+                                                   ALIGN(size, 0x1000),
+                                                   "brc pak statistic buffer");
+        if (!allocate_flag)
+            goto failed_allocation;
+    }
+
+    return VA_STATUS_SUCCESS;
+
+failed_allocation:
+    return VA_STATUS_ERROR_ALLOCATION_FAILED;
+}
 
 static void
 gen9_mfc_avc_pipe_mode_select(VADriverContextP ctx,
@@ -7200,8 +8109,192 @@ gen9_avc_pak_brc_prepare(struct encode_state *encode_state,
         encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
 }
 
+/* allcate resources for pak only (fei mode) */
+static VAStatus
+gen9_avc_fei_pak_pipeline_prepare(VADriverContextP ctx,
+                                  VAProfile profile,
+                                  struct encode_state *encode_state,
+                                  struct intel_encoder_context *encoder_context)
+{
+    VAStatus va_status;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct encoder_vme_mfc_context * pak_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
+    struct generic_encoder_context * generic_ctx = (struct generic_encoder_context *)pak_context->generic_enc_ctx;
+    struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context *)pak_context->private_enc_ctx;
+    struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)pak_context->generic_enc_state;
+    struct avc_enc_state * avc_state = (struct avc_enc_state *)pak_context->private_enc_state;
+    struct gen9_surface_avc *avc_priv_surface;
+    VAEncPictureParameterBufferH264  *pic_param;
+    VAEncSliceParameterBufferH264 *slice_param;
+    VAEncMiscParameterFEIFrameControlH264 *fei_param = NULL;
+    unsigned int size = 0, i, j;
+    unsigned int frame_mb_nums;
+    struct object_buffer *obj_buffer = NULL;
+    struct buffer_store *buffer_store = NULL;
+    struct object_surface *obj_surface = NULL;
+    struct avc_surface_param surface_param;
+    struct i965_coded_buffer_segment *coded_buffer_segment;
+    dri_bo *bo;
+    unsigned char * pdata;
+
+    gen9_avc_update_parameters(ctx, profile, encode_state, encoder_context);
+
+    pic_param = avc_state->pic_param;
+    slice_param = avc_state->slice_param[0];
+
+    va_status = gen9_avc_encode_check_parameter(ctx, encode_state, encoder_context);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    va_status = gen9_avc_allocate_pak_resources(ctx, encode_state, encoder_context);
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    /* Encoded bitstream ?*/
+    obj_buffer = encode_state->coded_buf_object;
+    bo = obj_buffer->buffer_store->bo;
+    i965_free_gpe_resource(&generic_ctx->compressed_bitstream.res);
+    i965_dri_object_to_buffer_gpe_resource(&generic_ctx->compressed_bitstream.res, bo);
+    generic_ctx->compressed_bitstream.start_offset = I965_CODEDBUFFER_HEADER_SIZE;
+    generic_ctx->compressed_bitstream.end_offset =
+        ALIGN(obj_buffer->size_element - 0x1000, 0x1000);
+
+    /*status buffer */
+    dri_bo_unreference(avc_ctx->status_buffer.bo);
+    avc_ctx->status_buffer.bo = bo;
+    dri_bo_reference(bo);
+
+    /* set the internal flag to 0 to indicate the coded size is unknown */
+    dri_bo_map(bo, 1);
+    coded_buffer_segment = (struct i965_coded_buffer_segment *)bo->virtual;
+    coded_buffer_segment->mapped = 0;
+    coded_buffer_segment->codec = encoder_context->codec;
+    coded_buffer_segment->status_support = 1;
+
+    pdata = bo->virtual + avc_ctx->status_buffer.base_offset;
+    memset(pdata, 0, avc_ctx->status_buffer.status_buffer_size);
+    dri_bo_unmap(bo);
+    //frame id, it is the ref pic id in the reference_objects list.
+    avc_state->num_refs[0] = 0;
+    avc_state->num_refs[1] = 0;
+    if (generic_state->frame_type == SLICE_TYPE_P) {
+        avc_state->num_refs[0] = pic_param->num_ref_idx_l0_active_minus1 + 1;
+
+        if (slice_param->num_ref_idx_active_override_flag)
+            avc_state->num_refs[0] = slice_param->num_ref_idx_l0_active_minus1 + 1;
+    } else if (generic_state->frame_type == SLICE_TYPE_B) {
+        avc_state->num_refs[0] = pic_param->num_ref_idx_l0_active_minus1 + 1;
+        avc_state->num_refs[1] = pic_param->num_ref_idx_l1_active_minus1 + 1;
+
+        if (slice_param->num_ref_idx_active_override_flag) {
+            avc_state->num_refs[0] = slice_param->num_ref_idx_l0_active_minus1 + 1;
+            avc_state->num_refs[1] = slice_param->num_ref_idx_l1_active_minus1 + 1;
+        }
+    }
+    for (i = 0; i < ARRAY_ELEMS(avc_state->list_ref_idx[0]); i++) {
+        VAPictureH264 *va_pic;
+
+        assert(ARRAY_ELEMS(slice_param->RefPicList0) == ARRAY_ELEMS(avc_state->list_ref_idx[0]));
+        avc_state->list_ref_idx[0][i] = 0;
+
+        if (i >= avc_state->num_refs[0])
+            continue;
+
+        va_pic = &slice_param->RefPicList0[i];
+
+        for (j = 0; j < ARRAY_ELEMS(encode_state->reference_objects); j++) {
+            obj_surface = encode_state->reference_objects[j];
+
+            if (obj_surface &&
+                obj_surface->bo &&
+                obj_surface->base.id == va_pic->picture_id) {
+
+                assert(obj_surface->base.id != VA_INVALID_SURFACE);
+                avc_state->list_ref_idx[0][i] = j;
+
+                break;
+            }
+        }
+    }
+    for (i = 0; i < ARRAY_ELEMS(avc_state->list_ref_idx[1]); i++) {
+        VAPictureH264 *va_pic;
+
+        assert(ARRAY_ELEMS(slice_param->RefPicList1) == ARRAY_ELEMS(avc_state->list_ref_idx[1]));
+        avc_state->list_ref_idx[1][i] = 0;
+
+        if (i >= avc_state->num_refs[1])
+            continue;
+
+        va_pic = &slice_param->RefPicList1[i];
+
+        for (j = 0; j < ARRAY_ELEMS(encode_state->reference_objects); j++) {
+            obj_surface = encode_state->reference_objects[j];
+
+
+            if (obj_surface &&
+                obj_surface->bo &&
+                obj_surface->base.id == va_pic->picture_id) {
+
+                assert(obj_surface->base.id != VA_INVALID_SURFACE);
+                avc_state->list_ref_idx[1][i] = j;
+
+                break;
+                break;
+            }
+        }
+    }
+
+    obj_surface = encode_state->reconstructed_object;
+    fei_param = avc_state->fei_framectl_param;
+    frame_mb_nums = generic_state->frame_width_in_mbs * generic_state->frame_height_in_mbs;
+
+    /* Setup current reconstruct frame */
+    obj_surface = encode_state->reconstructed_object;
+    va_status = i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
+
+    if (va_status != VA_STATUS_SUCCESS)
+        return va_status;
+
+    memset(&surface_param, 0, sizeof(surface_param));
+    surface_param.frame_width = generic_state->frame_width_in_pixel;
+    surface_param.frame_height = generic_state->frame_height_in_pixel;
+    va_status = gen9_avc_init_check_surfaces(ctx,
+                                             obj_surface, encoder_context,
+                                             &surface_param);
+    avc_priv_surface = obj_surface->private_data;
+
+    /* res_mb_code_surface for MB code */
+    /* PAK only mode must have the mb_code_surface from middleware,
+     * so the code shouldn't reach here without an externally provided
+     * MB Code buffer */
+    assert(fei_param->mb_code_data != VA_INVALID_ID);
+    size = frame_mb_nums * FEI_AVC_MB_CODE_BUFFER_SIZE;
+    obj_buffer = BUFFER(fei_param->mb_code_data);
+    buffer_store = obj_buffer->buffer_store;
+    assert(size <= buffer_store->bo->size);
+    if (avc_priv_surface->res_mb_code_surface.bo != NULL)
+        i965_free_gpe_resource(&avc_priv_surface->res_mb_code_surface);
+    i965_dri_object_to_buffer_gpe_resource(&avc_priv_surface->res_mb_code_surface,
+                                           buffer_store->bo);
+    /* res_mv_data_surface for MV data */
+    size = frame_mb_nums * FEI_AVC_MV_DATA_BUFFER_SIZE;
+    if (fei_param->mv_data != VA_INVALID_ID) {
+        obj_buffer = BUFFER(fei_param->mv_data);
+        buffer_store = obj_buffer->buffer_store;
+        assert(size <= buffer_store->bo->size);
+        if (avc_priv_surface->res_mv_data_surface.bo != NULL)
+            i965_free_gpe_resource(&avc_priv_surface->res_mv_data_surface);
+        i965_dri_object_to_buffer_gpe_resource(&avc_priv_surface->res_mv_data_surface,
+                                               buffer_store->bo);
+    }
+
+    return VA_STATUS_SUCCESS;
+
+}
+
 static VAStatus
 gen9_avc_pak_pipeline_prepare(VADriverContextP ctx,
+                              VAProfile profile,
                               struct encode_state *encode_state,
                               struct intel_encoder_context *encoder_context)
 {
@@ -7214,16 +8307,25 @@ gen9_avc_pak_pipeline_prepare(VADriverContextP ctx,
     struct avc_enc_state * avc_state = (struct avc_enc_state *)pak_context->private_enc_state;
 
     struct object_surface *obj_surface;
-    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
-    VAEncSliceParameterBufferH264 *slice_param = avc_state->slice_param[0];
+    VAEncPictureParameterBufferH264  *pic_param;
+    VAEncSliceParameterBufferH264 *slice_param;
 
     struct gen9_surface_avc *avc_priv_surface;
+    struct avc_surface_param surface_param;
     int i, j, enable_avc_ildb = 0;
     unsigned int allocate_flag = 1;
-    unsigned int size;
-    unsigned int w_mb = generic_state->frame_width_in_mbs;
-    unsigned int h_mb = generic_state->frame_height_in_mbs;
-    struct avc_surface_param surface_param;
+    unsigned int size, w_mb, h_mb;
+
+    if (encoder_context->fei_function_mode == VA_FEI_FUNCTION_PAK) {
+        va_status = gen9_avc_fei_pak_pipeline_prepare(ctx, profile, encode_state, encoder_context);
+        if (va_status != VA_STATUS_SUCCESS)
+            return va_status;
+    }
+
+    pic_param = avc_state->pic_param;
+    slice_param = avc_state->slice_param[0];
+    w_mb = generic_state->frame_width_in_mbs;
+    h_mb = generic_state->frame_height_in_mbs;
 
     /* update the parameter and check slice parameter */
     for (j = 0; j < encode_state->num_slice_params_ext && enable_avc_ildb == 0; j++) {
@@ -7402,7 +8504,7 @@ gen9_avc_encode_picture(VADriverContextP ctx,
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
 
-    va_status = gen9_avc_pak_pipeline_prepare(ctx, encode_state, encoder_context);
+    va_status = gen9_avc_pak_pipeline_prepare(ctx, profile, encode_state, encoder_context);
 
     if (va_status != VA_STATUS_SUCCESS)
         return va_status;
@@ -7566,8 +8668,13 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
 
     if (IS_SKL(i965->intel.device_info) ||
         IS_BXT(i965->intel.device_info)) {
-        generic_ctx->enc_kernel_ptr = (void *)skl_avc_encoder_kernels;
-        generic_ctx->enc_kernel_size = sizeof(skl_avc_encoder_kernels);
+        if (!encoder_context->fei_enabled) {
+            generic_ctx->enc_kernel_ptr = (void *)skl_avc_encoder_kernels;
+            generic_ctx->enc_kernel_size = sizeof(skl_avc_encoder_kernels);
+        } else {
+            generic_ctx->enc_kernel_ptr = (void *)skl_avc_fei_encoder_kernels;
+            generic_ctx->enc_kernel_size = sizeof(skl_avc_fei_encoder_kernels);
+        }
     } else if (IS_KBL(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
         generic_ctx->enc_kernel_ptr = (void *)kbl_avc_encoder_kernels;
@@ -7605,7 +8712,10 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
     generic_state->downscaled_width_32x_in_mb = 0;
     generic_state->downscaled_height_32x_in_mb = 0;
 
-    generic_state->hme_supported = 1;
+    if (!encoder_context->fei_enabled) {
+        generic_state->hme_supported = 1;
+        generic_state->b16xme_supported = 1;
+    }
     generic_state->b16xme_supported = 1;
     generic_state->b32xme_supported = 0;
     generic_state->hme_enabled = 0;
