@@ -471,6 +471,8 @@ operator<<(std::ostream& os, const VAEntrypoint& entrypoint)
         return os << "VAEntrypointEncSliceLP";
     case VAEntrypointEncPicture:
         return os << "VAEntrypointEncPicture";
+    case VAEntrypointFEI:
+        return os << "VAEntrypointFEI";
     default:
         return os << "Unknown VAEntrypoint: " << static_cast<int>(entrypoint);
     }

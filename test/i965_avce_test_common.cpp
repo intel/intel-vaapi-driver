@@ -59,6 +59,13 @@ VAStatus CheckSupported(VAProfile profile, VAEntrypoint entrypoint)
             if (HAS_LP_H264_ENCODING(i965)) {
                 return VA_STATUS_SUCCESS;
             }
+        } else if (entrypoint == VAEntrypointFEI) {
+            if (IS_SKL(i965->intel.device_info)) {
+                return VA_STATUS_SUCCESS;
+            }
+            if (HAS_FEI_H264_ENCODING(i965)) {
+                return VA_STATUS_SUCCESS;
+            }
         }
         break;
 
