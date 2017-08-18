@@ -1464,6 +1464,16 @@ intel_enc_hw_context_init(VADriverContextP ctx,
             encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
         } else
             encoder_context->quality_range = ENCODER_QUALITY_RANGE;
+
+        if (obj_config->entrypoint == VAEntrypointFEI) {
+            encoder_context->fei_enabled = 1;
+            /* check which attribute has been configured for FEI, this is
+             * required for VME/PAK disable or enable as per user request */
+            for (i = 0; i < obj_config->num_attribs; i++) {
+                if (obj_config->attrib_list[i].type == VAConfigAttribFEIFunctionType)
+                    encoder_context->fei_function_mode = obj_config->attrib_list[i].value;
+            }
+        }
         break;
 
     case VAProfileH264StereoHigh:

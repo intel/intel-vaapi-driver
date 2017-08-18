@@ -39,6 +39,8 @@
 #include <va/va_vpp.h>
 #include <va/va_backend.h>
 #include <va/va_backend_vpp.h>
+#include <va/va_fei.h>
+#include <va/va_fei_h264.h>
 
 #include "i965_mutext.h"
 #include "object_heap.h"
@@ -46,7 +48,7 @@
 #include "i965_fourcc.h"
 
 #define I965_MAX_PROFILES                       20
-#define I965_MAX_ENTRYPOINTS                    5
+#define I965_MAX_ENTRYPOINTS                    6
 #define I965_MAX_CONFIG_ATTRIBUTES              32
 #define I965_MAX_IMAGE_FORMATS                  10
 #define I965_MAX_SUBPIC_FORMATS                 6
@@ -96,6 +98,9 @@
 
 #define HAS_LP_H264_ENCODING(ctx)  ((ctx)->codec_info->has_lp_h264_encoding && \
                                     (ctx)->intel.has_bsd)
+
+#define HAS_FEI_H264_ENCODING(ctx)  ((ctx)->codec_info->has_fei_h264_encoding && \
+                                     (ctx)->intel.has_bsd)
 
 #define HAS_VC1_DECODING(ctx)   ((ctx)->codec_info->has_vc1_decoding && \
                                  (ctx)->intel.has_bsd)
@@ -271,7 +276,7 @@ struct encode_state {
 
     int has_layers;
 
-    struct buffer_store *misc_param[16][8];
+    struct buffer_store *misc_param[19][8];
 
     VASurfaceID current_render_target;
     struct object_surface *input_yuv_object;
@@ -478,6 +483,7 @@ struct hw_codec_info {
     unsigned int has_vpp_p010: 1;
     unsigned int has_lp_h264_encoding: 1;
     unsigned int has_vp9_encoding: 1;
+    unsigned int has_fei_h264_encoding: 1;
 
     unsigned int lp_h264_brc_mode;
     unsigned int h264_brc_mode;

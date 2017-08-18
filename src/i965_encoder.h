@@ -112,6 +112,9 @@ struct intel_encoder_context {
     unsigned int context_roi: 1;
     unsigned int is_new_sequence: 1; /* Currently only valid for H.264, TODO for other codecs */
 
+    unsigned int fei_enabled: 1;
+    unsigned int fei_function_mode; /* configured VA_FEI_FUNCTION_XXX */
+
     void (*vme_context_destroy)(void *vme_context);
     VAStatus(*vme_pipeline)(VADriverContextP ctx,
                             VAProfile profile,
