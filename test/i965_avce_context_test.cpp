@@ -276,10 +276,13 @@ INSTANTIATE_TEST_CASE_P(
     AVCEncode, AVCEContextTest, ::testing::Values(
         std::make_tuple(VAProfileH264ConstrainedBaseline, VAEntrypointEncSlice),
         std::make_tuple(VAProfileH264ConstrainedBaseline, VAEntrypointEncSliceLP),
+        std::make_tuple(VAProfileH264ConstrainedBaseline, VAEntrypointFEI),
         std::make_tuple(VAProfileH264Main, VAEntrypointEncSlice),
         std::make_tuple(VAProfileH264Main, VAEntrypointEncSliceLP),
+        std::make_tuple(VAProfileH264Main, VAEntrypointFEI),
         std::make_tuple(VAProfileH264High, VAEntrypointEncSlice),
         std::make_tuple(VAProfileH264High, VAEntrypointEncSliceLP),
+        std::make_tuple(VAProfileH264High, VAEntrypointFEI),
         std::make_tuple(VAProfileH264MultiviewHigh, VAEntrypointEncSlice),
         std::make_tuple(VAProfileH264StereoHigh, VAEntrypointEncSlice)
     )
