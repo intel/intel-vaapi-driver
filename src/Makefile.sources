@@ -65,6 +65,8 @@ source_c = \
 	gen9_hevc_enc_kernels_binary.c \
 	gen9_hevc_encoder.c \
 	gen9_hevc_enc_utils.c \
+	gen8_avc_const_def.c \
+	gen8_avc_encoder_kernels.c \
 	$(NULL)
 
 source_h = \
@@ -132,4 +134,7 @@ source_h = \
 	gen9_hevc_enc_kernels_binary.h \
 	gen9_hevc_enc_utils.h \
 	gen9_hevc_encoder.h \
+	gen8_avc_const_def.h \
+	gen8_avc_encoder.h \
+	gen8_avc_encoder_kernels.h \
 	$(NULL)

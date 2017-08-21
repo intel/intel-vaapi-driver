@@ -1337,9 +1337,13 @@ Bool gen8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     struct i965_kernel *vme_kernel_list = NULL;
     int i965_kernel_num;
 
-    if (IS_CHERRYVIEW(i965->intel.device_info) && encoder_context->codec == CODEC_VP8)
+    if (IS_CHERRYVIEW(i965->intel.device_info) && encoder_context->codec == CODEC_VP8) {
         return i965_encoder_vp8_vme_context_init(ctx, encoder_context);
-
+    } else if (IS_GEN8(i965->intel.device_info) && (
+                   encoder_context->codec == CODEC_H264 ||
+                   encoder_context->codec == CODEC_H264_MVC)) {
+        return gen9_avc_vme_context_init(ctx, encoder_context);
+    }
     switch (encoder_context->codec) {
     case CODEC_H264:
     case CODEC_H264_MVC:
