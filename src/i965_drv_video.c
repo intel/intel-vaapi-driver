@@ -1338,6 +1338,9 @@ i965_CreateConfig(VADriverContextP ctx,
             else if ((entrypoint == VAEntrypointEncSliceLP) && attrib_found &&
                      !(attrib_found->value & i965->codec_info->lp_h264_brc_mode))
                 vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
+            else if ((entrypoint == VAEntrypointFEI) && attrib_found &&
+                     !(attrib_found->value == VA_RC_CQP))
+                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
             break;
         default:
             break;
