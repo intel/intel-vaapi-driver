@@ -94,14 +94,18 @@ TEST_P(AVCEContextTest, RateControl)
 
     struct i965_driver_data *i965(*this);
     ASSERT_PTR(i965);
-    const unsigned supportedBRC = (entrypoint == VAEntrypointEncSlice) ?
-        i965->codec_info->h264_brc_mode : i965->codec_info->lp_h264_brc_mode;
+
+    const std::map<VAEntrypoint, unsigned> supportedBRC = {
+        {VAEntrypointEncSlice, i965->codec_info->h264_brc_mode},
+        {VAEntrypointEncSliceLP, i965->codec_info->lp_h264_brc_mode},
+        {VAEntrypointFEI, VA_RC_CQP},
+    };
 
     for (auto rc : rateControls) {
         ConfigAttribs attribs(1, {type:VAConfigAttribRateControl, value:rc});
 
         const VAStatus expect =
-            ((rc & supportedBRC) ||
+            ((rc & supportedBRC.at(entrypoint)) ||
                 profile == VAProfileH264MultiviewHigh ||
                 profile == VAProfileH264StereoHigh) ?
             VA_STATUS_SUCCESS : VA_STATUS_ERROR_INVALID_CONFIG;
