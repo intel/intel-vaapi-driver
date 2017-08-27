@@ -3691,6 +3691,7 @@ gen9_avc_fei_set_curbe_mbenc(VADriverContextP ctx,
 
     qp = pic_param->pic_init_qp + slice_param->slice_qp_delta;
 
+    assert(gpe_context != NULL);
     cmd = (gen9_avc_fei_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
     memset(cmd, 0, sizeof(gen9_avc_fei_mbenc_curbe_data));
 
@@ -4481,6 +4482,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
         i965_free_gpe_resource(&avc_priv_surface->res_mb_code_surface);
     if (fei_param->mb_code_data != VA_INVALID_ID) {
         obj_buffer = BUFFER(fei_param->mb_code_data);
+        assert(obj_buffer != NULL);
         buffer_store = obj_buffer->buffer_store;
         assert(size <= buffer_store->bo->size);
         i965_dri_object_to_buffer_gpe_resource(
@@ -4500,6 +4502,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
         i965_free_gpe_resource(&avc_priv_surface->res_mv_data_surface);
     if (fei_param->mv_data != VA_INVALID_ID) {
         obj_buffer = BUFFER(fei_param->mv_data);
+        assert(obj_buffer != NULL);
         buffer_store = obj_buffer->buffer_store;
         assert(size <= buffer_store->bo->size);
         i965_dri_object_to_buffer_gpe_resource(
@@ -4518,6 +4521,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     if (fei_param->mb_input | fei_param->mb_size_ctrl) {
         assert(fei_param->mb_ctrl != VA_INVALID_ID);
         obj_buffer = BUFFER(fei_param->mb_ctrl);
+        assert(obj_buffer != NULL);
         buffer_store = obj_buffer->buffer_store;
         assert(size <= buffer_store->bo->size);
         if (avc_priv_surface->res_fei_mb_cntrl_surface.bo != NULL)
@@ -4532,6 +4536,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     if (fei_param->mv_predictor_enable &&
         (fei_param->mv_predictor != VA_INVALID_ID)) {
         obj_buffer = BUFFER(fei_param->mv_predictor);
+        assert(obj_buffer != NULL);
         buffer_store = obj_buffer->buffer_store;
         assert(size <= buffer_store->bo->size);
         if (avc_priv_surface->res_fei_mv_predictor_surface.bo != NULL)
@@ -4550,6 +4555,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
         i965_free_gpe_resource(&avc_priv_surface->res_fei_vme_distortion_surface);
     if (fei_param->distortion != VA_INVALID_ID) {
         obj_buffer = BUFFER(fei_param->distortion);
+        assert(obj_buffer != NULL);
         buffer_store = obj_buffer->buffer_store;
         assert(size <= buffer_store->bo->size);
         i965_dri_object_to_buffer_gpe_resource(
@@ -4568,6 +4574,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     size = frame_mb_nums * FEI_AVC_QP_BUFFER_SIZE + 3;
     if (fei_param->mb_qp && (fei_param->qp != VA_INVALID_ID)) {
         obj_buffer = BUFFER(fei_param->qp);
+        assert(obj_buffer != NULL);
         buffer_store = obj_buffer->buffer_store;
         assert((size - 3) <= buffer_store->bo->size);
         if (avc_priv_surface->res_fei_mb_qp_surface.bo != NULL)
@@ -8270,6 +8277,7 @@ gen9_avc_fei_pak_pipeline_prepare(VADriverContextP ctx,
     assert(fei_param->mb_code_data != VA_INVALID_ID);
     size = frame_mb_nums * FEI_AVC_MB_CODE_BUFFER_SIZE;
     obj_buffer = BUFFER(fei_param->mb_code_data);
+    assert(obj_buffer != NULL);
     buffer_store = obj_buffer->buffer_store;
     assert(size <= buffer_store->bo->size);
     if (avc_priv_surface->res_mb_code_surface.bo != NULL)
@@ -8280,6 +8288,7 @@ gen9_avc_fei_pak_pipeline_prepare(VADriverContextP ctx,
     size = frame_mb_nums * FEI_AVC_MV_DATA_BUFFER_SIZE;
     if (fei_param->mv_data != VA_INVALID_ID) {
         obj_buffer = BUFFER(fei_param->mv_data);
+        assert(obj_buffer != NULL);
         buffer_store = obj_buffer->buffer_store;
         assert(size <= buffer_store->bo->size);
         if (avc_priv_surface->res_mv_data_surface.bo != NULL)
