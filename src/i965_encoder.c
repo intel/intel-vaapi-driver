@@ -1380,6 +1380,7 @@ intel_encoder_end_picture(VADriverContextP ctx,
             return vaStatus;
     }
 
+    assert(encoder_context->mfc_pipeline != NULL);
     encoder_context->mfc_pipeline(ctx, profile, encode_state, encoder_context);
     encoder_context->num_frames_in_sequence++;
     encoder_context->brc.need_reset = 0;
