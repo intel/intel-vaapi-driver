@@ -1573,7 +1573,6 @@ i965_suface_external_memory(VADriverContextP ctx,
         obj_surface->height = memory_attibute->offsets[1] / obj_surface->width;
 
     if (memory_attibute->num_planes > 1) {
-        ASSERT_RET(IS_ALIGNED(obj_surface->height, 16), VA_STATUS_ERROR_INVALID_PARAMETER);
         ASSERT_RET(obj_surface->height >= obj_surface->orig_height, VA_STATUS_ERROR_INVALID_PARAMETER);
     }
 
