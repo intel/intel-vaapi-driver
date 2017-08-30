@@ -72,7 +72,7 @@ static struct hw_codec_info g4x_hw_codec_info = {
     .max_width = 2048,
     .max_height = 2048,
     .min_linear_wpitch = 16,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .has_mpeg2_decoding = 1,
 
@@ -92,7 +92,7 @@ static struct hw_codec_info ilk_hw_codec_info = {
     .max_width = 2048,
     .max_height = 2048,
     .min_linear_wpitch = 16,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .has_mpeg2_decoding = 1,
     .has_h264_decoding = 1,
@@ -117,7 +117,7 @@ static struct hw_codec_info snb_hw_codec_info = {
     .max_width = 2048,
     .max_height = 2048,
     .min_linear_wpitch = 16,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = VA_PROFILE_MASK(H264StereoHigh),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
@@ -156,7 +156,7 @@ static struct hw_codec_info ivb_hw_codec_info = {
     .max_width = 4096,
     .max_height = 4096,
     .min_linear_wpitch = 64,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = VA_PROFILE_MASK(H264StereoHigh),
     .h264_dec_chroma_formats = EXTRA_H264_DEC_CHROMA_FORMATS,
@@ -200,7 +200,7 @@ static struct hw_codec_info hsw_hw_codec_info = {
     .max_width = 4096,
     .max_height = 4096,
     .min_linear_wpitch = 64,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
     VA_PROFILE_MASK(H264MultiviewHigh)),
@@ -246,7 +246,7 @@ static struct hw_codec_info bdw_hw_codec_info = {
     .max_width = 4096,
     .max_height = 4096,
     .min_linear_wpitch = 64,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
     VA_PROFILE_MASK(H264MultiviewHigh)),
@@ -291,7 +291,7 @@ static struct hw_codec_info chv_hw_codec_info = {
     .max_width = 4096,
     .max_height = 4096,
     .min_linear_wpitch = 64,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
     VA_PROFILE_MASK(H264MultiviewHigh)),
@@ -346,7 +346,7 @@ static struct hw_codec_info skl_hw_codec_info = {
     .max_width = 4096,  /* default. See max_resolution */
     .max_height = 4096, /* default. See max_resolution */
     .min_linear_wpitch = 64,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
     VA_PROFILE_MASK(H264MultiviewHigh)),
@@ -401,7 +401,7 @@ static struct hw_codec_info bxt_hw_codec_info = {
     .max_width = 4096,  /* default. See max_resolution */
     .max_height = 4096, /* default. See max_resolution */
     .min_linear_wpitch = 64,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
     VA_PROFILE_MASK(H264MultiviewHigh)),
@@ -459,7 +459,7 @@ static struct hw_codec_info kbl_hw_codec_info = {
     .max_width = 4096,   /* default. See max_resolution */
     .max_height = 4096,  /* default. See max_resolution */
     .min_linear_wpitch = 64,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
     VA_PROFILE_MASK(H264MultiviewHigh)),
@@ -524,7 +524,7 @@ static struct hw_codec_info glk_hw_codec_info = {
     .max_width = 4096,
     .max_height = 4096,
     .min_linear_wpitch = 64,
-    .min_linear_hpitch = 16,
+    .min_linear_hpitch = 4,
 
     .h264_mvc_dec_profiles = (VA_PROFILE_MASK(H264StereoHigh) |
     VA_PROFILE_MASK(H264MultiviewHigh)),
