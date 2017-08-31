@@ -129,10 +129,6 @@ VAStatus HasMVCEncodeSupport()
 }
 
 static const std::vector<ConfigTestInput> inputs = {
-    {VAProfileH264Baseline, VAEntrypointEncSlice, &ProfileNotSupported},
-    {VAProfileH264Baseline, VAEntrypointEncSliceLP, &ProfileNotSupported},
-    {VAProfileH264Baseline, VAEntrypointEncPicture, &ProfileNotSupported},
-
     {VAProfileH264ConstrainedBaseline, VAEntrypointEncSlice, &HasEncodeSupport},
     {VAProfileH264ConstrainedBaseline, VAEntrypointEncSliceLP, &HasLPEncodeSupport},
     {VAProfileH264ConstrainedBaseline, VAEntrypointEncPicture, &H264NotSupported},

@@ -432,8 +432,6 @@ operator<<(std::ostream& os, const VAProfile& profile)
         return os << "VAProfileVP9Profile2";
     case VAProfileVP9Profile3:
         return os << "VAProfileVP9Profile3";
-    case VAProfileH264Baseline:
-        return os << "VAProfileH264Baseline";
     case VAProfileH264ConstrainedBaseline:
         return os << "VAProfileH264ConstrainedBaseline";
     case VAProfileH264High:

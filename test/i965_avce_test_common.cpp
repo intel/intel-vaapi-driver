@@ -42,9 +42,6 @@ VAStatus CheckSupported(VAProfile profile, VAEntrypoint entrypoint)
     EXPECT_PTR(i965);
 
     switch(profile) {
-    case VAProfileH264Baseline:
-        return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
-
     case VAProfileH264ConstrainedBaseline:
     case VAProfileH264Main:
     case VAProfileH264High:
