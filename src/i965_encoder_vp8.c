@@ -1479,6 +1479,30 @@ i965_encoder_vp8_gpe_context_vfe_scoreboard_init(struct i965_gpe_context *gpe_co
 }
 
 static void
+i965_add_dri_buffer_gpe_surface(VADriverContextP ctx,
+                                struct intel_encoder_context *encoder_context,
+                                struct i965_gpe_context *gpe_context,
+                                dri_bo *bo,
+                                int is_raw_buffer,
+                                unsigned int size,
+                                unsigned int offset,
+                                int index)
+{
+    struct i965_gpe_resource gpe_resource;
+
+    i965_dri_object_to_buffer_gpe_resource(&gpe_resource, bo);
+    i965_add_buffer_gpe_surface(ctx,
+                                gpe_context,
+                                &gpe_resource,
+                                is_raw_buffer,
+                                size,
+                                offset,
+                                index);
+
+    i965_free_gpe_resource(&gpe_resource);
+}
+
+static void
 i965_add_dri_buffer_2d_gpe_surface(VADriverContextP ctx,
                                    struct intel_encoder_context *encoder_context,
                                    struct i965_gpe_context *gpe_context,
@@ -4066,6 +4090,7 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* MBEnc CURBE Buffer - read only */
     size = ALIGN(params->mbenc_gpe_context->curbe.length, 64);
     i965_add_dri_buffer_gpe_surface(ctx,
+                                    encoder_context,
                                     gpe_context,
                                     params->mbenc_gpe_context->curbe.bo,
                                     0,
@@ -4075,6 +4100,7 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
 
     /* MBEnc CURBE Buffer - write only */
     i965_add_dri_buffer_gpe_surface(ctx,
+                                    encoder_context,
                                     gpe_context,
                                     params->mbenc_gpe_context->curbe.bo,
                                     0,
@@ -4111,6 +4137,7 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* MPU CURBE Buffer - read only */
     size = ALIGN(params->mpu_gpe_context->curbe.length, 64);
     i965_add_dri_buffer_gpe_surface(ctx,
+                                    encoder_context,
                                     gpe_context,
                                     params->mpu_gpe_context->curbe.bo,
                                     0,
@@ -4121,6 +4148,7 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* MPU CURBE Buffer - write only */
     size = ALIGN(params->mpu_gpe_context->curbe.length, 64);
     i965_add_dri_buffer_gpe_surface(ctx,
+                                    encoder_context,
                                     gpe_context,
                                     params->mpu_gpe_context->curbe.bo,
                                     0,
@@ -4131,6 +4159,7 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* TPU CURBE Buffer - read only */
     size = ALIGN(params->tpu_gpe_context->curbe.length, 64);
     i965_add_dri_buffer_gpe_surface(ctx,
+                                    encoder_context,
                                     gpe_context,
                                     params->tpu_gpe_context->curbe.bo,
                                     0,
@@ -4141,6 +4170,7 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* TPU CURBE Buffer - write only */
     size = ALIGN(params->tpu_gpe_context->curbe.length, 64);
     i965_add_dri_buffer_gpe_surface(ctx,
+                                    encoder_context,
                                     gpe_context,
                                     params->tpu_gpe_context->curbe.bo,
                                     0,
