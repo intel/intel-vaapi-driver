@@ -1536,12 +1536,12 @@ gen9_avc_send_surface_scaling(VADriverContextP ctx,
     else
         surface_format = I965_SURFACEFORMAT_R8_UNORM;
 
-    gen9_add_2d_gpe_surface(ctx, gpe_context,
+    i965_add_2d_gpe_surface(ctx, gpe_context,
                             surface_param->input_surface,
                             0, 1, surface_format,
                             GEN9_AVC_SCALING_FRAME_SRC_Y_INDEX);
 
-    gen9_add_2d_gpe_surface(ctx, gpe_context,
+    i965_add_2d_gpe_surface(ctx, gpe_context,
                             surface_param->output_surface,
                             0, 1, surface_format,
                             GEN9_AVC_SCALING_FRAME_DST_Y_INDEX);
@@ -1550,7 +1550,7 @@ gen9_avc_send_surface_scaling(VADriverContextP ctx,
     if (surface_param->mbv_proc_stat_enabled) {
         res_size = 16 * (surface_param->input_frame_width / 16) * (surface_param->input_frame_height / 16) * sizeof(unsigned int);
 
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     surface_param->pres_mbv_proc_stat_buffer,
                                     0,
@@ -1558,7 +1558,7 @@ gen9_avc_send_surface_scaling(VADriverContextP ctx,
                                     0,
                                     GEN9_AVC_SCALING_FRAME_MBVPROCSTATS_DST_INDEX);
     } else if (surface_param->enable_mb_flatness_check) {
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        surface_param->pres_flatness_check_surface,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -2385,7 +2385,7 @@ gen9_avc_send_surface_brc_init_reset(VADriverContextP ctx,
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context *)vme_context->private_enc_ctx;
 
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &avc_ctx->res_brc_history_buffer,
                                 0,
@@ -2393,7 +2393,7 @@ gen9_avc_send_surface_brc_init_reset(VADriverContextP ctx,
                                 0,
                                 GEN9_AVC_BRC_INIT_RESET_HISTORY_INDEX);
 
-    gen9_add_buffer_2d_gpe_surface(ctx,
+    i965_add_buffer_2d_gpe_surface(ctx,
                                    gpe_context,
                                    &avc_ctx->res_brc_dist_data_surface,
                                    1,
@@ -2583,7 +2583,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
         is_g95 = 1;
 
     /* brc history buffer*/
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &avc_ctx->res_brc_history_buffer,
                                 0,
@@ -2592,7 +2592,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 (is_g95 ? GEN95_AVC_FRAME_BRC_UPDATE_HISTORY_INDEX : GEN9_AVC_FRAME_BRC_UPDATE_HISTORY_INDEX));
 
     /* previous pak buffer*/
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &avc_ctx->res_brc_pre_pak_statistics_output_buffer,
                                 0,
@@ -2601,7 +2601,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 (is_g95 ? GEN95_AVC_FRAME_BRC_UPDATE_PAK_STATISTICS_OUTPUT_INDEX : GEN9_AVC_FRAME_BRC_UPDATE_PAK_STATISTICS_OUTPUT_INDEX));
 
     /* image state command buffer read only*/
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &avc_ctx->res_brc_image_state_read_buffer,
                                 0,
@@ -2610,7 +2610,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 (is_g95 ? GEN95_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_READ_INDEX : GEN9_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_READ_INDEX));
 
     /* image state command buffer write only*/
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &avc_ctx->res_brc_image_state_write_buffer,
                                 0,
@@ -2619,7 +2619,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                 (is_g95 ? GEN95_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_WRITE_INDEX : GEN9_AVC_FRAME_BRC_UPDATE_IMAGE_STATE_WRITE_INDEX));
 
     if (avc_state->mbenc_brc_buffer_size > 0) {
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     &(avc_ctx->res_mbenc_brc_buffer),
                                     0,
@@ -2646,7 +2646,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
     }
 
     /* AVC_ME Distortion 2D surface buffer,input/output. is it res_brc_dist_data_surface*/
-    gen9_add_buffer_2d_gpe_surface(ctx,
+    i965_add_buffer_2d_gpe_surface(ctx,
                                    gpe_context,
                                    &avc_ctx->res_brc_dist_data_surface,
                                    1,
@@ -2654,7 +2654,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                    (is_g95 ? GEN95_AVC_FRAME_BRC_UPDATE_DISTORTION_INDEX : GEN9_AVC_FRAME_BRC_UPDATE_DISTORTION_INDEX));
 
     /* BRC const data 2D surface buffer */
-    gen9_add_buffer_2d_gpe_surface(ctx,
+    i965_add_buffer_2d_gpe_surface(ctx,
                                    gpe_context,
                                    &avc_ctx->res_brc_const_data_buffer,
                                    1,
@@ -2662,7 +2662,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
                                    (is_g95 ? GEN95_AVC_FRAME_BRC_UPDATE_CONSTANT_DATA_INDEX : GEN9_AVC_FRAME_BRC_UPDATE_CONSTANT_DATA_INDEX));
 
     /* MB statistical data surface*/
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &avc_ctx->res_mb_status_buffer,
                                 0,
@@ -2836,7 +2836,7 @@ gen9_avc_send_surface_brc_mb_update(VADriverContextP ctx,
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
 
     /* brc history buffer*/
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &avc_ctx->res_brc_history_buffer,
                                 0,
@@ -2846,7 +2846,7 @@ gen9_avc_send_surface_brc_mb_update(VADriverContextP ctx,
 
     /* MB qp data buffer is it same as res_mbbrc_mb_qp_data_surface*/
     if (generic_state->mb_brc_enabled) {
-        gen9_add_buffer_2d_gpe_surface(ctx,
+        i965_add_buffer_2d_gpe_surface(ctx,
                                        gpe_context,
                                        &avc_ctx->res_mbbrc_mb_qp_data_surface,
                                        1,
@@ -2857,7 +2857,7 @@ gen9_avc_send_surface_brc_mb_update(VADriverContextP ctx,
 
     /* BRC roi feature*/
     if (generic_state->brc_roi_enable) {
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     &avc_ctx->res_mbbrc_roi_surface,
                                     0,
@@ -2868,7 +2868,7 @@ gen9_avc_send_surface_brc_mb_update(VADriverContextP ctx,
     }
 
     /* MB statistical data surface*/
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &avc_ctx->res_mb_status_buffer,
                                 0,
@@ -4152,7 +4152,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     /*pak obj command buffer output*/
     size = frame_mb_size * 16 * 4;
     gpe_resource = &avc_priv_surface->res_mb_code_surface;
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 gpe_resource,
                                 0,
@@ -4163,7 +4163,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     /*mv data buffer output*/
     size = frame_mb_size * 32 * 4;
     gpe_resource = &avc_priv_surface->res_mv_data_surface;
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 gpe_resource,
                                 0,
@@ -4181,7 +4181,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     } else {
         obj_surface = encode_state->input_yuv_object;
     }
-    gen9_add_2d_gpe_surface(ctx,
+    i965_add_2d_gpe_surface(ctx,
                             gpe_context,
                             obj_surface,
                             0,
@@ -4189,7 +4189,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
                             I965_SURFACEFORMAT_R8_UNORM,
                             GEN9_AVC_MBENC_CURR_Y_INDEX);
 
-    gen9_add_2d_gpe_surface(ctx,
+    i965_add_2d_gpe_surface(ctx,
                             gpe_context,
                             obj_surface,
                             1,
@@ -4200,14 +4200,14 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     if (generic_state->hme_enabled) {
         /*memv input 4x*/
         gpe_resource = &(avc_ctx->s4x_memv_data_buffer);
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
                                        GEN9_AVC_MBENC_MV_DATA_FROM_ME_INDEX);
         /* memv distortion input*/
         gpe_resource = &(avc_ctx->s4x_memv_distortion_buffer);
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -4218,7 +4218,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     if (param->mb_const_data_buffer_in_use) {
         size = 16 * AVC_QP_MAX * sizeof(unsigned int);
         gpe_resource = &avc_ctx->res_mbbrc_const_data_buffer;
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     gpe_resource,
                                     0,
@@ -4234,7 +4234,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
             gpe_resource = &(avc_ctx->res_mb_qp_data_surface);
         else
             gpe_resource = &(avc_ctx->res_mbbrc_mb_qp_data_surface);
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -4251,7 +4251,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     } else {
         obj_surface = encode_state->input_yuv_object;
     }
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              obj_surface,
                              GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX);
     /*input ref YUV surface*/
@@ -4261,7 +4261,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
         if (!obj_surface || !obj_surface->private_data)
             break;
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  obj_surface,
                                  GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX + i * 2 + 1);
     }
@@ -4275,7 +4275,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     } else {
         obj_surface = encode_state->input_yuv_object;
     }
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              obj_surface,
                              GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX);
 
@@ -4286,10 +4286,10 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
         if (!obj_surface || !obj_surface->private_data)
             break;
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  obj_surface,
                                  GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX + i * 2 + 1);
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  obj_surface,
                                  GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX + i * 2 + 2);
         if (i == 0) {
@@ -4297,7 +4297,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
             /*pak obj command buffer output(mb code)*/
             size = frame_mb_size * 16 * 4;
             gpe_resource = &avc_priv_surface->res_mb_code_surface;
-            gen9_add_buffer_gpe_surface(ctx,
+            i965_add_buffer_gpe_surface(ctx,
                                         gpe_context,
                                         gpe_resource,
                                         0,
@@ -4308,7 +4308,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
             /*mv data buffer output*/
             size = frame_mb_size * 32 * 4;
             gpe_resource = &avc_priv_surface->res_mv_data_surface;
-            gen9_add_buffer_gpe_surface(ctx,
+            i965_add_buffer_gpe_surface(ctx,
                                         gpe_context,
                                         gpe_resource,
                                         0,
@@ -4319,7 +4319,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
         }
 
         if (i < INTEL_AVC_MAX_BWD_REF_NUM) {
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      obj_surface,
                                      GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX + i * 2 + 1 + INTEL_AVC_MAX_BWD_REF_NUM);
         }
@@ -4329,7 +4329,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     /* BRC distortion data buffer for I frame*/
     if (mbenc_i_frame_dist_in_use) {
         gpe_resource = &(avc_ctx->res_brc_dist_data_surface);
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -4341,7 +4341,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     avc_priv_surface = obj_surface->private_data;
     if (avc_state->ref_pic_select_list_supported && avc_priv_surface->is_as_ref) {
         gpe_resource = &(avc_priv_surface->res_ref_pic_select_surface);
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -4353,7 +4353,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
         /*mb status buffer input*/
         size = frame_mb_size * 16 * 4;
         gpe_resource = &(avc_ctx->res_mb_status_buffer);
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     gpe_resource,
                                     0,
@@ -4364,7 +4364,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     } else if (avc_state->flatness_check_enable) {
 
         gpe_resource = &(avc_ctx->res_flatness_check_surface);
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -4375,7 +4375,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
         /*mad buffer input*/
         size = 4;
         gpe_resource = &(avc_ctx->res_mad_data_buffer);
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     gpe_resource,
                                     0,
@@ -4389,7 +4389,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     if (avc_state->mbenc_brc_buffer_size > 0) {
         size = avc_state->mbenc_brc_buffer_size;
         gpe_resource = &(avc_ctx->res_mbenc_brc_buffer);
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     gpe_resource,
                                     0,
@@ -4402,7 +4402,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     if (avc_state->arbitrary_num_mbs_in_slice) {
         /*slice surface input*/
         gpe_resource = &(avc_ctx->res_mbenc_slice_map_surface);
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -4414,7 +4414,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
     if (!mbenc_i_frame_dist_in_use) {
         if (avc_state->mb_disable_skip_map_enable) {
             gpe_resource = &(avc_ctx->res_mb_disable_skip_map_surface);
-            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+            i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                            gpe_resource,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
@@ -4430,7 +4430,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
             }
 
             if (generic_state->frame_type != SLICE_TYPE_I) {
-                gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+                i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                                gpe_resource,
                                                1,
                                                I965_SURFACEFORMAT_R8_UNORM,
@@ -4590,7 +4590,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     /*==== pak obj command buffer output ====*/
     size = frame_mb_nums * FEI_AVC_MB_CODE_BUFFER_SIZE;
     gpe_resource = &avc_priv_surface->res_mb_code_surface;
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 gpe_resource,
                                 0,
@@ -4602,7 +4602,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     /*=== mv data buffer output */
     size = frame_mb_nums * FEI_AVC_MV_DATA_BUFFER_SIZE;
     gpe_resource = &avc_priv_surface->res_mv_data_surface;
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 gpe_resource,
                                 0,
@@ -4613,7 +4613,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
 
     /* === current input Y (binding table offset = 3)=== */
     obj_surface = encode_state->input_yuv_object;
-    gen9_add_2d_gpe_surface(ctx,
+    i965_add_2d_gpe_surface(ctx,
                             gpe_context,
                             obj_surface,
                             0,
@@ -4622,7 +4622,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
                             GEN9_AVC_MBENC_CURR_Y_INDEX);
 
     /* === current input UV === (binding table offset == 4)*/
-    gen9_add_2d_gpe_surface(ctx,
+    i965_add_2d_gpe_surface(ctx,
                             gpe_context,
                             obj_surface,
                             1,
@@ -4631,13 +4631,13 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
                             GEN9_AVC_MBENC_CURR_UV_INDEX);
 
     /* === input current YUV surface, (binding table offset == 15) === */
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              obj_surface,
                              GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX);
 
 
     /*== input current  YUV surface, (binding table offset == 32)*/
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              obj_surface,
                              GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX);
 
@@ -4648,7 +4648,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
         obj_surface = SURFACE(surface_id);
         if (!obj_surface || !obj_surface->private_data)
             break;
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  obj_surface,
                                  GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX + i * 2 + 1);
     }
@@ -4662,7 +4662,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
         if (!obj_surface || !obj_surface->private_data)
             break;
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  obj_surface,
                                  GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_INDEX + i * 2 + 2);
         if (i == 0) {
@@ -4670,7 +4670,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
             /* mb code of Backward reference frame */
             size = frame_mb_nums * FEI_AVC_MB_CODE_BUFFER_SIZE;
             gpe_resource = &avc_priv_surface->res_mb_code_surface;
-            gen9_add_buffer_gpe_surface(ctx,
+            i965_add_buffer_gpe_surface(ctx,
                                         gpe_context,
                                         gpe_resource,
                                         0,
@@ -4681,7 +4681,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
             /* mv data of backward ref frame */
             size = frame_mb_nums * FEI_AVC_MV_DATA_BUFFER_SIZE;
             gpe_resource = &avc_priv_surface->res_mv_data_surface;
-            gen9_add_buffer_gpe_surface(ctx,
+            i965_add_buffer_gpe_surface(ctx,
                                         gpe_context,
                                         gpe_resource,
                                         0,
@@ -4692,7 +4692,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
         }
         //again
         if (i < INTEL_AVC_MAX_BWD_REF_NUM) {
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      obj_surface,
                                      GEN9_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_INDEX + i * 2 + 1);
         }
@@ -4703,7 +4703,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     avc_priv_surface = obj_surface->private_data;
     if (avc_state->ref_pic_select_list_supported && avc_priv_surface->is_as_ref) {
         gpe_resource = &(avc_priv_surface->res_ref_pic_select_surface);
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -4717,7 +4717,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
         (fei_param->mb_ctrl != VA_INVALID_ID)) {
         size = frame_mb_nums * FEI_AVC_MB_CONTROL_BUFFER_SIZE;
         gpe_resource = &avc_priv_surface->res_fei_mb_cntrl_surface;
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     gpe_resource,
                                     0,
@@ -4730,7 +4730,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     if (fei_param->mv_predictor_enable && (fei_param->mv_predictor != VA_INVALID_ID)) {
         size = frame_mb_nums * 48; //sizeof (VAEncMVPredictorH264Intel) == 40
         gpe_resource = &avc_priv_surface->res_fei_mv_predictor_surface;
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     gpe_resource,
                                     0,
@@ -4743,7 +4743,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     if (fei_param->mb_qp && (fei_param->qp != VA_INVALID_ID)) {
         size = frame_mb_nums  + 3;
         gpe_resource = &avc_priv_surface->res_fei_mb_qp_surface,
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     gpe_resource,
                                     0,
@@ -4756,7 +4756,7 @@ gen9_avc_fei_send_surface_mbenc(VADriverContextP ctx,
     /*=== FEI distortion surface ====*/
     size = frame_mb_nums * 48; //sizeof (VAEncFEIDistortionBufferH264Intel) == 48
     gpe_resource = &avc_priv_surface->res_fei_vme_distortion_surface;
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 gpe_resource,
                                 0,
@@ -5086,7 +5086,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
     case INTEL_ENC_HME_4x : {
         /*memv output 4x*/
         gpe_resource = &avc_ctx->s4x_memv_data_buffer;
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -5095,7 +5095,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
         /*memv input 16x*/
         if (generic_state->b16xme_enabled) {
             gpe_resource = &avc_ctx->s16x_memv_data_buffer;
-            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+            i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                            gpe_resource,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
@@ -5103,14 +5103,14 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
         }
         /* brc distortion  output*/
         gpe_resource = &avc_ctx->res_brc_dist_data_surface;
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
                                        GEN9_AVC_ME_BRC_DISTORTION_INDEX);
         /* memv distortion output*/
         gpe_resource = &avc_ctx->s4x_memv_distortion_buffer;
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -5119,7 +5119,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
         obj_surface = encode_state->reconstructed_object;
         avc_priv_surface = obj_surface->private_data;
         input_surface = avc_priv_surface->scaled_4x_surface_obj;
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX);
         /*input ref scaled YUV surface*/
@@ -5132,7 +5132,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
 
             input_surface = avc_priv_surface->scaled_4x_surface_obj;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      input_surface,
                                      GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX + i * 2 + 1);
         }
@@ -5141,7 +5141,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
         avc_priv_surface = obj_surface->private_data;
         input_surface = avc_priv_surface->scaled_4x_surface_obj;
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX);
 
@@ -5154,7 +5154,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
 
             input_surface = avc_priv_surface->scaled_4x_surface_obj;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      input_surface,
                                      GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX + i * 2 + 1);
         }
@@ -5163,7 +5163,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
     }
     case INTEL_ENC_HME_16x : {
         gpe_resource = &avc_ctx->s16x_memv_data_buffer;
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -5171,7 +5171,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
 
         if (generic_state->b32xme_enabled) {
             gpe_resource = &avc_ctx->s32x_memv_data_buffer;
-            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+            i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                            gpe_resource,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
@@ -5181,7 +5181,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
         obj_surface = encode_state->reconstructed_object;
         avc_priv_surface = obj_surface->private_data;
         input_surface = avc_priv_surface->scaled_16x_surface_obj;
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX);
 
@@ -5194,7 +5194,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
 
             input_surface = avc_priv_surface->scaled_16x_surface_obj;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      input_surface,
                                      GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX + i * 2 + 1);
         }
@@ -5203,7 +5203,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
         avc_priv_surface = obj_surface->private_data;
         input_surface = avc_priv_surface->scaled_16x_surface_obj;
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX);
 
@@ -5216,7 +5216,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
 
             input_surface = avc_priv_surface->scaled_16x_surface_obj;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      input_surface,
                                      GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX + i * 2 + 1);
         }
@@ -5224,7 +5224,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
     }
     case INTEL_ENC_HME_32x : {
         gpe_resource = &avc_ctx->s32x_memv_data_buffer;
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -5233,7 +5233,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
         obj_surface = encode_state->reconstructed_object;
         avc_priv_surface = obj_surface->private_data;
         input_surface = avc_priv_surface->scaled_32x_surface_obj;
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX);
 
@@ -5246,7 +5246,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
 
             input_surface = avc_priv_surface->scaled_32x_surface_obj;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      input_surface,
                                      GEN9_AVC_ME_CURR_FOR_FWD_REF_INDEX + i * 2 + 1);
         }
@@ -5255,7 +5255,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
         avc_priv_surface = obj_surface->private_data;
         input_surface = avc_priv_surface->scaled_32x_surface_obj;
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX);
 
@@ -5268,7 +5268,7 @@ gen9_avc_send_surface_me(VADriverContextP ctx,
 
             input_surface = avc_priv_surface->scaled_32x_surface_obj;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      input_surface,
                                      GEN9_AVC_ME_CURR_FOR_BWD_REF_INDEX + i * 2 + 1);
         }
@@ -5430,12 +5430,12 @@ gen9_avc_send_surface_wp(VADriverContextP ctx,
         obj_surface = encode_state->reference_objects[0];
 
 
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              obj_surface,
                              GEN9_AVC_WP_INPUT_REF_SURFACE_INDEX);
 
     obj_surface = avc_ctx->wp_output_pic_select_surface_obj[curbe_param->ref_list_idx];
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              obj_surface,
                              GEN9_AVC_WP_OUTPUT_SCALED_SURFACE_INDEX);
 }
@@ -5567,7 +5567,7 @@ gen9_avc_send_surface_sfd(VADriverContextP ctx,
 
     /*HME mv data surface memv output 4x*/
     gpe_resource = &avc_ctx->s4x_memv_data_buffer;
-    gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+    i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                    gpe_resource,
                                    1,
                                    I965_SURFACEFORMAT_R8_UNORM,
@@ -5575,7 +5575,7 @@ gen9_avc_send_surface_sfd(VADriverContextP ctx,
 
     /* memv distortion */
     gpe_resource = &avc_ctx->s4x_memv_distortion_buffer;
-    gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+    i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                    gpe_resource,
                                    1,
                                    I965_SURFACEFORMAT_R8_UNORM,
@@ -5583,7 +5583,7 @@ gen9_avc_send_surface_sfd(VADriverContextP ctx,
     /*buffer output*/
     size = 32 * 4 * 4;
     gpe_resource = &avc_ctx->res_sfd_output_buffer;
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 gpe_resource,
                                 0,
