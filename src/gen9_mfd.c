@@ -1734,9 +1734,9 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
     //Only one VASliceParameterBufferVP9 should be sent per frame
     slice_data_bo = decode_state->slice_datas[0]->bo;
 
+    gen9_hcpd_vp9_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
     gen9_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
 
-    gen9_hcpd_vp9_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
     //If segmentation is disabled, only SegParam[0] is valid,
     //all others should be populated with 0
     if (!pic_param->pic_fields.bits.segmentation_enabled)
