@@ -44,6 +44,9 @@
 #define GEN95_AVC_MAX_LAMBDA              0xEFFF
 #define GEN95_AVC_DEFAULT_TRELLIS_QUANT_INTRA_ROUNDING      5
 
+#define GEN8_AVC_MBENC_CURBE_SIZE  88
+#define GEN8_AVC_ME_CURBE_SIZE  39
+
 extern const char gen9_avc_sfd_cost_table_p_frame[AVC_QP_MAX];
 extern const char gen9_avc_sfd_cost_table_b_frame[AVC_QP_MAX];
 
@@ -136,4 +139,12 @@ extern const unsigned int gen95_avc_tq_lambda_p_frame[AVC_QP_MAX][2];
 extern const unsigned int gen95_avc_tq_lambda_b_frame[AVC_QP_MAX][2];
 extern const unsigned short gen95_avc_lambda_data[256];
 extern const unsigned char gen95_avc_ftq25[64];
+
+/* gen8  */
+extern const unsigned int gen8_avc_mbenc_curbe_i_frame_dist_init_data[GEN8_AVC_MBENC_CURBE_SIZE];
+extern const unsigned int gen8_avc_mbenc_curbe_normal_i_frame_init_data[GEN8_AVC_MBENC_CURBE_SIZE];
+extern const unsigned int gen8_avc_mbenc_curbe_normal_p_frame_init_data[GEN8_AVC_MBENC_CURBE_SIZE];
+extern const unsigned int gen8_avc_mbenc_curbe_normal_b_frame_init_data[GEN8_AVC_MBENC_CURBE_SIZE];
+extern const unsigned int gen8_avc_me_curbe_init_data[GEN8_AVC_ME_CURBE_SIZE];
+extern const unsigned short gen8_avc_ref_cost[3][64];
 #endif //GEN9_AVC_const_DEF_H

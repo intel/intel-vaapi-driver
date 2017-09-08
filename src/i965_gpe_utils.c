@@ -2654,7 +2654,7 @@ i965_init_media_object_walker_parameter(struct gpe_encoder_kernel_walker_paramet
 }
 
 void
-gen9_add_2d_gpe_surface(VADriverContextP ctx,
+i965_add_2d_gpe_surface(VADriverContextP ctx,
                         struct i965_gpe_context *gpe_context,
                         struct object_surface *obj_surface,
                         int is_uv_surface,
@@ -2663,6 +2663,7 @@ gen9_add_2d_gpe_surface(VADriverContextP ctx,
                         int index)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_resource gpe_resource;
     struct i965_gpe_surface gpe_surface;
 
@@ -2682,17 +2683,18 @@ gen9_add_2d_gpe_surface(VADriverContextP ctx,
             gpe_surface.is_16bpp = 1;
     }
 
-    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+    gpe->context_add_surface(gpe_context, &gpe_surface, index);
     i965_free_gpe_resource(&gpe_resource);
 }
 
 void
-gen9_add_adv_gpe_surface(VADriverContextP ctx,
+i965_add_adv_gpe_surface(VADriverContextP ctx,
                          struct i965_gpe_context *gpe_context,
                          struct object_surface *obj_surface,
                          int index)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_resource gpe_resource;
     struct i965_gpe_surface gpe_surface;
 
@@ -2704,12 +2706,12 @@ gen9_add_adv_gpe_surface(VADriverContextP ctx,
     gpe_surface.cacheability_control = i965->intel.mocs_state;
     gpe_surface.v_direction = 2;
 
-    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+    gpe->context_add_surface(gpe_context, &gpe_surface, index);
     i965_free_gpe_resource(&gpe_resource);
 }
 
 void
-gen9_add_buffer_gpe_surface(VADriverContextP ctx,
+i965_add_buffer_gpe_surface(VADriverContextP ctx,
                             struct i965_gpe_context *gpe_context,
                             struct i965_gpe_resource *gpe_buffer,
                             int is_raw_buffer,
@@ -2718,6 +2720,7 @@ gen9_add_buffer_gpe_surface(VADriverContextP ctx,
                             int index)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_surface gpe_surface;
 
     memset(&gpe_surface, 0, sizeof(gpe_surface));
@@ -2729,11 +2732,11 @@ gen9_add_buffer_gpe_surface(VADriverContextP ctx,
     gpe_surface.size = size;
     gpe_surface.offset = offset;
 
-    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+    gpe->context_add_surface(gpe_context, &gpe_surface, index);
 }
 
 void
-gen9_add_buffer_2d_gpe_surface(VADriverContextP ctx,
+i965_add_buffer_2d_gpe_surface(VADriverContextP ctx,
                                struct i965_gpe_context *gpe_context,
                                struct i965_gpe_resource *gpe_buffer,
                                int is_media_block_rw,
@@ -2741,6 +2744,7 @@ gen9_add_buffer_2d_gpe_surface(VADriverContextP ctx,
                                int index)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_gpe_table *gpe = &i965->gpe_table;
     struct i965_gpe_surface gpe_surface;
 
     memset(&gpe_surface, 0, sizeof(gpe_surface));
@@ -2751,7 +2755,7 @@ gen9_add_buffer_2d_gpe_surface(VADriverContextP ctx,
     gpe_surface.cacheability_control = i965->intel.mocs_state;
     gpe_surface.format = format;
 
-    gen9_gpe_context_add_surface(gpe_context, &gpe_surface, index);
+    gpe->context_add_surface(gpe_context, &gpe_surface, index);
 }
 
 void
@@ -2766,7 +2770,7 @@ gen9_add_dri_buffer_gpe_surface(VADriverContextP ctx,
     struct i965_gpe_resource gpe_resource;
 
     i965_dri_object_to_buffer_gpe_resource(&gpe_resource, bo);
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &gpe_resource,
                                 is_raw_buffer,

@@ -1190,7 +1190,7 @@ gen9_brc_init_reset_add_surfaces_vp9(VADriverContextP ctx,
 {
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
 
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 gpe_context,
                                 &vme_context->res_brc_history_buffer,
                                 0,
@@ -1198,7 +1198,7 @@ gen9_brc_init_reset_add_surfaces_vp9(VADriverContextP ctx,
                                 0,
                                 VP9_BTI_BRC_HISTORY_G9);
 
-    gen9_add_buffer_2d_gpe_surface(ctx,
+    i965_add_buffer_2d_gpe_surface(ctx,
                                    gpe_context,
                                    &vme_context->s4x_memv_distortion_buffer,
                                    1,
@@ -1286,18 +1286,18 @@ gen9_brc_intra_dist_add_surfaces_vp9(VADriverContextP ctx,
     vp9_priv_surface = (struct gen9_surface_vp9 *)(obj_surface->private_data);
 
     obj_surface = vp9_priv_surface->scaled_4x_surface_obj;
-    gen9_add_2d_gpe_surface(ctx, gpe_context,
+    i965_add_2d_gpe_surface(ctx, gpe_context,
                             obj_surface,
                             0, 1,
                             I965_SURFACEFORMAT_R8_UNORM,
                             VP9_BTI_BRC_SRCY4X_G9
                            );
 
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              obj_surface,
                              VP9_BTI_BRC_VME_COARSE_INTRA_G9);
 
-    gen9_add_buffer_2d_gpe_surface(ctx,
+    i965_add_buffer_2d_gpe_surface(ctx,
                                    gpe_context,
                                    &vme_context->s4x_memv_distortion_buffer,
                                    1,
@@ -1613,7 +1613,7 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
     struct gen9_encoder_context_vp9 *vme_context = encoder_context->vme_context;
 
     /* 0. BRC history buffer */
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 brc_gpe_context,
                                 &vme_context->res_brc_history_buffer,
                                 0,
@@ -1622,7 +1622,7 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                 VP9_BTI_BRC_HISTORY_G9);
 
     /* 1. Constant data buffer */
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 brc_gpe_context,
                                 &vme_context->res_brc_const_data_buffer,
                                 0,
@@ -1631,7 +1631,7 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                 VP9_BTI_BRC_CONSTANT_DATA_G9);
 
     /* 2. Distortion 2D surface buffer */
-    gen9_add_buffer_2d_gpe_surface(ctx,
+    i965_add_buffer_2d_gpe_surface(ctx,
                                    brc_gpe_context,
                                    &vme_context->s4x_memv_distortion_buffer,
                                    1,
@@ -1639,7 +1639,7 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                    VP9_BTI_BRC_DISTORTION_G9);
 
     /* 3. pak buffer */
-    gen9_add_buffer_gpe_surface(ctx,
+    i965_add_buffer_gpe_surface(ctx,
                                 brc_gpe_context,
                                 &vme_context->res_brc_mmdk_pak_buffer,
                                 0,
@@ -1664,7 +1664,7 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                     VP9_BTI_BRC_MBENC_CURBE_OUTPUT_G9);
 
     /* 6. BRC_PIC_STATE read buffer */
-    gen9_add_buffer_gpe_surface(ctx, brc_gpe_context,
+    i965_add_buffer_gpe_surface(ctx, brc_gpe_context,
                                 &vme_context->res_pic_state_brc_read_buffer,
                                 0,
                                 vme_context->res_pic_state_brc_read_buffer.size,
@@ -1672,7 +1672,7 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                 VP9_BTI_BRC_PIC_STATE_INPUT_G9);
 
     /* 7. BRC_PIC_STATE write buffer */
-    gen9_add_buffer_gpe_surface(ctx, brc_gpe_context,
+    i965_add_buffer_gpe_surface(ctx, brc_gpe_context,
                                 &vme_context->res_pic_state_brc_write_hfw_read_buffer,
                                 0,
                                 vme_context->res_pic_state_brc_write_hfw_read_buffer.size,
@@ -1680,7 +1680,7 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                 VP9_BTI_BRC_PIC_STATE_OUTPUT_G9);
 
     /* 8. SEGMENT_STATE read buffer */
-    gen9_add_buffer_gpe_surface(ctx, brc_gpe_context,
+    i965_add_buffer_gpe_surface(ctx, brc_gpe_context,
                                 &vme_context->res_seg_state_brc_read_buffer,
                                 0,
                                 vme_context->res_seg_state_brc_read_buffer.size,
@@ -1688,7 +1688,7 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                 VP9_BTI_BRC_SEGMENT_STATE_INPUT_G9);
 
     /* 9. SEGMENT_STATE write buffer */
-    gen9_add_buffer_gpe_surface(ctx, brc_gpe_context,
+    i965_add_buffer_gpe_surface(ctx, brc_gpe_context,
                                 &vme_context->res_seg_state_brc_write_buffer,
                                 0,
                                 vme_context->res_seg_state_brc_write_buffer.size,
@@ -1696,14 +1696,14 @@ gen9_brc_update_add_surfaces_vp9(VADriverContextP ctx,
                                 VP9_BTI_BRC_SEGMENT_STATE_OUTPUT_G9);
 
     /* 10. Bitstream size buffer */
-    gen9_add_buffer_gpe_surface(ctx, brc_gpe_context,
+    i965_add_buffer_gpe_surface(ctx, brc_gpe_context,
                                 &vme_context->res_brc_bitstream_size_buffer,
                                 0,
                                 vme_context->res_brc_bitstream_size_buffer.size,
                                 0,
                                 VP9_BTI_BRC_BITSTREAM_SIZE_G9);
 
-    gen9_add_buffer_gpe_surface(ctx, brc_gpe_context,
+    i965_add_buffer_gpe_surface(ctx, brc_gpe_context,
                                 &vme_context->res_brc_hfw_data_buffer,
                                 0,
                                 vme_context->res_brc_hfw_data_buffer.size,
@@ -1973,7 +1973,7 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
         gpe_resource = param->pres_4x_memv_data_buffer;
     }
 
-    gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+    i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                    gpe_resource,
                                    1,
                                    I965_SURFACEFORMAT_R8_UNORM,
@@ -1981,7 +1981,7 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
 
     if (param->b16xme_enabled) {
         gpe_resource = param->pres_16x_memv_data_buffer;
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -1991,7 +1991,7 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
     if (!param->use_16x_me) {
         gpe_resource = param->pres_me_brc_distortion_buffer;
 
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -1999,7 +1999,7 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
 
         gpe_resource = param->pres_me_distortion_buffer;
 
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        gpe_resource,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -2011,7 +2011,7 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
     else
         input_surface = vp9_priv_surface->scaled_4x_surface_obj;
 
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              input_surface,
                              VP9_BTI_ME_CURR_PIC_L0);
 
@@ -2035,10 +2035,10 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
             else
                 input_surface = vp9_priv_surface->dys_4x_surface_obj;
         }
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  ref_bti);
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  ref_bti + 1);
         ref_bti += 2;
@@ -2062,10 +2062,10 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
                 input_surface = vp9_priv_surface->dys_4x_surface_obj;
         }
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  ref_bti);
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  ref_bti + 1);
         ref_bti += 2;
@@ -2088,10 +2088,10 @@ gen9_vp9_send_me_surface(VADriverContextP ctx,
             else
                 input_surface = vp9_priv_surface->dys_4x_surface_obj;
         }
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  ref_bti);
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  input_surface,
                                  ref_bti + 1);
         ref_bti += 2;
@@ -2268,12 +2268,12 @@ gen9_vp9_send_scaling_surface(VADriverContextP ctx,
     else
         surface_format = I965_SURFACEFORMAT_R8_UNORM;
 
-    gen9_add_2d_gpe_surface(ctx, gpe_context,
+    i965_add_2d_gpe_surface(ctx, gpe_context,
                             scaling_surface_param->input_surface,
                             0, 1, surface_format,
                             scaling_bti->scaling_frame_src_y);
 
-    gen9_add_2d_gpe_surface(ctx, gpe_context,
+    i965_add_2d_gpe_surface(ctx, gpe_context,
                             scaling_surface_param->output_surface,
                             0, 1, surface_format,
                             scaling_bti->scaling_frame_dst_y);
@@ -2524,13 +2524,13 @@ gen9_vp9_send_dys_surface(VADriverContextP ctx,
 {
 
     if (surface_param->input_frame)
-        gen9_add_adv_gpe_surface(ctx,
+        i965_add_adv_gpe_surface(ctx,
                                  gpe_context,
                                  surface_param->input_frame,
                                  VP9_BTI_DYS_INPUT_NV12);
 
     if (surface_param->output_frame) {
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 surface_param->output_frame,
                                 0,
@@ -2538,7 +2538,7 @@ gen9_vp9_send_dys_surface(VADriverContextP ctx,
                                 I965_SURFACEFORMAT_R8_UNORM,
                                 VP9_BTI_DYS_OUTPUT_Y);
 
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 surface_param->output_frame,
                                 1,
@@ -3009,7 +3009,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
     case VP9_MEDIA_STATE_MBENC_I_32x32: {
         obj_surface = mbenc_param->curr_frame_obj;
 
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 obj_surface,
                                 0,
@@ -3017,7 +3017,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                 I965_SURFACEFORMAT_R8_UNORM,
                                 VP9_BTI_MBENC_CURR_Y_G9);
 
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 obj_surface,
                                 1,
@@ -3027,7 +3027,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
 
         if (mbenc_param->segmentation_enabled) {
-            gen9_add_buffer_2d_gpe_surface(ctx,
+            i965_add_buffer_2d_gpe_surface(ctx,
                                            gpe_context,
                                            mbenc_param->pres_segmentation_map,
                                            1,
@@ -3038,7 +3038,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         res_size = 16 * mbenc_param->frame_width_in_mb *
                    mbenc_param->frame_height_in_mb * sizeof(unsigned int);
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision,
                                     0,
@@ -3051,7 +3051,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
     case VP9_MEDIA_STATE_MBENC_I_16x16: {
         obj_surface = mbenc_param->curr_frame_obj;
 
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 obj_surface,
                                 0,
@@ -3059,7 +3059,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                 I965_SURFACEFORMAT_R8_UNORM,
                                 VP9_BTI_MBENC_CURR_Y_G9);
 
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 obj_surface,
                                 1,
@@ -3067,12 +3067,12 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                 I965_SURFACEFORMAT_R16_UINT,
                                 VP9_BTI_MBENC_CURR_UV_G9);
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  obj_surface,
                                  VP9_BTI_MBENC_CURR_NV12_G9);
 
         if (mbenc_param->segmentation_enabled) {
-            gen9_add_buffer_2d_gpe_surface(ctx,
+            i965_add_buffer_2d_gpe_surface(ctx,
                                            gpe_context,
                                            mbenc_param->pres_segmentation_map,
                                            1,
@@ -3083,7 +3083,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         res_size = 16 * mbenc_param->frame_width_in_mb *
                    mbenc_param->frame_height_in_mb * sizeof(unsigned int);
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision,
                                     0,
@@ -3106,7 +3106,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
     case VP9_MEDIA_STATE_MBENC_P: {
         obj_surface = mbenc_param->curr_frame_obj;
 
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 obj_surface,
                                 0,
@@ -3114,14 +3114,14 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                 I965_SURFACEFORMAT_R8_UNORM,
                                 VP9_BTI_MBENC_CURR_Y_G9);
 
-        gen9_add_2d_gpe_surface(ctx, gpe_context,
+        i965_add_2d_gpe_surface(ctx, gpe_context,
                                 obj_surface,
                                 1,
                                 1,
                                 I965_SURFACEFORMAT_R16_UINT,
                                 VP9_BTI_MBENC_CURR_UV_G9);
 
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  obj_surface,
                                  VP9_BTI_MBENC_CURR_NV12_G9);
 
@@ -3136,11 +3136,11 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
             else
                 tmp_input = obj_surface;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      tmp_input,
                                      VP9_BTI_MBENC_LAST_NV12_G9);
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      tmp_input,
                                      VP9_BTI_MBENC_LAST_NV12_G9 + 1);
 
@@ -3157,11 +3157,11 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
             else
                 tmp_input = obj_surface;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      tmp_input,
                                      VP9_BTI_MBENC_GOLD_NV12_G9);
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      tmp_input,
                                      VP9_BTI_MBENC_GOLD_NV12_G9 + 1);
 
@@ -3178,24 +3178,24 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
             else
                 tmp_input = obj_surface;
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      tmp_input,
                                      VP9_BTI_MBENC_ALTREF_NV12_G9);
 
-            gen9_add_adv_gpe_surface(ctx, gpe_context,
+            i965_add_adv_gpe_surface(ctx, gpe_context,
                                      tmp_input,
                                      VP9_BTI_MBENC_ALTREF_NV12_G9 + 1);
 
         }
 
         if (mbenc_param->hme_enabled) {
-            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+            i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                            mbenc_param->ps4x_memv_data_buffer,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
                                            VP9_BTI_MBENC_HME_MV_DATA_G9);
 
-            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+            i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                            mbenc_param->ps4x_memv_distortion_buffer,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
@@ -3203,7 +3203,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
         }
 
         if (mbenc_param->segmentation_enabled) {
-            gen9_add_buffer_2d_gpe_surface(ctx,
+            i965_add_buffer_2d_gpe_surface(ctx,
                                            gpe_context,
                                            mbenc_param->pres_segmentation_map,
                                            1,
@@ -3214,7 +3214,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         res_size = 16 * mbenc_param->frame_width_in_mb *
                    mbenc_param->frame_height_in_mb * sizeof(unsigned int);
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision_prev,
                                     0,
@@ -3222,7 +3222,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                     0,
                                     VP9_BTI_MBENC_MODE_DECISION_PREV_G9);
 
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision,
                                     0,
@@ -3230,7 +3230,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                     0,
                                     VP9_BTI_MBENC_MODE_DECISION_G9);
 
-        gen9_add_buffer_2d_gpe_surface(ctx,
+        i965_add_buffer_2d_gpe_surface(ctx,
                                        gpe_context,
                                        mbenc_param->pres_output_16x16_inter_modes,
                                        1,
@@ -3253,7 +3253,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
     case VP9_MEDIA_STATE_MBENC_TX: {
         obj_surface = mbenc_param->curr_frame_obj;
 
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 obj_surface,
                                 0,
@@ -3261,7 +3261,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                 I965_SURFACEFORMAT_R8_UNORM,
                                 VP9_BTI_MBENC_CURR_Y_G9);
 
-        gen9_add_2d_gpe_surface(ctx,
+        i965_add_2d_gpe_surface(ctx,
                                 gpe_context,
                                 obj_surface,
                                 1,
@@ -3270,7 +3270,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                 VP9_BTI_MBENC_CURR_UV_G9);
 
         if (mbenc_param->segmentation_enabled) {
-            gen9_add_buffer_2d_gpe_surface(ctx,
+            i965_add_buffer_2d_gpe_surface(ctx,
                                            gpe_context,
                                            mbenc_param->pres_segmentation_map,
                                            1,
@@ -3281,7 +3281,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
 
         res_size = 16 * mbenc_param->frame_width_in_mb *
                    mbenc_param->frame_height_in_mb * sizeof(unsigned int);
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mode_decision,
                                     0,
@@ -3290,7 +3290,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
                                     VP9_BTI_MBENC_MODE_DECISION_G9);
 
         res_size = frame_width_in_sb * frame_height_in_sb * 4 * sizeof(unsigned int);
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mb_code_surface,
                                     0,
@@ -3302,7 +3302,7 @@ gen9_vp9_send_mbenc_surface(VADriverContextP ctx,
         res_size = frame_width_in_sb * frame_height_in_sb *
                    64 * 16 * sizeof(unsigned int);
 
-        gen9_add_buffer_gpe_surface(ctx,
+        i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
                                     mbenc_param->pres_mb_code_surface,
                                     0,
