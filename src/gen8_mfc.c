@@ -38,6 +38,7 @@
 #include "i965_structs.h"
 #include "i965_drv_video.h"
 #include "i965_encoder.h"
+#include "i965_encoder_api.h"
 #include "i965_encoder_utils.h"
 #include "gen6_mfc.h"
 #include "gen6_vme.h"
@@ -4564,7 +4565,10 @@ Bool gen8_mfc_context_init(VADriverContextP ctx, struct intel_encoder_context *e
 
     if (IS_CHERRYVIEW(i965->intel.device_info) && encoder_context->codec == CODEC_VP8)
         return i965_encoder_vp8_pak_context_init(ctx, encoder_context);
-
+    if (IS_GEN8(i965->intel.device_info) && (encoder_context->codec == CODEC_H264 ||
+                                             encoder_context->codec == CODEC_H264_MVC)) {
+        return gen9_avc_pak_context_init(ctx, encoder_context);
+    }
     mfc_context = calloc(1, sizeof(struct gen6_mfc_context));
     assert(mfc_context);
     mfc_context->gpe_context.surface_state_binding_table.length = (SURFACE_STATE_PADDED_SIZE + sizeof(unsigned int)) * MAX_MEDIA_SURFACES_GEN6;
