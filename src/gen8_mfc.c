@@ -736,6 +736,118 @@ gen8_mfc_pipe_buf_addr_state(VADriverContextP ctx,
 }
 
 static void
+gen10_mfc_pipe_buf_addr_state(VADriverContextP ctx,
+                              struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    int i;
+
+    BEGIN_BCS_BATCH(batch, 68);
+
+    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (68 - 2));
+
+    /* the DW1-3 is for pre_deblocking */
+    if (mfc_context->pre_deblocking_output.bo)
+        OUT_BCS_RELOC64(batch, mfc_context->pre_deblocking_output.bo,
+                        I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                        0);
+    else {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
+
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW4-6 is for the post_deblocking */
+    if (mfc_context->post_deblocking_output.bo)
+        OUT_BCS_RELOC64(batch, mfc_context->post_deblocking_output.bo,
+                        I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                        0);
+    else {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
+
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW7-9 is for the uncompressed_picture */
+    OUT_BCS_RELOC64(batch, mfc_context->uncompressed_picture_source.bo,
+                    I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                    0); /* uncompressed data */
+
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW10-12 is for the mb status */
+    OUT_BCS_RELOC64(batch, mfc_context->macroblock_status_buffer.bo,
+                    I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                    0); /* StreamOut data*/
+
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW13-15 is for the intra_row_store_scratch */
+    OUT_BCS_RELOC64(batch, mfc_context->intra_row_store_scratch_buffer.bo,
+                    I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                    0);
+
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW16-18 is for the deblocking filter */
+    OUT_BCS_RELOC64(batch, mfc_context->deblocking_filter_row_store_scratch_buffer.bo,
+                    I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                    0);
+
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW 19-50 is for Reference pictures*/
+    for (i = 0; i < ARRAY_ELEMS(mfc_context->reference_surfaces); i++) {
+        if (mfc_context->reference_surfaces[i].bo != NULL) {
+            OUT_BCS_RELOC64(batch, mfc_context->reference_surfaces[i].bo,
+                            I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                            0);
+        } else {
+            OUT_BCS_BATCH(batch, 0);
+            OUT_BCS_BATCH(batch, 0);
+        }
+
+    }
+
+    OUT_BCS_BATCH(batch, 0);
+
+    /* The DW 52-54 is for the MB status buffer */
+    OUT_BCS_RELOC64(batch, mfc_context->macroblock_status_buffer.bo,
+                    I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
+                    0);
+
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW 55-57 is the ILDB buffer */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* the DW 58-60 is the second ILDB buffer */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 61. Determine whether the compressed mode is used for Reference. */
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 62..64. Scaled surface */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 65..67. Slice size streamout data */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
 gen8_mfc_avc_directmode_state(VADriverContextP ctx,
                               struct intel_encoder_context *encoder_context)
 {
@@ -3993,7 +4105,8 @@ gen8_mfc_vp8_pic_state(VADriverContextP ctx,
                   pic_param->clamp_qindex_low << 0);
 
     for (i = 8; i < 19; i++) {
-        OUT_BCS_BATCH(batch, 0xffffffff);
+        //OUT_BCS_BATCH(batch, 0xffffffff);
+        OUT_BCS_BATCH(batch, 0);
     }
 
     OUT_BCS_BATCH(batch,
@@ -4096,17 +4209,58 @@ gen8_mfc_vp8_bsp_buf_base_addr_state(VADriverContextP ctx,
     ADVANCE_BCS_BATCH(batch);
 }
 
+#define ENCODE_INPUT_SOURCE     4
+
+static void
+gen10_vp8_mfc_input_surface(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+
+    BEGIN_BCS_BATCH(batch, 6);
+
+    OUT_BCS_BATCH(batch, MFX_SURFACE_STATE | (6 - 2));
+    OUT_BCS_BATCH(batch, ENCODE_INPUT_SOURCE);
+    OUT_BCS_BATCH(batch,
+                  ((mfc_context->surface_state.height - 1) << 18) |
+                  ((mfc_context->surface_state.width - 1) << 4));
+    OUT_BCS_BATCH(batch,
+                  (MFX_SURFACE_PLANAR_420_8 << 28) | /* 420 planar YUV surface */
+                  (1 << 27) | /* must be 1 for interleave U/V, hardware requirement */
+                  (0 << 20) |
+                  ((mfc_context->surface_state.w_pitch - 1) << 3) | /* pitch */
+                  (0 << 2)  | /* must be 0 for interleave U/V */
+                  (1 << 1)  | /* must be tiled */
+                  (I965_TILEWALK_YMAJOR << 0));  /* tile walk, TILEWALK_YMAJOR */
+    OUT_BCS_BATCH(batch,
+                  (0 << 16) |    /* must be 0 for interleave U/V */
+                  (mfc_context->surface_state.h_pitch));    /* y offset for U(cb) */
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
 static void
 gen8_mfc_vp8_pipeline_picture_programing(VADriverContextP ctx,
                                          struct encode_state *encode_state,
                                          struct intel_encoder_context *encoder_context)
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
 
     mfc_context->pipe_mode_select(ctx, MFX_FORMAT_VP8, encoder_context);
     mfc_context->set_surface_state(ctx, encoder_context);
+
+    if (IS_GEN10(i965->intel.device_info))
+        gen10_vp8_mfc_input_surface(ctx, encoder_context);
+
     mfc_context->ind_obj_base_addr_state(ctx, encoder_context);
-    gen8_mfc_pipe_buf_addr_state(ctx, encoder_context);
+
+    if (IS_GEN10(i965->intel.device_info))
+        gen10_mfc_pipe_buf_addr_state(ctx, encoder_context);
+    else
+        gen8_mfc_pipe_buf_addr_state(ctx, encoder_context);
+
     gen8_mfc_bsp_buf_base_addr_state(ctx, encoder_context);
     gen8_mfc_vp8_bsp_buf_base_addr_state(ctx, encode_state, encoder_context);
     gen8_mfc_vp8_pic_state(ctx, encode_state, encoder_context);
