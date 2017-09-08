@@ -38,6 +38,7 @@
 #include "i965_structs.h"
 #include "i965_drv_video.h"
 #include "i965_encoder.h"
+#include "i965_encoder_api.h"
 #include "i965_encoder_utils.h"
 #include "gen6_mfc.h"
 #include "gen6_vme.h"
