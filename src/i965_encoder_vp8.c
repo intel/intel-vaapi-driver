@@ -5157,6 +5157,9 @@ gen8_encoder_vp8_context_init(VADriverContextP, struct intel_encoder_context *, 
 extern Bool
 gen9_encoder_vp8_context_init(VADriverContextP, struct intel_encoder_context *, struct i965_encoder_vp8_context *);
 
+extern Bool
+gen10_encoder_vp8_context_init(VADriverContextP, struct intel_encoder_context *, struct i965_encoder_vp8_context *);
+
 Bool
 i965_encoder_vp8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
@@ -5174,6 +5177,8 @@ i965_encoder_vp8_vme_context_init(VADriverContextP ctx, struct intel_encoder_con
         gen8_encoder_vp8_context_init(ctx, encoder_context, vp8_context);
     else if (IS_GEN9(i965->intel.device_info)) {
         gen9_encoder_vp8_context_init(ctx, encoder_context, vp8_context);
+    } else if (IS_GEN10(i965->intel.device_info)) {
+        gen10_encoder_vp8_context_init(ctx, encoder_context, vp8_context);
     } else {
         free(vp8_context);
 

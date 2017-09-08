@@ -65,6 +65,7 @@ source_c = \
 	gen9_hevc_enc_kernels_binary.c \
 	gen9_hevc_encoder.c \
 	gen9_hevc_enc_utils.c \
+	gen10_encoder_vp8.c \
 	$(NULL)
 
 source_h = \
