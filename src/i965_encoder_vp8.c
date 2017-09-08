@@ -40,6 +40,7 @@
 #include "i965_defines.h"
 #include "i965_drv_video.h"
 #include "i965_encoder.h"
+#include "i965_gpe_utils.h"
 #include "i965_encoder_vp8.h"
 #include "vp8_probs.h"
 #include "vpx_quant.h"
@@ -1478,110 +1479,6 @@ i965_encoder_vp8_gpe_context_vfe_scoreboard_init(struct i965_gpe_context *gpe_co
 }
 
 static void
-i965_add_2d_gpe_surface(VADriverContextP ctx,
-                        struct intel_encoder_context *encoder_context,
-                        struct i965_gpe_context *gpe_context,
-                        struct object_surface *obj_surface,
-                        int is_uv_surface,
-                        int is_media_block_rw,
-                        unsigned int format,
-                        int index)
-{
-    struct i965_encoder_vp8_context *vp8_context = encoder_context->vme_context;
-    struct i965_gpe_table *gpe = vp8_context->gpe_table;
-    struct i965_gpe_resource gpe_resource;
-    struct i965_gpe_surface gpe_surface;
-
-    memset(&gpe_surface, 0, sizeof(gpe_surface));
-
-    i965_object_surface_to_2d_gpe_resource(&gpe_resource, obj_surface);
-    gpe_surface.gpe_resource = &gpe_resource;
-    gpe_surface.is_2d_surface = 1;
-    gpe_surface.is_uv_surface = !!is_uv_surface;
-    gpe_surface.is_media_block_rw = !!is_media_block_rw;
-
-    gpe_surface.cacheability_control = vp8_context->mocs;
-    gpe_surface.format = format;
-
-    gpe->context_add_surface(gpe_context, &gpe_surface, index);
-    i965_free_gpe_resource(&gpe_resource);
-}
-
-static void
-i965_add_adv_gpe_surface(VADriverContextP ctx,
-                         struct intel_encoder_context *encoder_context,
-                         struct i965_gpe_context *gpe_context,
-                         struct object_surface *obj_surface,
-                         int index)
-{
-    struct i965_encoder_vp8_context *vp8_context = encoder_context->vme_context;
-    struct i965_gpe_table *gpe = vp8_context->gpe_table;
-    struct i965_gpe_resource gpe_resource;
-    struct i965_gpe_surface gpe_surface;
-
-    memset(&gpe_surface, 0, sizeof(gpe_surface));
-
-    i965_object_surface_to_2d_gpe_resource(&gpe_resource, obj_surface);
-    gpe_surface.gpe_resource = &gpe_resource;
-    gpe_surface.is_adv_surface = 1;
-    gpe_surface.cacheability_control = vp8_context->mocs;
-    gpe_surface.v_direction = I965_VDIRECTION_FULL_FRAME;
-
-    gpe->context_add_surface(gpe_context, &gpe_surface, index);
-    i965_free_gpe_resource(&gpe_resource);
-}
-
-static void
-i965_add_buffer_gpe_surface(VADriverContextP ctx,
-                            struct intel_encoder_context *encoder_context,
-                            struct i965_gpe_context *gpe_context,
-                            struct i965_gpe_resource *gpe_buffer,
-                            int is_raw_buffer,
-                            unsigned int size,
-                            unsigned int offset,
-                            int index)
-{
-    struct i965_encoder_vp8_context *vp8_context = encoder_context->vme_context;
-    struct i965_gpe_table *gpe = vp8_context->gpe_table;
-    struct i965_gpe_surface gpe_surface;
-
-    memset(&gpe_surface, 0, sizeof(gpe_surface));
-
-    gpe_surface.gpe_resource = gpe_buffer;
-    gpe_surface.is_buffer = 1;
-    gpe_surface.is_raw_buffer = !!is_raw_buffer;
-    gpe_surface.cacheability_control = vp8_context->mocs;
-    gpe_surface.size = size;
-    gpe_surface.offset = offset;
-
-    gpe->context_add_surface(gpe_context, &gpe_surface, index);
-}
-
-static void
-i965_add_buffer_2d_gpe_surface(VADriverContextP ctx,
-                               struct intel_encoder_context *encoder_context,
-                               struct i965_gpe_context *gpe_context,
-                               struct i965_gpe_resource *gpe_buffer,
-                               int is_media_block_rw,
-                               unsigned int format,
-                               int index)
-{
-    struct i965_encoder_vp8_context *vp8_context = encoder_context->vme_context;
-    struct i965_gpe_table *gpe = vp8_context->gpe_table;
-    struct i965_gpe_surface gpe_surface;
-
-    memset(&gpe_surface, 0, sizeof(gpe_surface));
-
-    gpe_surface.gpe_resource = gpe_buffer;
-    gpe_surface.is_2d_surface = 1;
-    gpe_surface.is_media_block_rw = !!is_media_block_rw;
-    gpe_surface.cacheability_control = vp8_context->mocs;
-    gpe_surface.format = format;
-
-    gpe->context_add_surface(gpe_context, &gpe_surface, index);
-}
-
-static void
 i965_add_dri_buffer_gpe_surface(VADriverContextP ctx,
                                 struct intel_encoder_context *encoder_context,
                                 struct i965_gpe_context *gpe_context,
@@ -1595,7 +1492,6 @@ i965_add_dri_buffer_gpe_surface(VADriverContextP ctx,
 
     i965_dri_object_to_buffer_gpe_resource(&gpe_resource, bo);
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &gpe_resource,
                                 is_raw_buffer,
@@ -1622,7 +1518,6 @@ i965_add_dri_buffer_2d_gpe_surface(VADriverContextP ctx,
 
     i965_dri_object_to_2d_gpe_resource(&gpe_resource, bo, width, height, pitch);
     i965_add_buffer_2d_gpe_surface(ctx,
-                                   encoder_context,
                                    gpe_context,
                                    &gpe_resource,
                                    is_media_block_rw,
@@ -2533,7 +2428,6 @@ i965_encoder_vp8_vme_brc_init_reset_add_surfaces(VADriverContextP ctx,
     struct i965_encoder_vp8_context *vp8_context = encoder_context->vme_context;
 
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->brc_history_buffer,
                                 0,
@@ -2542,7 +2436,6 @@ i965_encoder_vp8_vme_brc_init_reset_add_surfaces(VADriverContextP ctx,
                                 VP8_BTI_BRC_INIT_RESET_HISTORY);
 
     i965_add_buffer_2d_gpe_surface(ctx,
-                                   encoder_context,
                                    gpe_context,
                                    &vp8_context->brc_distortion_buffer,
                                    1,
@@ -2644,7 +2537,6 @@ i965_encoder_vp8_vme_scaling_add_surfaces(VADriverContextP ctx,
                                           struct scaling_surface_parameters *params)
 {
     i965_add_2d_gpe_surface(ctx,
-                            encoder_context,
                             gpe_context,
                             params->input_obj_surface,
                             0,
@@ -2652,7 +2544,6 @@ i965_encoder_vp8_vme_scaling_add_surfaces(VADriverContextP ctx,
                             I965_SURFACEFORMAT_R32_UNORM,
                             VP8_BTI_SCALING_FRAME_SRC_Y);
     i965_add_2d_gpe_surface(ctx,
-                            encoder_context,
                             gpe_context,
                             params->output_obj_surface,
                             0,
@@ -2849,7 +2740,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
     }
 
     i965_add_buffer_2d_gpe_surface(ctx,
-                                   encoder_context,
                                    gpe_context,
                                    me_gpe_buffer,
                                    1,
@@ -2859,7 +2749,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
     if (vp8_context->hme_16x_enabled) {
         me_gpe_buffer = &vp8_context->me_16x_mv_data_buffer;
         i965_add_buffer_2d_gpe_surface(ctx,
-                                       encoder_context,
                                        gpe_context,
                                        me_gpe_buffer,
                                        1,
@@ -2870,7 +2759,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
     if (!params->use_16x_me) {
         me_gpe_buffer = &vp8_context->me_4x_distortion_buffer;
         i965_add_buffer_2d_gpe_surface(ctx,
-                                       encoder_context,
                                        gpe_context,
                                        me_gpe_buffer,
                                        1,
@@ -2879,7 +2767,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
 
         me_gpe_buffer = me_brc_distortion_buffer;
         i965_add_buffer_2d_gpe_surface(ctx,
-                                       encoder_context,
                                        gpe_context,
                                        me_gpe_buffer,
                                        1,
@@ -2897,7 +2784,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
     }
 
     i965_add_adv_gpe_surface(ctx,
-                             encoder_context,
                              gpe_context,
                              obj_surface,
                              VP8_BTI_VME_INTER_PRED);
@@ -2917,7 +2803,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
 
         if (obj_surface) {
             i965_add_adv_gpe_surface(ctx,
-                                     encoder_context,
                                      gpe_context,
                                      obj_surface,
                                      VP8_BTI_ME_REF1_PIC);
@@ -2942,7 +2827,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
             case 2:
             case 6:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_ME_REF1_PIC);
@@ -2951,7 +2835,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
             case 3:
             case 7:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_ME_REF2_PIC);
@@ -2977,7 +2860,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
             switch (vp8_context->ref_frame_ctrl) {
             case 4:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_ME_REF1_PIC);
@@ -2986,7 +2868,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
             case 5:
             case 6:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_ME_REF2_PIC);
@@ -2994,7 +2875,6 @@ i965_encoder_vp8_vme_me_add_surfaces(VADriverContextP ctx,
 
             case 7:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_ME_REF3_PIC);
@@ -3603,7 +3483,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
     /* Per MB output data buffer */
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->mb_coded_buffer,
                                 0,
@@ -3613,7 +3492,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
     /* Current input surface Y & UV */
     i965_add_2d_gpe_surface(ctx,
-                            encoder_context,
                             gpe_context,
                             encode_state->input_yuv_object,
                             0,
@@ -3622,7 +3500,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
                             VP8_BTI_MBENC_CURR_Y);
 
     i965_add_2d_gpe_surface(ctx,
-                            encoder_context,
                             gpe_context,
                             encode_state->input_yuv_object,
                             1,
@@ -3632,7 +3509,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
     /* Current surface for VME */
     i965_add_adv_gpe_surface(ctx,
-                             encoder_context,
                              gpe_context,
                              encode_state->input_yuv_object,
                              VP8_BTI_MBENC_VME);
@@ -3661,7 +3537,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
     /* Histogram buffer */
     size = VP8_HISTOGRAM_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->histogram_buffer,
                                 1,
@@ -3671,7 +3546,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
     if (vp8_context->frame_type == MPEG_I_PICTURE) {
         i965_add_buffer_2d_gpe_surface(ctx,
-                                       encoder_context,
                                        gpe_context,
                                        &vp8_context->mb_mode_cost_luma_buffer,
                                        0,
@@ -3679,7 +3553,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
                                        VP8_BTI_MBENC_MB_MODE_COST_LUMA);
 
         i965_add_buffer_2d_gpe_surface(ctx,
-                                       encoder_context,
                                        gpe_context,
                                        &vp8_context->block_mode_cost_buffer,
                                        0,
@@ -3689,7 +3562,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
         /* Chroma recon buffer */
         size = vp8_context->frame_width_in_mbs * vp8_context->frame_height_in_mbs * 64;
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->chroma_recon_buffer,
                                     0,
@@ -3699,7 +3571,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
         if (params->i_frame_dist_in_use) {
             i965_add_buffer_2d_gpe_surface(ctx,
-                                           encoder_context,
                                            gpe_context,
                                            params->me_brc_distortion_buffer,
                                            1,
@@ -3717,7 +3588,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
             if (obj_surface) {
                 i965_add_2d_gpe_surface(ctx,
-                                        encoder_context,
                                         gpe_context,
                                         obj_surface,
                                         0,
@@ -3726,7 +3596,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
                                         VP8_BTI_MBENC_CURR_Y_DOWNSCALED);
 
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_MBENC_VME_COARSE_INTRA);
@@ -3736,7 +3605,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
         size = vp8_context->frame_width_in_mbs * vp8_context->frame_height_in_mbs * 64;
 
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->mb_coded_buffer,
                                     1,
@@ -3746,7 +3614,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
         if (vp8_context->hme_enabled) {
             i965_add_buffer_2d_gpe_surface(ctx,
-                                           encoder_context,
                                            gpe_context,
                                            &vp8_context->me_4x_mv_data_buffer,
                                            1,
@@ -3755,7 +3622,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
         }
 
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->reference_frame_mb_count_buffer ,
                                     0,
@@ -3764,7 +3630,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
                                     VP8_BTI_MBENC_REF_MB_COUNT);
 
         i965_add_adv_gpe_surface(ctx,
-                                 encoder_context,
                                  gpe_context,
                                  encode_state->input_yuv_object,
                                  VP8_BTI_MBENC_INTER_PRED);
@@ -3779,7 +3644,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
             case 5:
             case 7:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_MBENC_REF1_PIC);
@@ -3795,7 +3659,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
             case 2:
             case 6:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_MBENC_REF1_PIC);
@@ -3804,7 +3667,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
             case 3:
             case 7:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_MBENC_REF2_PIC);
@@ -3819,7 +3681,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
             switch (vp8_context->ref_frame_ctrl) {
             case 4:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_MBENC_REF1_PIC);
@@ -3828,7 +3689,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
             case 5:
             case 6:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_MBENC_REF2_PIC);
@@ -3836,7 +3696,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
             case 7:
                 i965_add_adv_gpe_surface(ctx,
-                                         encoder_context,
                                          gpe_context,
                                          obj_surface,
                                          VP8_BTI_MBENC_REF3_PIC);
@@ -3845,7 +3704,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
         }
 
         i965_add_buffer_2d_gpe_surface(ctx,
-                                       encoder_context,
                                        gpe_context,
                                        &vp8_context->per_mb_quant_data_buffer,
                                        1,
@@ -3853,7 +3711,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
                                        VP8_BTI_MBENC_P_PER_MB_QUANT);
 
         i965_add_buffer_2d_gpe_surface(ctx,
-                                       encoder_context,
                                        gpe_context,
                                        &vp8_context->me_4x_distortion_buffer,
                                        0,
@@ -3862,7 +3719,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
         size = vp8_context->frame_width_in_mbs * vp8_context->frame_height_in_mbs * 16;
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->pred_mv_data_buffer,
                                     0,
@@ -3872,7 +3728,6 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
         size = 16 * sizeof(unsigned int);
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->mode_cost_update_buffer,
                                     1,
@@ -4196,7 +4051,6 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* BRC history buffer */
     size = VP8_BRC_HISTORY_BUFFER_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->brc_history_buffer,
                                 0,
@@ -4207,7 +4061,6 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* PAK Statistics buffer */
     size = sizeof(struct vp8_brc_pak_statistics);
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->brc_pak_statistics_buffer,
                                 0,
@@ -4218,7 +4071,6 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* Encoder CFG command surface - read only */
     size = VP8_BRC_IMG_STATE_SIZE_PER_PASS * VP8_BRC_MAXIMUM_NUM_PASSES;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->brc_vp8_cfg_command_write_buffer,
                                 0,
@@ -4228,7 +4080,6 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
 
     /* Encoder CFG command surface - write only */
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->brc_vp8_cfg_command_write_buffer,
                                 0,
@@ -4259,7 +4110,6 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
 
     /* BRC Distortion data buffer - input/output */
     i965_add_buffer_2d_gpe_surface(ctx,
-                                   encoder_context,
                                    gpe_context,
                                    is_intra ? &vp8_context->brc_distortion_buffer : &vp8_context->me_4x_distortion_buffer,
                                    1,
@@ -4269,7 +4119,6 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
     /* Constant Data Surface */
     size = VP8_BRC_CONSTANT_DATA_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->brc_vp8_constant_data_buffer,
                                 0,
@@ -4279,7 +4128,6 @@ i965_encoder_vp8_vme_brc_update_add_surfaces(VADriverContextP ctx,
 
     /* Segmap surface */
     i965_add_buffer_2d_gpe_surface(ctx,
-                                   encoder_context,
                                    gpe_context,
                                    &vp8_context->brc_segment_map_buffer,
                                    0,
@@ -4599,7 +4447,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     /* Histogram buffer */
     size = VP8_HISTOGRAM_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->histogram_buffer,
                                 1,
@@ -4610,7 +4457,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     // Reference mode probability
     size = VP8_MODE_PROPABILITIES_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_ref_mode_probs_buffer,
                                 1,
@@ -4620,7 +4466,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
 
     // Mode probability
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_mode_probs_buffer,
                                 1,
@@ -4631,7 +4476,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     // Reference Token probability
     size = VP8_COEFFS_PROPABILITIES_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_ref_coeff_probs_buffer,
                                 1,
@@ -4641,7 +4485,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
 
     // Token probability
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_coeff_probs_buffer,
                                 1,
@@ -4652,7 +4495,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     // Frame header
     size = VP8_FRAME_HEADER_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_frame_header_buffer,
                                 0,
@@ -4665,7 +4507,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
 
     if (brc_enabled) {
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->brc_vp8_cfg_command_write_buffer,
                                     0,
@@ -4674,7 +4515,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
                                     VP8_BTI_MPU_HEADER_METADATA);
     } else {
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->pak_mpu_tpu_picture_state_buffer,
                                     0,
@@ -4686,7 +4526,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     // Picture state MFX_VP8_PIC_STATE
     size = 38 * sizeof(unsigned int);
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_picture_state_buffer,
                                 0,
@@ -4697,7 +4536,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     // Mpu Bitstream
     size = VP8_MPU_BITSTREAM_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_mpu_bitstream_buffer,
                                 0,
@@ -4708,7 +4546,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     // Token bits Data Surface
     size = VP8_TOKEN_BITS_DATA_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_token_bits_data_buffer,
                                 1,
@@ -4719,7 +4556,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     // Entropy cost table
     size = VP8_ENTROPY_COST_TABLE_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_entropy_cost_table_buffer,
                                 1,
@@ -4730,7 +4566,6 @@ i965_encoder_vp8_vme_mpu_add_surfaces(VADriverContextP ctx,
     //Mode Cost Update Surface
     size = 16 * sizeof(unsigned int);
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->mode_cost_update_buffer,
                                 0,
@@ -5907,7 +5742,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
     // Pak token statistics
     size = VP8_TOKEN_STATISTICS_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_pak_token_statistics_buffer,
                                 1,
@@ -5918,7 +5752,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
     // Pak token Update flags
     size = VP8_COEFFS_PROPABILITIES_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_pak_token_update_flags_buffer,
                                 0,
@@ -5929,7 +5762,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
     // Entropy cost
     size = VP8_ENTROPY_COST_TABLE_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_entropy_cost_table_buffer,
                                 1,
@@ -5940,7 +5772,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
     // Frame header
     size = VP8_FRAME_HEADER_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_frame_header_buffer,
                                 0,
@@ -5951,7 +5782,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
     // Default token token probability
     size = VP8_COEFFS_PROPABILITIES_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_default_token_probability_buffer,
                                 0,
@@ -5962,7 +5792,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
     // Picture state surface
     size = VP8_PICTURE_STATE_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_picture_state_buffer,
                                 0,
@@ -5973,7 +5802,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
     // MPU Curbe info from TPU
     size = VP8_TOKEN_BITS_DATA_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_token_bits_data_buffer,
                                 0,
@@ -5986,7 +5814,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
 
     if (brc_enabled) {
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->brc_vp8_cfg_command_write_buffer,
                                     0,
@@ -5995,7 +5822,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
                                     VP8_BTI_TPU_HEADER_METADATA);
     } else {
         i965_add_buffer_gpe_surface(ctx,
-                                    encoder_context,
                                     gpe_context,
                                     &vp8_context->pak_mpu_tpu_picture_state_buffer,
                                     0,
@@ -6007,7 +5833,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
     // Current frame token probability
     size = VP8_COEFFS_PROPABILITIES_SIZE;
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_coeff_probs_buffer,
                                 0,
@@ -6017,7 +5842,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
 
     // Hardware token probability pass 1
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_ref_coeff_probs_buffer,
                                 0,
@@ -6027,7 +5851,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
 
     // key frame token probability
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_updated_token_probability_buffer,
                                 0,
@@ -6037,7 +5860,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
 
     // update token probability
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_key_frame_token_probability_buffer,
                                 0,
@@ -6047,7 +5869,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
 
     // Hardware token probability pass 2
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_hw_token_probability_pak_pass_2_buffer,
                                 0,
@@ -6057,7 +5878,6 @@ i965_encoder_vp8_tpu_add_surfaces(VADriverContextP ctx,
 
     // Repak Decision
     i965_add_buffer_gpe_surface(ctx,
-                                encoder_context,
                                 gpe_context,
                                 &vp8_context->pak_mpu_tpu_repak_decision_buffer,
                                 0,

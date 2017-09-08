@@ -794,7 +794,7 @@ gen9_hevc_set_gpe_1d_surface(VADriverContextP ctx,
     }
 
     if (gpe_buffer)
-        gen9_add_buffer_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_gpe_surface(ctx, gpe_context,
                                     gpe_buffer, is_raw_buffer,
                                     size == 0 ? gpe_buffer->size - offset : size,
                                     offset, bti_idx);
@@ -823,20 +823,20 @@ gen9_hevc_set_gpe_2d_surface(VADriverContextP ctx,
     }
 
     if (gpe_buffer) {
-        gen9_add_buffer_2d_gpe_surface(ctx,
+        i965_add_buffer_2d_gpe_surface(ctx,
                                        gpe_context,
                                        gpe_buffer,
                                        is_media_block_rw,
                                        format,
                                        bti_idx);
     } else if (surface_object) {
-        gen9_add_2d_gpe_surface(ctx, gpe_context,
+        i965_add_2d_gpe_surface(ctx, gpe_context,
                                 surface_object,
                                 0, is_media_block_rw, format,
                                 bti_idx);
 
         if (has_uv_surface)
-            gen9_add_2d_gpe_surface(ctx, gpe_context,
+            i965_add_2d_gpe_surface(ctx, gpe_context,
                                     surface_object,
                                     1, is_media_block_rw, format,
                                     bti_idx + 1);
@@ -855,7 +855,7 @@ gen9_hevc_set_gpe_adv_surface(VADriverContextP ctx,
         surface_object = priv_ctx->gpe_surfaces[surface_type].surface_object;
 
     if (surface_object)
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  surface_object, bti_idx);
 }
 
@@ -3099,12 +3099,12 @@ gen9_hevc_scaling_set_surfaces(VADriverContextP ctx,
     else
         surface_format = I965_SURFACEFORMAT_R8_UNORM;
 
-    gen9_add_2d_gpe_surface(ctx, gpe_context,
+    i965_add_2d_gpe_surface(ctx, gpe_context,
                             scaling_param->input_surface,
                             0, 1, surface_format,
                             GEN9_HEVC_SCALING_FRAME_SRC_Y_INDEX);
 
-    gen9_add_2d_gpe_surface(ctx, gpe_context,
+    i965_add_2d_gpe_surface(ctx, gpe_context,
                             scaling_param->output_surface,
                             0, 1, surface_format,
                             GEN9_HEVC_SCALING_FRAME_DST_Y_INDEX);
@@ -3113,7 +3113,7 @@ gen9_hevc_scaling_set_surfaces(VADriverContextP ctx,
          scaling_param->enable_mb_variance_output ||
          scaling_param->enable_mb_pixel_average_output) &&
         scaling_param->use_4x_scaling) {
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        scaling_param->pres_mbv_proc_stat_buffer,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -3404,26 +3404,26 @@ gen9_hevc_me_set_surfaces(VADriverContextP ctx,
     switch (hme_type) {
     case HEVC_HME_4X:
         scaled_surf_id = HEVC_SCALED_SURF_4X_ID;
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        &priv_ctx->s4x_memv_data_buffer,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
                                        GEN9_HEVC_ME_MV_DATA_SURFACE_INDEX);
 
         if (generic_state->b16xme_enabled)
-            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+            i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                            &priv_ctx->s16x_memv_data_buffer,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
                                            GEN9_HEVC_ME_16X_MV_DATA_SURFACE_INDEX);
 
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        &priv_ctx->res_brc_me_dist_buffer,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
                                        GEN9_HEVC_ME_BRC_DISTORTION_INDEX);
 
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        &priv_ctx->s4x_memv_distortion_buffer,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -3432,20 +3432,20 @@ gen9_hevc_me_set_surfaces(VADriverContextP ctx,
     case HEVC_HME_16X:
         scaled_surf_id = HEVC_SCALED_SURF_16X_ID;
 
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        &priv_ctx->s16x_memv_data_buffer,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
                                        GEN9_HEVC_ME_MV_DATA_SURFACE_INDEX);
 
         if (generic_state->b32xme_enabled)
-            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+            i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                            &priv_ctx->s32x_memv_data_buffer,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
                                            GEN9_HEVC_ME_32X_MV_DATA_SURFACE_INDEX);
         else
-            gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+            i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                            &priv_ctx->s16x_memv_data_buffer,
                                            1,
                                            I965_SURFACEFORMAT_R8_UNORM,
@@ -3453,7 +3453,7 @@ gen9_hevc_me_set_surfaces(VADriverContextP ctx,
         break;
     case HEVC_HME_32X:
         scaled_surf_id = HEVC_SCALED_SURF_32X_ID;
-        gen9_add_buffer_2d_gpe_surface(ctx, gpe_context,
+        i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
                                        &priv_ctx->s32x_memv_data_buffer,
                                        1,
                                        I965_SURFACEFORMAT_R8_UNORM,
@@ -3465,7 +3465,7 @@ gen9_hevc_me_set_surfaces(VADriverContextP ctx,
 
     obj_surface = encode_state->reconstructed_object;
     surface_priv = (struct gen9_hevc_surface_priv *)obj_surface->private_data;
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              surface_priv->scaled_surface_obj[scaled_surf_id],
                              GEN9_HEVC_ME_CURR_FOR_FWD_REF_INDEX);
 
@@ -3476,14 +3476,14 @@ gen9_hevc_me_set_surfaces(VADriverContextP ctx,
             break;
 
         surface_priv = (struct gen9_hevc_surface_priv *)obj_surface->private_data;
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  surface_priv->scaled_surface_obj[scaled_surf_id],
                                  GEN9_HEVC_ME_CURR_FOR_FWD_REF_INDEX + i * 2 + 1);
     }
 
     obj_surface = encode_state->reconstructed_object;
     surface_priv = (struct gen9_hevc_surface_priv *)obj_surface->private_data;
-    gen9_add_adv_gpe_surface(ctx, gpe_context,
+    i965_add_adv_gpe_surface(ctx, gpe_context,
                              surface_priv->scaled_surface_obj[scaled_surf_id],
                              GEN9_HEVC_ME_CURR_FOR_BWD_REF_INDEX);
 
@@ -3494,7 +3494,7 @@ gen9_hevc_me_set_surfaces(VADriverContextP ctx,
             break;
 
         surface_priv = (struct gen9_hevc_surface_priv *)obj_surface->private_data;
-        gen9_add_adv_gpe_surface(ctx, gpe_context,
+        i965_add_adv_gpe_surface(ctx, gpe_context,
                                  surface_priv->scaled_surface_obj[scaled_surf_id],
                                  GEN9_HEVC_ME_CURR_FOR_BWD_REF_INDEX + i * 2 + 1);
     }
