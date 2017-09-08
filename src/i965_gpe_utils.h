@@ -573,7 +573,7 @@ i965_init_media_object_walker_parameter(struct gpe_encoder_kernel_walker_paramet
                                         struct gpe_media_object_walker_parameter *walker_param);
 
 extern void
-gen9_add_2d_gpe_surface(VADriverContextP ctx,
+i965_add_2d_gpe_surface(VADriverContextP ctx,
                         struct i965_gpe_context *gpe_context,
                         struct object_surface *obj_surface,
                         int is_uv_surface,
@@ -581,12 +581,12 @@ gen9_add_2d_gpe_surface(VADriverContextP ctx,
                         unsigned int format,
                         int index);
 extern void
-gen9_add_adv_gpe_surface(VADriverContextP ctx,
+i965_add_adv_gpe_surface(VADriverContextP ctx,
                          struct i965_gpe_context *gpe_context,
                          struct object_surface *obj_surface,
                          int index);
 extern void
-gen9_add_buffer_gpe_surface(VADriverContextP ctx,
+i965_add_buffer_gpe_surface(VADriverContextP ctx,
                             struct i965_gpe_context *gpe_context,
                             struct i965_gpe_resource *gpe_buffer,
                             int is_raw_buffer,
@@ -594,7 +594,7 @@ gen9_add_buffer_gpe_surface(VADriverContextP ctx,
                             unsigned int offset,
                             int index);
 extern void
-gen9_add_buffer_2d_gpe_surface(VADriverContextP ctx,
+i965_add_buffer_2d_gpe_surface(VADriverContextP ctx,
                                struct i965_gpe_context *gpe_context,
                                struct i965_gpe_resource *gpe_buffer,
                                int is_media_block_rw,

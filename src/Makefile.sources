@@ -58,10 +58,10 @@ source_c = \
 	gen9_vp9_encoder.c \
 	intel_common_vpp_internal.c \
 	i965_encoder_const_def.c \
-	gen9_avc_const_def.c \
-	gen9_avc_encoder_kernels.c \
+	i965_avc_const_def.c \
+	i965_avc_encoder_kernels.c \
 	i965_avc_encoder_common.c \
-	gen9_avc_encoder.c \
+	i965_avc_encoder.c \
 	gen9_hevc_enc_kernels_binary.c \
 	gen9_hevc_encoder.c \
 	gen9_hevc_enc_utils.c \
@@ -123,9 +123,9 @@ source_h = \
 	intel_common_vpp_internal.h \
 	i965_encoder_common.h \
 	i965_encoder_api.h \
-	gen9_avc_const_def.h \
-	gen9_avc_encoder_kernels.h \
-	gen9_avc_encoder.h \
+	i965_avc_const_def.h \
+	i965_avc_encoder_kernels.h \
+	i965_avc_encoder.h \
 	i965_avc_encoder_common.h \
 	gen9_hevc_enc_const_def.h \
 	gen9_hevc_enc_kernels.h \
