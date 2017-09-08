@@ -8083,11 +8083,15 @@ gen8_avc_kernel_init(VADriverContextP ctx,
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context *)vme_context->private_enc_ctx;
     struct generic_encoder_context * generic_ctx = (struct generic_encoder_context *)vme_context->generic_enc_ctx;
+    int fei_enabled = encoder_context->fei_enabled;
 
+    generic_ctx->get_kernel_header_and_size = fei_enabled ?
+                                              intel_avc_fei_get_kernel_header_and_size :
+                                              intel_avc_get_kernel_header_and_size ;
     gen9_avc_kernel_init_scaling(ctx, generic_ctx, &avc_ctx->context_scaling);
     gen9_avc_kernel_init_brc(ctx, generic_ctx, &avc_ctx->context_brc);
     gen9_avc_kernel_init_me(ctx, generic_ctx, &avc_ctx->context_me);
-    gen9_avc_kernel_init_mbenc(ctx, generic_ctx, &avc_ctx->context_mbenc, 0);
+    gen9_avc_kernel_init_mbenc(ctx, generic_ctx, &avc_ctx->context_mbenc, fei_enabled);
     gen9_avc_kernel_init_sfd(ctx, generic_ctx, &avc_ctx->context_sfd);
 
     //function pointer
