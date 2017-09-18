@@ -28,7 +28,7 @@
  */
 
 
-#include "gen9_avc_const_def.h"
+#include "i965_avc_const_def.h"
 
 /* Gen9  */
 /*

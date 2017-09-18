@@ -48,9 +48,9 @@
 #include "i965_gpe_utils.h"
 #include "i965_encoder_common.h"
 #include "i965_avc_encoder_common.h"
-#include "gen9_avc_encoder_kernels.h"
-#include "gen9_avc_encoder.h"
-#include "gen9_avc_const_def.h"
+#include "i965_avc_encoder_kernels.h"
+#include "i965_avc_encoder.h"
+#include "i965_avc_const_def.h"
 
 #define MAX_URB_SIZE                    4096 /* In register */
 #define NUM_KERNELS_PER_GPE_CONTEXT     1

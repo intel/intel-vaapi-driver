@@ -26,8 +26,8 @@
  *
  */
 
-#ifndef GEN9_AVC_ENCODER_H
-#define GEN9_AVC_ENCODER_H
+#ifndef I965_AVC_ENCODER_H
+#define I965_AVC_ENCODER_H
 
 #include "i965_encoder_common.h"
 /*
@@ -4932,4 +4932,4 @@ typedef enum _gen8_avc_binding_table_offset_me {
     GEN8_AVC_ME_NUM_SURFACES_CM          = 27
 } gen8_avc_binding_table_offset_me;
 
-#endif /* GEN9_AVC_ENCODER_H */
+#endif /* I965_AVC_ENCODER_H */
