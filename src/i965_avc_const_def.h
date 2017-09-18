@@ -27,8 +27,8 @@
  *
  */
 
-#ifndef GEN9_AVC_const_DEF_H
-#define GEN9_AVC_const_DEF_H
+#ifndef I965_AVC_const_DEF_H
+#define I965_AVC_const_DEF_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -147,4 +147,4 @@ extern const unsigned int gen8_avc_mbenc_curbe_normal_p_frame_init_data[GEN8_AVC
 extern const unsigned int gen8_avc_mbenc_curbe_normal_b_frame_init_data[GEN8_AVC_MBENC_CURBE_SIZE];
 extern const unsigned int gen8_avc_me_curbe_init_data[GEN8_AVC_ME_CURBE_SIZE];
 extern const unsigned short gen8_avc_ref_cost[3][64];
-#endif //GEN9_AVC_const_DEF_H
+#endif //I965_AVC_const_DEF_H

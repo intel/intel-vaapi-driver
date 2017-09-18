@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-#include "gen9_avc_encoder_kernels.h"
+#include "i965_avc_encoder_kernels.h"
 
 const unsigned int skl_avc_encoder_kernels[] = {
     0x0000001b, 0x00000088, 0x000010c8, 0x00008948, 0x00012588, 0x000135c8, 0x0001ae48, 0x00024a88,
