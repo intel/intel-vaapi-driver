@@ -1639,6 +1639,12 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
     case VAProfileVP9Profile0:
         encoder_context->codec = CODEC_VP9;
+
+        if (obj_config->entrypoint == VAEntrypointEncSliceLP) {
+            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_VP9;
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE_VP9;
+        }
+
         break;
 
     default:

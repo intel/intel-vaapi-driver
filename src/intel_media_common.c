@@ -167,3 +167,37 @@ vdenc_free_avc_surface(void **data)
 
     pthread_mutex_unlock(&free_vdenc_avc_surface_lock);
 }
+
+static pthread_mutex_t free_vdenc_vp9_surface_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void
+vdenc_free_vp9_surface(void **data)
+{
+    VDEncVP9Surface *vp9_surface;
+
+    pthread_mutex_lock(&free_vdenc_vp9_surface_lock);
+
+    vp9_surface = *data;
+
+    if (!vp9_surface) {
+        pthread_mutex_unlock(&free_vdenc_vp9_surface_lock);
+        return;
+    }
+
+    if (vp9_surface->scaled_4x_surface_obj) {
+        i965_DestroySurfaces(vp9_surface->ctx, &vp9_surface->scaled_4x_surface_id, 1);
+        vp9_surface->scaled_4x_surface_id = VA_INVALID_SURFACE;
+        vp9_surface->scaled_4x_surface_obj = NULL;
+    }
+
+    if (vp9_surface->scaled_8x_surface_obj) {
+        i965_DestroySurfaces(vp9_surface->ctx, &vp9_surface->scaled_8x_surface_id, 1);
+        vp9_surface->scaled_8x_surface_id = VA_INVALID_SURFACE;
+        vp9_surface->scaled_8x_surface_obj = NULL;
+    }
+
+    free(vp9_surface);
+    *data = NULL;
+
+    pthread_mutex_unlock(&free_vdenc_vp9_surface_lock);
+}
