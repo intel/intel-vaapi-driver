@@ -1147,6 +1147,11 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 } else if (profile == VAProfileHEVCMain ||
                            profile == VAProfileHEVCMain10)
                     attrib_list[i].value = ENCODER_QUALITY_RANGE_HEVC;
+                else if (profile == VAProfileVP9Profile0 &&
+                         entrypoint == VAEntrypointEncSliceLP) {
+                    attrib_list[i].value = ENCODER_QUALITY_RANGE_VP9;
+                }
+
                 break;
             } else if (entrypoint == VAEntrypointStats)
                 attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;

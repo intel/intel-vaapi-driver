@@ -1989,8 +1989,13 @@ Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
         encoder_context->vme_context_destroy = NULL;
 
         return True;
-    } else if (encoder_context->codec == CODEC_VP9) {
-        return gen9_vp9_vme_context_init(ctx, encoder_context);
+    }
+
+    if (encoder_context->codec == CODEC_VP9) {
+        if (IS_GEN10(i965->intel.device_info))
+            return False;
+        else
+            return gen9_vp9_vme_context_init(ctx, encoder_context);
     } else if (encoder_context->codec == CODEC_VP8) {
         return i965_encoder_vp8_vme_context_init(ctx, encoder_context);
     } else if (encoder_context->codec == CODEC_H264 ||

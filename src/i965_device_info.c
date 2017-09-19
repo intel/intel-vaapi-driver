@@ -695,6 +695,7 @@ static struct hw_codec_info cnl_hw_codec_info = {
     .has_vpp_p010 = 1,
     .has_vp9_encoding = 0,
     .has_lp_h264_encoding = 1,
+    .has_lp_vp9_encoding = 1,
 
     .lp_h264_brc_mode = VA_RC_CQP,
     .h264_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR | VA_RC_MB,
@@ -1126,4 +1127,7 @@ static void gen9_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
 
     if (i965->intel.has_huc && codec_info->has_lp_h264_encoding)
         codec_info->lp_h264_brc_mode |= (VA_RC_CBR | VA_RC_VBR);
+
+    if (i965->intel.has_huc && codec_info->has_lp_vp9_encoding)
+        codec_info->lp_vp9_brc_mode |= VA_RC_CQP;
 }
