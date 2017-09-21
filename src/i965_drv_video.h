@@ -169,6 +169,9 @@
 #define HAS_VP9_ENCODING(ctx)          ((ctx)->codec_info->has_vp9_encoding && \
                                          (ctx)->intel.has_bsd)
 
+#define HAS_LP_VP9_ENCODING(ctx) ((ctx)->codec_info->has_lp_vp9_encoding && \
+                                    (ctx)->intel.has_huc)
+
 #define HAS_VP9_ENCODING_PROFILE(ctx, profile)                     \
     (HAS_VP9_ENCODING(ctx) &&                                      \
      ((ctx)->codec_info->vp9_enc_profiles & (1U << (profile - VAProfileVP9Profile0))))
@@ -499,8 +502,11 @@ struct hw_codec_info {
     unsigned int has_vp9_encoding: 1;
     unsigned int has_fei_h264_encoding: 1;
     unsigned int has_h264_preenc: 1;
+    unsigned int has_lp_vp9_encoding: 1;
 
     unsigned int lp_h264_brc_mode;
+    unsigned int lp_vp9_brc_mode;
+
     unsigned int h264_brc_mode;
     unsigned int vp9_brc_mode;
 

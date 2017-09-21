@@ -583,7 +583,8 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
     }
 
     if (HAS_VP9_DECODING_PROFILE(i965, VAProfileVP9Profile0) ||
-        HAS_VP9_ENCODING(i965)) {
+        HAS_VP9_ENCODING(i965) ||
+        HAS_LP_VP9_ENCODING(i965)) {
         profile_list[i++] = VAProfileVP9Profile0;
     }
 
@@ -719,6 +720,9 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
 
         if (HAS_VP9_ENCODING(i965) && (profile == VAProfileVP9Profile0))
             entrypoint_list[n++] = VAEntrypointEncSlice;
+
+        if (HAS_LP_VP9_ENCODING(i965) && (profile == VAProfileVP9Profile0))
+            entrypoint_list[n++] = VAEntrypointEncSliceLP;
 
         if (profile == VAProfileVP9Profile0) {
             if (i965->wrapper_pdrvctx) {
@@ -877,12 +881,18 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         } else if ((HAS_VP9_ENCODING_PROFILE(i965, profile)) &&
                    (entrypoint == VAEntrypointEncSlice)) {
             va_status = VA_STATUS_SUCCESS;
+        } else if ((HAS_LP_VP9_ENCODING(i965) &&
+                    profile == VAProfileVP9Profile0 &&
+                    entrypoint == VAEntrypointEncSliceLP)) {
+            va_status = VA_STATUS_SUCCESS;
         } else if (profile == VAProfileVP9Profile0 &&
                    entrypoint == VAEntrypointVLD &&
                    i965->wrapper_pdrvctx) {
             va_status = VA_STATUS_SUCCESS;
         } else if (!HAS_VP9_DECODING_PROFILE(i965, profile) &&
-                   !HAS_VP9_ENCODING(i965) && !i965->wrapper_pdrvctx) {
+                   !HAS_VP9_ENCODING(i965) &&
+                   !HAS_LP_VP9_ENCODING(i965) &&
+                   !i965->wrapper_pdrvctx) {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -989,6 +999,9 @@ i965_get_rc_attributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint ent
             profile == VAProfileH264MultiviewHigh ||
             profile == VAProfileH264StereoHigh)
             rc_attribs = i965->codec_info->lp_h264_brc_mode;
+
+        else if (profile == VAProfileVP9Profile0)
+            rc_attribs = i965->codec_info->lp_vp9_brc_mode;
 
     } else if (entrypoint == VAEntrypointFEI) {
 
