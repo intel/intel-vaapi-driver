@@ -71,6 +71,7 @@ source_c = \
 	gen10_hevc_enc_common.c \
 	gen10_hevc_encoder.c \
 	gen10_huc_common.c \
+	gen10_vdenc_common.c \
 	$(NULL)
 
 source_h = \
@@ -144,4 +145,5 @@ source_h = \
 	gen10_hevc_encoder.h \
 	gen10_hevc_enc_const_def.h \
 	gen10_huc_common.h \
+	gen10_vdenc_common.h \
 	$(NULL)
