@@ -6608,6 +6608,7 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
     struct encoder_scoreboard_parameter scoreboard_param;
     struct i965_kernel common_kernel;
 
+    memset(&kernel_param, 0, sizeof(kernel_param));
     if (IS_SKL(i965->intel.device_info) ||
         IS_BXT(i965->intel.device_info)) {
         kernel_param.curbe_size = sizeof(gen9_avc_scaling4x_curbe_data);
@@ -6620,6 +6621,8 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
         kernel_param.curbe_size = sizeof(gen8_avc_scaling4x_curbe_data);
         kernel_param.inline_data_size = sizeof(gen8_avc_scaling4x_curbe_data);
     }
+    else
+        assert(0);
 
     /* 4x scaling kernel*/
     kernel_param.sampler_size = 0;
