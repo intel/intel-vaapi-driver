@@ -1118,12 +1118,12 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                         if (entrypoint == VAEntrypointEncSliceLP) {
                             roi_config->bits.num_roi_regions = 3;
                             roi_config->bits.roi_rc_priority_support = 0;
-                            roi_config->bits.roi_rc_qp_delat_support = 0;
+                            roi_config->bits.roi_rc_qp_delta_support = 0;
                         } else {
                             roi_config->bits.num_roi_regions =
                                 I965_MAX_NUM_ROI_REGIONS;
                             roi_config->bits.roi_rc_priority_support = 0;
-                            roi_config->bits.roi_rc_qp_delat_support = 1;
+                            roi_config->bits.roi_rc_qp_delta_support = 1;
                         }
                     }
                 } else if (profile == VAProfileHEVCMain ||
@@ -1131,7 +1131,7 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     roi_config->bits.num_roi_regions =
                         I965_MAX_NUM_ROI_REGIONS;
                     roi_config->bits.roi_rc_priority_support = 1;
-                    roi_config->bits.roi_rc_qp_delat_support = 1;
+                    roi_config->bits.roi_rc_qp_delta_support = 1;
                 } else {
                     attrib_list[i].value = 0;
                 }

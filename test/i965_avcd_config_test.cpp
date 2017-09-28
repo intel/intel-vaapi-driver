@@ -96,8 +96,6 @@ VAStatus HasMVCDecodeSupport()
 }
 
 static const std::vector<ConfigTestInput> inputs = {
-    { VAProfileH264Baseline, VAEntrypointVLD, &ProfileNotSupported },
-
     { VAProfileH264ConstrainedBaseline, VAEntrypointVLD, &HasDecodeSupport },
     { VAProfileH264Main, VAEntrypointVLD, &HasDecodeSupport },
     { VAProfileH264High, VAEntrypointVLD, &HasDecodeSupport },

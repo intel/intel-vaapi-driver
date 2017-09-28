@@ -30,7 +30,7 @@
 #include "i965_output_dri.h"
 #include "dso_utils.h"
 
-#define LIBVA_X11_NAME "libva-x11.so.1"
+#define LIBVA_X11_NAME "libva-x11.so.2"
 
 typedef struct dri_drawable *(*dri_get_drawable_func)(VADriverContextP ctx, XID drawable);
 typedef union dri_buffer *(*dri_get_rendering_buffer_func)(VADriverContextP ctx, struct dri_drawable *d);
@@ -56,15 +56,15 @@ i965_output_dri_init(VADriverContextP ctx)
 
     static const struct dso_symbol symbols[] = {
         {
-            "dri_get_drawable",
+            "va_dri_get_drawable",
             offsetof(struct dri_vtable, get_drawable)
         },
         {
-            "dri_get_rendering_buffer",
+            "va_dri_get_rendering_buffer",
             offsetof(struct dri_vtable, get_rendering_buffer)
         },
         {
-            "dri_swap_buffer",
+            "va_dri_swap_buffer",
             offsetof(struct dri_vtable, swap_buffer)
         },
         { NULL, }
