@@ -572,7 +572,6 @@ void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     unsigned int skip_emul_byte_cnt;
 
     if (encode_state->packed_header_data[idx]) {
