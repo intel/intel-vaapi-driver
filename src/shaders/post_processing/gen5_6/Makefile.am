@@ -2,7 +2,6 @@
 INTEL_G4I = 
 
 INTEL_G4A	= null.g4a
-INTEL_G4B	= null.g4b
 INTEL_G4B_GEN5	= null.g4b.gen5
 INTEL_G6A	= null.g6a
 INTEL_G6B	= null.g6b
@@ -172,11 +171,15 @@ INTEL_PP_INC = \
 
 INTEL_PP_GEN5_ASM = $(INTEL_PP_G4B_GEN5:%.g4b.gen5=%.g5s)
 INTEL_PP_GEN6_ASM = $(INTEL_PP_G6B:%.g6b=%.g6s)
+INTEL_G4M = $(INTEL_G4A:%.g4a=%.g4m)
+INTEL_G6M = $(INTEL_G&A:%.g6a=%.g6m)
 
 TARGETS  =
 if HAVE_GEN4ASM
 TARGETS += $(INTEL_PP_G4B_GEN5)
 TARGETS += $(INTEL_PP_G6B)
+TARGETS += $(INTEL_G4B_GEN5)
+TARGETS += $(INTEL_G6B)
 endif
 
 all-local: $(TARGETS)
@@ -184,18 +187,15 @@ all-local: $(TARGETS)
 SUFFIXES = .g4a .g4b .g4b.gen5 .g6a .g6b .g5s .g6s .asm
 
 if HAVE_GEN4ASM
-.g4a.g4b:
-	$(AM_V_GEN)m4 $*.g4a > $*.g4m			&& \
-	$(AM_V_GEN)$(GEN4ASM) -o $@ $*.g4m		&& \
-	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@.gen5 $*.g4m	&& \
-	rm $*.g4m
+.g4a.g4m:
+	$(AM_V_GEN)m4 $*.g4a > $*.g4m
+.g4m.g4b.gen5:
+	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@ $*.g4m
 
-.g6a.g6b:
-	$(AM_V_GEN)m4 $< > $*.g6m			&& \
-	$(AM_V_GEN)$(GEN4ASM) -g 6 -o $@ $*.g6m		&& \
-	rm $*.g6m
-
-$(INTEL_G4B): $(INTEL_G4I)
+.g6a.g6m:
+	$(AM_V_GEN)m4 $< > $*.g6m
+.g6m.g6b:
+	$(AM_V_GEN)$(GEN4ASM) -g 6 -o $@ $*.g6m
 
 $(INTEL_PP_GEN5_ASM): $(INTEL_PP_ASM)
 .asm.g5s:
@@ -214,11 +214,14 @@ $(INTEL_PP_GEN6_ASM): $(INTEL_PP_ASM)
 	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 6 $<
 endif
 
-CLEANFILES = $(INTEL_PP_GEN5_ASM) $(INTEL_PP_GEN6_ASM)
+CLEANFILES = \
+	$(INTEL_PP_GEN5_ASM) \
+	$(INTEL_PP_GEN6_ASM) \
+	$(INTEL_G4M) \
+	$(INTEL_G6M)
 
 EXTRA_DIST = \
 	$(INTEL_G4A)		\
-	$(INTEL_G4B)		\
 	$(INTEL_G4B_GEN5)	\
 	$(INTEL_G4I)		\
 	$(INTEL_G6B)		\
