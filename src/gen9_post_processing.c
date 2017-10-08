@@ -103,9 +103,6 @@ static const uint32_t pp_nv12_load_save_rgbx_gen9[][4] = {
 #include "shaders/post_processing/gen9/pl2_to_rgbx.g9b"
 };
 
-static const uint32_t pp_nv12_blending_gen9[][4] = {
-};
-
 #define MAX_SCALING_SURFACES    16
 
 #define DEFAULT_MOCS    0x02
