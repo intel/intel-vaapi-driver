@@ -1073,7 +1073,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     profile == VAProfileH264High) {
                     attrib_list[i].value = ENCODER_QUALITY_RANGE;
                     if (entrypoint == VAEntrypointEncSlice) {
-                        if (IS_GEN9(i965->intel.device_info))
+                        if (IS_GEN9(i965->intel.device_info) ||
+                            IS_GEN10(i965->intel.device_info))
                             attrib_list[i].value = ENCODER_QUALITY_RANGE_AVC;
                     }
                 } else if (profile == VAProfileHEVCMain ||
@@ -1115,6 +1116,9 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                     if (IS_GEN9(i965->intel.device_info) &&
                         (entrypoint == VAEntrypointEncSlice || entrypoint == VAEntrypointFEI))
                         attrib_list[i].value = 0;
+                    else if (IS_GEN10(i965->intel.device_info) &&
+                             (entrypoint == VAEntrypointEncSlice || entrypoint == VAEntrypointFEI))
+                        attrib_list[i].value = 0;
                     else {
                         if (entrypoint == VAEntrypointEncSliceLP) {
                             roi_config->bits.num_roi_regions = 3;
@@ -1146,6 +1150,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                  profile == VAProfileH264High) &&
                 entrypoint == VAEntrypointEncSlice) {
                 if (IS_GEN9(i965->intel.device_info))
+                    attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
+                else if (IS_GEN10(i965->intel.device_info))
                     attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
                 else {
                     VAConfigAttribValEncRateControlExt *val_config = (VAConfigAttribValEncRateControlExt *) & (attrib_list[i].value);

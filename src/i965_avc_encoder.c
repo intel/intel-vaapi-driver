@@ -2411,6 +2411,7 @@ gen9_avc_init_brc_const_data(VADriverContextP ctx,
     }
 
     if (IS_KBL(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info) ||
         IS_GLK(i965->intel.device_info)) {
         data += size;
 
@@ -2865,6 +2866,7 @@ gen9_avc_send_surface_brc_frame_update(VADriverContextP ctx,
         IS_GEN8(i965->intel.device_info))
         is_g95 = 0;
     else if (IS_KBL(i965->intel.device_info) ||
+             IS_GEN10(i965->intel.device_info) ||
              IS_GLK(i965->intel.device_info))
         is_g95 = 1;
 
@@ -3492,6 +3494,7 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
 
         }
     } else if (IS_KBL(i965->intel.device_info) ||
+               IS_GEN10(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
         cmd.g95 = (gen95_avc_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
         if (!cmd.g95)
@@ -3649,17 +3652,15 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
 
     if (avc_state->adaptive_transform_decision_enable) {
         if (generic_state->frame_type != SLICE_TYPE_I) {
-            cmd.g9->dw34.enable_adaptive_tx_decision = 1;
-            if (is_g95) {
-                cmd.g95->dw60.mb_texture_threshold = 1024;
-                cmd.g95->dw60.tx_decision_threshold = 128;
+            if (is_g9) {
+                cmd.g9->dw34.enable_adaptive_tx_decision = 1;
+                cmd.g9->dw58.mb_texture_threshold = 1024;
+                cmd.g9->dw58.tx_decision_threshold = 128;
+            } else if (is_g95) {
+                cmd.g95->dw34.enable_adaptive_tx_decision = 1;
+                cmd.g9->dw58.mb_texture_threshold = 1024;
+                cmd.g9->dw58.tx_decision_threshold = 128;
             }
-
-        }
-
-        if (is_g9) {
-            cmd.g9->dw58.mb_texture_threshold = 1024;
-            cmd.g9->dw58.tx_decision_threshold = 128;
         }
     }
 
@@ -3831,7 +3832,10 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
     }
 
     cmd.g9->dw34.enable_per_mb_static_check = avc_state->sfd_enable && generic_state->hme_enabled;
-    cmd.g9->dw34.enable_adaptive_search_window_size = avc_state->adaptive_search_window_enable;
+    if (is_g9)
+        cmd.g9->dw34.enable_adaptive_search_window_size = avc_state->adaptive_search_window_enable;
+    else if (is_g95)
+        cmd.g95->dw34.enable_adaptive_search_window_size = avc_state->adaptive_search_window_enable;
 
     /*roi set disable by now. 49-56*/
     if (curbe_param->roi_enabled) {
@@ -4437,6 +4441,7 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
         IS_BXT(i965->intel.device_info))
         is_g95 = 0;
     else if (IS_KBL(i965->intel.device_info) ||
+             IS_GEN10(i965->intel.device_info) ||
              IS_GLK(i965->intel.device_info))
         is_g95 = 1;
 
@@ -4761,11 +4766,14 @@ gen9_avc_send_surface_mbenc(VADriverContextP ctx,
                     gpe_resource = &(avc_ctx->res_sfd_cost_table_b_frame_buffer);
                 }
                 if (generic_state->frame_type != SLICE_TYPE_I) {
-                    i965_add_buffer_2d_gpe_surface(ctx, gpe_context,
-                                                   gpe_resource,
-                                                   1,
-                                                   I965_SURFACEFORMAT_R8_UNORM,
-                                                   (is_g95 ? GEN95_AVC_MBENC_SFD_COST_TABLE_INDEX : GEN9_AVC_MBENC_SFD_COST_TABLE_INDEX));
+                    size = 64;
+                    i965_add_buffer_gpe_surface(ctx,
+                                                gpe_context,
+                                                gpe_resource,
+                                                0,
+                                                size / 4,
+                                                0,
+                                                (is_g95 ? GEN95_AVC_MBENC_SFD_COST_TABLE_INDEX : GEN9_AVC_MBENC_SFD_COST_TABLE_INDEX));
 
 
                 }
@@ -6614,14 +6622,14 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
         kernel_param.curbe_size = sizeof(gen9_avc_scaling4x_curbe_data);
         kernel_param.inline_data_size = sizeof(gen9_avc_scaling4x_curbe_data);
     } else if (IS_KBL(i965->intel.device_info) ||
+               IS_GEN10(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
         kernel_param.curbe_size = sizeof(gen95_avc_scaling4x_curbe_data);
         kernel_param.inline_data_size = sizeof(gen95_avc_scaling4x_curbe_data);
     } else if (IS_GEN8(i965->intel.device_info)) {
         kernel_param.curbe_size = sizeof(gen8_avc_scaling4x_curbe_data);
         kernel_param.inline_data_size = sizeof(gen8_avc_scaling4x_curbe_data);
-    }
-    else
+    } else
         assert(0);
 
     /* 4x scaling kernel*/
@@ -6748,6 +6756,7 @@ gen9_avc_kernel_init_mbenc(VADriverContextP ctx,
             num_mbenc_kernels = NUM_GEN9_AVC_FEI_KERNEL_MBENC;
         }
     } else if (IS_KBL(i965->intel.device_info) ||
+               IS_GEN10(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
         curbe_size = sizeof(gen95_avc_mbenc_curbe_data);
         num_mbenc_kernels = NUM_GEN9_AVC_KERNEL_MBENC;
@@ -7828,6 +7837,7 @@ gen9_avc_kernel_init(VADriverContextP ctx,
             IS_BXT(i965->intel.device_info))
             generic_ctx->pfn_set_curbe_scaling4x = gen9_avc_set_curbe_scaling4x;
         else if (IS_KBL(i965->intel.device_info) ||
+                 IS_GEN10(i965->intel.device_info) ||
                  IS_GLK(i965->intel.device_info))
             generic_ctx->pfn_set_curbe_scaling4x = gen95_avc_set_curbe_scaling4x;
     } else {
@@ -7964,10 +7974,14 @@ gen9_mfc_avc_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_cont
     struct i965_avc_encoder_context * avc_ctx = (struct i965_avc_encoder_context *)pak_context->private_enc_ctx;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     int i;
+    unsigned int cmd_len = 65;
 
-    BEGIN_BCS_BATCH(batch, 65);
+    if (IS_GEN10(i965->intel.device_info))
+        cmd_len = 68;
 
-    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (65 - 2));
+    BEGIN_BCS_BATCH(batch, cmd_len);
+
+    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (cmd_len - 2));
 
     /* the DW1-3 is for pre_deblocking */
     OUT_BUFFER_3DW(batch, avc_ctx->res_pre_deblocking_output.bo, 1, 0, i965->intel.mocs_state);
@@ -8009,6 +8023,13 @@ gen9_mfc_avc_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_cont
 
     /* the DW 62-64 is the buffer */
     OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /*65-67 for CNL */
+    if (IS_GEN10(i965->intel.device_info)) {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -9715,6 +9736,9 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
                IS_GLK(i965->intel.device_info)) {
         generic_ctx->enc_kernel_ptr = (void *)kbl_avc_encoder_kernels;
         generic_ctx->enc_kernel_size = sizeof(kbl_avc_encoder_kernels);
+    } else if (IS_GEN10(i965->intel.device_info)) {
+        generic_ctx->enc_kernel_ptr = (void *)cnl_avc_encoder_kernels;
+        generic_ctx->enc_kernel_size = sizeof(cnl_avc_encoder_kernels);
     } else
         goto allocate_structure_failed;
 
@@ -9913,6 +9937,7 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
         avc_state->brc_const_data_surface_height = 44;
         avc_state->brc_split_enable = 1;
     } else if (IS_KBL(i965->intel.device_info) ||
+               IS_GEN10(i965->intel.device_info) ||
                IS_GLK(i965->intel.device_info)) {
         avc_state->brc_const_data_surface_width = 64;
         avc_state->brc_const_data_surface_height = 53;
@@ -9924,6 +9949,7 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
         avc_state->kernel_trellis_enable = 1;
         avc_state->lambda_table_enable = 1;
         avc_state->brc_split_enable = 1;
+        avc_state->adaptive_transform_decision_enable = 1;// CNL
     }
 
     avc_state->num_refs[0] = 0;
