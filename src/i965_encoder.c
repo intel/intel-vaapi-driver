@@ -838,8 +838,8 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
             case VAProfileH264High:
             case VAProfileH264MultiviewHigh:
             case VAProfileH264StereoHigh:
-                if (IS_SKL(i965->intel.device_info) ||
-                    IS_BXT(i965->intel.device_info))
+                if (IS_GEN9(i965->intel.device_info) ||
+                    IS_GEN10(i965->intel.device_info))
                     encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
                 break;
 
@@ -1553,7 +1553,8 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
         if (obj_config->entrypoint == VAEntrypointEncSliceLP)
             encoder_context->quality_range = ENCODER_LP_QUALITY_RANGE;
-        else if (IS_GEN9(i965->intel.device_info)) {
+        else if (IS_GEN9(i965->intel.device_info) ||
+                 IS_GEN10(i965->intel.device_info)) {
             encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
             encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
         } else
@@ -1576,7 +1577,8 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
     case VAProfileH264StereoHigh:
     case VAProfileH264MultiviewHigh:
-        if (IS_GEN9(i965->intel.device_info)) {
+        if (IS_GEN9(i965->intel.device_info) ||
+            IS_GEN10(i965->intel.device_info)) {
             encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
             encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
         }

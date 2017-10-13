@@ -61,7 +61,8 @@ protected:
         struct i965_driver_data *i965(*this);
         if (not i965) return NULL;
 
-        if (IS_GEN9(i965->intel.device_info))
+        if (IS_GEN9(i965->intel.device_info)
+            ||IS_GEN10(i965->intel.device_info))
             is_gen9 = true;
 
         struct object_context const *obj_context = CONTEXT(context);
