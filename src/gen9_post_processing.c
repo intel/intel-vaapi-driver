@@ -720,7 +720,6 @@ gen9_pp_context_get_surface_conf(VADriverContextP ctx,
         } else if (fourcc == VA_FOURCC_YUY2 || fourcc == VA_FOURCC_UYVY) {
             /* nothing to do here */
         } else {
-            /* I010/I420 format */
             width[1] = width[0] / 2;
             height[1] = height[0] / 2;
             pitch[1] = obj_surface->cb_cr_pitch;
@@ -749,15 +748,19 @@ gen9_pp_context_get_surface_conf(VADriverContextP ctx,
         } else if (fourcc == VA_FOURCC_YUY2 || fourcc == VA_FOURCC_UYVY) {
             /* nothing to do here */
         } else {
-            /* I010/I420 format */
+            int u = 1, v = 2;
+
+            if (fourcc == VA_FOURCC_YV12 || fourcc == VA_FOURCC_IMC1)
+                u = 2, v = 1;
+
             width[1] = width[0] / 2;
             height[1] = height[0] / 2;
-            pitch[1] = obj_image->image.pitches[1];
-            bo_offset[1] = obj_image->image.offsets[1];
+            pitch[1] = obj_image->image.pitches[u];
+            bo_offset[1] = obj_image->image.offsets[u];
             width[2] = width[0] / 2;
             height[2] = height[0] / 2;
-            pitch[2] = obj_image->image.pitches[2];
-            bo_offset[2] = obj_image->image.offsets[2];
+            pitch[2] = obj_image->image.pitches[v];
+            bo_offset[2] = obj_image->image.offsets[v];
         }
 
     }
@@ -1233,7 +1236,13 @@ gen9_gpe_context_10bit_8bit_scaling_curbe(VADriverContextP ctx,
         break;
 
     case VA_FOURCC_I420:
+    case VA_FOURCC_IMC3: /* pitch / base address is set via surface_state */
         dst_format = DST_FORMAT_I420;
+        break;
+
+    case VA_FOURCC_YV12:
+    case VA_FOURCC_IMC1: /* pitch / base address is set via surface_state */
+        dst_format = DST_FORMAT_YV12;
         break;
 
     default:

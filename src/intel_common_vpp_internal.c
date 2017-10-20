@@ -136,7 +136,10 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
         scale_flag |= SRC_10BIT_420;
 
     if (src_fourcc == VA_FOURCC_NV12 ||
-        src_fourcc == VA_FOURCC_I420)
+        src_fourcc == VA_FOURCC_I420 ||
+        src_fourcc == VA_FOURCC_IMC3 ||
+        src_fourcc == VA_FOURCC_YV12 ||
+        src_fourcc == VA_FOURCC_IMC1)
         scale_flag |= SRC_8BIT_420;
 
     if (src_fourcc == VA_FOURCC_YUY2 ||
@@ -148,7 +151,10 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
         scale_flag |= DST_10BIT_420;
 
     if (dst_fourcc == VA_FOURCC_NV12 ||
-        dst_fourcc == VA_FOURCC_I420)
+        dst_fourcc == VA_FOURCC_I420 ||
+        dst_fourcc == VA_FOURCC_IMC3 ||
+        dst_fourcc == VA_FOURCC_YV12 ||
+        dst_fourcc == VA_FOURCC_IMC1)
         scale_flag |= DST_8BIT_420;
 
     if (dst_fourcc == VA_FOURCC_YUY2 ||

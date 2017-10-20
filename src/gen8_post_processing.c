@@ -1904,7 +1904,6 @@ gen8_pp_context_get_surface_conf(VADriverContextP ctx,
             pitch[1] = obj_surface->cb_cr_pitch;
             bo_offset[1] = obj_surface->width * obj_surface->y_cb_offset;
         } else {
-            /* I010/I420 format */
             width[1] = width[0] / 2;
             height[1] = height[0] / 2;
             pitch[1] = obj_surface->cb_cr_pitch;
@@ -1931,16 +1930,19 @@ gen8_pp_context_get_surface_conf(VADriverContextP ctx,
             pitch[1] = obj_image->image.pitches[1];
             bo_offset[1] = obj_image->image.offsets[1];
         } else {
-            /* I010/I420 format */
-            /* YV12 is TBD */
+            int u = 1, v = 2;
+
+            if (fourcc == VA_FOURCC_YV12 || fourcc == VA_FOURCC_IMC1)
+                u = 2, v = 1;
+
             width[1] = width[0] / 2;
             height[1] = height[0] / 2;
-            pitch[1] = obj_image->image.pitches[1];
-            bo_offset[1] = obj_image->image.offsets[1];
+            pitch[1] = obj_image->image.pitches[u];
+            bo_offset[1] = obj_image->image.offsets[u];
             width[2] = width[0] / 2;
             height[2] = height[0] / 2;
-            pitch[2] = obj_image->image.pitches[2];
-            bo_offset[2] = obj_image->image.offsets[2];
+            pitch[2] = obj_image->image.pitches[v];
+            bo_offset[2] = obj_image->image.offsets[v];
         }
 
     }
