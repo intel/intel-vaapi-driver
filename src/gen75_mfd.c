@@ -1946,10 +1946,11 @@ gen75_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
     if (gen7_mfd_context->reference_surface[0].surface_id != VA_INVALID_ID) {
         if (picture_type == 1 || picture_type == 2) { /* P/B picture */
             struct gen7_vc1_surface *gen7_vc1_surface = gen7_mfd_context->reference_surface[0].obj_surface->private_data;
-
-            intensitycomp_single_fwd = gen7_vc1_surface->intensity_compensation;
-            luma_scale1 = gen7_vc1_surface->luma_scale;
-            luma_shift1 = gen7_vc1_surface->luma_shift;
+            if (gen7_vc1_surface) {
+                intensitycomp_single_fwd = gen7_vc1_surface->intensity_compensation;
+                luma_scale1 = gen7_vc1_surface->luma_scale;
+                luma_shift1 = gen7_vc1_surface->luma_shift;
+            }
         }
     }
 
