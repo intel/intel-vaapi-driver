@@ -1705,7 +1705,12 @@ gen6_mfd_vc1_get_macroblock_bit_offset(uint8_t *buf, int in_slice_data_bit_offse
     else {
         for (i = 0, j = 0; i < slice_header_size; i++, j++) {
             if (!buf[j] && !buf[j + 1] && buf[j + 2] == 3 && buf[j + 3] < 4) {
-                i++, j += 2;
+                if (i < slice_header_size - 1)
+                    i++, j += 2;
+                else {
+                    buf[j + 2] = buf[j + 1];
+                    j++;
+                }
             }
         }
 
@@ -1728,7 +1733,7 @@ gen6_mfd_vc1_bsd_object(VADriverContextP ctx,
     int macroblock_offset;
     uint8_t *slice_data = NULL;
 
-    dri_bo_map(slice_data_bo, 0);
+    dri_bo_map(slice_data_bo, True);
     slice_data = (uint8_t *)(slice_data_bo->virtual + slice_param->slice_data_offset);
     macroblock_offset = gen6_mfd_vc1_get_macroblock_bit_offset(slice_data,
                                                                slice_param->macroblock_offset,
