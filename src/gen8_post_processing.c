@@ -1854,13 +1854,13 @@ gen8_gpe_context_yuv420p8_scaling_curbe(VADriverContextP ctx,
 
     fourcc = pp_get_surface_fourcc(ctx, src_surface);
     if (fourcc == VA_FOURCC_NV12) {
-        scaling_curbe->dw7.src_packed = 1;
+        scaling_curbe->dw2.src_packed = 1;
     }
 
     fourcc = pp_get_surface_fourcc(ctx, dst_surface);
 
     if (fourcc == VA_FOURCC_NV12) {
-        scaling_curbe->dw7.dst_packed = 1;
+        scaling_curbe->dw2.dst_packed = 1;
     }
 
     i965_gpe_context_unmap_curbe(gpe_context);
