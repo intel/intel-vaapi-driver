@@ -55,9 +55,10 @@
 #define DST_FORMAT_YUY2         5
 #define DST_FORMAT_UYVY         6
 
+/*
+ *  32 DWs or 4 GRFs
+ */
 struct scaling_input_parameter {
-    unsigned int input_data[5];
-
     float inv_width;
     float inv_height;
 
@@ -69,7 +70,7 @@ struct scaling_input_parameter {
         unsigned int reserved : 12;
         unsigned int src_format : 8;
         unsigned int dst_format : 8;
-    } dw7;
+    } dw2;
 
     int x_dst;
     int y_dst;
@@ -79,6 +80,7 @@ struct scaling_input_parameter {
     float    y_orig;
     unsigned int bti_input;
     unsigned int bti_output;
+    unsigned int reserved[21];
 };
 
 VAStatus
