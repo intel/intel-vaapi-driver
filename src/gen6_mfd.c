@@ -1287,7 +1287,10 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
 
     gen6_mfd_context->mpr_row_store_scratch_buffer.valid = 0;
 
-    gen6_mfd_context->bitplane_read_buffer.valid = !!pic_param->bitplane_present.value;
+    if (picture_type == GEN6_VC1_SKIPPED_PICTURE)
+        gen6_mfd_context->bitplane_read_buffer.valid = 1;
+    else
+        gen6_mfd_context->bitplane_read_buffer.valid = !!pic_param->bitplane_present.value;
     dri_bo_unreference(gen6_mfd_context->bitplane_read_buffer.bo);
 
     if (gen6_mfd_context->bitplane_read_buffer.valid) {
@@ -1296,9 +1299,6 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
         int bitplane_width = ALIGN(width_in_mbs, 2) / 2;
         int src_w, src_h;
         uint8_t *src = NULL, *dst = NULL;
-
-        assert(decode_state->bit_plane->buffer);
-        src = decode_state->bit_plane->buffer;
 
         bo = dri_bo_alloc(i965->intel.bufmgr,
                           "VC-1 Bitplane",
@@ -1311,28 +1311,44 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
         assert(bo->virtual);
         dst = bo->virtual;
 
-        for (src_h = 0; src_h < height_in_mbs; src_h++) {
-            for (src_w = 0; src_w < width_in_mbs; src_w++) {
-                int src_index, dst_index;
-                int src_shift;
-                uint8_t src_value;
+        if (picture_type == GEN6_VC1_SKIPPED_PICTURE) {
+            for (src_h = 0; src_h < height_in_mbs; src_h++) {
+                for (src_w = 0; src_w < width_in_mbs; src_w++) {
+                    int dst_index;
+                    uint8_t src_value = 0x2;
 
-                src_index = (src_h * width_in_mbs + src_w) / 2;
-                src_shift = !((src_h * width_in_mbs + src_w) & 1) * 4;
-                src_value = ((src[src_index] >> src_shift) & 0xf);
-
-                if (picture_type == GEN6_VC1_SKIPPED_PICTURE) {
-                    src_value |= 0x2;
+                    dst_index = src_w / 2;
+                    dst[dst_index] = ((dst[dst_index] >> 4) | (src_value << 4));
                 }
 
-                dst_index = src_w / 2;
-                dst[dst_index] = ((dst[dst_index] >> 4) | (src_value << 4));
+                if (src_w & 1)
+                    dst[src_w / 2] >>= 4;
+
+                dst += bitplane_width;
             }
+        } else {
+            assert(decode_state->bit_plane->buffer);
+            src = decode_state->bit_plane->buffer;
 
-            if (src_w & 1)
-                dst[src_w / 2] >>= 4;
+            for (src_h = 0; src_h < height_in_mbs; src_h++) {
+                for (src_w = 0; src_w < width_in_mbs; src_w++) {
+                    int src_index, dst_index;
+                    int src_shift;
+                    uint8_t src_value;
 
-            dst += bitplane_width;
+                    src_index = (src_h * width_in_mbs + src_w) / 2;
+                    src_shift = !((src_h * width_in_mbs + src_w) & 1) * 4;
+                    src_value = ((src[src_index] >> src_shift) & 0xf);
+
+                    dst_index = src_w / 2;
+                    dst[dst_index] = ((dst[dst_index] >> 4) | (src_value << 4));
+                }
+
+                if (src_w & 1)
+                    dst[src_w / 2] >>= 4;
+
+                dst += bitplane_width;
+            }
         }
 
         dri_bo_unmap(bo);
