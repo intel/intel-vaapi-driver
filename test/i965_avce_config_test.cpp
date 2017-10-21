@@ -95,7 +95,21 @@ VAStatus H264MVCNotSupported()
     struct i965_driver_data *i965(*env);
     EXPECT_PTR(i965);
 
-    if (!HAS_H264_MVC_DECODING(i965))
+    if (!HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264MultiviewHigh))
+        return ProfileNotSupported();
+
+    return EntrypointNotSupported();
+}
+
+VAStatus H264StereoNotSupported()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (!HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264StereoHigh))
         return ProfileNotSupported();
 
     return EntrypointNotSupported();
@@ -164,6 +178,20 @@ VAStatus HasMVCEncodeSupport()
     return H264MVCNotSupported();
 }
 
+VAStatus HasStereoEncodeSupport()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (HAS_H264_MVC_ENCODING(i965))
+        return VA_STATUS_SUCCESS;
+
+    return H264StereoNotSupported();
+}
+
 static const std::vector<ConfigTestInput> inputs = {
     {VAProfileH264ConstrainedBaseline, VAEntrypointEncSlice, &HasEncodeSupport},
     {VAProfileH264ConstrainedBaseline, VAEntrypointEncSliceLP, &HasLPEncodeSupport},
@@ -185,10 +213,10 @@ static const std::vector<ConfigTestInput> inputs = {
     {VAProfileH264MultiviewHigh, VAEntrypointEncPicture, &H264MVCNotSupported},
     {VAProfileH264MultiviewHigh, VAEntrypointFEI, &H264MVCNotSupported},
 
-    {VAProfileH264StereoHigh, VAEntrypointEncSlice, &HasMVCEncodeSupport},
-    {VAProfileH264StereoHigh, VAEntrypointEncSliceLP, &H264MVCNotSupported},
-    {VAProfileH264StereoHigh, VAEntrypointEncPicture, &H264MVCNotSupported},
-    {VAProfileH264StereoHigh, VAEntrypointFEI, &H264MVCNotSupported},
+    {VAProfileH264StereoHigh, VAEntrypointEncSlice, &HasStereoEncodeSupport},
+    {VAProfileH264StereoHigh, VAEntrypointEncSliceLP, &H264StereoNotSupported},
+    {VAProfileH264StereoHigh, VAEntrypointEncPicture, &H264StereoNotSupported},
+    {VAProfileH264StereoHigh, VAEntrypointFEI, &H264StereoNotSupported},
 };
 
 INSTANTIATE_TEST_CASE_P(
