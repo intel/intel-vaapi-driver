@@ -1505,7 +1505,6 @@ gen75_mfd_init_vc1_surface(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen7_vc1_surface *gen7_vc1_surface = obj_surface->private_data;
-    int width_in_mbs = ALIGN(pic_param->coded_width, 16) / 16;
     int height_in_mbs = ALIGN(pic_param->coded_height, 16) / 16;
 
     obj_surface->free_private_data = gen75_mfd_free_vc1_surface;
@@ -1525,7 +1524,7 @@ gen75_mfd_init_vc1_surface(VADriverContextP ctx,
     if (gen7_vc1_surface->dmv == NULL) {
         gen7_vc1_surface->dmv = dri_bo_alloc(i965->intel.bufmgr,
                                              "direct mv w/r buffer",
-                                             width_in_mbs * height_in_mbs * 64,
+                                             128 * height_in_mbs * 64,
                                              0x1000);
     }
 }
