@@ -1122,14 +1122,6 @@ gen6_mfd_mpeg2_decode_picture(VADriverContextP ctx,
     intel_batchbuffer_flush(batch);
 }
 
-static const int va_to_gen6_vc1_pic_type[5] = {
-    GEN6_VC1_I_PICTURE,
-    GEN6_VC1_P_PICTURE,
-    GEN6_VC1_B_PICTURE,
-    GEN6_VC1_BI_PICTURE,
-    GEN6_VC1_P_PICTURE,
-};
-
 static const int va_to_gen6_vc1_mv[4] = {
     1, /* 1-MV */
     2, /* 1-MV half-pel */
@@ -1374,11 +1366,14 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     int brfd = 0;
     int fcm = 0;
     int picture_type;
+    int ptype;
     int profile;
     int overlap = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
+
+    picture_type = pic_param->picture_fields.bits.picture_type;
 
     profile = va_to_gen6_vc1_profile[pic_param->sequence_fields.bits.profile];
     dquant = pic_param->pic_quantizer_fields.bits.dquant;
@@ -1457,7 +1452,10 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     if (pic_param->b_picture_fraction < 21)
         scale_factor = b_picture_scale_factor[pic_param->b_picture_fraction];
 
-    picture_type = va_to_gen6_vc1_pic_type[pic_param->picture_fields.bits.picture_type];
+    if (picture_type == GEN6_VC1_SKIPPED_PICTURE)
+        ptype = GEN6_VC1_P_PICTURE;
+    else
+        ptype = pic_param->picture_fields.bits.picture_type;
 
     if (profile == GEN6_VC1_ADVANCED_PROFILE &&
         picture_type == GEN6_VC1_I_PICTURE)
@@ -1488,8 +1486,8 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
             gen6_vc1_surface = obj_surface->private_data;
 
         if (!gen6_vc1_surface ||
-            (va_to_gen6_vc1_pic_type[gen6_vc1_surface->picture_type] == GEN6_VC1_I_PICTURE ||
-             va_to_gen6_vc1_pic_type[gen6_vc1_surface->picture_type] == GEN6_VC1_BI_PICTURE))
+            (gen6_vc1_surface->picture_type == GEN6_VC1_I_PICTURE ||
+             gen6_vc1_surface->picture_type == GEN6_VC1_BI_PICTURE))
             dmv_surface_valid = 0;
         else
             dmv_surface_valid = 1;
@@ -1506,7 +1504,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
             fcm = 3;
     }
 
-    if (pic_param->picture_fields.bits.picture_type == GEN6_VC1_B_PICTURE) { /* B picture */
+    if (picture_type == GEN6_VC1_B_PICTURE) { /* B picture */
         brfd = pic_param->reference_fields.bits.reference_distance;
         brfd = (scale_factor * brfd) >> 8;
         brfd = pic_param->reference_fields.bits.reference_distance - brfd - 1;
@@ -1518,16 +1516,16 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     if (pic_param->sequence_fields.bits.overlap) {
         if (profile != GEN6_VC1_ADVANCED_PROFILE) {
             if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9 &&
-                pic_param->picture_fields.bits.picture_type != GEN6_VC1_B_PICTURE) {
+                picture_type != GEN6_VC1_B_PICTURE) {
                 overlap = 1;
             }
         } else {
-            if (pic_param->picture_fields.bits.picture_type == GEN6_VC1_P_PICTURE &&
+            if (picture_type == GEN6_VC1_P_PICTURE &&
                 pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9) {
                 overlap = 1;
             }
-            if (pic_param->picture_fields.bits.picture_type == GEN6_VC1_I_PICTURE ||
-                pic_param->picture_fields.bits.picture_type == GEN6_VC1_BI_PICTURE) {
+            if (picture_type == GEN6_VC1_I_PICTURE ||
+                picture_type == GEN6_VC1_BI_PICTURE) {
                 if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9) {
                     overlap = 1;
                 } else if (va_to_gen6_vc1_condover[pic_param->conditional_overlap_flag] == 2 ||
@@ -1560,7 +1558,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                   pic_param->pic_quantizer_fields.bits.pic_quantizer_type << 8 |
                   va_to_gen6_vc1_condover[pic_param->conditional_overlap_flag] << 6 |
                   !pic_param->picture_fields.bits.is_first_field << 5 |
-                  picture_type << 2 |
+                  ptype << 2 |
                   fcm << 0);
     OUT_BCS_BATCH(batch,
                   !!(pic_param->bitplane_present.value & 0x7f) << 23 |
