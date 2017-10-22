@@ -1528,8 +1528,8 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                 picture_type == GEN6_VC1_BI_PICTURE) {
                 if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9) {
                     overlap = 1;
-                } else if (va_to_gen6_vc1_condover[pic_param->conditional_overlap_flag] == 2 ||
-                           va_to_gen6_vc1_condover[pic_param->conditional_overlap_flag] == 3) {
+                } else if (pic_param->conditional_overlap_flag == 1 || /* all block boundaries */
+                           pic_param->conditional_overlap_flag == 2) { /* coded by OVERFLAGSMB bitplane */
                     overlap = 1;
                 }
             }
