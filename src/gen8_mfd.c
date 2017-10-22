@@ -1702,13 +1702,13 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
                   pic_param->pic_quantizer_fields.bits.pic_quantizer_type << 0);
     OUT_BCS_BATCH(batch,
                   !!(pic_param->bitplane_present.value & 0x7f) << 31 |
-                  !pic_param->bitplane_present.flags.bp_forward_mb << 30 |
-                  !pic_param->bitplane_present.flags.bp_mv_type_mb << 29 |
-                  !pic_param->bitplane_present.flags.bp_skip_mb << 28 |
-                  !pic_param->bitplane_present.flags.bp_direct_mb << 27 |
-                  !pic_param->bitplane_present.flags.bp_overflags << 26 |
-                  !pic_param->bitplane_present.flags.bp_ac_pred << 25 |
-                  !pic_param->bitplane_present.flags.bp_field_tx << 24 |
+                  pic_param->raw_coding.flags.forward_mb << 30 |
+                  pic_param->raw_coding.flags.mv_type_mb << 29 |
+                  pic_param->raw_coding.flags.skip_mb << 28 |
+                  pic_param->raw_coding.flags.direct_mb << 27 |
+                  pic_param->raw_coding.flags.overflags << 26 |
+                  pic_param->raw_coding.flags.ac_pred << 25 |
+                  pic_param->raw_coding.flags.field_tx << 24 |
                   pic_param->mv_fields.bits.mv_table << 20 |
                   pic_param->mv_fields.bits.four_mv_block_pattern_table << 18 |
                   pic_param->mv_fields.bits.two_mv_block_pattern_table << 16 |
