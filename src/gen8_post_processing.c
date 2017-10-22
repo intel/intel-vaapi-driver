@@ -328,6 +328,16 @@ static const uint32_t pp_yuv420p8_scaling_gen8[][4] = {
 #include "shaders/post_processing/gen8/conv_nv12.g8b"
 };
 
+struct i965_kernel pp_common_scaling_gen8[] = {
+    {
+        "8bit to 8bit",
+        0,
+        pp_yuv420p8_scaling_gen8,
+        sizeof(pp_yuv420p8_scaling_gen8),
+        NULL,
+    },
+};
+
 static void
 gen8_pp_set_surface_tiling(struct gen8_surface_state *ss, unsigned int tiling)
 {
@@ -1661,7 +1671,6 @@ gen8_post_processing_context_init(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct i965_post_processing_context *pp_context = data;
     struct i965_gpe_context *gpe_context;
-    struct i965_kernel scaling_kernel;
 
     gen8_post_processing_context_common_init(ctx, data, pp_modules_gen8, ARRAY_ELEMS(pp_modules_gen8), batch);
     avs_init_state(&pp_context->pp_avs_context.state, &gen8_avs_config);
@@ -1673,12 +1682,9 @@ gen8_post_processing_context_init(VADriverContextP ctx,
      * I420 ->NV12
      */
     gpe_context = &pp_context->scaling_gpe_context;
-    memset(&scaling_kernel, 0, sizeof(scaling_kernel));
-    scaling_kernel.bin = pp_yuv420p8_scaling_gen8;
-    scaling_kernel.size = sizeof(pp_yuv420p8_scaling_gen8);
-    gen8_gpe_load_kernels(ctx, gpe_context, &scaling_kernel, 1);
+    gen8_gpe_load_kernels(ctx, gpe_context, pp_common_scaling_gen8, ARRAY_ELEMS(pp_common_scaling_gen8));
     gpe_context->idrt.entry_size = ALIGN(sizeof(struct gen8_interface_descriptor_data), 64);
-    gpe_context->idrt.max_entries = 1;
+    gpe_context->idrt.max_entries = ALIGN(ARRAY_ELEMS(pp_common_scaling_gen8), 2);
     gpe_context->sampler.entry_size = ALIGN(sizeof(struct gen8_sampler_state), 64);
     gpe_context->sampler.max_entries = 1;
     gpe_context->curbe.length = ALIGN(sizeof(struct scaling_input_parameter), 32);
