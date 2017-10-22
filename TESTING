@@ -1,0 +1,146 @@
+
+Overview
+--------
+
+The intel-vaapi-driver uses the Google Test Framework (gtest) for testing the
+driver.  Documentation for gtest can be found in the test/gtest/doc/
+subdirectory.  The original, upstream gtest project can be found at
+https://github.com/google/googletest.
+
+Ideally, driver tests will only verify driver-specific functionality, features
+and internal utility functions and concepts.
+
+Developers are expected to write new tests for any new code that they contribute
+to the project.  The project maintainers reserve the right to refuse patch
+submissions if they are not accompanied by tests, when reasonable, or if a
+submission causes existing tests to regress.
+
+
+Google Test Framework Integration
+---------------------------------
+
+Google Test recommends it be custom compiled for each project that uses it.
+Therefore, the intel-vaapi-driver project tracks a subset copy of the Google
+Test Framework source code at release 1.8.0 (initially) in a test/gtest/
+subdirectory of the project source tree.  The intel-vaapi-driver copy of gtest
+will only be updated to new upstream releases (or critical upstream fixes) of
+gtest, only if it is necessary.  As of this writing, the last release (1.8.0)
+was August 2016, about three years after its previous release.  Thus, there
+should be minimal need to update or maintain gtest within the intel-vaapi-driver
+project.
+
+Intel-vaapi-driver tests or other project code should *not* be intermixed within
+the test/gtest/ subdirectory.  The test/gtest/ subdirectory should only contain
+source from the upstream Google Test project to make upgrades simpler.
+
+
+Building Google Test Framework Library
+--------------------------------------
+
+The Google Test Framework is compiled as a convenience library (libgtest.la)
+within the intel-vaapi-driver source tree.  The rules to build libgtest.la are
+maintained in a custom makefile in the intel-vaapi-driver project tree
+(see test/Makefile.am).  The libgtest.la library will be automatically compiled
+if the tests are enabled by configuration.
+
+
+Building Driver Tests
+---------------------
+
+The --enable-tests=[yes|no] configuration option is defined in configure.ac to
+enable or disable compilation of libgtest.la and the driver test executable.
+The default is disabled.  When the tests are enabled during configuration, the
+make command will compile the driver tests and link to libgtest.la and output a
+single test/test_i965_drv_video executable.  Hence...
+
+    "./autogen.sh --enable-tests && make"
+
+...is a minimal example of how one might build the driver and its tests.
+
+
+Writing Driver Tests
+--------------------
+
+Intel-vaapi-driver tests are defined in the test/ subdirectory using the Google
+Test Framework.  All driver tests that need a VADriverContextP, VADisplay and
+etc. should define a test fixture that inherits from the I965TestFixture class
+and then use the gtest test fixture macro (TEST_F) to define the test case.  The
+I965TestFixture class handles initialization and termination of the i965 driver
+context, display, etc.  It also defines various C++ operators to convert to
+these types, amongst others.  Additionally, it provides an interface that wraps
+various i965 driver functions.  After calling a wrapped function within a test,
+the test should check HasFailure() with the appropriate assertion macro since
+these wrapper functions may generate fatal or non-fatal test assertions.
+
+The following is a basic example of how to use the I965TestFixture class to
+write a test:
+
+    #include “i965_test_fixture.h”
+    #include <vector>
+    class MyDriverATest : public I965TestFixture
+    {
+    public:
+        virtual void SetUp()
+        {
+            I965TestFixture::SetUp();
+
+            // do local test SetUp stuff
+        }
+        virtual void TearDown()
+        {
+            // do local test TearDown stuff
+
+            I965TestFixture::TearDown();
+        }
+    };
+
+    TEST_F(MyDriverATest, test_case_1)
+    {
+        ConfigAttribs attribs(
+            1, {type: VAConfigAttribRTFormat, value: VA_RT_FORMAT_YUV420});
+
+        // call I965TestFixture wrapper for i965_CreateConfig
+        VAConfigID config = this->createConfig(
+            VAProfileJPEGBaseline, VAEntrypointVLD, attribs);
+        ASSERT_FALSE(HasFailure()); // abort and fail if wrapper call failed
+        ASSERT_ID(config); // abort and fail if config id is not valid
+
+        // convert I965TestFixture to driver context
+        VADriverContextP ctx(*this);
+        ASSERT_PTR(ctx); // abort and fail if invalid pointer
+
+        // convert I965TestFixture to display
+        VADisplay display(*this);
+
+        // more testing...
+    }
+
+To directly test a driver function that is only declared and defined in a .c
+implementation file, an extern prototype of that function should be declared and
+wrapped in an extern “C” block.  The test/i965_internal_decl.h header does some
+of this for you already.
+
+To include a driver's C header file in a C++ test file, the #include should be
+wrapped within an extern “C” block.  See test/i965_internal_decl.h for an
+example.
+
+
+Validation/QA
+--------------
+
+Validation and QA Teams should compile the test executable and run it directly
+from their build tree.  Without any command line options, the executable will
+execute all the tests and report the result to the console.  For CI frameworks,
+the --gtest_output=xml:test_result.xml command line option can be specified to
+have the test results dumped to an xml file that can be processed by the CI
+framework.  There are various other predefined gtest command line options that
+may also be useful, like test shuffling, repeating, seed, etc. (see --help for
+these options).
+
+
+Distribution
+------------
+
+An intel-vaapi-driver source distribution is generated during `make dist` and
+includes the necessary Google Test Framework source code and makefile rules
+along with the driver test source code.

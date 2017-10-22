@@ -1,0 +1,60 @@
+
+  intel-vaapi-driver
+  VA driver for Intel G45 & HD Graphics family
+
+  Copyright (C) 2009-2017 Intel Corporation
+
+
+License
+-------
+
+Please read the COPYING file available in this package.
+
+
+Overview
+--------
+
+intel-vaapi-driver is the VA-API implementation for Intel G45 chipsets
+and Intel HD Graphics for Intel Core processor family.
+
+Platform definitions:
+CTG: Cantiga, Intel GMA 4500MHD (GM45)
+ILK: Ironlake, Intel HD Graphics for 2010 Intel Core processor family
+SNB: Sandybridge, Intel HD Graphics for 2011 Intel Core processor family
+IVB: Ivybridge
+HSW: Haswell
+BDW: Broadwell
+CHV/BSW: Cherryview/Braswell
+SKL: Skylake
+BXT: Broxton
+KBL: Kabylake
+GLK: Gemini Lake
+
+Codecs
+------
+
+H.264   D   ILK+
+H.264   E   SNB+
+MPEG-2  D   CTG+
+VC-1    D   SNB+
+JPEG    D   IVB+
+JPEG    E   CHV+/BSW+
+VP8     D   BDW+
+VP8     E   CHV+/BSW+
+HEVC    D   CHV+/BSW+
+HEVC    E   SKL+
+VP9     D   BXT+
+VP9     E   KBL+
+HEVC 10bit     D       BXT+
+HEVC 10bit     E       KBL+
+VP9 10bit      D       KBL+
+
+Requirements
+------------
+
+libva >= 1.7.0
+
+Testing
+-------
+
+Please read the TESTING file available in this package.
