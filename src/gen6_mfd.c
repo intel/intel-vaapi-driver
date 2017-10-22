@@ -1290,7 +1290,7 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
     if (picture_type == GEN6_VC1_SKIPPED_PICTURE)
         gen6_mfd_context->bitplane_read_buffer.valid = 1;
     else
-        gen6_mfd_context->bitplane_read_buffer.valid = !!pic_param->bitplane_present.value;
+        gen6_mfd_context->bitplane_read_buffer.valid = !!(pic_param->bitplane_present.value & 0x7f);
     dri_bo_unreference(gen6_mfd_context->bitplane_read_buffer.bo);
 
     if (gen6_mfd_context->bitplane_read_buffer.valid) {
@@ -1566,7 +1566,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                   picture_type << 2 |
                   fcm << 0);
     OUT_BCS_BATCH(batch,
-                  !!pic_param->bitplane_present.value << 23 |
+                  !!(pic_param->bitplane_present.value & 0x7f) << 23 |
                   !pic_param->bitplane_present.flags.bp_forward_mb << 22 |
                   !pic_param->bitplane_present.flags.bp_mv_type_mb << 21 |
                   !pic_param->bitplane_present.flags.bp_skip_mb << 20 |
