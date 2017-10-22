@@ -1699,7 +1699,7 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
     int fcm = 0;
     int picture_type;
     int profile;
-    int overlap;
+    int overlap = 0;
     int interpolation_mode = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
@@ -1841,10 +1841,7 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
             brfd = 0;
     }
 
-    overlap = pic_param->sequence_fields.bits.overlap;
-
-    if (overlap) {
-        overlap = 0;
+    if (pic_param->sequence_fields.bits.overlap) {
         if (profile != GEN7_VC1_ADVANCED_PROFILE) {
             if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9 &&
                 pic_param->picture_fields.bits.picture_type != GEN7_VC1_B_PICTURE) {
