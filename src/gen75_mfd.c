@@ -168,7 +168,7 @@ gen75_mfd_surface_state(VADriverContextP ctx,
                   (y_cb_offset << 0)); /* Y offset for U(Cb) */
     OUT_BCS_BATCH(batch,
                   (0 << 16) | /* X offset for V(Cr), must be 0 */
-                  (y_cr_offset << 0)); /* Y offset for V(Cr), must be 0 for video codec, non-zoro for JPEG */
+                  ((standard_select == MFX_FORMAT_JPEG ? y_cr_offset : 0) << 0)); /* Y offset for V(Cr), must be 0 for video codec, non-zoro for JPEG */
     ADVANCE_BCS_BATCH(batch);
 }
 
