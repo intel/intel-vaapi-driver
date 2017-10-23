@@ -1517,10 +1517,6 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
     else
         ptype = pic_param->picture_fields.bits.picture_type;
 
-    if (profile == GEN7_VC1_ADVANCED_PROFILE &&
-        picture_type == GEN7_VC1_I_PICTURE)
-        picture_type = GEN7_VC1_BI_PICTURE;
-
     if (picture_type == GEN7_VC1_I_PICTURE || picture_type == GEN7_VC1_BI_PICTURE) /* I picture */
         trans_ac_y = pic_param->transform_fields.bits.transform_ac_codingset_idx2;
     else {
