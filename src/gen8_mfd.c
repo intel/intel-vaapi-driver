@@ -1346,12 +1346,18 @@ gen8_mfd_vc1_decode_init(VADriverContextP ctx,
     dri_bo_unreference(gen7_mfd_context->post_deblocking_output.bo);
     gen7_mfd_context->post_deblocking_output.bo = obj_surface->bo;
     dri_bo_reference(gen7_mfd_context->post_deblocking_output.bo);
-    gen7_mfd_context->post_deblocking_output.valid = pic_param->entrypoint_fields.bits.loopfilter;
 
     dri_bo_unreference(gen7_mfd_context->pre_deblocking_output.bo);
     gen7_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
     dri_bo_reference(gen7_mfd_context->pre_deblocking_output.bo);
-    gen7_mfd_context->pre_deblocking_output.valid = !pic_param->entrypoint_fields.bits.loopfilter;
+
+    if (picture_type == GEN7_VC1_SKIPPED_PICTURE) {
+        gen7_mfd_context->post_deblocking_output.valid = 0;
+        gen7_mfd_context->pre_deblocking_output.valid = 1;
+    } else {
+        gen7_mfd_context->post_deblocking_output.valid = pic_param->entrypoint_fields.bits.loopfilter;
+        gen7_mfd_context->pre_deblocking_output.valid = !pic_param->entrypoint_fields.bits.loopfilter;
+    }
 
     dri_bo_unreference(gen7_mfd_context->intra_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -1473,6 +1479,7 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
     int profile;
     int overlap = 0;
     int interpolation_mode = 0;
+    int loopfilter = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
@@ -1558,8 +1565,10 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
 
     if (picture_type == GEN7_VC1_SKIPPED_PICTURE)
         ptype = GEN7_VC1_P_PICTURE;
-    else
+    else {
         ptype = pic_param->picture_fields.bits.picture_type;
+        loopfilter = pic_param->entrypoint_fields.bits.loopfilter;
+    }
 
     if (picture_type == GEN7_VC1_I_PICTURE || picture_type == GEN7_VC1_BI_PICTURE) /* I picture */
         trans_ac_y = pic_param->transform_fields.bits.transform_ac_codingset_idx2;
@@ -1665,7 +1674,7 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
                   interpolation_mode << 8 |
                   0 << 7 | /* FIXME: scale up or down ??? */
                   pic_param->range_reduction_frame << 6 |
-                  pic_param->entrypoint_fields.bits.loopfilter << 5 |
+                  loopfilter << 5 |
                   overlap << 4 |
                   !pic_param->picture_fields.bits.is_first_field << 3 |
                   (pic_param->sequence_fields.bits.profile == 3) << 0);

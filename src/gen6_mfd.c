@@ -1243,12 +1243,18 @@ gen6_mfd_vc1_decode_init(VADriverContextP ctx,
     dri_bo_unreference(gen6_mfd_context->post_deblocking_output.bo);
     gen6_mfd_context->post_deblocking_output.bo = obj_surface->bo;
     dri_bo_reference(gen6_mfd_context->post_deblocking_output.bo);
-    gen6_mfd_context->post_deblocking_output.valid = pic_param->entrypoint_fields.bits.loopfilter;
 
     dri_bo_unreference(gen6_mfd_context->pre_deblocking_output.bo);
     gen6_mfd_context->pre_deblocking_output.bo = obj_surface->bo;
     dri_bo_reference(gen6_mfd_context->pre_deblocking_output.bo);
-    gen6_mfd_context->pre_deblocking_output.valid = !pic_param->entrypoint_fields.bits.loopfilter;
+
+    if (picture_type == GEN6_VC1_SKIPPED_PICTURE) {
+        gen6_mfd_context->post_deblocking_output.valid = 0;
+        gen6_mfd_context->pre_deblocking_output.valid = 1;
+    } else {
+        gen6_mfd_context->post_deblocking_output.valid = pic_param->entrypoint_fields.bits.loopfilter;
+        gen6_mfd_context->pre_deblocking_output.valid = !pic_param->entrypoint_fields.bits.loopfilter;
+    }
 
     dri_bo_unreference(gen6_mfd_context->intra_row_store_scratch_buffer.bo);
     bo = dri_bo_alloc(i965->intel.bufmgr,
@@ -1369,6 +1375,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     int ptype;
     int profile;
     int overlap = 0;
+    int loopfilter = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
@@ -1454,8 +1461,10 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
 
     if (picture_type == GEN6_VC1_SKIPPED_PICTURE)
         ptype = GEN6_VC1_P_PICTURE;
-    else
+    else {
         ptype = pic_param->picture_fields.bits.picture_type;
+        loopfilter = pic_param->entrypoint_fields.bits.loopfilter;
+    }
 
     if (picture_type == GEN6_VC1_I_PICTURE || picture_type == GEN6_VC1_BI_PICTURE) /* I picture */
         trans_ac_y = pic_param->transform_fields.bits.transform_ac_codingset_idx2;
@@ -1544,7 +1553,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                   pic_param->sequence_fields.bits.syncmarker << 31 |
                   1 << 29 | /* concealment */
                   alt_pq << 24 |
-                  pic_param->entrypoint_fields.bits.loopfilter << 23 |
+                  loopfilter << 23 |
                   overlap << 22 |
                   (pic_param->pic_quantizer_fields.bits.quantizer == 0) << 21 | /* implicit quantizer */
                   pic_param->pic_quantizer_fields.bits.pic_quantizer_scale << 16 |
