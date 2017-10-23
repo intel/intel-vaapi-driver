@@ -1514,12 +1514,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     }
 
     if (pic_param->sequence_fields.bits.overlap) {
-        if (profile != GEN6_VC1_ADVANCED_PROFILE) {
-            if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9 &&
-                picture_type != GEN6_VC1_B_PICTURE) {
-                overlap = 1;
-            }
-        } else {
+        if (profile == GEN6_VC1_ADVANCED_PROFILE) {
             if (picture_type == GEN6_VC1_P_PICTURE &&
                 pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9) {
                 overlap = 1;
@@ -1532,6 +1527,11 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                            pic_param->conditional_overlap_flag == 2) { /* coded by OVERFLAGSMB bitplane */
                     overlap = 1;
                 }
+            }
+        } else {
+            if (pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9 &&
+                picture_type != GEN6_VC1_B_PICTURE) {
+                overlap = 1;
             }
         }
     }
