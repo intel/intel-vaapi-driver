@@ -1816,11 +1816,8 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
         if (obj_surface)
             gen7_vc1_surface = obj_surface->private_data;
 
-        if (!gen7_vc1_surface ||
-            (gen7_vc1_surface->picture_type == GEN7_VC1_I_PICTURE ||
-             gen7_vc1_surface->picture_type == GEN7_VC1_BI_PICTURE))
-            dmv_surface_valid = 0;
-        else
+        if (gen7_vc1_surface &&
+            gen7_vc1_surface->picture_type == GEN7_VC1_P_PICTURE)
             dmv_surface_valid = 1;
     }
 
@@ -1993,19 +1990,26 @@ gen75_mfd_vc1_directmode_state_bplus(VADriverContextP ctx,
                                      struct gen7_mfd_context *gen7_mfd_context)
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+    VAPictureParameterBufferVC1 *pic_param;
     struct object_surface *obj_surface;
     dri_bo *dmv_read_buffer = NULL, *dmv_write_buffer = NULL;
+    int picture_type;
 
-    obj_surface = decode_state->render_object;
+    pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
+    picture_type = pic_param->picture_fields.bits.picture_type;
 
-    if (obj_surface && obj_surface->private_data) {
+    if (picture_type == GEN7_VC1_P_PICTURE ||
+        picture_type == GEN7_VC1_SKIPPED_PICTURE) {
+        obj_surface = decode_state->render_object;
         dmv_write_buffer = ((struct gen7_vc1_surface *)(obj_surface->private_data))->dmv;
     }
 
-    obj_surface = decode_state->reference_objects[1];
-
-    if (obj_surface && obj_surface->private_data) {
-        dmv_read_buffer = ((struct gen7_vc1_surface *)(obj_surface->private_data))->dmv;
+    if (picture_type == GEN7_VC1_B_PICTURE) {
+        obj_surface = decode_state->reference_objects[1];
+        if (pic_param->backward_reference_picture != VA_INVALID_ID &&
+            obj_surface) {
+            dmv_read_buffer = ((struct gen7_vc1_surface *)(obj_surface->private_data))->dmv;
+        }
     }
 
     BEGIN_BCS_BATCH(batch, 7);
@@ -2039,25 +2043,32 @@ gen75_mfd_vc1_directmode_state(VADriverContextP ctx,
                                struct gen7_mfd_context *gen7_mfd_context)
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
+    VAPictureParameterBufferVC1 *pic_param;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
     dri_bo *dmv_read_buffer = NULL, *dmv_write_buffer = NULL;
+    int picture_type;
 
     if (IS_STEPPING_BPLUS(i965)) {
         gen75_mfd_vc1_directmode_state_bplus(ctx, decode_state, gen7_mfd_context);
         return;
     }
 
-    obj_surface = decode_state->render_object;
+    pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
+    picture_type = pic_param->picture_fields.bits.picture_type;
 
-    if (obj_surface && obj_surface->private_data) {
+    if (picture_type == GEN7_VC1_P_PICTURE ||
+        picture_type == GEN7_VC1_SKIPPED_PICTURE) {
+        obj_surface = decode_state->render_object;
         dmv_write_buffer = ((struct gen7_vc1_surface *)(obj_surface->private_data))->dmv;
     }
 
-    obj_surface = decode_state->reference_objects[1];
-
-    if (obj_surface && obj_surface->private_data) {
-        dmv_read_buffer = ((struct gen7_vc1_surface *)(obj_surface->private_data))->dmv;
+    if (picture_type == GEN7_VC1_B_PICTURE) {
+        obj_surface = decode_state->reference_objects[1];
+        if (pic_param->backward_reference_picture != VA_INVALID_ID &&
+            obj_surface) {
+            dmv_read_buffer = ((struct gen7_vc1_surface *)(obj_surface->private_data))->dmv;
+        }
     }
 
     BEGIN_BCS_BATCH(batch, 3);
