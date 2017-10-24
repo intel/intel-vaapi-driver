@@ -1376,6 +1376,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     int profile;
     int overlap = 0;
     int loopfilter = 0;
+    int bitplane_present;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
@@ -1459,10 +1460,12 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     if (pic_param->b_picture_fraction < 21)
         scale_factor = b_picture_scale_factor[pic_param->b_picture_fraction];
 
-    if (picture_type == GEN6_VC1_SKIPPED_PICTURE)
+    if (picture_type == GEN6_VC1_SKIPPED_PICTURE) {
         ptype = GEN6_VC1_P_PICTURE;
-    else {
+        bitplane_present = 1;
+    } else {
         ptype = pic_param->picture_fields.bits.picture_type;
+        bitplane_present = !!(pic_param->bitplane_present.value & 0x7f);
         loopfilter = pic_param->entrypoint_fields.bits.loopfilter;
     }
 
@@ -1563,7 +1566,7 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                   ptype << 2 |
                   fcm << 0);
     OUT_BCS_BATCH(batch,
-                  !!(pic_param->bitplane_present.value & 0x7f) << 23 |
+                  bitplane_present << 23 |
                   pic_param->raw_coding.flags.forward_mb << 22 |
                   pic_param->raw_coding.flags.mv_type_mb << 21 |
                   pic_param->raw_coding.flags.skip_mb << 20 |
