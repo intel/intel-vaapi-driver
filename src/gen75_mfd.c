@@ -1702,6 +1702,8 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
     int interpolation_mode = 0;
     int loopfilter = 0;
     int bitplane_present;
+    int forward_mb = 0, mv_type_mb = 0, skip_mb = 0, direct_mb = 0;
+    int overflags = 0, ac_pred = 0, field_tx = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
@@ -1791,6 +1793,13 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
     } else {
         ptype = pic_param->picture_fields.bits.picture_type;
         bitplane_present = !!(pic_param->bitplane_present.value & 0x7f);
+        forward_mb = pic_param->raw_coding.flags.forward_mb;
+        mv_type_mb = pic_param->raw_coding.flags.mv_type_mb;
+        skip_mb = pic_param->raw_coding.flags.skip_mb;
+        direct_mb = pic_param->raw_coding.flags.direct_mb;
+        overflags = pic_param->raw_coding.flags.overflags;
+        ac_pred = pic_param->raw_coding.flags.ac_pred;
+        field_tx = pic_param->raw_coding.flags.field_tx;
         loopfilter = pic_param->entrypoint_fields.bits.loopfilter;
     }
 
@@ -1922,13 +1931,13 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
                   pic_param->pic_quantizer_fields.bits.pic_quantizer_type << 0);
     OUT_BCS_BATCH(batch,
                   bitplane_present << 31 |
-                  pic_param->raw_coding.flags.forward_mb << 30 |
-                  pic_param->raw_coding.flags.mv_type_mb << 29 |
-                  pic_param->raw_coding.flags.skip_mb << 28 |
-                  pic_param->raw_coding.flags.direct_mb << 27 |
-                  pic_param->raw_coding.flags.overflags << 26 |
-                  pic_param->raw_coding.flags.ac_pred << 25 |
-                  pic_param->raw_coding.flags.field_tx << 24 |
+                  forward_mb << 30 |
+                  mv_type_mb << 29 |
+                  skip_mb << 28 |
+                  direct_mb << 27 |
+                  overflags << 26 |
+                  ac_pred << 25 |
+                  field_tx << 24 |
                   pic_param->mv_fields.bits.mv_table << 20 |
                   pic_param->mv_fields.bits.four_mv_block_pattern_table << 18 |
                   pic_param->mv_fields.bits.two_mv_block_pattern_table << 16 |

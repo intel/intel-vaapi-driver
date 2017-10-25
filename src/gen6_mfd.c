@@ -1377,6 +1377,8 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     int overlap = 0;
     int loopfilter = 0;
     int bitplane_present;
+    int forward_mb = 0, mv_type_mb = 0, skip_mb = 0, direct_mb = 0;
+    int overflags = 0, ac_pred = 0, field_tx = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
@@ -1466,6 +1468,13 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
     } else {
         ptype = pic_param->picture_fields.bits.picture_type;
         bitplane_present = !!(pic_param->bitplane_present.value & 0x7f);
+        forward_mb = pic_param->raw_coding.flags.forward_mb;
+        mv_type_mb = pic_param->raw_coding.flags.mv_type_mb;
+        skip_mb = pic_param->raw_coding.flags.skip_mb;
+        direct_mb = pic_param->raw_coding.flags.direct_mb;
+        overflags = pic_param->raw_coding.flags.overflags;
+        ac_pred = pic_param->raw_coding.flags.ac_pred;
+        field_tx = pic_param->raw_coding.flags.field_tx;
         loopfilter = pic_param->entrypoint_fields.bits.loopfilter;
     }
 
@@ -1567,13 +1576,13 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
                   fcm << 0);
     OUT_BCS_BATCH(batch,
                   bitplane_present << 23 |
-                  pic_param->raw_coding.flags.forward_mb << 22 |
-                  pic_param->raw_coding.flags.mv_type_mb << 21 |
-                  pic_param->raw_coding.flags.skip_mb << 20 |
-                  pic_param->raw_coding.flags.direct_mb << 19 |
-                  pic_param->raw_coding.flags.overflags << 18 |
-                  pic_param->raw_coding.flags.ac_pred << 17 |
-                  pic_param->raw_coding.flags.field_tx << 16 |
+                  forward_mb << 22 |
+                  mv_type_mb << 21 |
+                  skip_mb << 20 |
+                  direct_mb << 19 |
+                  overflags << 18 |
+                  ac_pred << 17 |
+                  field_tx << 16 |
                   pic_param->mv_fields.bits.extended_dmv_range << 14 |
                   pic_param->mv_fields.bits.extended_mv_range << 12 |
                   pic_param->mv_fields.bits.four_mv_switch << 11 |
