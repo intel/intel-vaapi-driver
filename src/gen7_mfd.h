@@ -69,8 +69,14 @@ struct gen7_vc1_surface {
     int picture_type_bottom;
     int reference_distance;
     int intensity_compensation;
+    int intensity_compensation_top;
+    int intensity_compensation_bottom;
     int luma_scale;
+    int luma_scale_top[2];
+    int luma_scale_bottom[2];
     int luma_shift;
+    int luma_shift_top[2];
+    int luma_shift_bottom[2];
 };
 
 struct hw_context;
