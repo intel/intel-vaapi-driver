@@ -139,6 +139,12 @@ gen75_send_avc_picid_state(
     GenFrameStore                       frame_store[MAX_GEN_REFERENCE_FRAMES]
 );
 
+#define VC1_I_PICTURE              0
+#define VC1_P_PICTURE              1
+#define VC1_B_PICTURE              2
+#define VC1_BI_PICTURE             3
+#define VC1_SKIPPED_PICTURE        4
+
 void
 intel_update_vc1_frame_store_index(VADriverContextP ctx,
                                    struct decode_state *decode_state,
