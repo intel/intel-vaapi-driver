@@ -1314,14 +1314,20 @@ gen8_mfd_init_vc1_surface(VADriverContextP ctx,
         is_first_field) {
         gen7_vc1_surface->picture_type_top = 0;
         gen7_vc1_surface->picture_type_bottom = 0;
-        gen7_vc1_surface->intensity_compensation = 0;
-        gen7_vc1_surface->luma_scale = 0;
-        gen7_vc1_surface->luma_shift = 0;
+        gen7_vc1_surface->intensity_compensation_top = 0;
+        gen7_vc1_surface->intensity_compensation_bottom = 0;
+        gen7_vc1_surface->luma_scale_top[0] = 0;
+        gen7_vc1_surface->luma_scale_top[1] = 0;
+        gen7_vc1_surface->luma_scale_bottom[0] = 0;
+        gen7_vc1_surface->luma_scale_bottom[1] = 0;
+        gen7_vc1_surface->luma_shift_top[0] = 0;
+        gen7_vc1_surface->luma_shift_top[1] = 0;
+        gen7_vc1_surface->luma_shift_bottom[0] = 0;
+        gen7_vc1_surface->luma_shift_bottom[1] = 0;
     }
 
     if (!pic_param->sequence_fields.bits.interlace ||
         pic_param->picture_fields.bits.frame_coding_mode < 2) { /* Progressive or Frame-Interlace */
-        gen7_vc1_surface->picture_type = picture_type;
         gen7_vc1_surface->picture_type_top = picture_type;
         gen7_vc1_surface->picture_type_bottom = picture_type;
     } else if (pic_param->picture_fields.bits.top_field_first ^ is_first_field)
@@ -1355,16 +1361,17 @@ gen8_mfd_vc1_decode_init(VADriverContextP ctx,
     VAPictureParameterBufferVC1 *pic_param;
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_surface *obj_surface;
+    struct gen7_vc1_surface *gen7_vc1_current_surface;
+    struct gen7_vc1_surface *gen7_vc1_forward_surface;
     dri_bo *bo;
     int width_in_mbs;
     int picture_type;
-    int intensity_compensation;
     int is_first_field = 1;
+    int i;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
     width_in_mbs = ALIGN(pic_param->coded_width, 16) / 16;
-    intensity_compensation = (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation);
 
     if (!pic_param->sequence_fields.bits.interlace ||
         (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
@@ -1372,25 +1379,6 @@ gen8_mfd_vc1_decode_init(VADriverContextP ctx,
     } else {/* Field-Interlace */
         is_first_field = pic_param->picture_fields.bits.is_first_field;
         picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
-    }
-
-    intel_update_vc1_frame_store_index(ctx,
-                                       decode_state,
-                                       pic_param,
-                                       gen7_mfd_context->reference_surface);
-
-    /* Forward reference picture */
-    obj_surface = decode_state->reference_objects[0];
-    if (pic_param->forward_reference_picture != VA_INVALID_ID &&
-        obj_surface &&
-        obj_surface->private_data) {
-        if (picture_type == 1 && intensity_compensation) { /* P picture */
-            struct gen7_vc1_surface *gen7_vc1_surface = obj_surface->private_data;
-
-            gen7_vc1_surface->intensity_compensation = intensity_compensation;
-            gen7_vc1_surface->luma_scale = pic_param->luma_scale;
-            gen7_vc1_surface->luma_shift = pic_param->luma_shift;
-        }
     }
 
     /* Current decoded picture */
@@ -1412,6 +1400,136 @@ gen8_mfd_vc1_decode_init(VADriverContextP ctx,
     } else {
         gen7_mfd_context->post_deblocking_output.valid = pic_param->entrypoint_fields.bits.loopfilter;
         gen7_mfd_context->pre_deblocking_output.valid = !pic_param->entrypoint_fields.bits.loopfilter;
+    }
+
+    intel_update_vc1_frame_store_index(ctx,
+                                       decode_state,
+                                       pic_param,
+                                       gen7_mfd_context->reference_surface);
+
+    if (picture_type == GEN7_VC1_P_PICTURE) {
+        obj_surface = decode_state->reference_objects[0];
+        gen7_vc1_current_surface = (struct gen7_vc1_surface *)(decode_state->render_object->private_data);
+        if (pic_param->forward_reference_picture != VA_INVALID_ID &&
+            obj_surface)
+            gen7_vc1_forward_surface = (struct gen7_vc1_surface *)(obj_surface->private_data);
+        else
+            gen7_vc1_forward_surface = NULL;
+
+        if (!pic_param->sequence_fields.bits.interlace ||
+            pic_param->picture_fields.bits.frame_coding_mode == 0) { /* Progressive */
+            if (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation) {
+                if (gen7_vc1_forward_surface) {
+                    gen7_vc1_forward_surface->intensity_compensation_top = 1;
+                    gen7_vc1_forward_surface->intensity_compensation_bottom = 1;
+                    gen7_vc1_forward_surface->luma_scale_top[0] = pic_param->luma_scale;
+                    gen7_vc1_forward_surface->luma_scale_bottom[0] = pic_param->luma_scale;
+                    gen7_vc1_forward_surface->luma_shift_top[0] = pic_param->luma_shift;
+                    gen7_vc1_forward_surface->luma_shift_bottom[0] = pic_param->luma_shift;
+                }
+            }
+        } else if (pic_param->sequence_fields.bits.interlace &&
+            pic_param->picture_fields.bits.frame_coding_mode == 1) { /* Frame-Interlace */
+            if (pic_param->picture_fields.bits.intensity_compensation) {
+                if (gen7_vc1_forward_surface) {
+                    gen7_vc1_forward_surface->intensity_compensation_top = 1;
+                    gen7_vc1_forward_surface->intensity_compensation_bottom = 1;
+                    gen7_vc1_forward_surface->luma_scale_top[0] = pic_param->luma_scale;
+                    gen7_vc1_forward_surface->luma_scale_bottom[0] = pic_param->luma_scale;
+                    gen7_vc1_forward_surface->luma_shift_top[0] = pic_param->luma_shift;
+                    gen7_vc1_forward_surface->luma_shift_bottom[0] = pic_param->luma_shift;
+                }
+            }
+        } else if (pic_param->sequence_fields.bits.interlace &&
+                   pic_param->picture_fields.bits.frame_coding_mode == 2) { /* Field-Interlace */
+            if (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation) {
+                if (pic_param->intensity_compensation_field == 1 || /* Top field */
+                    pic_param->intensity_compensation_field == 0) { /* Both fields */
+                    if (is_first_field) {
+                        if ((!pic_param->reference_fields.bits.num_reference_pictures &&
+                             (pic_param->reference_fields.bits.reference_field_pic_indicator ==
+                             pic_param->picture_fields.bits.top_field_first)) ||
+                            pic_param->reference_fields.bits.num_reference_pictures) {
+                            if (gen7_vc1_forward_surface) {
+                                i = gen7_vc1_forward_surface->intensity_compensation_top++;
+                                gen7_vc1_forward_surface->luma_scale_top[i] = pic_param->luma_scale;
+                                gen7_vc1_forward_surface->luma_shift_top[i] = pic_param->luma_shift;
+                            }
+                        }
+                    } else { /* Second field */
+                        if (pic_param->picture_fields.bits.top_field_first) {
+                            if ((!pic_param->reference_fields.bits.num_reference_pictures &&
+                                 !pic_param->reference_fields.bits.reference_field_pic_indicator) ||
+                                pic_param->reference_fields.bits.num_reference_pictures) {
+                                i = gen7_vc1_current_surface->intensity_compensation_top++;
+                                gen7_vc1_current_surface->luma_scale_top[i] = pic_param->luma_scale;
+                                gen7_vc1_current_surface->luma_shift_top[i] = pic_param->luma_shift;
+                            }
+                        } else {
+                            if ((!pic_param->reference_fields.bits.num_reference_pictures &&
+                                 pic_param->reference_fields.bits.reference_field_pic_indicator) ||
+                                pic_param->reference_fields.bits.num_reference_pictures) {
+                                if (gen7_vc1_forward_surface) {
+                                    i = gen7_vc1_forward_surface->intensity_compensation_top++;
+                                    gen7_vc1_forward_surface->luma_scale_top[i] = pic_param->luma_scale;
+                                    gen7_vc1_forward_surface->luma_shift_top[i] = pic_param->luma_shift;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (pic_param->intensity_compensation_field == 2 || /* Bottom field */
+                    pic_param->intensity_compensation_field == 0) { /* Both fields */
+                    if (is_first_field) {
+                        if ((!pic_param->reference_fields.bits.num_reference_pictures &&
+                             (pic_param->reference_fields.bits.reference_field_pic_indicator ^
+                              pic_param->picture_fields.bits.top_field_first)) ||
+                            pic_param->reference_fields.bits.num_reference_pictures) {
+                            if (gen7_vc1_forward_surface) {
+                                i = gen7_vc1_forward_surface->intensity_compensation_bottom++;
+                                if (pic_param->intensity_compensation_field == 2) { /* Bottom field */
+                                    gen7_vc1_forward_surface->luma_scale_bottom[i] = pic_param->luma_scale;
+                                    gen7_vc1_forward_surface->luma_shift_bottom[i] = pic_param->luma_shift;
+                                } else { /* Both fields */
+                                    gen7_vc1_forward_surface->luma_scale_bottom[i] = pic_param->luma_scale2;
+                                    gen7_vc1_forward_surface->luma_shift_bottom[i] = pic_param->luma_shift2;
+                                }
+                            }
+                        }
+                    } else { /* Second field */
+                        if (pic_param->picture_fields.bits.top_field_first) {
+                            if ((!pic_param->reference_fields.bits.num_reference_pictures &&
+                                 pic_param->reference_fields.bits.reference_field_pic_indicator) ||
+                                pic_param->reference_fields.bits.num_reference_pictures) {
+                                if (gen7_vc1_forward_surface) {
+                                    i = gen7_vc1_forward_surface->intensity_compensation_bottom++;
+                                    if (pic_param->intensity_compensation_field == 2) { /* Bottom field */
+                                        gen7_vc1_forward_surface->luma_scale_bottom[i] = pic_param->luma_scale;
+                                        gen7_vc1_forward_surface->luma_shift_bottom[i] = pic_param->luma_shift;
+                                    } else { /* Both fields */
+                                        gen7_vc1_forward_surface->luma_scale_bottom[i] = pic_param->luma_scale2;
+                                        gen7_vc1_forward_surface->luma_shift_bottom[i] = pic_param->luma_shift2;
+                                    }
+                                }
+                            }
+                        } else {
+                           if ((!pic_param->reference_fields.bits.num_reference_pictures &&
+                                 !pic_param->reference_fields.bits.reference_field_pic_indicator) ||
+                                pic_param->reference_fields.bits.num_reference_pictures) {
+                                i = gen7_vc1_current_surface->intensity_compensation_bottom++;
+                               if (pic_param->intensity_compensation_field == 2) { /* Bottom field */
+                                   gen7_vc1_current_surface->luma_scale_bottom[i] = pic_param->luma_scale;
+                                   gen7_vc1_current_surface->luma_shift_bottom[i] = pic_param->luma_shift;
+                                } else { /* Both fields */
+                                    gen7_vc1_current_surface->luma_scale_bottom[i] = pic_param->luma_scale2;
+                                    gen7_vc1_current_surface->luma_shift_bottom[i] = pic_param->luma_shift2;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     dri_bo_unreference(gen7_mfd_context->intra_row_store_scratch_buffer.bo);
@@ -1841,11 +1959,25 @@ gen8_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     VAPictureParameterBufferVC1 *pic_param;
+    struct gen7_vc1_surface *gen7_vc1_top_surface;
+    struct gen7_vc1_surface *gen7_vc1_bottom_surface;
     int picture_type;
     int is_first_field = 1;
     int intensitycomp_single_fwd = 0;
-    int luma_scale1 = 0;
-    int luma_shift1 = 0;
+    int intensitycomp_single_bwd = 0;
+    int intensitycomp_double_fwd = 0;
+    int lumscale1_single_fwd = 0;
+    int lumscale2_single_fwd = 0;
+    int lumshift1_single_fwd = 0;
+    int lumshift2_single_fwd = 0;
+    int lumscale1_single_bwd = 0;
+    int lumscale2_single_bwd = 0;
+    int lumshift1_single_bwd = 0;
+    int lumshift2_single_bwd = 0;
+    int lumscale1_double_fwd = 0;
+    int lumscale2_double_fwd = 0;
+    int lumshift1_double_fwd = 0;
+    int lumshift2_double_fwd = 0;
     int replication_mode = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
@@ -1859,13 +1991,67 @@ gen8_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
         picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
     }
 
-    if (gen7_mfd_context->reference_surface[0].surface_id != VA_INVALID_ID) {
-        if (picture_type == 1 || picture_type == 2) { /* P/B picture */
-            struct gen7_vc1_surface *gen7_vc1_surface = gen7_mfd_context->reference_surface[0].obj_surface->private_data;
-            if (gen7_vc1_surface) {
-                intensitycomp_single_fwd = gen7_vc1_surface->intensity_compensation;
-                luma_scale1 = gen7_vc1_surface->luma_scale;
-                luma_shift1 = gen7_vc1_surface->luma_shift;
+    if (picture_type == GEN7_VC1_P_PICTURE ||
+        picture_type == GEN7_VC1_B_PICTURE) {
+        if (gen7_mfd_context->reference_surface[0].surface_id != VA_INVALID_ID)
+            gen7_vc1_top_surface = (struct gen7_vc1_surface *)(gen7_mfd_context->reference_surface[0].obj_surface->private_data);
+        else
+            gen7_vc1_top_surface = NULL;
+
+        if (gen7_vc1_top_surface) {
+            intensitycomp_single_fwd = !!gen7_vc1_top_surface->intensity_compensation_top;
+            lumscale1_single_fwd = gen7_vc1_top_surface->luma_scale_top[0];
+            lumshift1_single_fwd = gen7_vc1_top_surface->luma_shift_top[0];
+            if (gen7_vc1_top_surface->intensity_compensation_top == 2) {
+                intensitycomp_double_fwd = 1;
+                lumscale1_double_fwd = gen7_vc1_top_surface->luma_scale_top[1];
+                lumshift1_double_fwd = gen7_vc1_top_surface->luma_shift_top[1];
+            }
+        }
+
+        if (pic_param->sequence_fields.bits.interlace &&
+            pic_param->picture_fields.bits.frame_coding_mode == 2) { /* Field-Interlace */
+            if (gen7_mfd_context->reference_surface[2].surface_id != VA_INVALID_ID)
+                gen7_vc1_bottom_surface = (struct gen7_vc1_surface *)(gen7_mfd_context->reference_surface[2].obj_surface->private_data);
+            else
+                gen7_vc1_bottom_surface = NULL;
+
+            if (gen7_vc1_bottom_surface) {
+                intensitycomp_single_fwd |= !!gen7_vc1_bottom_surface->intensity_compensation_bottom << 1;
+                lumscale2_single_fwd = gen7_vc1_bottom_surface->luma_scale_bottom[0];
+                lumshift2_single_fwd = gen7_vc1_bottom_surface->luma_shift_bottom[0];
+                if (gen7_vc1_bottom_surface->intensity_compensation_bottom == 2) {
+                    intensitycomp_double_fwd |= 2;
+                    lumscale2_double_fwd = gen7_vc1_bottom_surface->luma_scale_bottom[1];
+                    lumshift2_double_fwd = gen7_vc1_bottom_surface->luma_shift_bottom[1];
+                }
+            }
+        }
+    }
+
+    if (picture_type == GEN7_VC1_B_PICTURE) {
+        if (gen7_mfd_context->reference_surface[1].surface_id != VA_INVALID_ID)
+            gen7_vc1_top_surface = (struct gen7_vc1_surface *)(gen7_mfd_context->reference_surface[1].obj_surface->private_data);
+        else
+            gen7_vc1_top_surface = NULL;
+
+        if (gen7_vc1_top_surface) {
+            intensitycomp_single_bwd = !!gen7_vc1_top_surface->intensity_compensation_top;
+            lumscale1_single_bwd = gen7_vc1_top_surface->luma_scale_top[0];
+            lumshift1_single_bwd = gen7_vc1_top_surface->luma_shift_top[0];
+        }
+
+        if (pic_param->sequence_fields.bits.interlace &&
+            pic_param->picture_fields.bits.frame_coding_mode == 2) { /* Field-Interlace */
+            if (gen7_mfd_context->reference_surface[3].surface_id != VA_INVALID_ID)
+                gen7_vc1_bottom_surface = (struct gen7_vc1_surface *)(gen7_mfd_context->reference_surface[3].obj_surface->private_data);
+            else
+                gen7_vc1_bottom_surface = NULL;
+
+            if (gen7_vc1_bottom_surface) {
+                intensitycomp_single_bwd |= !!gen7_vc1_bottom_surface->intensity_compensation_bottom << 1;
+                lumscale2_single_bwd = gen7_vc1_bottom_surface->luma_scale_bottom[0];
+                lumshift2_single_bwd = gen7_vc1_bottom_surface->luma_shift_bottom[0];
             }
         }
     }
@@ -1881,18 +2067,32 @@ gen8_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFX_VC1_PRED_PIPE_STATE | (6 - 2));
     OUT_BCS_BATCH(batch,
-                  0 << 14 | /* FIXME: double ??? */
+                  intensitycomp_double_fwd << 14 |
                   0 << 12 |
                   intensitycomp_single_fwd << 10 |
-                  0 << 8 |
+                  intensitycomp_single_bwd << 8 |
                   replication_mode << 4 |
                   0);
     OUT_BCS_BATCH(batch,
-                  luma_shift1 << 16 |
-                  luma_scale1 << 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
-    OUT_BCS_BATCH(batch, 0);
+                  lumshift2_single_fwd << 24 |
+                  lumshift1_single_fwd << 16 |
+                  lumscale2_single_fwd << 8 |
+                  lumscale1_single_fwd << 0);
+    OUT_BCS_BATCH(batch,
+                  lumshift2_double_fwd << 24 |
+                  lumshift1_double_fwd << 16 |
+                  lumscale2_double_fwd << 8 |
+                  lumscale1_double_fwd << 0);
+    OUT_BCS_BATCH(batch,
+                  lumshift2_single_bwd << 24 |
+                  lumshift1_single_bwd << 16 |
+                  lumscale2_single_bwd << 8 |
+                  lumscale1_single_bwd << 0);
+    OUT_BCS_BATCH(batch,
+                  0 << 24 |
+                  0 << 16 |
+                  0 << 8 |
+                  0 << 0);
     ADVANCE_BCS_BATCH(batch);
 }
 
