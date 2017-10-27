@@ -1661,13 +1661,9 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
     if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPelBilinear ||
         (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
          pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPelBilinear))
-        interpolation_mode = 9; /* Half-pel bilinear */
-    else if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPel ||
-             (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
-              pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPel))
-        interpolation_mode = 1; /* Half-pel bicubic */
+        interpolation_mode = 8 | pic_param->fast_uvmc_flag;
     else
-        interpolation_mode = 0; /* Quarter-pel bicubic */
+        interpolation_mode = 0 | pic_param->fast_uvmc_flag;
 
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFD_VC1_LONG_PIC_STATE | (6 - 2));
