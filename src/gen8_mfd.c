@@ -1253,6 +1253,17 @@ static const int va_to_gen7_vc1_profile[4] = {
     GEN7_VC1_ADVANCED_PROFILE
 };
 
+static const int fptype_to_picture_type[8][2] = {
+    {GEN7_VC1_I_PICTURE, GEN7_VC1_I_PICTURE},
+    {GEN7_VC1_I_PICTURE, GEN7_VC1_P_PICTURE},
+    {GEN7_VC1_P_PICTURE, GEN7_VC1_I_PICTURE},
+    {GEN7_VC1_P_PICTURE, GEN7_VC1_P_PICTURE},
+    {GEN7_VC1_B_PICTURE, GEN7_VC1_B_PICTURE},
+    {GEN7_VC1_B_PICTURE, GEN7_VC1_BI_PICTURE},
+    {GEN7_VC1_BI_PICTURE, GEN7_VC1_B_PICTURE},
+    {GEN7_VC1_BI_PICTURE, GEN7_VC1_BI_PICTURE}
+};
+
 static void
 gen8_mfd_free_vc1_surface(void **data)
 {
@@ -1274,6 +1285,16 @@ gen8_mfd_init_vc1_surface(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen7_vc1_surface *gen7_vc1_surface = obj_surface->private_data;
     int height_in_mbs = ALIGN(pic_param->coded_height, 16) / 16;
+    int picture_type;
+    int is_first_field = 1;
+
+    if (!pic_param->sequence_fields.bits.interlace ||
+        (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
+        picture_type = pic_param->picture_fields.bits.picture_type;
+    } else {/* Field-Interlace */
+        is_first_field = pic_param->picture_fields.bits.is_first_field;
+        picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
+    }
 
     obj_surface->free_private_data = gen8_mfd_free_vc1_surface;
 
@@ -1287,10 +1308,25 @@ gen8_mfd_init_vc1_surface(VADriverContextP ctx,
         obj_surface->private_data = gen7_vc1_surface;
     }
 
-    gen7_vc1_surface->picture_type = pic_param->picture_fields.bits.picture_type;
-    gen7_vc1_surface->intensity_compensation = 0;
-    gen7_vc1_surface->luma_scale = 0;
-    gen7_vc1_surface->luma_shift = 0;
+    if (!pic_param->sequence_fields.bits.interlace ||
+        pic_param->picture_fields.bits.frame_coding_mode < 2 || /* Progressive or Frame-Interlace */
+        is_first_field) {
+        gen7_vc1_surface->picture_type_top = 0;
+        gen7_vc1_surface->picture_type_bottom = 0;
+        gen7_vc1_surface->intensity_compensation = 0;
+        gen7_vc1_surface->luma_scale = 0;
+        gen7_vc1_surface->luma_shift = 0;
+    }
+
+    if (!pic_param->sequence_fields.bits.interlace ||
+        pic_param->picture_fields.bits.frame_coding_mode < 2) { /* Progressive or Frame-Interlace */
+        gen7_vc1_surface->picture_type = picture_type;
+        gen7_vc1_surface->picture_type_top = picture_type;
+        gen7_vc1_surface->picture_type_bottom = picture_type;
+    } else if (pic_param->picture_fields.bits.top_field_first ^ is_first_field)
+        gen7_vc1_surface->picture_type_bottom = picture_type;
+    else
+        gen7_vc1_surface->picture_type_top = picture_type;
 
     if (gen7_vc1_surface->dmv == NULL) {
         gen7_vc1_surface->dmv = dri_bo_alloc(i965->intel.bufmgr,
@@ -1312,12 +1348,20 @@ gen8_mfd_vc1_decode_init(VADriverContextP ctx,
     int width_in_mbs;
     int picture_type;
     int intensity_compensation;
+    int is_first_field = 1;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
     width_in_mbs = ALIGN(pic_param->coded_width, 16) / 16;
-    picture_type = pic_param->picture_fields.bits.picture_type;
     intensity_compensation = (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation);
+
+    if (!pic_param->sequence_fields.bits.interlace ||
+        (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
+        picture_type = pic_param->picture_fields.bits.picture_type;
+    } else {/* Field-Interlace */
+        is_first_field = pic_param->picture_fields.bits.is_first_field;
+        picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
+    }
 
     intel_update_vc1_frame_store_index(ctx,
                                        decode_state,
@@ -1396,10 +1440,16 @@ gen8_mfd_vc1_decode_init(VADriverContextP ctx,
 
     if (gen7_mfd_context->bitplane_read_buffer.valid) {
         int width_in_mbs = ALIGN(pic_param->coded_width, 16) / 16;
-        int height_in_mbs = ALIGN(pic_param->coded_height, 16) / 16;
+        int height_in_mbs;
         int bitplane_width = ALIGN(width_in_mbs, 2) / 2;
         int src_w, src_h;
         uint8_t *src = NULL, *dst = NULL;
+
+        if (!pic_param->sequence_fields.bits.interlace ||
+            (pic_param->picture_fields.bits.frame_coding_mode < 2)) /* Progressive or Frame-Interlace */
+            height_in_mbs = ALIGN(pic_param->coded_height, 16) / 16;
+        else /* Field-Interlace */
+            height_in_mbs = ALIGN(pic_param->coded_height, 32) / 32;
 
         bo = dri_bo_alloc(i965->intel.bufmgr,
                           "VC-1 Bitplane",
@@ -1479,6 +1529,8 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
     int profile;
     int overlap = 0;
     int interpolation_mode = 0;
+    int height_in_mbs;
+    int is_first_field = 1;
     int loopfilter = 0;
     int bitplane_present;
     int forward_mb = 0, mv_type_mb = 0, skip_mb = 0, direct_mb = 0;
@@ -1487,7 +1539,15 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
 
-    picture_type = pic_param->picture_fields.bits.picture_type;
+    if (!pic_param->sequence_fields.bits.interlace ||
+        (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
+        picture_type = pic_param->picture_fields.bits.picture_type;
+        height_in_mbs = ALIGN(pic_param->coded_height, 16) / 16;
+    } else {/* Field-Interlace */
+        is_first_field = pic_param->picture_fields.bits.is_first_field;
+        picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
+        height_in_mbs = ALIGN(pic_param->coded_height, 32) / 32;
+    }
 
     profile = va_to_gen7_vc1_profile[pic_param->sequence_fields.bits.profile];
     dquant = pic_param->pic_quantizer_fields.bits.dquant;
@@ -1614,13 +1674,11 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
 
     assert(pic_param->picture_fields.bits.frame_coding_mode < 3);
 
-    if (pic_param->picture_fields.bits.frame_coding_mode < 2)
-        fcm = pic_param->picture_fields.bits.frame_coding_mode;
-    else {
-        if (pic_param->picture_fields.bits.top_field_first)
-            fcm = 2;
-        else
+    if (pic_param->sequence_fields.bits.interlace) {
+        if (!pic_param->picture_fields.bits.top_field_first)
             fcm = 3;
+        else
+            fcm = pic_param->picture_fields.bits.frame_coding_mode;
     }
 
     if (picture_type == GEN7_VC1_B_PICTURE) { /* B picture */
@@ -1655,9 +1713,6 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
         }
     }
 
-    assert(pic_param->conditional_overlap_flag < 3);
-    assert(pic_param->mv_fields.bits.mv_table < 4); /* FIXME: interlace mode */
-
     if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPelBilinear ||
         (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
          pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPelBilinear))
@@ -1668,7 +1723,7 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFD_VC1_LONG_PIC_STATE | (6 - 2));
     OUT_BCS_BATCH(batch,
-                  (((ALIGN(pic_param->coded_height, 16) / 16) - 1) << 16) |
+                  ((height_in_mbs - 1) << 16) |
                   ((ALIGN(pic_param->coded_width, 16) / 16) - 1));
     OUT_BCS_BATCH(batch,
                   ((ALIGN(pic_param->coded_width, 16) / 16 + 1) / 2 - 1) << 24 |
@@ -1681,7 +1736,7 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
                   pic_param->range_reduction_frame << 6 |
                   loopfilter << 5 |
                   overlap << 4 |
-                  !pic_param->picture_fields.bits.is_first_field << 3 |
+                  !is_first_field << 3 |
                   (pic_param->sequence_fields.bits.profile == 3) << 0);
     OUT_BCS_BATCH(batch,
                   va_to_gen7_vc1_condover[pic_param->conditional_overlap_flag] << 29 |
@@ -1734,13 +1789,22 @@ gen8_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     VAPictureParameterBufferVC1 *pic_param;
     int picture_type;
+    int is_first_field = 1;
     int intensitycomp_single_fwd = 0;
     int luma_scale1 = 0;
     int luma_shift1 = 0;
+    int replication_mode = 0;
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
-    picture_type = pic_param->picture_fields.bits.picture_type;
+
+    if (!pic_param->sequence_fields.bits.interlace ||
+        (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
+        picture_type = pic_param->picture_fields.bits.picture_type;
+    } else {/* Field-Interlace */
+        is_first_field = pic_param->picture_fields.bits.is_first_field;
+        picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
+    }
 
     if (gen7_mfd_context->reference_surface[0].surface_id != VA_INVALID_ID) {
         if (picture_type == 1 || picture_type == 2) { /* P/B picture */
@@ -1753,6 +1817,14 @@ gen8_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
         }
     }
 
+    if (pic_param->sequence_fields.bits.interlace &&
+        pic_param->picture_fields.bits.frame_coding_mode > 0) { /* Frame-Interlace or Field-Interlace */
+        if (picture_type == GEN7_VC1_P_PICTURE)
+            replication_mode = 0x5;
+        else if (picture_type == GEN7_VC1_B_PICTURE)
+            replication_mode = 0xf;
+    }
+
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFX_VC1_PRED_PIPE_STATE | (6 - 2));
     OUT_BCS_BATCH(batch,
@@ -1760,7 +1832,7 @@ gen8_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
                   0 << 12 |
                   intensitycomp_single_fwd << 10 |
                   0 << 8 |
-                  0 << 4 | /* FIXME: interlace mode */
+                  replication_mode << 4 |
                   0);
     OUT_BCS_BATCH(batch,
                   luma_shift1 << 16 |
@@ -1782,9 +1854,17 @@ gen8_mfd_vc1_directmode_state(VADriverContextP ctx,
     struct object_surface *obj_surface;
     dri_bo *dmv_read_buffer = NULL, *dmv_write_buffer = NULL;
     int picture_type;
+    int is_first_field = 1;
 
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
-    picture_type = pic_param->picture_fields.bits.picture_type;
+
+    if (!pic_param->sequence_fields.bits.interlace ||
+        (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
+        picture_type = pic_param->picture_fields.bits.picture_type;
+    } else {/* Field-Interlace */
+        is_first_field = pic_param->picture_fields.bits.is_first_field;
+        picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
+    }
 
     if (picture_type == GEN7_VC1_P_PICTURE ||
         picture_type == GEN7_VC1_SKIPPED_PICTURE) {
@@ -1877,8 +1957,11 @@ gen8_mfd_vc1_bsd_object(VADriverContextP ctx,
 
     if (next_slice_param)
         next_slice_start_vert_pos = next_slice_param->slice_vertical_position;
-    else
+    else if (!pic_param->sequence_fields.bits.interlace ||
+             pic_param->picture_fields.bits.frame_coding_mode < 2) /* Progressive or Frame-Interlace */
         next_slice_start_vert_pos = ALIGN(pic_param->coded_height, 16) / 16;
+    else /* Field-Interlace */
+        next_slice_start_vert_pos = ALIGN(pic_param->coded_height, 32) / 32;
 
     BEGIN_BCS_BATCH(batch, 5);
     OUT_BCS_BATCH(batch, MFD_VC1_BSD_OBJECT | (5 - 2));
