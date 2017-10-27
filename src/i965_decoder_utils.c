@@ -1116,11 +1116,6 @@ intel_decoder_check_vc1_parameter(VADriverContextP ctx,
     int is_first_field = 1;
     int i = 0;
 
-    if (pic_param->sequence_fields.bits.interlace == 1 &&
-        pic_param->picture_fields.bits.frame_coding_mode != 0) { /* frame-interlace or field-interlace */
-        return VA_STATUS_ERROR_DECODING_ERROR;
-    }
-
     if (!pic_param->sequence_fields.bits.interlace ||
         (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
         picture_type = pic_param->picture_fields.bits.picture_type;
