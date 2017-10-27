@@ -63,6 +63,8 @@
 struct gen7_vc1_surface {
     dri_bo *dmv;
     int picture_type;
+    int picture_type_top;
+    int picture_type_bottom;
     int intensity_compensation;
     int luma_scale;
     int luma_shift;
