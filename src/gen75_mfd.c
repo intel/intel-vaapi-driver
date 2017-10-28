@@ -2231,7 +2231,7 @@ gen75_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
         }
 
         if (pic_param->sequence_fields.bits.interlace &&
-            pic_param->picture_fields.bits.frame_coding_mode == 2) { /* Field-Interlace */
+            pic_param->picture_fields.bits.frame_coding_mode > 0) { /* Frame-Interlace or Field-Interlace */
             if (gen7_mfd_context->reference_surface[2].surface_id != VA_INVALID_ID)
                 gen7_vc1_bottom_surface = (struct gen7_vc1_surface *)(gen7_mfd_context->reference_surface[2].obj_surface->private_data);
             else
@@ -2263,7 +2263,7 @@ gen75_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
         }
 
         if (pic_param->sequence_fields.bits.interlace &&
-            pic_param->picture_fields.bits.frame_coding_mode == 2) { /* Field-Interlace */
+            pic_param->picture_fields.bits.frame_coding_mode > 0) { /* Frame-Interlace or Field-Interlace */
             if (gen7_mfd_context->reference_surface[3].surface_id != VA_INVALID_ID)
                 gen7_vc1_bottom_surface = (struct gen7_vc1_surface *)(gen7_mfd_context->reference_surface[3].obj_surface->private_data);
             else
