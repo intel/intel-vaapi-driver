@@ -61,14 +61,11 @@
 #define GEN7_YUV422V_4Y                 7
 
 struct gen7_vc1_surface {
-    dri_bo *dmv;
     dri_bo *dmv_top;
     dri_bo *dmv_bottom;
-    int picture_type;
     int picture_type_top;
     int picture_type_bottom;
     int reference_distance;
-    int intensity_compensation;
     int intensity_compensation_top;
     int intensity_compensation_bottom;
     int luma_scale;
