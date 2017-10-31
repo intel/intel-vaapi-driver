@@ -1557,7 +1557,7 @@ gen75_mfd_init_vc1_surface(VADriverContextP ctx,
         gen7_vc1_surface->picture_type_top = picture_type;
 
     if (gen7_vc1_surface->dmv_top == NULL) {
-        height_in_mbs = ALIGN(pic_param->coded_height, 16) / 16;
+        height_in_mbs = ALIGN(obj_surface->orig_height, 16) / 16;
         gen7_vc1_surface->dmv_top = dri_bo_alloc(i965->intel.bufmgr,
                                              "direct mv w/r buffer",
                                              128 * height_in_mbs * 64,
@@ -1566,7 +1566,7 @@ gen75_mfd_init_vc1_surface(VADriverContextP ctx,
 
     if (pic_param->sequence_fields.bits.interlace &&
         gen7_vc1_surface->dmv_bottom == NULL) {
-        height_in_mbs = ALIGN(pic_param->coded_height, 32) / 32;
+        height_in_mbs = ALIGN(obj_surface->orig_height, 32) / 32;
         gen7_vc1_surface->dmv_bottom = dri_bo_alloc(i965->intel.bufmgr,
                                              "direct mv w/r buffer",
                                              128 * height_in_mbs * 64,
