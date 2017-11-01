@@ -1715,7 +1715,7 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
                 range_reduction = 1;
                 range_reduction_scale = 0;
             } else if (!gen7_vc1_current_surface->range_reduction_frame &&
-                   gen7_vc1_reference_surface->range_reduction_frame) {
+                       gen7_vc1_reference_surface->range_reduction_frame) {
                 range_reduction = 1;
                 range_reduction_scale = 1;
             }
@@ -2101,7 +2101,7 @@ gen7_mfd_vc1_directmode_state(VADriverContextP ctx,
         picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
     }
 
-   if (picture_type == GEN7_VC1_P_PICTURE ||
+    if (picture_type == GEN7_VC1_P_PICTURE ||
         picture_type == GEN7_VC1_SKIPPED_PICTURE) {
         obj_surface = decode_state->render_object;
 
