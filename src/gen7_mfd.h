@@ -65,6 +65,7 @@ struct gen7_vc1_surface {
     dri_bo *dmv_bottom;
     int picture_type_top;
     int picture_type_bottom;
+    int range_reduction_frame;
     int reference_distance;
     int intensity_compensation_top;
     int intensity_compensation_bottom;
