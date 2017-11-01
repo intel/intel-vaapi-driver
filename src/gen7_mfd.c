@@ -1600,7 +1600,8 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     VAPictureParameterBufferVC1 *pic_param;
     struct object_surface *obj_surface;
-    struct gen7_vc1_surface *gen7_vc1_surface;
+    struct gen7_vc1_surface *gen7_vc1_current_surface;
+    struct gen7_vc1_surface *gen7_vc1_reference_surface;
     int alt_pquant_config = 0, alt_pquant_edge_mask = 0, alt_pq;
     int dquant, dquantfrm, dqprofile, dqdbedge, dqsbedge, dqbilevel;
     int unified_mv_mode = 0;
@@ -1620,6 +1621,8 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
     int is_first_field = 1;
     int loopfilter = 0;
     int bitplane_present;
+    int range_reduction = 0;
+    int range_reduction_scale = 0;
     int forward_mb = 0, mv_type_mb = 0, skip_mb = 0, direct_mb = 0;
     int overflags = 0, ac_pred = 0, field_tx = 0;
 
@@ -1695,6 +1698,39 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
         }
     }
 
+    if (profile == GEN7_VC1_MAIN_PROFILE &&
+        pic_param->sequence_fields.bits.rangered) {
+        obj_surface = decode_state->reference_objects[0];
+
+        gen7_vc1_current_surface = (struct gen7_vc1_surface *)(decode_state->render_object->private_data);
+
+        if (pic_param->forward_reference_picture != VA_INVALID_ID &&
+            obj_surface)
+            gen7_vc1_reference_surface = (struct gen7_vc1_surface *)(obj_surface->private_data);
+        else
+            gen7_vc1_reference_surface = NULL;
+
+        if (picture_type == GEN7_VC1_SKIPPED_PICTURE)
+            if (gen7_vc1_reference_surface)
+                gen7_vc1_current_surface->range_reduction_frame = gen7_vc1_reference_surface->range_reduction_frame;
+            else
+                gen7_vc1_current_surface->range_reduction_frame = 0;
+        else
+            gen7_vc1_current_surface->range_reduction_frame = pic_param->range_reduction_frame;
+
+        if (gen7_vc1_reference_surface) {
+            if (gen7_vc1_current_surface->range_reduction_frame &&
+                !gen7_vc1_reference_surface->range_reduction_frame) {
+                range_reduction = 1;
+                range_reduction_scale = 0;
+            } else if (!gen7_vc1_current_surface->range_reduction_frame &&
+                   gen7_vc1_reference_surface->range_reduction_frame) {
+                range_reduction = 1;
+                range_reduction_scale = 1;
+            }
+        }
+    }
+
     if ((!pic_param->sequence_fields.bits.interlace ||
          pic_param->picture_fields.bits.frame_coding_mode != 1) && /* Progressive or Field-Interlace */
         (picture_type == GEN7_VC1_P_PICTURE ||
@@ -1763,17 +1799,17 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
 
         if (pic_param->backward_reference_picture != VA_INVALID_ID &&
             obj_surface)
-            gen7_vc1_surface = (struct gen7_vc1_surface *)(obj_surface->private_data);
+            gen7_vc1_reference_surface = (struct gen7_vc1_surface *)(obj_surface->private_data);
         else
-            gen7_vc1_surface = NULL;
+            gen7_vc1_reference_surface = NULL;
 
-        if (gen7_vc1_surface) {
+        if (gen7_vc1_reference_surface) {
             if (pic_param->sequence_fields.bits.interlace &&
                 pic_param->picture_fields.bits.frame_coding_mode == 2 && /* Field-Interlace */
                 pic_param->picture_fields.bits.top_field_first ^ is_first_field) {
-                if (gen7_vc1_surface->picture_type_bottom == GEN7_VC1_P_PICTURE)
+                if (gen7_vc1_reference_surface->picture_type_bottom == GEN7_VC1_P_PICTURE)
                     dmv_surface_valid = 1;
-            } else if (gen7_vc1_surface->picture_type_top == GEN7_VC1_P_PICTURE)
+            } else if (gen7_vc1_reference_surface->picture_type_top == GEN7_VC1_P_PICTURE)
                 dmv_surface_valid = 1;
         }
     }
@@ -1791,25 +1827,25 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
         pic_param->picture_fields.bits.frame_coding_mode == 2) { /* Field-Interlace */
         if (picture_type == GEN7_VC1_I_PICTURE ||
              picture_type == GEN7_VC1_P_PICTURE) {
-            gen7_vc1_surface = (struct gen7_vc1_surface *)(decode_state->render_object->private_data);
+            gen7_vc1_current_surface = (struct gen7_vc1_surface *)(decode_state->render_object->private_data);
 
             if (is_first_field)
-                gen7_vc1_surface->reference_distance = pic_param->reference_fields.bits.reference_distance;
+                gen7_vc1_current_surface->reference_distance = pic_param->reference_fields.bits.reference_distance;
 
-            frfd = gen7_vc1_surface->reference_distance;
+            frfd = gen7_vc1_current_surface->reference_distance;
         } else if (picture_type == GEN7_VC1_B_PICTURE) {
             obj_surface = decode_state->reference_objects[1];
 
             if (pic_param->backward_reference_picture != VA_INVALID_ID &&
                 obj_surface)
-                gen7_vc1_surface = (struct gen7_vc1_surface *)(obj_surface->private_data);
+                gen7_vc1_reference_surface = (struct gen7_vc1_surface *)(obj_surface->private_data);
             else
-                gen7_vc1_surface = NULL;
+                gen7_vc1_reference_surface = NULL;
 
-            if (gen7_vc1_surface) {
-                frfd = (scale_factor * gen7_vc1_surface->reference_distance) >> 8;
+            if (gen7_vc1_reference_surface) {
+                frfd = (scale_factor * gen7_vc1_reference_surface->reference_distance) >> 8;
 
-                brfd = gen7_vc1_surface->reference_distance - frfd - 1;
+                brfd = gen7_vc1_reference_surface->reference_distance - frfd - 1;
                 if (brfd < 0)
                     brfd = 0;
             }
@@ -1858,8 +1894,8 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
                   pic_param->rounding_control << 13 |
                   pic_param->sequence_fields.bits.syncmarker << 12 |
                   interpolation_mode << 8 |
-                  0 << 7 | /* FIXME: scale up or down ??? */
-                  pic_param->range_reduction_frame << 6 |
+                  range_reduction_scale << 7 |
+                  range_reduction << 6 |
                   loopfilter << 5 |
                   overlap << 4 |
                   !is_first_field << 3 |
