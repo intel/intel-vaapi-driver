@@ -1930,8 +1930,8 @@ gen8_mfd_vc1_pic_state(VADriverContextP ctx,
                   pic_param->rounding_control << 13 |
                   pic_param->sequence_fields.bits.syncmarker << 12 |
                   interpolation_mode << 8 |
-                  0 << 7 | /* FIXME: scale up or down ??? */
-                  pic_param->range_reduction_frame << 6 |
+                  range_reduction_scale << 7 |
+                  range_reduction << 6 |
                   loopfilter << 5 |
                   overlap << 4 |
                   !is_first_field << 3 |
