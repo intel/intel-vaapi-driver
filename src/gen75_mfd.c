@@ -1470,13 +1470,6 @@ static const int va_to_gen7_vc1_condover[3] = {
     3
 };
 
-static const int va_to_gen7_vc1_profile[4] = {
-    GEN7_VC1_SIMPLE_PROFILE,
-    GEN7_VC1_MAIN_PROFILE,
-    GEN7_VC1_RESERVED_PROFILE,
-    GEN7_VC1_ADVANCED_PROFILE
-};
-
 static const int fptype_to_picture_type[8][2] = {
     {GEN7_VC1_I_PICTURE, GEN7_VC1_I_PICTURE},
     {GEN7_VC1_I_PICTURE, GEN7_VC1_P_PICTURE},
@@ -1879,7 +1872,6 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
     int fcm = 0;
     int picture_type;
     int ptype;
-    int profile;
     int overlap = 0;
     int interpolation_mode = 0;
     int height_in_mbs;
@@ -1904,7 +1896,6 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
         height_in_mbs = ALIGN(pic_param->coded_height, 32) / 32;
     }
 
-    profile = va_to_gen7_vc1_profile[pic_param->sequence_fields.bits.profile];
     dquant = pic_param->pic_quantizer_fields.bits.dquant;
     dquantfrm = pic_param->pic_quantizer_fields.bits.dq_frame;
     dqprofile = pic_param->pic_quantizer_fields.bits.dq_profile;
@@ -1963,7 +1954,7 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
         }
     }
 
-    if (profile == GEN7_VC1_MAIN_PROFILE &&
+    if (pic_param->sequence_fields.bits.profile == 1 && /* Main Profile */
         pic_param->sequence_fields.bits.rangered) {
         obj_surface = decode_state->reference_objects[0];
 
@@ -2119,7 +2110,7 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
     }
 
     if (pic_param->sequence_fields.bits.overlap) {
-        if (profile == GEN7_VC1_ADVANCED_PROFILE) {
+        if (pic_param->sequence_fields.bits.profile == 3) { /* Advanced Profile */
             if (picture_type == GEN7_VC1_P_PICTURE &&
                 pic_param->pic_quantizer_fields.bits.pic_quantizer_scale >= 9) {
                 overlap = 1;
@@ -2165,7 +2156,7 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
                   loopfilter << 5 |
                   overlap << 4 |
                   !is_first_field << 3 |
-                  (pic_param->sequence_fields.bits.profile == 3) << 0);
+                  (pic_param->sequence_fields.bits.profile == 3) << 0); /* Advanced Profile */
     OUT_BCS_BATCH(batch,
                   va_to_gen7_vc1_condover[pic_param->conditional_overlap_flag] << 29 |
                   ptype << 26 |
@@ -2509,9 +2500,7 @@ gen75_mfd_vc1_get_macroblock_bit_offset(uint8_t *buf, int in_slice_data_bit_offs
     int slice_header_size = in_slice_data_bit_offset / 8;
     int i, j;
 
-    if (profile != 3)
-        out_slice_data_bit_offset = in_slice_data_bit_offset;
-    else {
+    if (profile == 3) { /* Advanced Profile */
         for (i = 0, j = 0; i < slice_header_size; i++, j++) {
             if (!buf[j] && !buf[j + 1] && buf[j + 2] == 3 && buf[j + 3] < 4) {
                 if (i < slice_header_size - 1)
@@ -2524,7 +2513,8 @@ gen75_mfd_vc1_get_macroblock_bit_offset(uint8_t *buf, int in_slice_data_bit_offs
         }
 
         out_slice_data_bit_offset = 8 * j + in_slice_data_bit_offset % 8;
-    }
+    } else /* Simple or Main Profile */
+        out_slice_data_bit_offset = in_slice_data_bit_offset;
 
     return out_slice_data_bit_offset;
 }

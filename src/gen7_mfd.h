@@ -41,11 +41,6 @@
 #define GEN7_VC1_BI_PICTURE             3
 #define GEN7_VC1_SKIPPED_PICTURE        4
 
-#define GEN7_VC1_SIMPLE_PROFILE         0
-#define GEN7_VC1_MAIN_PROFILE           1
-#define GEN7_VC1_ADVANCED_PROFILE       2
-#define GEN7_VC1_RESERVED_PROFILE       3
-
 #define GEN7_JPEG_ROTATION_0            0
 #define GEN7_JPEG_ROTATION_90           1
 #define GEN7_JPEG_ROTATION_270          2
