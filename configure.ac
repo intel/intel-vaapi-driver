@@ -135,10 +135,6 @@ VA_MINOR_VERSION=`echo "$VA_VERSION" | cut -d'.' -f2`
 VA_MICRO_VERSION=`echo "$VA_VERSION" | cut -d'.' -f3`
 VA_VERSION_STR="$VA_VERSION"
 
-va_full_version_int=`expr ${VA_MAJOR_VERSION:-0} "*" 1000000 + \
-                          ${VA_MINOR_VERSION:-0} "*" 10000   + \
-                          ${VA_MICRO_VERSION:-0} "*" 100     + \
-                          0`
 VA_DRIVER_INIT_FUNC="__vaDriverInit_${VA_MAJOR_VERSION}_${VA_MINOR_VERSION}"
 AC_DEFINE_UNQUOTED([VA_DRIVER_INIT_FUNC], [$VA_DRIVER_INIT_FUNC],
     [Define driver entry-point])
