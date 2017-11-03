@@ -1,0 +1,5 @@
+option('driverdir', type : 'string', description : 'drivers path')
+option('with_x11', type : 'combo', choices : ['yes', 'no', 'auto'], value : 'auto')
+option('with_wayland', type : 'combo', choices : ['yes', 'no', 'auto'], value : 'auto')
+option('enable_hybrid_codec', type : 'boolean', value : false)
+option('enable_tests', type : 'boolean', value : false)
