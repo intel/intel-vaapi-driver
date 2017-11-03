@@ -45,7 +45,7 @@ driver_ldflags = \
 
 driver_libs = \
 	-lpthread -lm -ldl	\
-	$(DRM_LIBS) -ldrm_intel	\
+	$(DRM_LIBS)		\
 	$(NULL)
 
 include Makefile.sources
