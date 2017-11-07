@@ -51,7 +51,7 @@ addons:
       name: "intel/intel-vaapi-driver"
       description: "Build submitted via Travis CI"
     notification_email: intel-media-security@lists.01.org
-    build_command_prepend: "./autogen.sh; ./configure --prefix=/usr"
+    build_command_prepend: "./autogen.sh; ./configure --prefix=/usr --enable-tests"
     build_command:   "make -j4"
     branch_pattern: coverity_scan
 
