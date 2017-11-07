@@ -62,7 +62,7 @@ script:
         exit 0;
     fi
   - ./autogen.sh
-  - ./configure --prefix=/usr
+  - ./configure --prefix=/usr --enable-tests
   - make -j4 ; sudo make install
   - make check
 
