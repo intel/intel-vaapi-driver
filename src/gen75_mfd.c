@@ -2500,16 +2500,18 @@ gen75_mfd_vc1_get_macroblock_bit_offset(uint8_t *buf, int in_slice_data_bit_offs
     int slice_header_size = in_slice_data_bit_offset / 8;
     int i, j;
 
-    if (profile == 3) { /* Advanced Profile */
-        for (i = 0, j = 0; i < slice_header_size; i++, j++) {
-            if (!buf[j] && !buf[j + 1] && buf[j + 2] == 3 && buf[j + 3] < 4) {
-                if (i < slice_header_size - 1)
+    if (profile == 3 && slice_header_size) { /* Advanced Profile */
+        for (i = 0, j = 0; i < slice_header_size - 1; i++, j++)
+            if (!buf[j] && !buf[j + 1] && buf[j + 2] == 3 && buf[j + 3] < 4)
                     i++, j += 2;
-                else {
-                    buf[j + 2] = buf[j + 1];
-                    j++;
-                }
+
+        if (i == slice_header_size - 1) {
+            if (!buf[j] && !buf[j + 1] && buf[j + 2] == 3 && buf[j + 3] < 4) {
+                buf[j + 2] = 0;
+                j++;
             }
+
+            j++;
         }
 
         out_slice_data_bit_offset = 8 * j + in_slice_data_bit_offset % 8;
