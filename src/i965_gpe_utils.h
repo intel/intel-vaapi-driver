@@ -238,6 +238,13 @@ struct gpe_mi_batch_buffer_start_parameter {
     unsigned int use_global_gtt;
 };
 
+struct gpe_mi_copy_mem_parameter {
+    dri_bo *src_bo;
+    unsigned int src_offset;
+    dri_bo *dst_bo;
+    unsigned int dst_offset;
+};
+
 void i965_gpe_context_destroy(struct i965_gpe_context *gpe_context);
 void i965_gpe_context_init(VADriverContextP ctx,
                            struct i965_gpe_context *gpe_context);
@@ -691,6 +698,10 @@ struct i965_gpe_table {
     void (*mi_flush_dw)(VADriverContextP ctx,
                         struct intel_batchbuffer *batch,
                         struct gpe_mi_flush_dw_parameter *params);
+
+    void (*mi_copy_mem_mem)(VADriverContextP ctx,
+                            struct intel_batchbuffer *batch,
+                            struct gpe_mi_copy_mem_parameter *params);
 };
 
 extern bool
