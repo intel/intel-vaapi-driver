@@ -2467,6 +2467,25 @@ gen8_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
 }
 
 void
+gen8_gpe_mi_copy_mem_mem(VADriverContextP ctx,
+                         struct intel_batchbuffer *batch,
+                         struct gpe_mi_copy_mem_parameter *param)
+{
+    __OUT_BATCH(batch, (MI_COPY_MEM_MEM |
+                        (0 << 22) |
+                        (0 << 21) |
+                        (5 - 2))); /* Always use PPGTT for src and dst */
+    __OUT_RELOC64(batch,
+                  param->dst_bo,
+                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                  param->dst_offset);
+    __OUT_RELOC64(batch,
+                  param->src_bo,
+                  I915_GEM_DOMAIN_RENDER, 0,
+                  param->src_offset);
+}
+
+void
 gen8_gpe_pipe_control(VADriverContextP ctx,
                       struct intel_batchbuffer *batch,
                       struct gpe_pipe_control_parameter *param)
@@ -2813,6 +2832,7 @@ i965_gpe_table_init(VADriverContextP ctx)
         gpe->mi_store_register_mem = gen8_gpe_mi_store_register_mem;
         gpe->mi_store_data_imm = gen8_gpe_mi_store_data_imm;
         gpe->mi_flush_dw = gen8_gpe_mi_flush_dw;
+        gpe->mi_copy_mem_mem = gen8_gpe_mi_copy_mem_mem;
     } else if (IS_GEN9(i965->intel.device_info) ||
                IS_GEN10(i965->intel.device_info)) {
         gpe->context_init = gen8_gpe_context_init;
@@ -2836,6 +2856,7 @@ i965_gpe_table_init(VADriverContextP ctx)
         gpe->mi_store_register_mem = gen8_gpe_mi_store_register_mem;
         gpe->mi_store_data_imm = gen8_gpe_mi_store_data_imm;
         gpe->mi_flush_dw = gen8_gpe_mi_flush_dw;
+        gpe->mi_copy_mem_mem = gen8_gpe_mi_copy_mem_mem;
     } else {
         // TODO: for other platforms
     }
