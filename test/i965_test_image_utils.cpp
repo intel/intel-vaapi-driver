@@ -196,7 +196,7 @@ YUVImage::Shared YUVImage::create(const VAImage& image)
 YUVImage::Shared YUVImage::create(const VASurfaceID surface)
 {
     I965TestEnvironment& env = *I965TestEnvironment::instance();
-    VAImage image;
+    VAImage image{.image_id = VA_INVALID_ID};
 
     EXPECT_STATUS(i965_DeriveImage(env, surface, &image));
 
@@ -213,7 +213,7 @@ YUVImage::Shared YUVImage::create(const VASurfaceID surface)
 void YUVImage::toSurface(VASurfaceID surface) const
 {
     I965TestEnvironment& env = *I965TestEnvironment::instance();
-    VAImage image;
+    VAImage image{.image_id = VA_INVALID_ID};
 
     ASSERT_STATUS(i965_DeriveImage(env, surface, &image));
 
