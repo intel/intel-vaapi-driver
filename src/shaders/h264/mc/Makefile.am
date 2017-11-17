@@ -2,7 +2,7 @@
 INTEL_G4I = 
 
 INTEL_G4A = null.g4a
-
+INTEL_G4M = $(INTEL_G4A:%.g4a=%.g4m)
 INTEL_G4B = null.g4b
 
 INTEL_G4B_GEN5 = null.g4b.gen5
@@ -171,18 +171,21 @@ INTEL_MC_GEN5_ASM = avc_mc.gen5.asm
 TARGETS  =
 if HAVE_GEN4ASM
 TARGETS += $(INTEL_MC_G4B_GEN5)
+TARGETS += $(INTEL_G4B)
+TARGETS += $(INTEL_G4B_GEN5)
 endif
 
 all-local: $(TARGETS)
 
-SUFFIXES = .g4a .g4b .gen5.asm
+SUFFIXES = .g4a .g4b .g4b.gen5 .gen5.asm
 
 if HAVE_GEN4ASM
-.g4a.g4b:
-	$(AM_V_GEN)m4 $*.g4a > $*.g4m			&& \
-	$(AM_V_GEN)$(GEN4ASM) -o $@ $*.g4m		&& \
-	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@.gen5 $*.g4m	&& \
-	rm $*.g4m
+.g4a.g4m:
+	$(AM_V_GEN)m4 $*.g4a > $*.g4m
+.g4m.g4b:
+	$(AM_V_GEN)$(GEN4ASM) -o $@ $*.g4m
+.g4m.g4b.gen5:
+	$(AM_V_GEN)$(GEN4ASM) -g 5 -o $@ $*.g4m
 
 $(INTEL_MC_GEN5_ASM): $(INTEL_MC_ASM) $(INTEL_MC_INC) $(INTEL_ILDB_ASM)
 	$(AM_V_GEN)cpp -DDEV_ILK -DBOOTSTRAP -I $(srcdir)/../ildb/ $(srcdir)/AllAVC.asm > _mc0.$@	&& \
@@ -204,7 +207,9 @@ $(INTEL_MC_G4B_GEN5): $(INTEL_MC_GEN5_ASM)
 $(INTEL_G4B): $(INTEL_G4I)
 endif
 
-CLEANFILES = $(INTEL_MC_GEN5_ASM)
+CLEANFILES = \
+	$(INTEL_G4M) \
+	$(INTEL_MC_GEN5_ASM)
 
 EXTRA_DIST = \
 	$(INTEL_G4A)		\
