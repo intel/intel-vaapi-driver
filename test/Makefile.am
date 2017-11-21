@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-AM_CXXFLAGS =								\
+AM_CXXFLAGS +=								\
 	-I$(top_srcdir)/test/gtest/include				\
 	$(NULL)
 
@@ -98,11 +98,6 @@ test_i965_drv_video_CPPFLAGS =						\
 	$(LIBVA_DEPS_CFLAGS)						\
 	$(LIBVA_DRM_DEPS_CFLAGS)					\
 	$(AM_CPPFLAGS)							\
-	$(NULL)
-
-test_i965_drv_video_CXXFLAGS =						\
-	-Wall -Werror							\
-	$(AM_CXXFLAGS)							\
 	$(NULL)
 
 check-local: test_i965_drv_video
