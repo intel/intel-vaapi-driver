@@ -212,6 +212,9 @@ if test "$enable_wayland" = "yes"; then
 fi
 AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
 
+AC_SUBST([AM_CFLAGS], ["-Wall -Werror"])
+AC_SUBST([AM_CXXFLAGS], ["-Wall -Werror"])
+
 AC_OUTPUT([
     Makefile
     src/Makefile
