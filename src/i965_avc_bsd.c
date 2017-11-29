@@ -844,7 +844,7 @@ i965_avc_bsd_pipeline(VADriverContextP ctx, struct decode_state *decode_state, v
                    (slice_param->slice_type == SLICE_TYPE_B));
 
             if (i965_h264_context->picture.i_flag &&
-                (slice_param->slice_type != SLICE_TYPE_I ||
+                (slice_param->slice_type != SLICE_TYPE_I &&
                  slice_param->slice_type != SLICE_TYPE_SI))
                 i965_h264_context->picture.i_flag = 0;
 
