@@ -54,6 +54,9 @@ static const struct avc_level_limits {
     { INTEL_AVC_LEVEL_5,    589824,  22080,  110400,  512, 16 },
     { INTEL_AVC_LEVEL_51,   983040,  36864,  184320,  512, 16 },
     { INTEL_AVC_LEVEL_52,  2073600,  36864,  184320,  512, 16 },
+    { INTEL_AVC_LEVEL_6,   4177920, 139264,  696320, 8192, 16 },
+    { INTEL_AVC_LEVEL_61,  8355840, 139264,  696320, 8192, 16 },
+    { INTEL_AVC_LEVEL_62, 16711680, 139264,  696320, 8192, 16 },
 };
 
 static const struct avc_level_limits*
