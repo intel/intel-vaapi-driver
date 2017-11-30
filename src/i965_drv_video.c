@@ -6904,6 +6904,53 @@ VAStatus i965_QueryVideoProcPipelineCaps(
     return VA_STATUS_SUCCESS;
 }
 
+void i965_log_error(VADriverContextP ctx, const char *format, ...)
+{
+    va_list vl;
+
+    va_start(vl, format);
+
+    if (!ctx->error_callback) {
+        // No error callback: this is a error message which should be
+        // user-visible, so print it to stderr instead.
+        vfprintf(stderr, format, vl);
+    } else {
+        // Put the message on the stack.  If it overruns the size of the
+        // then it will just be truncated - callers shouldn't be sending
+        // messages which are too long.
+        char tmp[1024];
+        int ret;
+        ret = vsnprintf(tmp, sizeof(tmp), format, vl);
+        if (ret > 0)
+            ctx->error_callback(ctx, tmp);
+    }
+
+    va_end(vl);
+}
+
+void i965_log_info(VADriverContextP ctx, const char *format, ...)
+{
+    va_list vl;
+
+    va_start(vl, format);
+
+    if (!ctx->info_callback) {
+        // No info callback: this message is only useful for developers,
+        // so just discard it.
+    } else {
+        // Put the message on the stack.  If it overruns the size of the
+        // then it will just be truncated - callers shouldn't be sending
+        // messages which are too long.
+        char tmp[1024];
+        int ret;
+        ret = vsnprintf(tmp, sizeof(tmp), format, vl);
+        if (ret > 0)
+            ctx->info_callback(ctx, tmp);
+    }
+
+    va_end(vl);
+}
+
 extern struct hw_codec_info *i965_get_codec_info(int devid);
 
 static bool
