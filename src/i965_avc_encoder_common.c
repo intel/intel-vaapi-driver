@@ -151,46 +151,6 @@ i965_avc_calculate_initial_qp(struct avc_param * param)
 }
 
 int
-i965_avc_get_max_v_mv_r(int level_idc)
-{
-    int max_v_mv_r = 128 * 4;
-
-    // See JVT Spec Annex A Table A-1 Level limits for below mapping
-    // MaxVmvR is in luma quarter pel unit
-    switch (level_idc) {
-    case INTEL_AVC_LEVEL_1:
-        max_v_mv_r = 64 * 4;
-        break;
-    case INTEL_AVC_LEVEL_11:
-    case INTEL_AVC_LEVEL_12:
-    case INTEL_AVC_LEVEL_13:
-    case INTEL_AVC_LEVEL_2:
-        max_v_mv_r = 128 * 4;
-        break;
-    case INTEL_AVC_LEVEL_21:
-    case INTEL_AVC_LEVEL_22:
-    case INTEL_AVC_LEVEL_3:
-        max_v_mv_r = 256 * 4;
-        break;
-    case INTEL_AVC_LEVEL_31:
-    case INTEL_AVC_LEVEL_32:
-    case INTEL_AVC_LEVEL_4:
-    case INTEL_AVC_LEVEL_41:
-    case INTEL_AVC_LEVEL_42:
-    case INTEL_AVC_LEVEL_5:
-    case INTEL_AVC_LEVEL_51:
-    case INTEL_AVC_LEVEL_52:
-        max_v_mv_r = 512 * 4;
-        break;
-    default:
-        assert(0);
-        break;
-    }
-
-    return max_v_mv_r;
-}
-
-int
 i965_avc_get_max_mv_len(int level_idc)
 {
     int max_mv_len = 127;
@@ -267,44 +227,4 @@ i965_avc_calc_skip_value(unsigned int enc_block_based_sip_en, unsigned int trans
     }
 
     return skip_value;
-}
-
-unsigned short i965_avc_get_maxnum_slices_num(int profile_idc, int level_idc, unsigned int frames_per_100s)
-{
-    unsigned int  slice_num = 0;
-
-    if ((profile_idc == VAProfileH264Main) ||
-        (profile_idc == VAProfileH264High)) {
-        switch (level_idc) {
-        case INTEL_AVC_LEVEL_3:
-            slice_num = (unsigned int)(40500.0 * 100 / 22.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_31:
-            slice_num = (unsigned int)(108000.0 * 100 / 60.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_32:
-            slice_num = (unsigned int)(216000.0 * 100 / 60.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_4:
-        case INTEL_AVC_LEVEL_41:
-            slice_num = (unsigned int)(245760.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_42:
-            slice_num = (unsigned int)(522240.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_5:
-            slice_num = (unsigned int)(589824.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_51:
-            slice_num = (unsigned int)(983040.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_52:
-            slice_num = (unsigned int)(2073600.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        default:
-            slice_num = 0;
-        }
-    }
-
-    return slice_num;
 }
