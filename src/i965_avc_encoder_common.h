@@ -95,7 +95,10 @@ typedef enum {
     INTEL_AVC_LEVEL_42                   = 42,
     INTEL_AVC_LEVEL_5                    = 50,
     INTEL_AVC_LEVEL_51                   = 51,
-    INTEL_AVC_LEVEL_52                   = 52
+    INTEL_AVC_LEVEL_52                   = 52,
+    INTEL_AVC_LEVEL_6                    = 60,
+    INTEL_AVC_LEVEL_61                   = 61,
+    INTEL_AVC_LEVEL_62                   = 62,
 } INTEL_AVC_LEVEL_IDC;
 
 /*
