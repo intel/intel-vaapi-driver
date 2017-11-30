@@ -639,4 +639,8 @@ extern VAStatus i965_CreateSurfaces(VADriverContextP ctx,
 void
 i965_destroy_surface_storage(struct object_surface *obj_surface);
 
+// Logging functions for errors (to be shown to users) and info (useful for developers).
+void i965_log_error(VADriverContextP ctx, const char *format, ...);
+void i965_log_info(VADriverContextP ctx, const char *format, ...);
+
 #endif /* _I965_DRV_VIDEO_H_ */
