@@ -322,7 +322,6 @@ struct avc_enc_state {
 extern int i965_avc_get_max_mbps(int level_idc);
 extern int i965_avc_calculate_initial_qp(struct avc_param * param);
 extern unsigned int i965_avc_get_profile_level_max_frame(struct avc_param * param, int level_idc);
-extern int i965_avc_get_max_v_mv_r(int level_idc);
 extern int i965_avc_get_max_mv_len(int level_idc);
 extern int i965_avc_get_max_mv_per_2mb(int level_idc);
 extern unsigned short i965_avc_calc_skip_value(unsigned int enc_block_based_sip_en, unsigned int transform_8x8_flag, unsigned short skip_value);
