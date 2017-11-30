@@ -6559,8 +6559,11 @@ i965_ExportSurfaceHandle(VADriverContextP ctx, VASurfaceID surface_id,
     if (!obj_surface || !obj_surface->bo)
         return VA_STATUS_ERROR_INVALID_SURFACE;
 
-    if (mem_type != VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2)
+    if (mem_type != VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2) {
+        i965_log_info(ctx, "vaExportSurfaceHandle: memory type %08x "
+                      "is not supported.\n", mem_type);
         return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
+    }
 
     info = get_fourcc_info(obj_surface->fourcc);
     if (!info)
@@ -6568,14 +6571,22 @@ i965_ExportSurfaceHandle(VADriverContextP ctx, VASurfaceID surface_id,
     if (composite_object) {
         formats[0] =
             drm_format_of_composite_object(obj_surface->fourcc);
-        if (!formats[0])
+        if (!formats[0]) {
+            i965_log_info(ctx, "vaExportSurfaceHandle: fourcc %08x "
+                          "is not supported for export as a composite "
+                          "object.\n", obj_surface->fourcc);
             return VA_STATUS_ERROR_INVALID_SURFACE;
+        }
     } else {
         for (p = 0; p < info->num_planes; p++) {
             formats[p] =
                 drm_format_of_separate_plane(obj_surface->fourcc, p);
-            if (!formats[p])
+            if (!formats[p]) {
+                i965_log_info(ctx, "vaExportSurfaceHandle: fourcc %08x "
+                              "is not supported for export as separate "
+                              "planes.\n", obj_surface->fourcc);
                 return VA_STATUS_ERROR_INVALID_SURFACE;
+            }
         }
     }
 
