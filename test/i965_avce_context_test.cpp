@@ -99,6 +99,7 @@ TEST_P(AVCEContextTest, RateControl)
         {VAEntrypointEncSlice, i965->codec_info->h264_brc_mode},
         {VAEntrypointEncSliceLP, i965->codec_info->lp_h264_brc_mode},
         {VAEntrypointFEI, VA_RC_CQP},
+        {VAEntrypointStats, VA_RC_NONE},
     };
 
     for (auto rc : rateControls) {
@@ -281,12 +282,15 @@ INSTANTIATE_TEST_CASE_P(
         std::make_tuple(VAProfileH264ConstrainedBaseline, VAEntrypointEncSlice),
         std::make_tuple(VAProfileH264ConstrainedBaseline, VAEntrypointEncSliceLP),
         std::make_tuple(VAProfileH264ConstrainedBaseline, VAEntrypointFEI),
+        std::make_tuple(VAProfileH264ConstrainedBaseline, VAEntrypointStats),
         std::make_tuple(VAProfileH264Main, VAEntrypointEncSlice),
         std::make_tuple(VAProfileH264Main, VAEntrypointEncSliceLP),
         std::make_tuple(VAProfileH264Main, VAEntrypointFEI),
+        std::make_tuple(VAProfileH264Main, VAEntrypointStats),
         std::make_tuple(VAProfileH264High, VAEntrypointEncSlice),
         std::make_tuple(VAProfileH264High, VAEntrypointEncSliceLP),
         std::make_tuple(VAProfileH264High, VAEntrypointFEI),
+        std::make_tuple(VAProfileH264High, VAEntrypointStats),
         std::make_tuple(VAProfileH264MultiviewHigh, VAEntrypointEncSlice),
         std::make_tuple(VAProfileH264StereoHigh, VAEntrypointEncSlice)
     )
