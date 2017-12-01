@@ -115,6 +115,8 @@ struct intel_encoder_context {
     unsigned int fei_enabled: 1;
     unsigned int fei_function_mode; /* configured VA_FEI_FUNCTION_XXX */
 
+    unsigned int preenc_enabled: 1;
+
     void (*vme_context_destroy)(void *vme_context);
     VAStatus(*vme_pipeline)(VADriverContextP ctx,
                             VAProfile profile,

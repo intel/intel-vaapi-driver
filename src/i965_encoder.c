@@ -944,6 +944,55 @@ error:
 }
 
 static VAStatus
+intel_pre_encoder_check_avc_parameter(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface = NULL;
+    VAStatsStatisticsParameterH264 *stat_param_h264 = NULL;
+    VAStatsStatisticsParameter*stat_param = NULL;
+
+    if (!encode_state->stat_param_ext)
+        goto error;
+    stat_param_h264 =
+        (VAStatsStatisticsParameterH264 *) encode_state->stat_param_ext->buffer;
+    stat_param = (VAStatsStatisticsParameter *)(&stat_param_h264->stats_params);
+
+    if (stat_param->input.flags == VA_PICTURE_STATS_INVALID)
+        goto error;
+
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
+    if (!obj_surface)
+        goto error;
+
+#if 0
+    /* FeiPreEncFixme: Since the driver is doing internal CSC for non NV12
+      input surfaces, this check may fail here */
+    /* Make sure the same input yuv has been provided in vaBeginPicture()
+     * and VAStatsStatisticsParameter */
+    if (obj_surface != SURFACE(stat_param->input.picture_id))
+        goto error;
+#endif
+
+    /* There is no reconstructed object in preenc. Here we just assigning
+     * the input yuv object to reconstructed object pointer inorder
+     * to use the same encode code path later on */
+    encode_state->reconstructed_object = obj_surface;
+
+    encoder_context->frame_width_in_pixel = obj_surface->orig_width;
+    encoder_context->frame_height_in_pixel = obj_surface->orig_height;
+
+    /* PreEnc only supports maxium of 1 past and 1 future reference */
+    if (stat_param->num_past_references > 1 || stat_param->num_future_references > 1)
+        goto error;
+
+    return VA_STATUS_SUCCESS;
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
 intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
                                     struct encode_state *encode_state,
                                     struct intel_encoder_context *encoder_context)
@@ -1282,11 +1331,20 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
     case VAProfileH264High:
     case VAProfileH264MultiviewHigh:
     case VAProfileH264StereoHigh: {
-        vaStatus = intel_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
-        if (vaStatus != VA_STATUS_SUCCESS)
+        if (!encoder_context->preenc_enabled) {
+            vaStatus = intel_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
+            if (vaStatus != VA_STATUS_SUCCESS)
+                goto out;
+            vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+            break;
+        } else {
+            vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+            if (vaStatus != VA_STATUS_SUCCESS)
+                goto out;
+
+            vaStatus = intel_pre_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
             goto out;
-        vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
-        break;
+        }
     }
 
     case VAProfileMPEG2Simple:
@@ -1361,9 +1419,11 @@ intel_encoder_end_picture(VADriverContextP ctx,
 
     /* VME or PAK stages are separately invoked if middleware configured the corresponding
      * FEI modes through confgiruation attributes. On the other hand, ENC_PAK mode
-     * will invoke both VME and PAK similar to the non fei use case */
-    if (encoder_context->fei_enabled) {
-        if (encoder_context->fei_function_mode == VA_FEI_FUNCTION_ENC) {
+     * will invoke both VME and PAK similar to the non fei use case.
+     * PreEnc always invoke the VME */
+    if (encoder_context->fei_enabled || encoder_context->preenc_enabled) {
+        if ((encoder_context->fei_function_mode == VA_FEI_FUNCTION_ENC) ||
+            (encoder_context->preenc_enabled)) {
             if ((encoder_context->vme_context && encoder_context->vme_pipeline))
                 return encoder_context->vme_pipeline(ctx, profile, encode_state, encoder_context);
         } else if (encoder_context->fei_function_mode == VA_FEI_FUNCTION_PAK) {
@@ -1490,6 +1550,10 @@ intel_enc_hw_context_init(VADriverContextP ctx,
                     encoder_context->fei_function_mode = obj_config->attrib_list[i].value;
             }
         }
+
+        if (obj_config->entrypoint == VAEntrypointStats)
+            encoder_context->preenc_enabled = 1;
+
         break;
 
     case VAProfileH264StereoHigh:
