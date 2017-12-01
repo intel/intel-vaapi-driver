@@ -39,6 +39,7 @@
 #define GEN9_AVC_NUM_REF_CHECK_HEIGHT     2160
 #define GEN9_AVC_MBENC_CURBE_SIZE    88
 #define GEN9_AVC_FEI_MBENC_CURBE_SIZE    104
+#define GEN9_AVC_PREPROC_CURBE_SIZE    49
 #define AVC_QP_MAX    52
 #define PRESET_NUM    8
 #define GEN95_AVC_MAX_LAMBDA              0xEFFF
@@ -127,6 +128,14 @@ extern const unsigned int gen9_avc_fei_mbenc_curbe_i_frame_init_data[GEN9_AVC_FE
 extern const unsigned int gen9_avc_fei_mbenc_curbe_p_frame_init_data[GEN9_AVC_FEI_MBENC_CURBE_SIZE];
 extern const unsigned int gen9_avc_fei_mbenc_curbe_b_frame_init_data[GEN9_AVC_FEI_MBENC_CURBE_SIZE];
 extern const unsigned int gen9_avc_fei_mbenc_curbe_i_frame_dist_init_data[GEN9_AVC_FEI_MBENC_CURBE_SIZE];
+
+/* GEN9 AVC PreEnc CURBE init data  */
+extern const unsigned int gen9_avc_preenc_preproc_curbe_i_frame_init_data [GEN9_AVC_PREPROC_CURBE_SIZE];
+extern const unsigned int gen9_avc_preenc_preproc_curbe_p_frame_init_data [GEN9_AVC_PREPROC_CURBE_SIZE];
+extern const unsigned int gen9_avc_preenc_preproc_curbe_b_frame_init_data [GEN9_AVC_PREPROC_CURBE_SIZE];
+
+/* GEN9 AVC PreProc FTQ Lut Butter init data */
+extern const unsigned int gen9_avc_preenc_preproc_ftq_lut [AVC_QP_MAX][16];
 
 /* Gen95  */
 extern const unsigned int gen95_avc_trellis_quantization_rounding[PRESET_NUM];
