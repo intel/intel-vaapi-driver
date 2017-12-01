@@ -2141,17 +2141,17 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
         for (j = num_roi; j ; j--) {
             int qp_delta, qp_clip;
 
-            col_start = encoder_context->brc.roi[i].left;
-            col_end = encoder_context->brc.roi[i].right;
-            row_start = encoder_context->brc.roi[i].top;
-            row_end = encoder_context->brc.roi[i].bottom;
+            col_start = encoder_context->brc.roi[j].left;
+            col_end = encoder_context->brc.roi[j].right;
+            row_start = encoder_context->brc.roi[j].top;
+            row_end = encoder_context->brc.roi[j].bottom;
 
             col_start = col_start / 16;
             col_end = (col_end + 15) / 16;
             row_start = row_start / 16;
             row_end = (row_end + 15) / 16;
 
-            qp_delta = encoder_context->brc.roi[i].value;
+            qp_delta = encoder_context->brc.roi[j].value;
             qp_clip = qp + qp_delta;
 
             BRC_CLIP(qp_clip, min_qp, 51);
