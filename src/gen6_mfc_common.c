@@ -2105,6 +2105,8 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
     if (!vme_context->roi_enabled)
         return;
 
+    num_roi = encoder_context->brc.num_roi;
+
     if ((vme_context->saved_width_mbs !=  width_in_mbs) ||
         (vme_context->saved_height_mbs != height_in_mbs)) {
         free(vme_context->qp_per_mb);
