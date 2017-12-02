@@ -71,6 +71,12 @@ get_level_limits(int level_idc)
 }
 
 int
+i965_avc_level_is_valid(int level_idc)
+{
+    return get_level_limits(level_idc)->level_idc == level_idc;
+}
+
+int
 i965_avc_get_max_mbps(int level_idc)
 {
     return get_level_limits(level_idc)->max_mbps;
