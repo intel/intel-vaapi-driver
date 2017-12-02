@@ -6620,8 +6620,7 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
     } else if (IS_GEN8(i965->intel.device_info)) {
         kernel_param.curbe_size = sizeof(gen8_avc_scaling4x_curbe_data);
         kernel_param.inline_data_size = sizeof(gen8_avc_scaling4x_curbe_data);
-    }
-    else
+    } else
         assert(0);
 
     /* 4x scaling kernel*/
