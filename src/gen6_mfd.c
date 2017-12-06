@@ -1189,10 +1189,16 @@ gen6_mfd_init_vc1_surface(VADriverContextP ctx,
     gen6_vc1_surface->luma_scale = 0;
     gen6_vc1_surface->luma_shift = 0;
 
+    /*
+     * The Direct MV buffer is scalable with frame height, but
+     * does not scale with frame width as the hardware assumes
+     * that frame width is fixed at 128 MBs.
+     */
+
     if (gen6_vc1_surface->dmv == NULL) {
         gen6_vc1_surface->dmv = dri_bo_alloc(i965->intel.bufmgr,
                                              "direct mv w/r buffer",
-                                             128 * height_in_mbs * 64,  /* scalable with frame height */
+                                             128 * height_in_mbs * 64,
                                              0x1000);
     }
 }
