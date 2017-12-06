@@ -1328,6 +1328,12 @@ gen8_mfd_init_vc1_surface(VADriverContextP ctx,
     else
         gen7_vc1_surface->picture_type_top = picture_type;
 
+    /*
+     * The Direct MV buffer is scalable with frame height, but
+     * does not scale with frame width as the hardware assumes
+     * that frame width is fixed at 128 MBs.
+     */
+
     if (gen7_vc1_surface->dmv_top == NULL) {
         height_in_mbs = ALIGN(obj_surface->orig_height, 16) / 16;
         gen7_vc1_surface->dmv_top = dri_bo_alloc(i965->intel.bufmgr,
