@@ -1143,26 +1143,32 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
         encode_state->seq_param_ext->buffer)
         seq_param = (VAEncSequenceParameterBufferHEVC *)(encode_state->seq_param_ext->buffer);
 
-    assert(!(pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID));
-
-    if (pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID)
+    if (pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.decoded_curr_pic.flags (%#x) is invalid.\n",
+                      pic_param->decoded_curr_pic.flags);
         goto error;
+    }
 
     obj_surface = SURFACE(pic_param->decoded_curr_pic.picture_id);
-    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
-
-    if (!obj_surface)
+    if (!obj_surface) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.decoded_curr_pic.picture_id (%#x) is not a valid surface.\n",
+                      pic_param->decoded_curr_pic.picture_id);
         goto error;
+    }
 
     encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
-    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
-
-    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.coded_buf (%#x) is not a valid buffer.\n",
+                      pic_param->coded_buf);
         goto error;
+    }
 
-    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num)
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num) {
+        i965_log_info(ctx, "Too many slices in picture submission: %d, max supported is %d.\n",
+                      encode_state->num_slice_params_ext, encoder_context->max_slice_or_seg_num);
         goto error;
+    }
 
     encode_state->coded_buf_object = obj_buffer;
 
@@ -1172,15 +1178,12 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
             break;
         else {
             obj_surface = SURFACE(pic_param->reference_frames[i].picture_id);
-            assert(obj_surface);
-
-            if (!obj_surface)
+            if (!obj_surface || !obj_surface->bo) {
+                i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.reference_frames[%d].picture_id (%#x)"
+                              " is not a valid surface.\n", i, pic_param->reference_frames[i].picture_id);
                 goto error;
-
-            if (obj_surface->bo)
-                encode_state->reference_objects[i] = obj_surface;
-            else
-                encode_state->reference_objects[i] = NULL; /* FIXME: Warning or Error ??? */
+            }
+            encode_state->reference_objects[i] = obj_surface;
         }
     }
 
