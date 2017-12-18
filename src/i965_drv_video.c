@@ -2857,8 +2857,7 @@ i965_BufferSetNumElements(VADriverContextP ctx,
         return vaStatus;
     }
 
-    if ((num_elements < 0) ||
-        (num_elements > obj_buffer->max_num_elements)) {
+    if (num_elements > obj_buffer->max_num_elements) {
         vaStatus = VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
     } else {
         obj_buffer->num_elements = num_elements;
