@@ -3004,8 +3004,8 @@ gen8_mfc_jpeg_huff_table_state(VADriverContextP ctx,
     assert(encode_state->huffman_table && encode_state->huffman_table->buffer);
     huff_buffer = (VAHuffmanTableBufferJPEGBaseline *)encode_state->huffman_table->buffer;
 
-    memset(dc_table, 0, 12);
-    memset(ac_table, 0, 162);
+    memset(dc_table, 0, sizeof(dc_table));
+    memset(ac_table, 0, sizeof(ac_table));
 
     for (index = 0; index < num_tables; index++) {
         int id = va_to_gen7_jpeg_hufftable[index];
