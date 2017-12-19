@@ -428,6 +428,7 @@
 #define HCP_IND_OBJ_BASE_ADDR_STATE             HCP(0x03)
 #define HCP_QM_STATE                            HCP(0x04)
 #define HCP_FQM_STATE                           HCP(0x05)
+#define HCP_RDOQ_STATE                          HCP(0x08)
 #define HCP_PIC_STATE                           HCP(0x10)
 #define HCP_TILE_STATE                          HCP(0x11)
 #define HCP_REF_IDX_STATE                       HCP(0x12)
