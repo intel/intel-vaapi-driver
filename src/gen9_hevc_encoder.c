@@ -4148,7 +4148,7 @@ gen9_hevc_set_control_region(VADriverContextP ctx,
             }
         } else {
             int cur_lcu_pel_y = region_start_table[GEN9_HEVC_ENC_REGION_START_Y_OFFSET +
-                                                   (k * priv_state->num_regions_in_slice)] << 5;
+                                                                                       (k * priv_state->num_regions_in_slice)] << 5;
             int ts_width = (priv_state->picture_width + 16) >> 5;
             int ts_height = height;
             int offset_y = -4 * ((ts_width + 1) >> 1);

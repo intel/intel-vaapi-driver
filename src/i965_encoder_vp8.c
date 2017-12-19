@@ -3623,7 +3623,7 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
         i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
-                                    &vp8_context->reference_frame_mb_count_buffer ,
+                                    &vp8_context->reference_frame_mb_count_buffer,
                                     0,
                                     32, /* sizeof(unsigned int) * 8 */
                                     0,
