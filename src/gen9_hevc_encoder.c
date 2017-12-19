@@ -1245,7 +1245,7 @@ gen9_hevc_enc_init_parameters(VADriverContextP ctx,
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     va_status = gen9_hevc_enc_check_parameters(ctx, encode_state, encoder_context);
-    if (va_status |= VA_STATUS_SUCCESS)
+    if (va_status != VA_STATUS_SUCCESS)
         return va_status;
 
     gen9_hevc_enc_init_seq_parameters(priv_ctx, generic_state, priv_state, seq_param);
