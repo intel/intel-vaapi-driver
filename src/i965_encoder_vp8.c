@@ -1731,7 +1731,8 @@ i965_encoder_vp8_vme_init_mpu_tpu_buffer(VADriverContextP ctx,
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_updated_token_probability_buffer);
 }
 
-#define ALLOC_VP8_RESOURCE_BUFFER(buffer, bufsize, des) {       \
+#define ALLOC_VP8_RESOURCE_BUFFER(buffer, bufsize, des)         \
+    do {                                                        \
         vp8_context->buffer.type = I965_GPE_RESOURCE_BUFFER;    \
         vp8_context->buffer.width = (bufsize);                  \
         vp8_context->buffer.height = 1;                         \
