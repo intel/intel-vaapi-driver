@@ -783,7 +783,7 @@ static void
 gen9_hevc_set_gpe_1d_surface(VADriverContextP ctx,
                              struct gen9_hevc_encoder_context *priv_ctx,
                              struct i965_gpe_context *gpe_context,
-                             enum GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
+                             GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
                              int bti_idx,
                              int is_raw_buffer,
                              int size,
@@ -812,7 +812,7 @@ static void
 gen9_hevc_set_gpe_2d_surface(VADriverContextP ctx,
                              struct gen9_hevc_encoder_context *priv_ctx,
                              struct i965_gpe_context *gpe_context,
-                             enum GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
+                             GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
                              int bti_idx,
                              int has_uv_surface,
                              int is_media_block_rw,
@@ -850,7 +850,7 @@ static void
 gen9_hevc_set_gpe_adv_surface(VADriverContextP ctx,
                               struct gen9_hevc_encoder_context *priv_ctx,
                               struct i965_gpe_context *gpe_context,
-                              enum GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
+                              GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
                               int bti_idx,
                               struct object_surface *surface_object)
 {
@@ -864,7 +864,7 @@ gen9_hevc_set_gpe_adv_surface(VADriverContextP ctx,
 
 static void
 gen9_hevc_add_gpe_surface(struct gen9_hevc_encoder_context *priv_ctx,
-                          enum GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
+                          GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
                           struct i965_gpe_resource *gpe_buffer,
                           struct object_surface *surface_object)
 {
