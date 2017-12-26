@@ -968,9 +968,11 @@ i965_get_rc_attributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint ent
             rc_attribs |= VA_RC_CBR;
 
         if (profile == VAProfileVP8Version0_3 ||
-            profile == VAProfileVP9Profile0 ||
             profile == VAProfileHEVCMain)
             rc_attribs |= VA_RC_VBR;
+
+        if (profile == VAProfileVP9Profile0)
+            rc_attribs = i965->codec_info->vp9_brc_mode;
 
         if (profile == VAProfileH264ConstrainedBaseline ||
             profile == VAProfileH264Main ||
