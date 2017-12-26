@@ -1129,5 +1129,5 @@ static void gen9_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
         codec_info->lp_h264_brc_mode |= (VA_RC_CBR | VA_RC_VBR);
 
     if (i965->intel.has_huc && codec_info->has_lp_vp9_encoding)
-        codec_info->lp_vp9_brc_mode |= VA_RC_CQP;
+        codec_info->lp_vp9_brc_mode |= (VA_RC_CQP | VA_RC_CBR | VA_RC_VBR);
 }

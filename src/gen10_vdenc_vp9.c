@@ -414,6 +414,164 @@ vdenc_vp9_quant_ac[256] = {
     1597, 1628, 1660, 1692, 1725, 1759, 1793, 1828,
 };
 
+static const int8_t vdenc_vp9_huc_inst_rate_thresh_i[4] = {
+    30, 50, 90, 115,
+};
+
+static const int8_t vdenc_vp9_huc_inst_rate_thresh_p[4] = {
+    30, 50, 70, 120,
+};
+
+static const uint32_t vdenc_vp9_huc_brc_init_dmem_data[48] = {
+    0x00000000, 0x00038400, 0x00030d40, 0x000c3500, 0x00061a80, 0x00061a80, 0x00000000, 0x0000001e,
+    0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x270f0020, 0x02800000, 0x00010168,
+    0x000000ff, 0x0000000e, 0x00000073, 0x00000000, 0x00000000, 0x7846321e, 0x7846321e, 0x735a321e,
+    0xe5dfd8d1, 0x2f29211b, 0xe5ddd7d1, 0x5e56463f, 0xeae3dad4, 0x2f281f16, 0x01007488, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000
+};
+
+static const uint32_t vdenc_vp9_huc_brc_update_dmem_data[64] = {
+    0x00061a80, 0x00000000, 0x0007a120, 0x000493e0, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0x0032000a, 0x00960064, 0x01680280, 0x02200000, 0x007802b8,
+    0x00000000, 0x00000000, 0x00000000, 0x02032000, 0xb4785028, 0x67614b28, 0x0101a07d, 0x28010203,
+    0x01030505, 0x00fefcfa, 0x04060402, 0x78503c1e, 0x00ffc88c, 0x503c1e04, 0xffc88c78, 0x28140200,
+    0xc8a08246, 0x090800ff, 0x040c0b0a, 0x07060605, 0x06060504, 0x00650007, 0x00000000, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000
+};
+
+static const uint32_t vdenc_vp9_huc_brc_constant_data[2][416] = {
+    {
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x32191900, 0x00264B4B, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x0E0A0602, 0x06040212, 0x00000E0A, 0x00080402, 0x04020000, 0x000000FE, 0xFEFCFA02, 0xF8F60000,
+        0xF200FEFC, 0xFEFCF8F4, 0xFCF6F2EE, 0x0A0402FE, 0x04021410, 0x00100C08, 0x0C080402, 0x02000000,
+        0x0000FE04, 0xFEFC0200, 0xFA0000FE, 0x00FEFEFC, 0xFEFCFAF6, 0xF8F4F200, 0x0402FEFC, 0x0214100A,
+        0x100C0804, 0x08040200, 0x0000000C, 0x00FE0402, 0xFC020000, 0x0000FEFE, 0xFEFEFCFA, 0xFCFAF600,
+        0xF4F200FE, 0x00FEFCF8, 0x00000000, 0x14100C08, 0x00000000, 0x0E0A0600, 0x0000FE12, 0x08060000,
+        0xFEFC0E0C, 0x02000000, 0xFA0A0604, 0x0000FEFC, 0x0A060200, 0x00FEFCF8, 0x06020000, 0xFCFAF60A,
+        0x020000FE, 0xF8F40A06, 0x0000FEFC, 0xF40A0602, 0x00FEFCF8, 0x0A060200, 0x00000000, 0x0E0A0600,
+        0x00000012, 0x0A060000, 0x00FE100C, 0x06000000, 0xFC100E0A, 0x000000FE, 0x0C0A0804, 0x00FEFCFA,
+        0x08020000, 0xFEFCF80A, 0x02000000, 0xFCF80A08, 0x0000FEFE, 0xF80A0800, 0x00FEFCFA, 0x0A020000,
+        0xFEFCF8F6, 0x02000000, 0x00000008, 0x0A060000, 0x0000120E, 0x06000000, 0xFE100C0A, 0x00000000,
+        0x100E0A06, 0x0000FEFC, 0x0A080400, 0xFEFCFA0C, 0x02000000, 0xFCF80A08, 0x000000FE, 0xF80A0802,
+        0x00FEFEFC, 0x0A080000, 0xFEFCFAF8, 0x02000000, 0xFCF8F60A, 0x000000FE, 0x00000802, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000
+    },
+
+    {
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626,
+        0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904,
+        0x0B0B001E, 0x0000000B, 0x13194B0D, 0x1F5E2626, 0x19321F4B, 0x1E1E1904, 0x0B0B001E, 0x0000000B,
+        0x0E0A0602, 0x06040212, 0x00000E0A, 0x00080402, 0x04020000, 0x000000FE, 0xFEFCFA02, 0xF8F60000,
+        0xF200FEFC, 0xFEFCF8F4, 0xFCF6F2EE, 0x0A0402FE, 0x04021410, 0x00100C08, 0x0C080402, 0x02000000,
+        0x0000FE04, 0xFEFC0200, 0xFA0000FE, 0x00FEFEFC, 0xFEFCFAF6, 0xF8F4F200, 0x0402FEFC, 0x0214100A,
+        0x100C0804, 0x08040200, 0x0000000C, 0x00FE0402, 0xFC020000, 0x0000FEFE, 0xFEFEFCFA, 0xFCFAF600,
+        0xF4F200FE, 0x00FEFCF8, 0x00000000, 0x14100C08, 0x00000000, 0x0E0A0600, 0x0000FE12, 0x08060000,
+        0xFEFC0E0C, 0x02000000, 0xFA0A0604, 0x0000FEFC, 0x0A060200, 0x00FEFCF8, 0x06020000, 0xFCFAF60A,
+        0x020000FE, 0xF8F40A06, 0x0000FEFC, 0xF40A0602, 0x00FEFCF8, 0x0A060200, 0x00000000, 0x0E0A0600,
+        0x00000012, 0x0A060000, 0x00FE100C, 0x06000000, 0xFC100E0A, 0x000000FE, 0x0C0A0804, 0x00FEFCFA,
+        0x08020000, 0xFEFCF80A, 0x02000000, 0xFCF80A08, 0x0000FEFE, 0xF80A0800, 0x00FEFCFA, 0x0A020000,
+        0xFEFCF8F6, 0x02000000, 0x00000008, 0x0A060000, 0x0000120E, 0x06000000, 0xFE100C0A, 0x00000000,
+        0x100E0A06, 0x0000FEFC, 0x0A080400, 0xFEFCFA0C, 0x02000000, 0xFCF80A08, 0x000000FE, 0xF80A0802,
+        0x00FEFEFC, 0x0A080000, 0xFEFCFAF8, 0x02000000, 0xFCF8F60A, 0x000000FE, 0x00000802, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000
+    }
+};
+
+static const double
+vdenc_brc_dev_threshi0_fp_neg[4] = { 0.80, 0.60, 0.34, 0.2 };
+
+static const double
+vdenc_brc_dev_threshi0_fp_pos[4] = { 0.2, 0.4, 0.66, 0.9 };
+
+static const double
+vdenc_brc_dev_threshpb0_fp_neg[4] = { 0.90, 0.66, 0.46, 0.3 };
+
+static const double
+vdenc_brc_dev_threshpb0_fp_pos[4] = { 0.3, 0.46, 0.70, 0.90 };
+
+static const double
+vdenc_brc_dev_threshvbr0_neg[4] = { 0.90, 0.70, 0.50, 0.3 };
+
+static const double
+vdenc_brc_dev_threshvbr0_pos[4] = { 0.4, 0.5, 0.75, 0.90 };
+
 #define OUT_BUFFER_2DW(batch, bo, is_target, delta)  do {               \
         if (bo) {                                                       \
             OUT_BCS_RELOC64(batch,                                      \
@@ -1151,12 +1309,49 @@ gen10_vdenc_vp9_update_brc_parameters(VADriverContextP ctx,
 {
     struct gen10_vdenc_vp9_context *vdenc_context = encoder_context->mfc_context;
 
-    vdenc_context->brc_enabled = 0;
-    vdenc_context->target_bit_rate = 0;
-    vdenc_context->max_bit_rate = 0;
-    vdenc_context->min_bit_rate = 0;
-    vdenc_context->init_vbv_buffer_fullness_in_bit = 0;
-    vdenc_context->vbv_buffer_size_in_bit = 0;
+    if (vdenc_context->internal_rate_mode != I965_BRC_CQP &&
+        encoder_context->brc.need_reset) {
+        /* So far, vdenc doesn't support temporal layer */
+        vdenc_context->framerate = encoder_context->brc.framerate[0];
+
+        vdenc_context->vbv_buffer_size_in_bit = encoder_context->brc.hrd_buffer_size;
+        vdenc_context->init_vbv_buffer_fullness_in_bit = encoder_context->brc.hrd_initial_buffer_fullness;
+
+        vdenc_context->max_bit_rate = encoder_context->brc.bits_per_second[0];
+        vdenc_context->brc_need_reset = (vdenc_context->brc_initted && encoder_context->brc.need_reset);
+
+        if (vdenc_context->internal_rate_mode == I965_BRC_CBR) {
+            vdenc_context->min_bit_rate = vdenc_context->max_bit_rate;
+            vdenc_context->target_bit_rate = vdenc_context->max_bit_rate;
+        } else {
+            assert(vdenc_context->internal_rate_mode == I965_BRC_VBR);
+            vdenc_context->min_bit_rate = vdenc_context->max_bit_rate * (2 * encoder_context->brc.target_percentage[0] - 100) / 100;
+            vdenc_context->target_bit_rate = vdenc_context->max_bit_rate * encoder_context->brc.target_percentage[0] / 100;
+        }
+    }
+
+    if (vdenc_context->internal_rate_mode == I965_BRC_CBR ||
+        vdenc_context->internal_rate_mode == I965_BRC_VBR)
+        vdenc_context->brc_enabled = 1;
+    else
+        vdenc_context->brc_enabled = 0;
+
+    if (vdenc_context->brc_enabled &&
+        (!vdenc_context->init_vbv_buffer_fullness_in_bit ||
+         !vdenc_context->vbv_buffer_size_in_bit ||
+         !vdenc_context->max_bit_rate ||
+         !vdenc_context->target_bit_rate ||
+         !vdenc_context->framerate.num ||
+         !vdenc_context->framerate.den))
+        vdenc_context->brc_enabled = 0;
+
+    if (!vdenc_context->brc_enabled) {
+        vdenc_context->target_bit_rate = 0;
+        vdenc_context->max_bit_rate = 0;
+        vdenc_context->min_bit_rate = 0;
+        vdenc_context->init_vbv_buffer_fullness_in_bit = 0;
+        vdenc_context->vbv_buffer_size_in_bit = 0;
+    }
 }
 
 static VAStatus
@@ -2350,6 +2545,362 @@ gen10_vdenc_vp9_huc_store_huc_status2(VADriverContextP ctx,
     gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
 }
 
+static VAStatus
+gen10_vdenc_vp9_calculate_initial_qp(VADriverContextP ctx,
+                                     struct encode_state *encode_state,
+                                     struct intel_encoder_context *encoder_context,
+                                     unsigned int *init_qp_i,
+                                     unsigned int *init_qp_p)
+{
+    struct gen10_vdenc_vp9_context *vdenc_context = encoder_context->mfc_context;
+    VAEncSequenceParameterBufferVP9 *seq_param = vdenc_context->seq_param;
+    float x0 = 0, y0 = 1.19f, x1 = 1.75f, y1 = 1.75f;
+    unsigned frame_size;
+    int qp_i, qp_p, delat_qp;
+
+    frame_size = (vdenc_context->frame_width * vdenc_context->frame_height * 3 / 2);
+    qp_p = (int)(1.0 / 1.2 * pow(10.0,
+                                 (log10(frame_size * 2.0 / 3.0 * vdenc_context->framerate.num /
+                                        ((double)vdenc_context->target_bit_rate * vdenc_context->framerate.den)) - x0) *
+                                 (y1 - y0) / (x1 - x0) + y0) + 0.5);
+    qp_p = qp_p * 5;
+    qp_p -= 20;
+    qp_p = CLAMP(1, 200, qp_p);
+    qp_i = (qp_p > 4) ? (qp_p - 4) : qp_p;
+    delat_qp = (seq_param->intra_period - 1) / 30 - 1;
+    delat_qp = CLAMP(0, 20, delat_qp);
+    qp_i -= delat_qp;
+    qp_i = CLAMP(1, 200, qp_i);
+    qp_p = qp_i + 20;
+
+    *init_qp_i = qp_i;
+    *init_qp_p = qp_p;
+
+    return VA_STATUS_SUCCESS;
+}
+
+static void
+gen10_vdenc_vp9_update_huc_brc_init_dmem(VADriverContextP ctx,
+                                         struct encode_state *encode_state,
+                                         struct intel_encoder_context *encoder_context)
+{
+    struct gen10_vdenc_vp9_context *vdenc_context = encoder_context->mfc_context;
+    struct vdenc_vp9_huc_brc_init_dmem *dmem;
+    VAEncSequenceParameterBufferVP9 *seq_param = vdenc_context->seq_param;
+    unsigned int seq_max_frame_size, qp_i = 20, qp_p = 20;
+    double input_bits_per_frame, bps_ratio;
+    int i;
+
+    if (!seq_param)
+        return;
+
+    seq_max_frame_size = seq_param->max_frame_width * seq_param->max_frame_height;
+
+    assert(sizeof(*dmem) == sizeof(vdenc_vp9_huc_brc_init_dmem_data));
+    dmem = (struct vdenc_vp9_huc_brc_init_dmem *)i965_map_gpe_resource(&vdenc_context->vdenc_brc_init_reset_dmem_buffer_res);
+
+    if (!dmem)
+        return;
+
+    memcpy(dmem, vdenc_vp9_huc_brc_init_dmem_data, sizeof(*dmem));
+
+    dmem->brc_func = vdenc_context->brc_initted ? 2 : 0;
+    dmem->profile_level_max_frame = vdenc_context->max_frame_width * vdenc_context->max_frame_height;
+
+    if (seq_max_frame_size)
+        dmem->profile_level_max_frame = MIN(dmem->profile_level_max_frame, seq_max_frame_size);
+
+    dmem->buffer_size = vdenc_context->vbv_buffer_size_in_bit;
+    dmem->init_buffer_fullness = vdenc_context->init_vbv_buffer_fullness_in_bit;
+    dmem->target_bitrate = vdenc_context->target_bit_rate;
+    dmem->max_rate = vdenc_context->max_bit_rate;
+    dmem->frame_rate_m = vdenc_context->framerate.num;
+    dmem->frame_rate_d = vdenc_context->framerate.den;
+
+    if (vdenc_context->internal_rate_mode == I965_BRC_CBR) {
+        dmem->brc_flag = 0x10;
+        dmem->max_rate = dmem->target_bitrate;
+    } else if (vdenc_context->internal_rate_mode == I965_BRC_VBR)
+        dmem->brc_flag = 0x20;
+
+    if (dmem->max_rate < dmem->target_bitrate)
+        dmem->max_rate = (dmem->target_bitrate << 1);
+
+    dmem->num_p_in_gop = seq_param->intra_period - 1;
+    dmem->frame_width = vdenc_context->frame_width;
+    dmem->frame_height = vdenc_context->frame_height;
+    dmem->min_qp = 0;
+    dmem->max_qp = 255;
+    dmem->enable_scaling = vdenc_context->dys_in_use;
+
+    assert(ARRAY_ELEMS(dmem->inst_rate_thresh_i0) == ARRAY_ELEMS(dmem->inst_rate_thresh_p0));
+    assert(ARRAY_ELEMS(dmem->inst_rate_thresh_i0) == ARRAY_ELEMS(vdenc_vp9_huc_inst_rate_thresh_i));
+    assert(ARRAY_ELEMS(dmem->inst_rate_thresh_i0) == ARRAY_ELEMS(vdenc_vp9_huc_inst_rate_thresh_p));
+    for (i = 0; i < ARRAY_ELEMS(dmem->inst_rate_thresh_i0); i++) {
+        dmem->inst_rate_thresh_i0[i] = vdenc_vp9_huc_inst_rate_thresh_i[i];
+        dmem->inst_rate_thresh_p0[i] = vdenc_vp9_huc_inst_rate_thresh_p[i];
+    }
+
+    input_bits_per_frame = ((double)dmem->max_rate * (double)dmem->frame_rate_d) / (double)dmem->frame_rate_m;
+
+    if (dmem->buffer_size < (uint32_t)(input_bits_per_frame * 4))
+        dmem->buffer_size = (uint32_t)(input_bits_per_frame * 4);
+
+    if (dmem->init_buffer_fullness == 0)
+        dmem->init_buffer_fullness = 7 * dmem->buffer_size / 8;
+
+    if (dmem->init_buffer_fullness < (uint32_t)(input_bits_per_frame * 2))
+        dmem->init_buffer_fullness = (uint32_t)(input_bits_per_frame * 2);
+
+    if (dmem->init_buffer_fullness > dmem->buffer_size)
+        dmem->init_buffer_fullness = dmem->buffer_size;
+
+    bps_ratio = input_bits_per_frame /
+                ((double)vdenc_context->vbv_buffer_size_in_bit * vdenc_context->framerate.den / vdenc_context->framerate.num);
+
+    if (bps_ratio < 0.1)
+        bps_ratio = 0.1;
+
+    if (bps_ratio > 3.5)
+        bps_ratio = 3.5;
+
+    for (i = 0; i < 4; i++) {
+        dmem->dev_thresh_pb0[i] = (char)(-50 * pow(vdenc_brc_dev_threshpb0_fp_neg[i], bps_ratio));
+        dmem->dev_thresh_pb0[i + 4] = (char)(50 * pow(vdenc_brc_dev_threshpb0_fp_pos[i], bps_ratio));
+
+        dmem->dev_thresh_i0[i] = (char)(-50 * pow(vdenc_brc_dev_threshi0_fp_neg[i], bps_ratio));
+        dmem->dev_thresh_i0[i + 4] = (char)(50 * pow(vdenc_brc_dev_threshi0_fp_pos[i], bps_ratio));
+
+        dmem->dev_thresh_vbr0[i] = (char)(-50 * pow(vdenc_brc_dev_threshvbr0_neg[i], bps_ratio));
+        dmem->dev_thresh_vbr0[i + 4] = (char)(100 * pow(vdenc_brc_dev_threshvbr0_pos[i], bps_ratio));
+    }
+
+    gen10_vdenc_vp9_calculate_initial_qp(ctx, encode_state, encoder_context, &qp_i, &qp_p);
+
+    dmem->init_qp_i = qp_i;
+    dmem->init_qp_p = qp_p;
+
+    dmem->total_level = 1; // TODO for temporal
+
+    i965_unmap_gpe_resource(&vdenc_context->vdenc_brc_init_reset_dmem_buffer_res);
+
+    vdenc_context->input_bits_per_frame =
+        ((double)vdenc_context->max_bit_rate * vdenc_context->framerate.den) / vdenc_context->framerate.num;
+    vdenc_context->current_target_buf_full_in_bits = vdenc_context->target_bit_rate;
+}
+
+static void
+gen10_vdenc_vp9_huc_brc_init_reset(VADriverContextP ctx,
+                                   struct encode_state *encode_state,
+                                   struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen10_vdenc_vp9_context *vdenc_context = encoder_context->mfc_context;
+    struct gen10_huc_pipe_mode_select_parameter pipe_mode_select_params;
+    struct gen10_huc_imem_state_parameter imem_state_params;
+    struct gen10_huc_dmem_state_parameter dmem_state_params;
+    struct gen10_huc_virtual_addr_parameter virtual_addr_params;
+    struct gen10_huc_start_parameter start_params;
+    struct gpe_mi_flush_dw_parameter mi_flush_dw_params;
+    struct i965_gpe_table *gpe = vdenc_context->gpe_table;
+    gen10_vdenc_vd_pipeline_flush_param pipeline_flush_params;
+
+    memset(&imem_state_params, 0, sizeof(imem_state_params));
+    imem_state_params.huc_firmware_descriptor = VDENC_VP9_HUC_BRC_INIT_RESET;
+    gen10_huc_imem_state(ctx, batch, &imem_state_params);
+
+    memset(&pipe_mode_select_params, 0, sizeof(pipe_mode_select_params));
+    gen10_huc_pipe_mode_select(ctx, batch, &pipe_mode_select_params);
+
+    gen10_vdenc_vp9_update_huc_brc_init_dmem(ctx, encode_state, encoder_context);
+    memset(&dmem_state_params, 0, sizeof(dmem_state_params));
+    dmem_state_params.huc_data_source_res = &vdenc_context->vdenc_brc_init_reset_dmem_buffer_res;
+    dmem_state_params.huc_data_destination_base_address = VDENC_VP9_HUC_DMEM_DATA_OFFSET;
+    dmem_state_params.huc_data_length = ALIGN(sizeof(struct vdenc_vp9_huc_brc_init_dmem), 64);
+    gen10_huc_dmem_state(ctx, batch, &dmem_state_params);
+
+    memset(&virtual_addr_params, 0, sizeof(virtual_addr_params));
+    virtual_addr_params.regions[0].huc_surface_res = &vdenc_context->brc_history_buffer_res;
+    virtual_addr_params.regions[0].is_target = 1;
+    gen10_huc_virtual_addr_state(ctx, batch, &virtual_addr_params);
+
+    gen10_vdenc_vp9_huc_store_huc_status2(ctx, encoder_context);
+
+    memset(&start_params, 0, sizeof(start_params));
+    start_params.last_stream_object = 1;
+    gen10_huc_start(ctx, batch, &start_params);
+
+    memset(&pipeline_flush_params, 0, sizeof(pipeline_flush_params));
+    pipeline_flush_params.dw1.hevc_pipeline_done = 1;
+    pipeline_flush_params.dw1.hevc_pipeline_flush = 1;
+    gen10_vdenc_vd_pipeline_flush(ctx, batch, &pipeline_flush_params);
+
+    memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
+    mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
+    gpe->mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+}
+
+static void
+gen10_vdenc_vp9_update_huc_update_dmem(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
+{
+    struct gen10_vdenc_vp9_context *vdenc_context = encoder_context->mfc_context;
+    VAEncPictureParameterBufferVP9 *pic_param;
+    struct vdenc_vp9_huc_brc_update_dmem *dmem;
+
+    if (!vdenc_context->pic_param)
+        return;
+
+    pic_param = vdenc_context->pic_param;
+
+    dmem = (struct vdenc_vp9_huc_brc_update_dmem *)i965_map_gpe_resource(&vdenc_context->vdenc_brc_update_dmem_buffer_res[vdenc_context->current_pass]);
+
+    if (!dmem)
+        return;
+
+    assert(sizeof(struct vdenc_vp9_huc_brc_update_dmem) == sizeof(vdenc_vp9_huc_brc_update_dmem_data));
+    memcpy(dmem, vdenc_vp9_huc_brc_update_dmem_data, sizeof(struct vdenc_vp9_huc_brc_update_dmem));
+
+    if (vdenc_context->current_target_buf_full_in_bits > vdenc_context->vbv_buffer_size_in_bit) {
+        dmem->overflow_flag = 1;
+        vdenc_context->current_target_buf_full_in_bits -= vdenc_context->vbv_buffer_size_in_bit;
+    }
+
+    if (vdenc_context->current_pass == 0) {
+        dmem->target_buf_fullness = vdenc_context->current_target_buf_full_in_bits;
+    }
+
+    dmem->frame_num = vdenc_context->frame_number;
+    dmem->temporal_level = 0; // TODO
+    dmem->hrd_buffer_fullness_upper = 0;
+    dmem->hrd_buffer_fullness_lower = 0;
+
+    dmem->cur_width = vdenc_context->frame_width;
+    dmem->cur_height = vdenc_context->frame_height;
+    dmem->current_frame_type = vdenc_context->is_key_frame ? 2 : 0;
+
+    dmem->max_num_paks = vdenc_context->num_passes - 1; // no update for repak
+    dmem->current_pak_pass = vdenc_context->current_pass;
+
+    dmem->vdenc_igs_offset = vdenc_context->cmd1_state_offset_in_2nd_batchbuffer;
+    dmem->second_level_batchbuffer_size = vdenc_context->huc_2nd_batchbuffer_size;
+    dmem->pic_state_offset = vdenc_context->pic_state_offset_in_2nd_batchbuffer;
+
+    dmem->acq_qp = pic_param->luma_ac_qindex;
+    dmem->segment_map_generating = !!vdenc_context->segment_param;
+
+    dmem->delta_qp_for_sad_zone0 = -5;
+    dmem->delta_qp_for_sad_zone1 = -1;
+    dmem->delta_qp_for_sad_zone2 = 1;
+    dmem->delta_qp_for_sad_zone3 = 5;
+    dmem->delta_qp_for_mv_zero = -5;
+    dmem->delta_qp_for_mv_zone0 = -2;
+    dmem->delta_qp_for_mv_zone1 = 1;
+    dmem->delta_qp_for_mv_zone2 = 5;
+
+    i965_unmap_gpe_resource(&vdenc_context->vdenc_brc_update_dmem_buffer_res[vdenc_context->current_pass]);
+}
+
+static void
+gen10_vdenc_vp9_huc_brc_update_constant_data(VADriverContextP ctx,
+                                             struct encode_state *encode_state,
+                                             struct intel_encoder_context *encoder_context)
+{
+    struct gen10_vdenc_vp9_context *vdenc_context = encoder_context->mfc_context;
+    struct huc_brc_update_constant_data *brc_buffer;
+
+    brc_buffer = (struct huc_brc_update_constant_data *)i965_map_gpe_resource(&vdenc_context->brc_constant_data_buffer_res);
+
+    if (!brc_buffer)
+        return;
+
+    assert(sizeof(vdenc_vp9_huc_brc_constant_data[0]) == VDENC_VP9_BRC_CONSTANT_DATA_SIZE);
+    memcpy(brc_buffer, vdenc_vp9_huc_brc_constant_data[!vdenc_context->is_key_frame], VDENC_VP9_BRC_CONSTANT_DATA_SIZE);
+
+    i965_unmap_gpe_resource(&vdenc_context->brc_constant_data_buffer_res);
+}
+
+static void
+gen10_vdenc_vp9_huc_brc_update(VADriverContextP ctx,
+                               struct encode_state *encode_state,
+                               struct intel_encoder_context *encoder_context)
+{
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+    struct gen10_vdenc_vp9_context *vdenc_context = encoder_context->mfc_context;
+    struct gen10_huc_pipe_mode_select_parameter pipe_mode_select_params;
+    struct gen10_huc_imem_state_parameter imem_state_params;
+    struct gen10_huc_dmem_state_parameter dmem_state_params;
+    struct gen10_huc_virtual_addr_parameter virtual_addr_params;
+    struct gen10_huc_start_parameter start_params;
+    struct gpe_mi_flush_dw_parameter mi_flush_dw_params;
+    struct i965_gpe_table *gpe = vdenc_context->gpe_table;
+    gen10_vdenc_vd_pipeline_flush_param pipeline_flush_params;
+
+    gen10_vdenc_vp9_huc_brc_update_constant_data(ctx, encode_state, encoder_context);
+
+    memset(&imem_state_params, 0, sizeof(imem_state_params));
+    imem_state_params.huc_firmware_descriptor = VDENC_VP9_HUC_BRC_UPDATE;
+    gen10_huc_imem_state(ctx, batch, &imem_state_params);
+
+    memset(&pipe_mode_select_params, 0, sizeof(pipe_mode_select_params));
+    gen10_huc_pipe_mode_select(ctx, batch, &pipe_mode_select_params);
+
+    gen10_vdenc_vp9_update_huc_update_dmem(ctx, encoder_context);
+
+    memset(&dmem_state_params, 0, sizeof(dmem_state_params));
+    dmem_state_params.huc_data_source_res = &vdenc_context->vdenc_brc_update_dmem_buffer_res[vdenc_context->current_pass];
+    dmem_state_params.huc_data_destination_base_address = VDENC_VP9_HUC_DMEM_DATA_OFFSET;
+    dmem_state_params.huc_data_length = ALIGN(sizeof(struct vdenc_vp9_huc_brc_update_dmem), 64);
+    gen10_huc_dmem_state(ctx, batch, &dmem_state_params);
+
+    memset(&virtual_addr_params, 0, sizeof(virtual_addr_params));
+    virtual_addr_params.regions[0].huc_surface_res = &vdenc_context->brc_history_buffer_res;
+    virtual_addr_params.regions[0].is_target = 1;
+    virtual_addr_params.regions[1].huc_surface_res = &vdenc_context->vdenc_brc_stat_buffer_res;
+    virtual_addr_params.regions[2].huc_surface_res = &vdenc_context->vdenc_brc_pak_stat_buffer_res;
+    virtual_addr_params.regions[3].huc_surface_res = &vdenc_context->vdenc_pic_state_input_2nd_batchbuffer_res[vdenc_context->current_pass];
+    virtual_addr_params.regions[4].huc_surface_res = &vdenc_context->brc_huc_data_buffer_res;
+    virtual_addr_params.regions[4].is_target = 1;
+    virtual_addr_params.regions[5].huc_surface_res = &vdenc_context->brc_constant_data_buffer_res;
+    virtual_addr_params.regions[6].huc_surface_res = &vdenc_context->vdenc_pic_state_output_2nd_batchbuffer_res[0]; // the first for non-tile clip
+    virtual_addr_params.regions[6].is_target = 1;
+    virtual_addr_params.regions[7].huc_surface_res = &vdenc_context->brc_bitstream_size_buffer_res;
+    gen10_huc_virtual_addr_state(ctx, batch, &virtual_addr_params);
+
+    gen10_vdenc_vp9_huc_store_huc_status2(ctx, encoder_context);
+
+    memset(&start_params, 0, sizeof(start_params));
+    start_params.last_stream_object = 1;
+    gen10_huc_start(ctx, batch, &start_params);
+
+    memset(&pipeline_flush_params, 0, sizeof(pipeline_flush_params));
+    pipeline_flush_params.dw1.hevc_pipeline_done = 1;
+    pipeline_flush_params.dw1.hevc_pipeline_flush = 1;
+    gen10_vdenc_vd_pipeline_flush(ctx, batch, &pipeline_flush_params);
+
+    memset(&mi_flush_dw_params, 0, sizeof(mi_flush_dw_params));
+    mi_flush_dw_params.video_pipeline_cache_invalidate = 1;
+    gpe->mi_flush_dw(ctx, batch, &mi_flush_dw_params);
+
+#if 0
+    /* Store HUC_STATUS */
+    memset(&mi_store_register_mem_params, 0, sizeof(mi_store_register_mem_params));
+    mi_store_register_mem_params.mmio_offset = VCS0_HUC_STATUS;
+    mi_store_register_mem_params.bo = vdenc_context->huc_status_buffer_res.bo;
+    gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_params);
+
+    /* Write HUC_STATUS mask (1 << 31) */
+    memset(&mi_store_data_imm_params, 0, sizeof(mi_store_data_imm_params));
+    mi_store_data_imm_params.bo = vdenc_context->huc_status_buffer_res.bo;
+    mi_store_data_imm_params.offset = 4;
+    mi_store_data_imm_params.dw0 = (1 << 31);
+    gpe->mi_store_data_imm(ctx, batch, &mi_store_data_imm_params);
+#endif
+
+    if (vdenc_context->current_pass == 0) {
+        vdenc_context->current_target_buf_full_in_bits += vdenc_context->input_bits_per_frame;
+    }
+}
+
 static void
 gen10_vdenc_mfx_wait(VADriverContextP ctx,
                      struct encode_state *encode_state,
@@ -2989,8 +3540,11 @@ gen10_vdenc_vp9_context_brc_prepare(struct encode_state *encode_state,
 
     switch (rate_control_mode & 0x7f) {
     case VA_RC_CBR:
+        vdenc_context->internal_rate_mode = I965_BRC_CBR;
+        break;
+
     case VA_RC_VBR:
-        assert(0); // TODO add support for CBR
+        vdenc_context->internal_rate_mode = I965_BRC_VBR;
         break;
 
     case VA_RC_CQP:
@@ -3828,6 +4382,20 @@ gen10_vdenc_vp9_encode_picture(VADriverContextP ctx,
 
         intel_batchbuffer_emit_mi_flush(batch);
 
+        if (vdenc_context->brc_enabled) {
+            assert(vdenc_context->num_passes > 1);
+
+            if (!vdenc_context->brc_initted || vdenc_context->brc_need_reset)
+                gen10_vdenc_vp9_huc_brc_init_reset(ctx, encode_state, encoder_context);
+
+            if (vdenc_context->current_pass < (vdenc_context->num_passes - 1) ||
+                (vdenc_context->current_pass == 0 &&
+                 vdenc_context->num_passes == 1))
+                gen10_vdenc_vp9_huc_brc_update(ctx, encode_state, encoder_context);
+
+            /* intel_batchbuffer_emit_mi_flush(batch); */
+        }
+
         if ((vdenc_context->current_pass == 0) || (vdenc_context->current_pass == (vdenc_context->num_passes - 1)))
             gen10_vdenc_vp9_huc_vp9_prob(ctx, encode_state, encoder_context);
 
@@ -3838,6 +4406,9 @@ gen10_vdenc_vp9_encode_picture(VADriverContextP ctx,
             intel_batchbuffer_end_atomic(batch);
             intel_batchbuffer_flush(batch);
         }
+
+        vdenc_context->brc_initted = 1;
+        vdenc_context->brc_need_reset = 0;
     }
 
     assert(vdenc_context->pic_param);
