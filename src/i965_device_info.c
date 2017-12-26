@@ -502,6 +502,8 @@ static struct hw_codec_info kbl_hw_codec_info = {
     .lp_h264_brc_mode = VA_RC_CQP,
     .h264_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR | VA_RC_MB,
 
+    .vp9_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR,
+
     .num_filters = 5,
     .filters = {
         { VAProcFilterNoiseReduction, I965_RING_VEBOX },
@@ -567,6 +569,8 @@ static struct hw_codec_info glk_hw_codec_info = {
     .lp_h264_brc_mode = VA_RC_CQP,
     .h264_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR | VA_RC_MB,
 
+    .vp9_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR,
+
     .num_filters = 5,
     .filters = {
         { VAProcFilterNoiseReduction, I965_RING_VEBOX },
@@ -630,6 +634,8 @@ static struct hw_codec_info cfl_hw_codec_info = {
 
     .lp_h264_brc_mode = VA_RC_CQP,
     .h264_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR | VA_RC_MB,
+
+    .vp9_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR,
 
     .num_filters = 5,
     .filters = {
