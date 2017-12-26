@@ -3685,8 +3685,8 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
                 cmd.g9->dw58.tx_decision_threshold = 128;
             } else if (is_g95) {
                 cmd.g95->dw34.enable_adaptive_tx_decision = 1;
-                cmd.g9->dw58.mb_texture_threshold = 1024;
-                cmd.g9->dw58.tx_decision_threshold = 128;
+                cmd.g95->dw60.mb_texture_threshold = 1024;
+                cmd.g95->dw60.tx_decision_threshold = 128;
             }
         }
     }
