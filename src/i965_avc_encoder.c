@@ -8180,6 +8180,9 @@ gen9_avc_encode_check_parameter(VADriverContextP ctx,
         }
     }
 
+    if (avc_state->slice_num > 1)
+        avc_state->arbitrary_num_mbs_in_slice = 1;
+
     if (generic_state->frame_type == SLICE_TYPE_I) {
         generic_state->hme_enabled = 0;
         generic_state->b16xme_enabled = 0;
