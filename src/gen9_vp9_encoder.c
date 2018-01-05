@@ -1059,7 +1059,7 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
         cmd->dw13.init_frame_width   = pic_param->frame_width_src;
         cmd->dw13.init_frame_height   = pic_param->frame_height_src;
 
-        cmd->dw15.min_qp          = 0;
+        cmd->dw15.min_qp          = 1;
         cmd->dw15.max_qp          = 255;
 
         cmd->dw16.cq_level            = 30;
@@ -1108,7 +1108,7 @@ void gen9_vp9_set_curbe_brc(VADriverContextP ctx,
         break;
     }
     case VP9_MEDIA_STATE_BRC_UPDATE: {
-        cmd->dw15.min_qp          = 0;
+        cmd->dw15.min_qp          = 1;
         cmd->dw15.max_qp          = 255;
 
         cmd->dw25.frame_number    = param->frame_number;

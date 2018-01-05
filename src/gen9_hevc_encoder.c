@@ -414,6 +414,9 @@ gen9_hevc_enc_free_resources(struct encoder_vme_mfc_context *vme_context)
 
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
 
+    if (!priv_ctx)
+        return;
+
     i965_free_gpe_resource(&priv_ctx->res_brc_pic_states_write_buffer);
     i965_free_gpe_resource(&priv_ctx->res_brc_history_buffer);
     i965_free_gpe_resource(&priv_ctx->res_brc_intra_dist_buffer);

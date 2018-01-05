@@ -1416,13 +1416,9 @@ VAStatus hsw_veb_pre_format_convert(VADriverContextP ctx,
 
     proc_ctx->format_convert_flags = 0;
 
-    if ((obj_surf_input == NULL) &&
-        (proc_ctx->pipeline_param->surface_region == NULL))
+    if ((obj_surf_input == NULL) || (obj_surf_output == NULL)) {
         ASSERT_RET(0, VA_STATUS_ERROR_INVALID_PARAMETER);
-
-    if ((obj_surf_output == NULL) &&
-        (proc_ctx->pipeline_param->output_region == NULL))
-        ASSERT_RET(0, VA_STATUS_ERROR_INVALID_PARAMETER);
+    }
 
     if (proc_ctx->pipeline_param->surface_region) {
         proc_ctx->width_input   = proc_ctx->pipeline_param->surface_region->width;

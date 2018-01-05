@@ -30,6 +30,7 @@
 #include "sysdeps.h"
 #include <unistd.h>
 #include <dlfcn.h>
+#include <drm_fourcc.h>
 
 #ifdef HAVE_VA_X11
 # include "i965_output_dri.h"
@@ -6436,6 +6437,237 @@ i965_ReleaseBufferHandle(VADriverContextP ctx, VABufferID buf_id)
     return i965_release_buffer_handle(obj_buffer);
 }
 
+// Locally define DRM_FORMAT values not available in older but still
+// supported versions of libdrm.
+#ifndef DRM_FORMAT_R8
+#define DRM_FORMAT_R8        fourcc_code('R', '8', ' ', ' ')
+#endif
+#ifndef DRM_FORMAT_R16
+#define DRM_FORMAT_R16       fourcc_code('R', '1', '6', ' ')
+#endif
+#ifndef DRM_FORMAT_GR88
+#define DRM_FORMAT_GR88      fourcc_code('G', 'R', '8', '8')
+#endif
+#ifndef DRM_FORMAT_GR1616
+#define DRM_FORMAT_GR1616    fourcc_code('G', 'R', '3', '2')
+#endif
+
+static uint32_t drm_format_of_separate_plane(uint32_t fourcc, int plane)
+{
+    if (plane == 0) {
+        switch (fourcc) {
+        case VA_FOURCC_NV12:
+        case VA_FOURCC_I420:
+        case VA_FOURCC_YV12:
+        case VA_FOURCC_YV16:
+        case VA_FOURCC_Y800:
+            return DRM_FORMAT_R8;
+        case VA_FOURCC_P010:
+        case VA_FOURCC_I010:
+            return DRM_FORMAT_R16;
+
+        case VA_FOURCC_YUY2:
+        case VA_FOURCC_UYVY:
+            // These are not representable as separate planes.
+            return 0;
+
+        case VA_FOURCC_RGBA:
+            return DRM_FORMAT_ABGR8888;
+        case VA_FOURCC_RGBX:
+            return DRM_FORMAT_XBGR8888;
+        case VA_FOURCC_BGRA:
+            return DRM_FORMAT_ARGB8888;
+        case VA_FOURCC_BGRX:
+            return DRM_FORMAT_XRGB8888;
+        case VA_FOURCC_ARGB:
+            return DRM_FORMAT_BGRA8888;
+        case VA_FOURCC_ABGR:
+            return DRM_FORMAT_RGBA8888;
+        }
+    } else {
+        switch (fourcc) {
+        case VA_FOURCC_NV12:
+            return DRM_FORMAT_GR88;
+        case VA_FOURCC_I420:
+        case VA_FOURCC_YV12:
+        case VA_FOURCC_YV16:
+            return DRM_FORMAT_R8;
+        case VA_FOURCC_P010:
+            return DRM_FORMAT_GR1616;
+        case VA_FOURCC_I010:
+            return DRM_FORMAT_R16;
+        }
+    }
+    return 0;
+}
+
+static uint32_t drm_format_of_composite_object(uint32_t fourcc)
+{
+    switch (fourcc) {
+    case VA_FOURCC_NV12:
+        return DRM_FORMAT_NV12;
+    case VA_FOURCC_I420:
+        return DRM_FORMAT_YUV420;
+    case VA_FOURCC_YV12:
+        return DRM_FORMAT_YVU420;
+    case VA_FOURCC_YV16:
+        return DRM_FORMAT_YVU422;
+    case VA_FOURCC_YUY2:
+        return DRM_FORMAT_YUYV;
+    case VA_FOURCC_UYVY:
+        return DRM_FORMAT_UYVY;
+    case VA_FOURCC_Y800:
+        return DRM_FORMAT_R8;
+
+    case VA_FOURCC_P010:
+    case VA_FOURCC_I010:
+        // These currently have no composite DRM format - they are usable
+        // only as separate planes.
+        return 0;
+
+    case VA_FOURCC_RGBA:
+        return DRM_FORMAT_ABGR8888;
+    case VA_FOURCC_RGBX:
+        return DRM_FORMAT_XBGR8888;
+    case VA_FOURCC_BGRA:
+        return DRM_FORMAT_ARGB8888;
+    case VA_FOURCC_BGRX:
+        return DRM_FORMAT_XRGB8888;
+    case VA_FOURCC_ARGB:
+        return DRM_FORMAT_BGRA8888;
+    case VA_FOURCC_ABGR:
+        return DRM_FORMAT_RGBA8888;
+    }
+    return 0;
+}
+
+static VAStatus
+i965_ExportSurfaceHandle(VADriverContextP ctx, VASurfaceID surface_id,
+                         uint32_t mem_type, uint32_t flags,
+                         void *descriptor)
+{
+    struct i965_driver_data *const i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface = SURFACE(surface_id);
+    const i965_fourcc_info *info;
+    VADRMPRIMESurfaceDescriptor *desc;
+    unsigned int tiling, swizzle;
+    uint32_t formats[4], pitch, height, offset;
+    int fd, p;
+    int composite_object =
+        flags & VA_EXPORT_SURFACE_COMPOSED_LAYERS;
+
+    if (!obj_surface || !obj_surface->bo)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    if (mem_type != VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2) {
+        i965_log_info(ctx, "vaExportSurfaceHandle: memory type %08x "
+                      "is not supported.\n", mem_type);
+        return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
+    }
+
+    info = get_fourcc_info(obj_surface->fourcc);
+    if (!info)
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+    if (composite_object) {
+        formats[0] =
+            drm_format_of_composite_object(obj_surface->fourcc);
+        if (!formats[0]) {
+            i965_log_info(ctx, "vaExportSurfaceHandle: fourcc %08x "
+                          "is not supported for export as a composite "
+                          "object.\n", obj_surface->fourcc);
+            return VA_STATUS_ERROR_INVALID_SURFACE;
+        }
+    } else {
+        for (p = 0; p < info->num_planes; p++) {
+            formats[p] =
+                drm_format_of_separate_plane(obj_surface->fourcc, p);
+            if (!formats[p]) {
+                i965_log_info(ctx, "vaExportSurfaceHandle: fourcc %08x "
+                              "is not supported for export as separate "
+                              "planes.\n", obj_surface->fourcc);
+                return VA_STATUS_ERROR_INVALID_SURFACE;
+            }
+        }
+    }
+
+    if (drm_intel_bo_gem_export_to_prime(obj_surface->bo, &fd))
+        return VA_STATUS_ERROR_INVALID_SURFACE;
+
+    if (drm_intel_bo_get_tiling(obj_surface->bo, &tiling, &swizzle))
+        tiling = I915_TILING_NONE;
+
+    desc = descriptor;
+
+    desc->fourcc = obj_surface->fourcc;
+    desc->width  = obj_surface->width;
+    desc->height = obj_surface->height;
+
+    desc->num_objects     = 1;
+    desc->objects[0].fd   = fd;
+    desc->objects[0].size = obj_surface->size;
+    switch (tiling) {
+    case I915_TILING_X:
+        desc->objects[0].drm_format_modifier = I915_FORMAT_MOD_X_TILED;
+        break;
+    case I915_TILING_Y:
+        desc->objects[0].drm_format_modifier = I915_FORMAT_MOD_Y_TILED;
+        break;
+    case I915_TILING_NONE:
+    default:
+        desc->objects[0].drm_format_modifier = DRM_FORMAT_MOD_NONE;
+    }
+
+    if (composite_object) {
+        desc->num_layers = 1;
+
+        desc->layers[0].drm_format = formats[0];
+        desc->layers[0].num_planes = info->num_planes;
+
+        offset = 0;
+        for (p = 0; p < info->num_planes; p++) {
+            desc->layers[0].object_index[p] = 0;
+
+            if (p == 0) {
+                pitch  = obj_surface->width;
+                height = obj_surface->height;
+            } else {
+                pitch  = obj_surface->cb_cr_pitch;
+                height = obj_surface->cb_cr_height;
+            }
+
+            desc->layers[0].offset[p] = offset;
+            desc->layers[0].pitch[p]  = pitch;
+
+            offset += pitch * height;
+        }
+    } else {
+        desc->num_layers = info->num_planes;
+
+        offset = 0;
+        for (p = 0; p < info->num_planes; p++) {
+            desc->layers[p].drm_format = formats[p];
+            desc->layers[p].num_planes = 1;
+
+            desc->layers[p].object_index[0] = 0;
+
+            if (p == 0) {
+                pitch  = obj_surface->width;
+                height = obj_surface->height;
+            } else {
+                pitch  = obj_surface->cb_cr_pitch;
+                height = obj_surface->cb_cr_height;
+            }
+
+            desc->layers[p].offset[0] = offset;
+            desc->layers[p].pitch[0]  = pitch;
+
+            offset += pitch * height;
+        }
+    }
+
+    return VA_STATUS_SUCCESS;
+}
+
 static int
 i965_os_has_ring_support(VADriverContextP ctx,
                          int ring)
@@ -6681,6 +6913,53 @@ VAStatus i965_QueryVideoProcPipelineCaps(
     }
 
     return VA_STATUS_SUCCESS;
+}
+
+void i965_log_error(VADriverContextP ctx, const char *format, ...)
+{
+    va_list vl;
+
+    va_start(vl, format);
+
+    if (!ctx->error_callback) {
+        // No error callback: this is a error message which should be
+        // user-visible, so print it to stderr instead.
+        vfprintf(stderr, format, vl);
+    } else {
+        // Put the message on the stack.  If it overruns the size of the
+        // then it will just be truncated - callers shouldn't be sending
+        // messages which are too long.
+        char tmp[1024];
+        int ret;
+        ret = vsnprintf(tmp, sizeof(tmp), format, vl);
+        if (ret > 0)
+            ctx->error_callback(ctx, tmp);
+    }
+
+    va_end(vl);
+}
+
+void i965_log_info(VADriverContextP ctx, const char *format, ...)
+{
+    va_list vl;
+
+    va_start(vl, format);
+
+    if (!ctx->info_callback) {
+        // No info callback: this message is only useful for developers,
+        // so just discard it.
+    } else {
+        // Put the message on the stack.  If it overruns the size of the
+        // then it will just be truncated - callers shouldn't be sending
+        // messages which are too long.
+        char tmp[1024];
+        int ret;
+        ret = vsnprintf(tmp, sizeof(tmp), format, vl);
+        if (ret > 0)
+            ctx->info_callback(ctx, tmp);
+    }
+
+    va_end(vl);
 }
 
 extern struct hw_codec_info *i965_get_codec_info(int devid);
@@ -7140,6 +7419,9 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
     /* 0.36.0 */
     vtable->vaAcquireBufferHandle = i965_AcquireBufferHandle;
     vtable->vaReleaseBufferHandle = i965_ReleaseBufferHandle;
+
+    /* 1.0.0 */
+    vtable->vaExportSurfaceHandle = i965_ExportSurfaceHandle;
 
     vtable_vpp->vaQueryVideoProcFilters = i965_QueryVideoProcFilters;
     vtable_vpp->vaQueryVideoProcFilterCaps = i965_QueryVideoProcFilterCaps;

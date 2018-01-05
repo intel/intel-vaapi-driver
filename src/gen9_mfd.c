@@ -341,7 +341,7 @@ gen9_hcpd_ind_obj_base_addr_state(VADriverContextP ctx,
 
     OUT_BCS_BATCH(batch, HCP_IND_OBJ_BASE_ADDR_STATE | (14 - 2));
     OUT_BUFFER_MA_REFERENCE(slice_data_bo);        /* DW 1..3 */
-    OUT_BUFFER_NMA_REFERENCE(NULL);                /* DW 4..5, Upper Bound */
+    OUT_BCS_RELOC64(batch, slice_data_bo, I915_GEM_DOMAIN_RENDER, 0, ALIGN(slice_data_bo->size, 4096));
     OUT_BUFFER_MA_REFERENCE(NULL);                 /* DW 6..8, CU, ignored */
     OUT_BUFFER_MA_TARGET(NULL);                    /* DW 9..11, PAK-BSE, ignored */
     OUT_BUFFER_NMA_TARGET(NULL);                   /* DW 12..13, Upper Bound  */
