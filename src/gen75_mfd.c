@@ -2080,10 +2080,12 @@ gen75_mfd_vc1_pic_state(VADriverContextP ctx,
     assert(pic_param->picture_fields.bits.frame_coding_mode < 3);
 
     if (pic_param->sequence_fields.bits.interlace) {
-        if (!pic_param->picture_fields.bits.top_field_first)
-            fcm = 3;
-        else
+        if (pic_param->picture_fields.bits.frame_coding_mode < 2)
             fcm = pic_param->picture_fields.bits.frame_coding_mode;
+        else if (!pic_param->picture_fields.bits.top_field_first)
+            fcm = 3; /* Field with bottom field first */
+        else
+            fcm = 2; /* Field with top field first */
     }
 
     if (pic_param->sequence_fields.bits.interlace &&
