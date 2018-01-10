@@ -71,6 +71,7 @@ struct intel_encoder_context {
     unsigned int frame_width_in_pixel;
     unsigned int frame_height_in_pixel;
     unsigned int max_slice_or_seg_num;
+    unsigned int codec_level;
 
     struct {
         unsigned int num_layers;
@@ -114,6 +115,8 @@ struct intel_encoder_context {
 
     unsigned int fei_enabled: 1;
     unsigned int fei_function_mode; /* configured VA_FEI_FUNCTION_XXX */
+
+    unsigned int preenc_enabled: 1;
 
     void (*vme_context_destroy)(void *vme_context);
     VAStatus(*vme_pipeline)(VADriverContextP ctx,

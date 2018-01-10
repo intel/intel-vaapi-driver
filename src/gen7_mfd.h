@@ -41,11 +41,6 @@
 #define GEN7_VC1_BI_PICTURE             3
 #define GEN7_VC1_SKIPPED_PICTURE        4
 
-#define GEN7_VC1_SIMPLE_PROFILE         0
-#define GEN7_VC1_MAIN_PROFILE           1
-#define GEN7_VC1_ADVANCED_PROFILE       2
-#define GEN7_VC1_RESERVED_PROFILE       3
-
 #define GEN7_JPEG_ROTATION_0            0
 #define GEN7_JPEG_ROTATION_90           1
 #define GEN7_JPEG_ROTATION_270          2
@@ -61,11 +56,20 @@
 #define GEN7_YUV422V_4Y                 7
 
 struct gen7_vc1_surface {
-    dri_bo *dmv;
-    int picture_type;
-    int intensity_compensation;
+    dri_bo *dmv_top;
+    dri_bo *dmv_bottom;
+    int picture_type_top;
+    int picture_type_bottom;
+    int range_reduction_frame;
+    int reference_distance;
+    int intensity_compensation_top;
+    int intensity_compensation_bottom;
     int luma_scale;
+    int luma_scale_top[2];
+    int luma_scale_bottom[2];
     int luma_shift;
+    int luma_shift_top[2];
+    int luma_shift_bottom[2];
 };
 
 struct hw_context;

@@ -30,6 +30,17 @@
 #include "i965_decoder_utils.h"
 #include "i965_defines.h"
 
+static const int fptype_to_picture_type[8][2] = {
+    {VC1_I_PICTURE, VC1_I_PICTURE},
+    {VC1_I_PICTURE, VC1_P_PICTURE},
+    {VC1_P_PICTURE, VC1_I_PICTURE},
+    {VC1_P_PICTURE, VC1_P_PICTURE},
+    {VC1_B_PICTURE, VC1_B_PICTURE},
+    {VC1_B_PICTURE, VC1_BI_PICTURE},
+    {VC1_BI_PICTURE, VC1_B_PICTURE},
+    {VC1_BI_PICTURE, VC1_BI_PICTURE}
+};
+
 /* Set reference surface if backing store exists */
 static inline int
 set_ref_frame(
@@ -810,27 +821,47 @@ intel_update_vc1_frame_store_index(VADriverContextP ctx,
         !obj_surface->bo) {
         frame_store[0].surface_id = VA_INVALID_ID;
         frame_store[0].obj_surface = NULL;
+        frame_store[2].surface_id = VA_INVALID_ID;
+        frame_store[2].obj_surface = NULL;
     } else {
         frame_store[0].surface_id = pic_param->forward_reference_picture;
         frame_store[0].obj_surface = obj_surface;
+        frame_store[2].surface_id = pic_param->forward_reference_picture;
+        frame_store[2].obj_surface = obj_surface;
     }
 
-    obj_surface = decode_state->reference_objects[1];
+    if (pic_param->sequence_fields.bits.interlace &&
+        pic_param->picture_fields.bits.frame_coding_mode == 2 && /* Field-Interlace */
+        !pic_param->picture_fields.bits.is_first_field) {
+        if (pic_param->picture_fields.bits.top_field_first) {
+            frame_store[0].surface_id = decode_state->current_render_target;
+            frame_store[0].obj_surface = decode_state->render_object;
+        } else {
+            frame_store[2].surface_id = decode_state->current_render_target;
+            frame_store[2].obj_surface = decode_state->render_object;
+        }
+    }
+
+    obj_surface= decode_state->reference_objects[1];
 
     if (pic_param->backward_reference_picture == VA_INVALID_ID ||
         !obj_surface ||
         !obj_surface->bo) {
         frame_store[1].surface_id = frame_store[0].surface_id;
         frame_store[1].obj_surface = frame_store[0].obj_surface;
+        frame_store[3].surface_id = frame_store[2].surface_id;
+        frame_store[3].obj_surface = frame_store[2].obj_surface;
     } else {
         frame_store[1].surface_id = pic_param->backward_reference_picture;
         frame_store[1].obj_surface = obj_surface;
-    }
-    for (i = 2; i < MAX_GEN_REFERENCE_FRAMES; i++) {
-        frame_store[i].surface_id = frame_store[i % 2].surface_id;
-        frame_store[i].obj_surface = frame_store[i % 2].obj_surface;
+        frame_store[3].surface_id = pic_param->backward_reference_picture;
+        frame_store[3].obj_surface = obj_surface;
     }
 
+    for (i = 4; i < MAX_GEN_REFERENCE_FRAMES; i++) {
+        frame_store[i].surface_id = frame_store[i % 4].surface_id;
+        frame_store[i].obj_surface = frame_store[i % 4].obj_surface;
+    }
 }
 
 void
@@ -1081,24 +1112,29 @@ intel_decoder_check_vc1_parameter(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAPictureParameterBufferVC1 *pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
     struct object_surface *obj_surface;
+    int picture_type;
+    int is_first_field = 1;
     int i = 0;
 
-    if (pic_param->sequence_fields.bits.interlace == 1 &&
-        pic_param->picture_fields.bits.frame_coding_mode != 0) { /* frame-interlace or field-interlace */
-        return VA_STATUS_ERROR_DECODING_ERROR;
+    if (!pic_param->sequence_fields.bits.interlace ||
+        (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
+        picture_type = pic_param->picture_fields.bits.picture_type;
+    } else {/* Field-Interlace */
+        is_first_field = pic_param->picture_fields.bits.is_first_field;
+        picture_type = fptype_to_picture_type[pic_param->picture_fields.bits.picture_type][!is_first_field];
     }
 
-    if (pic_param->picture_fields.bits.picture_type == 0 ||
-        pic_param->picture_fields.bits.picture_type == 3) {
-    } else if (pic_param->picture_fields.bits.picture_type == 1 ||
-               pic_param->picture_fields.bits.picture_type == 4) {
+    if (picture_type == VC1_I_PICTURE ||
+        picture_type == VC1_BI_PICTURE) {
+    } else if (picture_type == VC1_P_PICTURE ||
+               picture_type == VC1_SKIPPED_PICTURE) {
         obj_surface = SURFACE(pic_param->forward_reference_picture);
 
         if (!obj_surface || !obj_surface->bo)
             decode_state->reference_objects[i++] = NULL;
         else
             decode_state->reference_objects[i++] = obj_surface;
-    } else if (pic_param->picture_fields.bits.picture_type == 2) {
+    } else if (picture_type == VC1_B_PICTURE) {
         obj_surface = SURFACE(pic_param->forward_reference_picture);
 
         if (!obj_surface || !obj_surface->bo)

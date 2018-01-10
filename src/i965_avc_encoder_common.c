@@ -28,62 +28,58 @@
  */
 
 #include "i965_avc_encoder_common.h"
+
+// H.264 table A-1 - level limits.
+static const struct avc_level_limits {
+    int level_idc;
+    int max_mbps;
+    int max_fs;
+    int max_dpb_mbs;
+    int max_v_mv_r;
+    int max_mvs_per_2mb;
+} avc_level_limits[] = {
+    { INTEL_AVC_LEVEL_1,      1485,     99,     396,   64,  0 },
+    { INTEL_AVC_LEVEL_11,     3000,    396,     900,  128,  0 },
+    { INTEL_AVC_LEVEL_12,     6000,    396,    2376,  128,  0 },
+    { INTEL_AVC_LEVEL_13,    11880,    396,    2376,  128,  0 },
+    { INTEL_AVC_LEVEL_2,     11880,    396,    2376,  128,  0 },
+    { INTEL_AVC_LEVEL_21,    19800,    792,    4752,  256,  0 },
+    { INTEL_AVC_LEVEL_22,    20250,   1620,    8100,  256,  0 },
+    { INTEL_AVC_LEVEL_3,     40500,   1620,    8100,  256, 32 },
+    { INTEL_AVC_LEVEL_31,   108000,   3600,   18000,  512, 16 },
+    { INTEL_AVC_LEVEL_32,   216000,   5120,   20480,  512, 16 },
+    { INTEL_AVC_LEVEL_4,    245760,   8192,   32768,  512, 16 },
+    { INTEL_AVC_LEVEL_41,   245760,   8192,   32768,  512, 16 },
+    { INTEL_AVC_LEVEL_42,   522240,   8704,   34816,  512, 16 },
+    { INTEL_AVC_LEVEL_5,    589824,  22080,  110400,  512, 16 },
+    { INTEL_AVC_LEVEL_51,   983040,  36864,  184320,  512, 16 },
+    { INTEL_AVC_LEVEL_52,  2073600,  36864,  184320,  512, 16 },
+    { INTEL_AVC_LEVEL_6,   4177920, 139264,  696320, 8192, 16 },
+    { INTEL_AVC_LEVEL_61,  8355840, 139264,  696320, 8192, 16 },
+    { INTEL_AVC_LEVEL_62, 16711680, 139264,  696320, 8192, 16 },
+};
+
+static const struct avc_level_limits*
+get_level_limits(int level_idc)
+{
+    int i;
+    for (i = 1; i < ARRAY_ELEMS(avc_level_limits); i++) {
+        if (level_idc < avc_level_limits[i].level_idc)
+            break;
+    }
+    return &avc_level_limits[i - 1];
+}
+
+int
+i965_avc_level_is_valid(int level_idc)
+{
+    return get_level_limits(level_idc)->level_idc == level_idc;
+}
+
 int
 i965_avc_get_max_mbps(int level_idc)
 {
-    int max_mbps = 11880;
-
-    switch (level_idc) {
-    case INTEL_AVC_LEVEL_2:
-        max_mbps = 11880;
-        break;
-
-    case INTEL_AVC_LEVEL_21:
-        max_mbps = 19800;
-        break;
-
-    case INTEL_AVC_LEVEL_22:
-        max_mbps = 20250;
-        break;
-
-    case INTEL_AVC_LEVEL_3:
-        max_mbps = 40500;
-        break;
-
-    case INTEL_AVC_LEVEL_31:
-        max_mbps = 108000;
-        break;
-
-    case INTEL_AVC_LEVEL_32:
-        max_mbps = 216000;
-        break;
-
-    case INTEL_AVC_LEVEL_4:
-    case INTEL_AVC_LEVEL_41:
-        max_mbps = 245760;
-        break;
-
-    case INTEL_AVC_LEVEL_42:
-        max_mbps = 522240;
-        break;
-
-    case INTEL_AVC_LEVEL_5:
-        max_mbps = 589824;
-        break;
-
-    case INTEL_AVC_LEVEL_51:
-        max_mbps = 983040;
-        break;
-
-    case INTEL_AVC_LEVEL_52:
-        max_mbps = 2073600;
-        break;
-
-    default:
-        break;
-    }
-
-    return max_mbps;
+    return get_level_limits(level_idc)->max_mbps;
 };
 
 unsigned int
@@ -150,111 +146,17 @@ i965_avc_calculate_initial_qp(struct avc_param * param)
     return qp;
 }
 
-int
-i965_avc_get_max_v_mv_r(int level_idc)
-{
-    int max_v_mv_r = 128 * 4;
-
-    // See JVT Spec Annex A Table A-1 Level limits for below mapping
-    // MaxVmvR is in luma quarter pel unit
-    switch (level_idc) {
-    case INTEL_AVC_LEVEL_1:
-        max_v_mv_r = 64 * 4;
-        break;
-    case INTEL_AVC_LEVEL_11:
-    case INTEL_AVC_LEVEL_12:
-    case INTEL_AVC_LEVEL_13:
-    case INTEL_AVC_LEVEL_2:
-        max_v_mv_r = 128 * 4;
-        break;
-    case INTEL_AVC_LEVEL_21:
-    case INTEL_AVC_LEVEL_22:
-    case INTEL_AVC_LEVEL_3:
-        max_v_mv_r = 256 * 4;
-        break;
-    case INTEL_AVC_LEVEL_31:
-    case INTEL_AVC_LEVEL_32:
-    case INTEL_AVC_LEVEL_4:
-    case INTEL_AVC_LEVEL_41:
-    case INTEL_AVC_LEVEL_42:
-    case INTEL_AVC_LEVEL_5:
-    case INTEL_AVC_LEVEL_51:
-    case INTEL_AVC_LEVEL_52:
-        max_v_mv_r = 512 * 4;
-        break;
-    default:
-        assert(0);
-        break;
-    }
-
-    return max_v_mv_r;
-}
 
 int
 i965_avc_get_max_mv_len(int level_idc)
 {
-    int max_mv_len = 127;
-
-    // See JVT Spec Annex A Table A-1 Level limits for below mapping
-    // MaxVmvR is in luma quarter pel unit
-    switch (level_idc) {
-    case INTEL_AVC_LEVEL_1:
-        max_mv_len = 63;
-        break;
-    case INTEL_AVC_LEVEL_11:
-    case INTEL_AVC_LEVEL_12:
-    case INTEL_AVC_LEVEL_13:
-    case INTEL_AVC_LEVEL_2:
-        max_mv_len = 127;
-        break;
-    case INTEL_AVC_LEVEL_21:
-    case INTEL_AVC_LEVEL_22:
-    case INTEL_AVC_LEVEL_3:
-        max_mv_len = 255;
-        break;
-    case INTEL_AVC_LEVEL_31:
-    case INTEL_AVC_LEVEL_32:
-    case INTEL_AVC_LEVEL_4:
-    case INTEL_AVC_LEVEL_41:
-    case INTEL_AVC_LEVEL_42:
-    case INTEL_AVC_LEVEL_5:
-    case INTEL_AVC_LEVEL_51:
-    case INTEL_AVC_LEVEL_52:
-        max_mv_len = 511;
-        break;
-    default:
-        assert(0);
-        break;
-    }
-
-    return max_mv_len;
+    return get_level_limits(level_idc)->max_v_mv_r - 1;
 }
 
 int
 i965_avc_get_max_mv_per_2mb(int level_idc)
 {
-    unsigned int max_mv_per_2mb = 32;
-
-    // See JVT Spec Annex A Table A-1 Level limits for below mapping
-    switch (level_idc) {
-    case INTEL_AVC_LEVEL_3:
-        max_mv_per_2mb = 32;
-        break;
-    case INTEL_AVC_LEVEL_31:
-    case INTEL_AVC_LEVEL_32:
-    case INTEL_AVC_LEVEL_4:
-    case INTEL_AVC_LEVEL_41:
-    case INTEL_AVC_LEVEL_42:
-    case INTEL_AVC_LEVEL_5:
-    case INTEL_AVC_LEVEL_51:
-    case INTEL_AVC_LEVEL_52:
-        max_mv_per_2mb = 16;
-        break;
-    default:
-        break;
-    }
-
-    return max_mv_per_2mb;
+    return get_level_limits(level_idc)->max_mvs_per_2mb;
 }
 
 unsigned short
@@ -267,44 +169,4 @@ i965_avc_calc_skip_value(unsigned int enc_block_based_sip_en, unsigned int trans
     }
 
     return skip_value;
-}
-
-unsigned short i965_avc_get_maxnum_slices_num(int profile_idc, int level_idc, unsigned int frames_per_100s)
-{
-    unsigned int  slice_num = 0;
-
-    if ((profile_idc == VAProfileH264Main) ||
-        (profile_idc == VAProfileH264High)) {
-        switch (level_idc) {
-        case INTEL_AVC_LEVEL_3:
-            slice_num = (unsigned int)(40500.0 * 100 / 22.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_31:
-            slice_num = (unsigned int)(108000.0 * 100 / 60.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_32:
-            slice_num = (unsigned int)(216000.0 * 100 / 60.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_4:
-        case INTEL_AVC_LEVEL_41:
-            slice_num = (unsigned int)(245760.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_42:
-            slice_num = (unsigned int)(522240.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_5:
-            slice_num = (unsigned int)(589824.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_51:
-            slice_num = (unsigned int)(983040.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        case INTEL_AVC_LEVEL_52:
-            slice_num = (unsigned int)(2073600.0 * 100 / 24.0 / frames_per_100s);
-            break;
-        default:
-            slice_num = 0;
-        }
-    }
-
-    return slice_num;
 }
