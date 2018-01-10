@@ -95,7 +95,10 @@ typedef enum {
     INTEL_AVC_LEVEL_42                   = 42,
     INTEL_AVC_LEVEL_5                    = 50,
     INTEL_AVC_LEVEL_51                   = 51,
-    INTEL_AVC_LEVEL_52                   = 52
+    INTEL_AVC_LEVEL_52                   = 52,
+    INTEL_AVC_LEVEL_6                    = 60,
+    INTEL_AVC_LEVEL_61                   = 61,
+    INTEL_AVC_LEVEL_62                   = 62,
 } INTEL_AVC_LEVEL_IDC;
 
 /*
@@ -176,6 +179,22 @@ struct i965_avc_encoder_context {
     //ref list
     struct i965_gpe_resource list_reference_res[MAX_MFC_AVC_REFERENCE_SURFACES];
 
+    //preenc downscale surfae
+    VASurfaceID preenc_scaled_4x_surface_id;
+    struct object_surface *preenc_scaled_4x_surface_obj;
+    VASurfaceID preenc_past_ref_scaled_4x_surface_id;
+    struct object_surface *preenc_past_ref_scaled_4x_surface_obj;
+    VASurfaceID preenc_future_ref_scaled_4x_surface_id;
+    struct object_surface *preenc_future_ref_scaled_4x_surface_obj;
+    struct i965_gpe_resource preenc_past_ref_stat_data_out_buffer;
+    struct i965_gpe_resource preenc_future_ref_stat_data_out_buffer;
+
+    // preproc resources
+    struct i965_gpe_resource preproc_mv_predictor_buffer;
+    struct i965_gpe_resource preproc_mb_qp_buffer;
+    struct i965_gpe_resource preproc_mv_data_out_buffer;
+    struct i965_gpe_resource preproc_stat_data_out_buffer;
+
     // kernel context
     struct gen_avc_scaling_context  context_scaling;
     struct gen_avc_me_context  context_me;
@@ -183,6 +202,7 @@ struct i965_avc_encoder_context {
     struct gen_avc_mbenc_context  context_mbenc;
     struct gen_avc_wp_context  context_wp;
     struct gen_avc_sfd_context  context_sfd;
+    struct gen_avc_preproc_context  context_preproc;
 
     struct encoder_status_buffer_internal status_buffer;
 
@@ -196,6 +216,7 @@ struct avc_enc_state {
     VAEncSliceParameterBufferH264    *slice_param[MAX_AVC_SLICE_NUM];
     VAEncMacroblockParameterBufferH264 *mb_param;
     VAEncMiscParameterFEIFrameControlH264 *fei_framectl_param;
+    VAStatsStatisticsParameterH264 *stat_param;
     uint32_t mad_enable: 1;
     //mb skip
     uint32_t mb_disable_skip_map_enable: 1;
@@ -319,10 +340,10 @@ struct avc_enc_state {
 
 };
 
+extern int i965_avc_level_is_valid(int level_idc);
 extern int i965_avc_get_max_mbps(int level_idc);
 extern int i965_avc_calculate_initial_qp(struct avc_param * param);
 extern unsigned int i965_avc_get_profile_level_max_frame(struct avc_param * param, int level_idc);
-extern int i965_avc_get_max_v_mv_r(int level_idc);
 extern int i965_avc_get_max_mv_len(int level_idc);
 extern int i965_avc_get_max_mv_per_2mb(int level_idc);
 extern unsigned short i965_avc_calc_skip_value(unsigned int enc_block_based_sip_en, unsigned int transform_8x8_flag, unsigned short skip_value);

@@ -50,7 +50,7 @@
 #include "i965_fourcc.h"
 
 #define I965_MAX_PROFILES                       20
-#define I965_MAX_ENTRYPOINTS                    6
+#define I965_MAX_ENTRYPOINTS                    7
 #define I965_MAX_CONFIG_ATTRIBUTES              32
 #define I965_MAX_IMAGE_FORMATS                  10
 #define I965_MAX_SUBPIC_FORMATS                 6
@@ -86,6 +86,11 @@
 
 #define ENCODER_LP_QUALITY_RANGE  8
 
+#define STATS_MAX_NUM_PAST_REFS     1
+#define STATS_MAX_NUM_FUTURE_REFS   1
+#define STATS_MAX_NUM_OUTPUTS       2
+#define STATS_INTERLACED_SUPPORT    0
+
 #define HAS_MPEG2_DECODING(ctx)  ((ctx)->codec_info->has_mpeg2_decoding && \
                                   (ctx)->intel.has_bsd)
 
@@ -103,6 +108,8 @@
 
 #define HAS_FEI_H264_ENCODING(ctx)  ((ctx)->codec_info->has_fei_h264_encoding && \
                                      (ctx)->intel.has_bsd)
+
+#define HAS_H264_PREENC(ctx)  ((ctx)->codec_info->has_h264_preenc)
 
 #define HAS_VC1_DECODING(ctx)   ((ctx)->codec_info->has_vc1_decoding && \
                                  (ctx)->intel.has_bsd)
@@ -280,6 +287,9 @@ struct encode_state {
 
     struct buffer_store *misc_param[19][8];
 
+    /* To store the VAStatsStatisticsParameterBufferType buffers */
+    struct buffer_store *stat_param_ext;
+
     VASurfaceID current_render_target;
     struct object_surface *input_yuv_object;
     struct object_surface *reconstructed_object;
@@ -297,6 +307,7 @@ struct proc_state {
 #define CODEC_DEC       0
 #define CODEC_ENC       1
 #define CODEC_PROC      2
+#define CODEC_PREENC    3
 
 union codec_state {
     struct codec_state_base base;
@@ -486,6 +497,7 @@ struct hw_codec_info {
     unsigned int has_lp_h264_encoding: 1;
     unsigned int has_vp9_encoding: 1;
     unsigned int has_fei_h264_encoding: 1;
+    unsigned int has_h264_preenc: 1;
 
     unsigned int lp_h264_brc_mode;
     unsigned int h264_brc_mode;
@@ -638,5 +650,9 @@ extern VAStatus i965_CreateSurfaces(VADriverContextP ctx,
 
 void
 i965_destroy_surface_storage(struct object_surface *obj_surface);
+
+// Logging functions for errors (to be shown to users) and info (useful for developers).
+void i965_log_error(VADriverContextP ctx, const char *format, ...);
+void i965_log_info(VADriverContextP ctx, const char *format, ...);
 
 #endif /* _I965_DRV_VIDEO_H_ */

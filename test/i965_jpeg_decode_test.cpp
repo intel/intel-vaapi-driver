@@ -223,7 +223,7 @@ TEST_P(FourCCTest, Decode)
     ASSERT_NO_FAILURE(renderPicture(context, &sliceDataBufId));
     ASSERT_NO_FAILURE(endPicture(context));
 
-    VAImage image;
+    VAImage image{.image_id = VA_INVALID_ID};
     ASSERT_NO_FAILURE(deriveImage(surfaces.front(), image));
     ASSERT_NO_FAILURE(
         uint8_t *output = mapBuffer<uint8_t>(image.buf));

@@ -46,6 +46,10 @@
 #define SRC_FORMAT_I010         4
 #define SRC_FORMAT_YUY2         5
 #define SRC_FORMAT_UYVY         6
+#define SRC_FORMAT_RGBA         7
+#define SRC_FORMAT_RGBX         8
+#define SRC_FORMAT_BGRA         9
+#define SRC_FORMAT_BGRX         10
 
 #define DST_FORMAT_I420         0
 #define DST_FORMAT_YV12         1
@@ -54,10 +58,15 @@
 #define DST_FORMAT_I010         4
 #define DST_FORMAT_YUY2         5
 #define DST_FORMAT_UYVY         6
+#define DST_FORMAT_RGBA         7
+#define DST_FORMAT_RGBX         8
+#define DST_FORMAT_BGRA         9
+#define DST_FORMAT_BGRX         10
 
+/*
+ *  32 DWs or 4 GRFs
+ */
 struct scaling_input_parameter {
-    unsigned int input_data[5];
-
     float inv_width;
     float inv_height;
 
@@ -69,7 +78,7 @@ struct scaling_input_parameter {
         unsigned int reserved : 12;
         unsigned int src_format : 8;
         unsigned int dst_format : 8;
-    } dw7;
+    } dw2;
 
     int x_dst;
     int y_dst;
@@ -79,6 +88,20 @@ struct scaling_input_parameter {
     float    y_orig;
     unsigned int bti_input;
     unsigned int bti_output;
+    unsigned int reserved0;
+    float coef_ry;
+    float coef_ru;
+    float coef_rv;
+    float coef_yd;
+    float coef_gy;
+    float coef_gu;
+    float coef_gv;
+    float coef_ud;
+    float coef_by;
+    float coef_bu;
+    float coef_bv;
+    float coef_vd;
+    unsigned int reserved[8];
 };
 
 VAStatus
@@ -106,4 +129,21 @@ gen9_10bit_8bit_scaling_post_processing(VADriverContextP   ctx,
                                         VARectangle *src_rect,
                                         struct i965_surface *dst_surface,
                                         VARectangle *dst_rect);
+
+VAStatus
+gen8_8bit_420_rgb32_scaling_post_processing(VADriverContextP   ctx,
+                                            struct i965_post_processing_context *pp_context,
+                                            struct i965_surface *src_surface,
+                                            VARectangle *src_rect,
+                                            struct i965_surface *dst_surface,
+                                            VARectangle *dst_rect);
+
+VAStatus
+gen9_8bit_420_rgb32_scaling_post_processing(VADriverContextP   ctx,
+                                            struct i965_post_processing_context *pp_context,
+                                            struct i965_surface *src_surface,
+                                            VARectangle *src_rect,
+                                            struct i965_surface *dst_surface,
+                                            VARectangle *dst_rect);
+
 #endif  // _INTEL_COMMON_VPP_INTERNAL_H_
