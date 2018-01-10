@@ -29,10 +29,10 @@
 #include "intel_driver.h"
 #include "gen9_hevc_enc_utils.h"
 
-static int
+static unsigned int
 hevc_get_max_mbps(unsigned int level_idc)
 {
-    int max_bps = 0;
+    unsigned int max_bps = 0;
 
     switch (level_idc) {
     case 30:
@@ -85,7 +85,8 @@ gen9_hevc_get_profile_level_max_frame(VAEncSequenceParameterBufferHEVC *seq_para
                                       unsigned int frame_rate)
 {
     double bits_per_mb, tmp_f;
-    int max_mbps, num_mb_per_frame;
+    int num_mb_per_frame;
+    unsigned int max_mbps;
     unsigned long long max_byte_per_pic, max_byte_per_pic_not0;
     int profile_level_max_frame;
     double frameRateD = 100;

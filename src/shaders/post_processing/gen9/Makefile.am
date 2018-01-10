@@ -4,7 +4,8 @@ VPATH = $(SRCDIR)
 INTEL_PP_PRE_G9B =		\
 	conv_p010.g9b           \
 	conv_nv12.g9b		\
-	conv_10bit_8bit.g9b
+	conv_10bit_8bit.g9b	\
+	conv_8bit_420_rgb32.g9b
 
 INTEL_PP_G9B = \
 	pl2_to_pl2.g9b		\

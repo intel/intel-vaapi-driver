@@ -2723,18 +2723,13 @@ static void
 get_reciprocal_dword_qm(unsigned char *raster_qm, uint32_t *dword_qm)
 {
     int i = 0, j = 0;
-    short reciprocal_qm[64];
+    short hdw, ldw;
 
-    for (i = 0; i < 64; i++) {
-        reciprocal_qm[i] = 65535 / (raster_qm[i]);
+    for (i = 0, j = 0; i < 64; i += 2, j++) {
+        hdw = 65535 / (raster_qm[i]);
+        ldw = 65535 / (raster_qm[i + 1]);
+        dword_qm[j] = (hdw << 16) | ldw;
     }
-
-    for (i = 0; i < 64; i++) {
-        dword_qm[j] = ((reciprocal_qm[i + 1] << 16) | (reciprocal_qm[i]));
-        j++;
-        i++;
-    }
-
 }
 
 
