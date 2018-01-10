@@ -42,6 +42,7 @@
 
 #include "i965_post_processing.h"
 #include "i965_encoder_api.h"
+#include "i965_avc_encoder_common.h"
 
 static struct intel_fraction
 reduce_fraction(struct intel_fraction f)
@@ -852,6 +853,8 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
                 break;
             }
         } else if (encoder_context->quality_level > encoder_context->quality_range) {
+            i965_log_info(ctx, "VAEncMiscParameterBufferQualityLevel.quality_level (%d) out of range (max %d).\n",
+                          encoder_context->quality_level, encoder_context->quality_range);
             ret = VA_STATUS_ERROR_INVALID_PARAMETER;
             goto out;
         }
@@ -880,26 +883,41 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int i;
 
-    assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
+    if (seq_param->level_idc != encoder_context->codec_level &&
+        !i965_avc_level_is_valid(seq_param->level_idc)) {
+        i965_log_info(ctx, "VAEncSequenceParameterBufferH264.level_idc (%d) does not appear to be valid.\n",
+                      seq_param->level_idc);
+        encoder_context->codec_level = seq_param->level_idc;
+        // Only print this the first time we see it, and continue anyway - this could be a correct future
+        // value or an unknown extension.
+    }
 
-    if (pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID)
+    if (pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferH264.CurrPic.flags (%#x) is invalid.\n",
+                      pic_param->CurrPic.flags);
         goto error;
+    }
 
     obj_surface = SURFACE(pic_param->CurrPic.picture_id);
-    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
-
-    if (!obj_surface)
+    if (!obj_surface) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferH264.CurrPic.picture_id (%#x) is not a valid surface.\n",
+                      pic_param->CurrPic.picture_id);
         goto error;
+    }
 
     encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
-    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
-
-    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferH264.coded_buf (%#x) is not a valid buffer.\n",
+                      pic_param->coded_buf);
         goto error;
+    }
 
-    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num)
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num) {
+        i965_log_info(ctx, "Too many slices in picture submission: %d, max supported is %d.\n",
+                      encode_state->num_slice_params_ext, encoder_context->max_slice_or_seg_num);
         goto error;
+    }
 
     encode_state->coded_buf_object = obj_buffer;
 
@@ -909,15 +927,12 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
             break;
         else {
             obj_surface = SURFACE(pic_param->ReferenceFrames[i].picture_id);
-            assert(obj_surface);
-
-            if (!obj_surface)
+            if (!obj_surface || !obj_surface->bo) {
+                i965_log_info(ctx, "VAEncPictureParameterBufferH264.ReferenceFrames[%d].picture_id (%#x)"
+                              " is not a valid surface.\n", i, pic_param->ReferenceFrames[i].picture_id);
                 goto error;
-
-            if (obj_surface->bo)
-                encode_state->reference_objects[i] = obj_surface;
-            else
-                encode_state->reference_objects[i] = NULL; /* FIXME: Warning or Error ??? */
+            }
+            encode_state->reference_objects[i] = obj_surface;
         }
     }
 
@@ -1177,26 +1192,32 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
         encode_state->seq_param_ext->buffer)
         seq_param = (VAEncSequenceParameterBufferHEVC *)(encode_state->seq_param_ext->buffer);
 
-    assert(!(pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID));
-
-    if (pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID)
+    if (pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.decoded_curr_pic.flags (%#x) is invalid.\n",
+                      pic_param->decoded_curr_pic.flags);
         goto error;
+    }
 
     obj_surface = SURFACE(pic_param->decoded_curr_pic.picture_id);
-    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
-
-    if (!obj_surface)
+    if (!obj_surface) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.decoded_curr_pic.picture_id (%#x) is not a valid surface.\n",
+                      pic_param->decoded_curr_pic.picture_id);
         goto error;
+    }
 
     encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
-    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
-
-    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.coded_buf (%#x) is not a valid buffer.\n",
+                      pic_param->coded_buf);
         goto error;
+    }
 
-    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num)
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num) {
+        i965_log_info(ctx, "Too many slices in picture submission: %d, max supported is %d.\n",
+                      encode_state->num_slice_params_ext, encoder_context->max_slice_or_seg_num);
         goto error;
+    }
 
     encode_state->coded_buf_object = obj_buffer;
 
@@ -1206,15 +1227,12 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
             break;
         else {
             obj_surface = SURFACE(pic_param->reference_frames[i].picture_id);
-            assert(obj_surface);
-
-            if (!obj_surface)
+            if (!obj_surface || !obj_surface->bo) {
+                i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.reference_frames[%d].picture_id (%#x)"
+                              " is not a valid surface.\n", i, pic_param->reference_frames[i].picture_id);
                 goto error;
-
-            if (obj_surface->bo)
-                encode_state->reference_objects[i] = obj_surface;
-            else
-                encode_state->reference_objects[i] = NULL; /* FIXME: Warning or Error ??? */
+            }
+            encode_state->reference_objects[i] = obj_surface;
         }
     }
 
