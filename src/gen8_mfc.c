@@ -2840,8 +2840,8 @@ get_reciprocal_dword_qm(unsigned char *raster_qm, uint32_t *dword_qm)
     short hdw, ldw;
 
     for (i = 0, j = 0; i < 64; i += 2, j++) {
-        hdw = 65535 / (raster_qm[i]);
-        ldw = 65535 / (raster_qm[i + 1]);
+        ldw = 65535 / (raster_qm[i]);
+        hdw = 65535 / (raster_qm[i + 1]);
         dword_qm[j] = (hdw << 16) | ldw;
     }
 }
