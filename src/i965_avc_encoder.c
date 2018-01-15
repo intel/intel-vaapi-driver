@@ -11234,7 +11234,9 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
         avc_state->kernel_trellis_enable = 1;
         avc_state->lambda_table_enable = 1;
         avc_state->brc_split_enable = 1;
-        avc_state->adaptive_transform_decision_enable = 1;// CNL
+
+        if (IS_GEN10(i965->intel.device_info))
+            avc_state->adaptive_transform_decision_enable = 1;// CNL
     }
 
     avc_state->num_refs[0] = 0;
