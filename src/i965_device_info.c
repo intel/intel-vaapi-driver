@@ -693,12 +693,14 @@ static struct hw_codec_info cnl_hw_codec_info = {
     .has_hevc10_encoding = 1,
     .has_vp9_decoding = 1,
     .has_vpp_p010 = 1,
-    .has_vp9_encoding = 0,
+    .has_vp9_encoding = 1,
     .has_lp_h264_encoding = 1,
     .has_lp_vp9_encoding = 1,
 
     .lp_h264_brc_mode = VA_RC_CQP,
     .h264_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR | VA_RC_MB,
+
+    .vp9_brc_mode = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR,
 
     .num_filters = 5,
     .filters = {
