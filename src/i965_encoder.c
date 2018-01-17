@@ -824,6 +824,16 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus ret = VA_STATUS_SUCCESS;
+    int min_width_height = 32;
+
+    if (encoder_context->frame_width_in_pixel > 0 &&
+        encoder_context->frame_height_in_pixel > 0) {
+        if (profile == VAProfileJPEGBaseline)
+            min_width_height = 16;
+        if (encoder_context->frame_width_in_pixel < min_width_height ||
+            encoder_context->frame_height_in_pixel < min_width_height)
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+    }
 
     if (encode_state->misc_param[VAEncMiscParameterTypeQualityLevel][0] &&
         encode_state->misc_param[VAEncMiscParameterTypeQualityLevel][0]->buffer) {
@@ -1014,9 +1024,15 @@ intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     int i = 0;
+
+    seq_param = NULL;
+    if (encode_state->seq_param_ext &&
+        encode_state->seq_param_ext->buffer)
+        seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
 
     obj_surface = SURFACE(pic_param->reconstructed_picture);
     assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
@@ -1067,6 +1083,11 @@ intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
     for (; i < 16; i++)
         encode_state->reference_objects[i] = NULL;
 
+    if (seq_param) {
+        encoder_context->frame_width_in_pixel = seq_param->picture_width;
+        encoder_context->frame_height_in_pixel = seq_param->picture_height;
+    }
+
     return VA_STATUS_SUCCESS;
 
 error:
@@ -1092,6 +1113,9 @@ intel_encoder_check_jpeg_parameter(VADriverContextP ctx,
         goto error;
 
     encode_state->coded_buf_object = obj_buffer;
+
+    encoder_context->frame_width_in_pixel = pic_param->picture_width;
+    encoder_context->frame_height_in_pixel = pic_param->picture_height;
 
     return VA_STATUS_SUCCESS;
 
@@ -1252,6 +1276,12 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
 
     encoder_context->is_new_sequence = (pic_param->pic_fields.bits.idr_pic_flag && seq_param);
 
+    if (encoder_context->is_new_sequence) {
+        encoder_context->num_frames_in_sequence = 0;
+        encoder_context->frame_width_in_pixel = seq_param->pic_width_in_luma_samples;
+        encoder_context->frame_height_in_pixel = seq_param->pic_height_in_luma_samples;
+    }
+
     return VA_STATUS_SUCCESS;
 
 error:
@@ -1327,6 +1357,9 @@ intel_encoder_check_vp9_parameter(VADriverContextP ctx,
         encode_state->reference_objects[i] = NULL;
 
     encoder_context->is_new_sequence = (is_key_frame && seq_param);
+
+    encoder_context->frame_width_in_pixel = pic_param->frame_width_src;
+    encoder_context->frame_height_in_pixel = pic_param->frame_height_src;
 
     return VA_STATUS_SUCCESS;
 
