@@ -81,6 +81,7 @@
 #define ENCODER_HIGH_QUALITY      ENCODER_DEFAULT_QUALITY
 #define ENCODER_LOW_QUALITY       2
 
+#define I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT   32
 #define I965_MAX_NUM_ROI_REGIONS                     8
 #define I965_MAX_NUM_SLICE                           32
 

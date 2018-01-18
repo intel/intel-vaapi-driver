@@ -77,6 +77,7 @@ protected:
     VAConfigID      config = VA_INVALID_ID;
     VAContextID     context = VA_INVALID_ID;
     bool            is_gen9 = false;
+    int             min_resolution_width_height = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
 };
 
 TEST_P(AVCEContextTest, RateControl)
@@ -113,7 +114,11 @@ TEST_P(AVCEContextTest, RateControl)
         config = createConfig(profile, entrypoint, attribs, expect);
         if (expect != VA_STATUS_SUCCESS) continue;
 
-        context = createContext(config, 1, 1);
+        context = createContext(
+            config,
+            min_resolution_width_height,
+            min_resolution_width_height);
+
         if (HasFailure()) continue;
 
         struct intel_encoder_context const *hw_context(*this);
@@ -148,7 +153,10 @@ TEST_P(AVCEContextTest, Codec)
 
     ASSERT_NO_FAILURE(
         config = createConfig(profile, entrypoint);
-        context = createContext(config, 1, 1);
+        context = createContext(
+            config,
+            min_resolution_width_height,
+            min_resolution_width_height);
     );
 
     struct intel_encoder_context const *hw_context(*this);
@@ -168,7 +176,10 @@ TEST_P(AVCEContextTest, LowPowerMode)
 
     ASSERT_NO_FAILURE(
         config = createConfig(profile, entrypoint);
-        context = createContext(config, 1, 1);
+        context = createContext(
+            config,
+            min_resolution_width_height,
+            min_resolution_width_height);
     );
 
     struct intel_encoder_context const *hw_context(*this);
@@ -193,7 +204,10 @@ TEST_P(AVCEContextTest, ROINotSpecified)
     // will disable it.
     ASSERT_NO_FAILURE(
         config = createConfig(profile, entrypoint);
-        context = createContext(config, 1, 1);
+        context = createContext(
+            config,
+            min_resolution_width_height,
+            min_resolution_width_height);
     );
 
     struct intel_encoder_context const *hw_context(*this);
@@ -222,7 +236,10 @@ TEST_P(AVCEContextTest, ROISpecified)
     ConfigAttribs attribs(1, {type:VAConfigAttribEncROI});
     ASSERT_NO_FAILURE(
         config = createConfig(profile, entrypoint, attribs);
-        context = createContext(config, 1, 1);
+        context = createContext(
+            config,
+            min_resolution_width_height,
+            min_resolution_width_height);
     );
 
     struct intel_encoder_context const *hw_context(*this);
@@ -242,7 +259,10 @@ TEST_P(AVCEContextTest, QualityRange)
 
     ASSERT_NO_FAILURE(
         config = createConfig(profile, entrypoint);
-        context = createContext(config, 1, 1);
+        context = createContext(
+            config,
+            min_resolution_width_height,
+            min_resolution_width_height);
     );
 
     struct intel_encoder_context const *hw_context(*this);

@@ -824,12 +824,12 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus ret = VA_STATUS_SUCCESS;
-    int min_width_height = 32;
+    int min_width_height = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
 
     if (encoder_context->frame_width_in_pixel > 0 &&
         encoder_context->frame_height_in_pixel > 0) {
         if (profile == VAProfileJPEGBaseline)
-            min_width_height = 16;
+            min_width_height = 1;
         if (encoder_context->frame_width_in_pixel < min_width_height ||
             encoder_context->frame_height_in_pixel < min_width_height)
             return VA_STATUS_ERROR_INVALID_PARAMETER;
