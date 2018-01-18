@@ -349,18 +349,18 @@
         // V = 8, Y= 0, U = 4, A = 12.
 	// And a0.x is used as indirect-register for RGBX. R=a0.1, G=a0.2, B=a0.0  
 	// B = 8, R= 0, G = 4, A = 12
-        mov (4) acc0.0<1>:w                 0x6EA2:v
-        add (4) acc0.0<1>:w                 acc0<4;4,1>:w       70:uw
-        shl (4) r22.0<1>:w       acc0<4;4,1>:w       5:uw
+        mov (4) r22.0<1>:w                 0x6EA2:v
+        add (4) r22.0<1>:w                 r22.0<4;4,1>:w       70:uw
+        shl (4) r22.0<1>:w       r22.0<4;4,1>:w       5:uw
 
     //OPT: wAVS_SU_SHUFFLE_PTR_0 and udAVS_SU_SHUFFLE_OFF_0 are sub-regs of same GRF. -rT
 
     //SU LAYOUT:(VYUAVYUA)
         //V = 4, Y = 2, U = 0, A = 6
         //B = 4, G = 2, R = 0, A = 6
-        mov (4) acc0.0<1>:w                 0x6204:v
-        add (4) acc0.0<1>:w                 acc0<4;4,1>:w       64:uw
-        shl (4) r18.0<1>:w  acc0<4;4,1>:w       5:uw                    { NoDDClr }     //Convert to BYTE address.
+        mov (4) r18.0<1>:w                 0x6204:v
+        add (4) r18.0<1>:w                 r18.0<4;4,1>:w       64:uw
+        shl (4) r18.0<1>:w  r18.0<4;4,1>:w       5:uw                    { NoDDClr }     //Convert to BYTE address.
 
         //OFFSET:
         mov (1)   r18.4<1>:ud      0x1000100:ud    { NoDDChk }
