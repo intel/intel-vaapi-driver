@@ -2479,11 +2479,15 @@ i965_CreateContext(VADriverContextP ctx,
     int i;
     int max_width;
     int max_height;
+    int min_width_height = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
 
     if (NULL == obj_config) {
         vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
         return vaStatus;
     }
+
+    if (obj_config->profile == VAProfileJPEGBaseline)
+        min_width_height = 1;
 
     max_resolution(i965, obj_config, &max_width, &max_height);
 
@@ -2491,6 +2495,17 @@ i965_CreateContext(VADriverContextP ctx,
         picture_height > max_height) {
         vaStatus = VA_STATUS_ERROR_RESOLUTION_NOT_SUPPORTED;
         return vaStatus;
+    }
+
+    if ((VAEntrypointEncSlice == obj_config->entrypoint) ||
+        (VAEntrypointEncPicture == obj_config->entrypoint) ||
+        (VAEntrypointEncSliceLP == obj_config->entrypoint) ||
+        (VAEntrypointFEI == obj_config->entrypoint)) {
+        if (picture_width < min_width_height ||
+            picture_height < min_width_height) {
+            vaStatus = VA_STATUS_ERROR_RESOLUTION_NOT_SUPPORTED;
+            return vaStatus;
+        }
     }
 
     /* Validate flag */
@@ -2637,6 +2652,7 @@ i965_CreateContext(VADriverContextP ctx,
         if (vaStatus == VA_STATUS_SUCCESS)
             obj_context->wrapper_context = wrapper_context;
     }
+
     /* Error recovery */
     if (VA_STATUS_SUCCESS != vaStatus) {
         i965_destroy_context(&i965->context_heap, (struct object_base *)obj_context);
@@ -6409,21 +6425,23 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
     i++;
 
     if (obj_config->entrypoint == VAEntrypointEncSlice ||
-        obj_config->entrypoint == VAEntrypointEncSliceLP) {
+        obj_config->entrypoint == VAEntrypointEncSliceLP ||
+        obj_config->entrypoint == VAEntrypointEncPicture ||
+        obj_config->entrypoint == VAEntrypointFEI) {
         attribs[i].type = VASurfaceAttribMinWidth;
         attribs[i].value.type = VAGenericValueTypeInteger;
         attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
-        attribs[i].value.value.i = 32;
+        attribs[i].value.value.i = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
         if (obj_config->profile == VAProfileJPEGBaseline)
-            attribs[i].value.value.i = 16;
+            attribs[i].value.value.i = 1;
         i++;
 
         attribs[i].type = VASurfaceAttribMinHeight;
         attribs[i].value.type = VAGenericValueTypeInteger;
         attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
-        attribs[i].value.value.i = 32;
+        attribs[i].value.value.i = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
         if (obj_config->profile == VAProfileJPEGBaseline)
-            attribs[i].value.value.i = 16;
+            attribs[i].value.value.i = 1;
         i++;
     }
 
