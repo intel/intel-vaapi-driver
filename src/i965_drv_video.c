@@ -6408,6 +6408,25 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
     attribs[i].value.value.i = max_height;
     i++;
 
+    if (obj_config->entrypoint == VAEntrypointEncSlice ||
+        obj_config->entrypoint == VAEntrypointEncSliceLP) {
+        attribs[i].type = VASurfaceAttribMinWidth;
+        attribs[i].value.type = VAGenericValueTypeInteger;
+        attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+        attribs[i].value.value.i = 32;
+        if (obj_config->profile == VAProfileJPEGBaseline)
+            attribs[i].value.value.i = 16;
+        i++;
+
+        attribs[i].type = VASurfaceAttribMinHeight;
+        attribs[i].value.type = VAGenericValueTypeInteger;
+        attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+        attribs[i].value.value.i = 32;
+        if (obj_config->profile == VAProfileJPEGBaseline)
+            attribs[i].value.value.i = 16;
+        i++;
+    }
+
     if (i > *num_attribs) {
         *num_attribs = i;
         free(attribs);
