@@ -107,10 +107,8 @@ TEST_P(AVCEContextTest, RateControl)
         ConfigAttribs attribs(1, {type:VAConfigAttribRateControl, value:rc});
 
         const VAStatus expect =
-            ((rc & supportedBRC.at(entrypoint)) ||
-                profile == VAProfileH264MultiviewHigh ||
-                profile == VAProfileH264StereoHigh) ?
-            VA_STATUS_SUCCESS : VA_STATUS_ERROR_INVALID_CONFIG;
+            (rc & supportedBRC.at(entrypoint)) ?
+            VA_STATUS_SUCCESS : VA_STATUS_ERROR_INVALID_VALUE;
 
         config = createConfig(profile, entrypoint, attribs, expect);
         if (expect != VA_STATUS_SUCCESS) continue;
