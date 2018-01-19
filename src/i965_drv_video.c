@@ -1112,7 +1112,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribDecSliceMode:
-            attrib_list[i].value = VA_DEC_SLICE_MODE_NORMAL;
+            if (entrypoint == VAEntrypointVLD)
+                attrib_list[i].value = VA_DEC_SLICE_MODE_NORMAL;
             break;
 
         case VAConfigAttribEncROI:
@@ -1426,6 +1427,17 @@ i965_CreateConfig(VADriverContextP ctx,
 
         if (attrib.value != VA_ATTRIB_NOT_SUPPORTED)
             vaStatus = i965_append_config_attribute(obj_config, &attrib);
+    }
+
+    if (vaStatus == VA_STATUS_SUCCESS) {
+        VAConfigAttrib *attrib_found;
+
+        attrib_found = i965_lookup_config_attribute(obj_config, VAConfigAttribDecSliceMode);
+
+        if (attrib_found &&
+            (entrypoint != VAEntrypointVLD ||
+             attrib_found->value != VA_DEC_SLICE_MODE_NORMAL))
+            vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
     }
 
     if ((vaStatus == VA_STATUS_SUCCESS) &&
