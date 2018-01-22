@@ -82,6 +82,10 @@ AC_CHECK_PROGS([PYTHON2], [python2 python])
 LIBVA_PACKAGE_VERSION=libva_package_version
 AC_SUBST(LIBVA_PACKAGE_VERSION)
 
+AC_SEARCH_LIBS([dlopen], [dl], [], [
+  AC_MSG_ERROR([unable to find the dlopen() function])
+])
+
 dnl Check for recent enough DRM
 LIBDRM_VERSION=libdrm_version
 PKG_CHECK_MODULES([DRM], [libdrm >= $LIBDRM_VERSION libdrm_intel])
