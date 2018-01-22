@@ -47,11 +47,6 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])], [
     AC_SUBST(AM_DEFAULT_VERBOSITY)
 ])
 
-AC_ARG_ENABLE(drm,
-    [AC_HELP_STRING([--enable-drm],
-                    [build with VA/DRM API support @<:@default=yes@:>@])],
-    [], [enable_drm="yes"])
-
 AC_ARG_ENABLE(x11,
     [AC_HELP_STRING([--enable-x11],
                     [build with VA/X11 API support @<:@default=yes@:>@])],
@@ -104,24 +99,12 @@ AC_PATH_PROG([GIT], [git])
 AM_CONDITIONAL([HAVE_GIT], [test -n "$GIT"])
 
 dnl Check for VA-API
-PKG_CHECK_MODULES(LIBVA_DEPS,     [libva >= va_api_version])
+PKG_CHECK_MODULES(LIBVA_DEPS, [libva >= va_api_version])
 
-dnl Check for VA/DRM API
-USE_DRM="$enable_drm"
-if test "$USE_DRM" = "yes"; then
-    PKG_CHECK_MODULES(LIBVA_DRM_DEPS, [libva-drm],
-      [AC_DEFINE([HAVE_VA_DRM], [1], [Defined to 1 if VA/DRM API is enabled])],
-      [USE_DRM="no"])
-
-    # Check for <drm_fourcc.h>
-    if test "$USE_DRM" = "yes"; then
-        saved_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $DRM_CFLAGS"
-        AC_CHECK_HEADERS([drm_fourcc.h], [:], [USE_DRM="no"])
-        CPPFLAGS="$saved_CPPFLAGS"
-    fi
+dnl Check for VA/DRM API only if tests are enabled
+if test "$enable_tests" = "yes"; then
+    PKG_CHECK_MODULES(LIBVA_DRM_DEPS, [libva-drm >= va_api_version])
 fi
-AM_CONDITIONAL(USE_DRM, test "$USE_DRM" = "yes")
 
 if test "$enable_hybrid_codec" = "yes"; then
     AC_DEFINE([HAVE_HYBRID_CODEC], [1], [Defined to 1 if hybrid codec is needed])
@@ -234,8 +217,7 @@ AC_OUTPUT([
 ])
 
 dnl Print summary
-BACKENDS=""
-AS_IF([test "$USE_DRM" = "yes"], [BACKENDS="$BACKENDS drm"])
+BACKENDS="drm"
 AS_IF([test "$USE_X11" = "yes"], [BACKENDS="$BACKENDS x11"])
 AS_IF([test "$USE_WAYLAND" = "yes"], [BACKENDS="$BACKENDS wayland"])
 
