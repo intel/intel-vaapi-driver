@@ -6826,8 +6826,8 @@ i965_ExportSurfaceHandle(VADriverContextP ctx, VASurfaceID surface_id,
     desc = descriptor;
 
     desc->fourcc = obj_surface->fourcc;
-    desc->width  = obj_surface->width;
-    desc->height = obj_surface->height;
+    desc->width  = obj_surface->orig_width;
+    desc->height = obj_surface->orig_height;
 
     desc->num_objects     = 1;
     desc->objects[0].fd   = fd;
