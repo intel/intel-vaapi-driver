@@ -156,25 +156,6 @@ fi
 AC_MSG_RESULT([$LIBVA_DRIVERS_PATH])
 AC_SUBST(LIBVA_DRIVERS_PATH)
 
-# Check for EGL
-if test "$enable_wayland" = "yes"; then
-    enable_egl="yes"
-fi
-
-USE_EGL="no"
-if test "$enable_egl" = "yes"; then
-    PKG_CHECK_MODULES([EGL], [egl], [USE_EGL="yes"], [USE_EGL="no"])
-    saved_CPPFLAGS="$CPPFLAGS"
-    saved_LIBS="$LIBS"
-    CPPFLAGS="$CPPFLAGS $EGL_CFLAGS"
-    LIBS="$LIBS $EGL_LIBS"
-    AC_CHECK_HEADERS([EGL/egl.h], [:], [USE_EGL="no"])
-    AC_CHECK_LIB([EGL], [eglGetDisplay], [:], [USE_EGL="no"])
-    CPPFLAGS="$saved_CPPFLAGS"
-    LIBS="$saved_LIBS"
-fi
-AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
-
 # Check for Wayland
 USE_WAYLAND="no"
 if test "$enable_wayland" = "yes"; then
