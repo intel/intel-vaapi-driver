@@ -129,7 +129,7 @@ AC_DEFINE_UNQUOTED([VA_DRIVER_INIT_FUNC], [$VA_DRIVER_INIT_FUNC],
 dnl Check for VA/X11 API
 USE_X11="$enable_x11"
 if test "$USE_X11" = "yes"; then
-    PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11],
+    PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11 >= va_api_version],
       [AC_DEFINE([HAVE_VA_X11], [1], [Defined to 1 if VA/X11 API is enabled])],
       [USE_X11="no"])
 fi
@@ -150,19 +150,21 @@ AC_SUBST(LIBVA_DRIVERS_PATH)
 # Check for Wayland
 USE_WAYLAND="no"
 if test "$enable_wayland" = "yes"; then
-    PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland],
-        [USE_WAYLAND="yes"], [:])
-
+    PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland >= va_api_version],
+        [
+          PKG_CHECK_MODULES([WAYLAND_CLIENT],
+             [wayland-client >= wayland_api_version],
+             [
+                USE_WAYLAND="yes"
+                WAYLAND_PREFIX=`$PKG_CONFIG --variable=prefix wayland-client`
+                AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner],
+                    [USE_ WAYLAND="no"],
+                    [${WAYLAND_PREFIX}/bin$PATH_SEPARATOR$PATH])
+             ], [:])
+        ], [:])
     if test "$USE_WAYLAND" = "yes"; then
-
-        PKG_CHECK_MODULES([WAYLAND_CLIENT], [wayland-client >= wayland_api_version],
-        [INCLUDES="$INCLUDES $WAYLAND_CLIENT_CFLAGS"], [:])
-        WAYLAND_PREFIX=`$PKG_CONFIG --variable=prefix wayland-client`
-        AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner],,
-                     [${WAYLAND_PREFIX}/bin$PATH_SEPARATOR$PATH])
-
-        AC_DEFINE([HAVE_VA_WAYLAND], [1],
-                  [Defined to 1 if VA/Wayland API is enabled])
+      AC_DEFINE([HAVE_VA_WAYLAND], [1],
+        [Defined to 1 if VA/Wayland API is enabled])
     fi
 fi
 AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
