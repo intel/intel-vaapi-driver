@@ -26,7 +26,7 @@ AC_INIT([intel_vaapi_driver],
         [intel-vaapi-driver],
         [https://github.com/01org/intel-vaapi-driver])
 AC_CONFIG_SRCDIR([Makefile.am])
-AM_INIT_AUTOMAKE([1.9 tar-ustar])
+AM_INIT_AUTOMAKE([1.9 tar-ustar -Wno-portability])
 
 AC_CONFIG_HEADERS([src/config.h])
 
