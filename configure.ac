@@ -126,17 +126,8 @@ VA_DRIVER_INIT_FUNC="__vaDriverInit_${VA_MAJOR_VERSION}_${VA_MINOR_VERSION}"
 AC_DEFINE_UNQUOTED([VA_DRIVER_INIT_FUNC], [$VA_DRIVER_INIT_FUNC],
     [Define driver entry-point])
 
-dnl Check for VA/DRM API
+dnl Check for VA/X11 API
 USE_X11="$enable_x11"
-
-dnl Check for X11
-if test "$enable_x11" = "yes"; then
-    USE_X11="yes"
-    PKG_CHECK_MODULES([X11],    [x11],    [:], [USE_X11="no"])
-    PKG_CHECK_MODULES([XEXT],   [xext],   [:], [USE_X11="no"])
-    PKG_CHECK_MODULES([XFIXES], [xfixes], [:], [USE_X11="no"])
-fi
-
 if test "$USE_X11" = "yes"; then
     PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11],
       [AC_DEFINE([HAVE_VA_X11], [1], [Defined to 1 if VA/X11 API is enabled])],
