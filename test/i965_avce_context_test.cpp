@@ -100,7 +100,7 @@ TEST_P(AVCEContextTest, RateControl)
         {VAEntrypointEncSlice, i965->codec_info->h264_brc_mode},
         {VAEntrypointEncSliceLP, i965->codec_info->lp_h264_brc_mode},
         {VAEntrypointFEI, VA_RC_CQP},
-        {VAEntrypointStats, VA_RC_NONE},
+        {VAEntrypointStats, VA_ATTRIB_NOT_SUPPORTED},
     };
 
     for (auto rc : rateControls) {
