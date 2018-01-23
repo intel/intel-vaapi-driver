@@ -995,6 +995,9 @@ i965_get_rc_attributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint ent
             profile == VAProfileH264High)
             rc_attribs = VA_RC_CQP;
 
+    } else if (entrypoint == VAEntrypointEncPicture) {
+        if (profile == VAProfileJPEGBaseline)
+            rc_attribs = VA_RC_CQP;
     }
 
     return rc_attribs;
