@@ -1008,19 +1008,35 @@ i965_get_enc_packed_attributes(VADriverContextP ctx, VAProfile profile, VAEntryp
     if (entrypoint == VAEntrypointEncSlice ||
         entrypoint == VAEntrypointEncSliceLP ||
         entrypoint == VAEntrypointFEI) {
-        enc_packed_attribs = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
 
-        if (profile == VAProfileH264ConstrainedBaseline ||
-            profile == VAProfileH264Main ||
-            profile == VAProfileH264High ||
-            profile == VAProfileH264StereoHigh ||
-            profile == VAProfileH264MultiviewHigh ||
-            profile == VAProfileHEVCMain ||
-            profile == VAProfileHEVCMain10) {
+        switch (profile) {
+        case VAProfileVP8Version0_3:
+            enc_packed_attribs = VA_ENC_PACKED_HEADER_NONE;
+            break;
+
+        case VAProfileMPEG2Simple:
+        case VAProfileMPEG2Main:
+            enc_packed_attribs = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
+            break;
+
+        case VAProfileH264ConstrainedBaseline:
+        case VAProfileH264Main:
+        case VAProfileH264High:
+        case VAProfileH264StereoHigh:
+        case VAProfileH264MultiviewHigh:
+        case VAProfileHEVCMain:
+        case VAProfileHEVCMain10:
+            enc_packed_attribs = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
             enc_packed_attribs |= (VA_ENC_PACKED_HEADER_RAW_DATA | VA_ENC_PACKED_HEADER_SLICE);
+            break;
 
-        } else if (profile == VAProfileVP9Profile0)
+        case VAProfileVP9Profile0:
             enc_packed_attribs = VA_ENC_PACKED_HEADER_RAW_DATA;
+            break;
+
+        default:
+            break;
+        }
 
     } else if (entrypoint == VAEntrypointEncPicture) {
         if (profile == VAProfileJPEGBaseline)
@@ -1396,7 +1412,8 @@ i965_CreateConfig(VADriverContextP ctx,
         if (attrib_found) {
             uint32_t enc_packed_attribs = i965_get_enc_packed_attributes(ctx, profile, entrypoint);
 
-            if (!(attrib_found->value & enc_packed_attribs))
+            if (((enc_packed_attribs == VA_ENC_PACKED_HEADER_NONE) && attrib_found->value) ||
+                ((enc_packed_attribs != VA_ENC_PACKED_HEADER_NONE) && !(attrib_found->value & enc_packed_attribs)))
                 vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
         }
     }
