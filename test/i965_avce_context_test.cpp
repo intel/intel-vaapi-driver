@@ -101,17 +101,15 @@ TEST_P(AVCEContextTest, RateControl)
         {VAEntrypointEncSlice, i965->codec_info->h264_brc_mode},
         {VAEntrypointEncSliceLP, i965->codec_info->lp_h264_brc_mode},
         {VAEntrypointFEI, VA_RC_CQP},
-        {VAEntrypointStats, VA_RC_NONE},
+        {VAEntrypointStats, VA_ATTRIB_NOT_SUPPORTED},
     };
 
     for (auto rc : rateControls) {
         ConfigAttribs attribs(1, {type:VAConfigAttribRateControl, value:rc});
 
         const VAStatus expect =
-            ((rc & supportedBRC.at(entrypoint)) ||
-                profile == VAProfileH264MultiviewHigh ||
-                profile == VAProfileH264StereoHigh) ?
-            VA_STATUS_SUCCESS : VA_STATUS_ERROR_INVALID_CONFIG;
+            (rc & supportedBRC.at(entrypoint)) ?
+            VA_STATUS_SUCCESS : VA_STATUS_ERROR_INVALID_VALUE;
 
         config = createConfig(profile, entrypoint, attribs, expect);
         if (expect != VA_STATUS_SUCCESS) continue;
