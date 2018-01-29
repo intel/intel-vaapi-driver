@@ -3685,8 +3685,8 @@ gen9_avc_set_curbe_mbenc(VADriverContextP ctx,
                 cmd.g9->dw58.tx_decision_threshold = 128;
             } else if (is_g95) {
                 cmd.g95->dw34.enable_adaptive_tx_decision = 1;
-                cmd.g9->dw58.mb_texture_threshold = 1024;
-                cmd.g9->dw58.tx_decision_threshold = 128;
+                cmd.g95->dw60.mb_texture_threshold = 1024;
+                cmd.g95->dw60.tx_decision_threshold = 128;
             }
         }
     }
@@ -8180,6 +8180,9 @@ gen9_avc_encode_check_parameter(VADriverContextP ctx,
         }
     }
 
+    if (avc_state->slice_num > 1)
+        avc_state->arbitrary_num_mbs_in_slice = 1;
+
     if (generic_state->frame_type == SLICE_TYPE_I) {
         generic_state->hme_enabled = 0;
         generic_state->b16xme_enabled = 0;
@@ -11231,7 +11234,9 @@ gen9_avc_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *en
         avc_state->kernel_trellis_enable = 1;
         avc_state->lambda_table_enable = 1;
         avc_state->brc_split_enable = 1;
-        avc_state->adaptive_transform_decision_enable = 1;// CNL
+
+        if (IS_GEN10(i965->intel.device_info))
+            avc_state->adaptive_transform_decision_enable = 1;// CNL
     }
 
     avc_state->num_refs[0] = 0;

@@ -583,7 +583,8 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
     }
 
     if (HAS_VP9_DECODING_PROFILE(i965, VAProfileVP9Profile0) ||
-        HAS_VP9_ENCODING(i965)) {
+        HAS_VP9_ENCODING(i965) ||
+        HAS_LP_VP9_ENCODING(i965)) {
         profile_list[i++] = VAProfileVP9Profile0;
     }
 
@@ -719,6 +720,9 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
 
         if (HAS_VP9_ENCODING(i965) && (profile == VAProfileVP9Profile0))
             entrypoint_list[n++] = VAEntrypointEncSlice;
+
+        if (HAS_LP_VP9_ENCODING(i965) && (profile == VAProfileVP9Profile0))
+            entrypoint_list[n++] = VAEntrypointEncSliceLP;
 
         if (profile == VAProfileVP9Profile0) {
             if (i965->wrapper_pdrvctx) {
@@ -877,12 +881,18 @@ i965_validate_config(VADriverContextP ctx, VAProfile profile,
         } else if ((HAS_VP9_ENCODING_PROFILE(i965, profile)) &&
                    (entrypoint == VAEntrypointEncSlice)) {
             va_status = VA_STATUS_SUCCESS;
+        } else if ((HAS_LP_VP9_ENCODING(i965) &&
+                    profile == VAProfileVP9Profile0 &&
+                    entrypoint == VAEntrypointEncSliceLP)) {
+            va_status = VA_STATUS_SUCCESS;
         } else if (profile == VAProfileVP9Profile0 &&
                    entrypoint == VAEntrypointVLD &&
                    i965->wrapper_pdrvctx) {
             va_status = VA_STATUS_SUCCESS;
         } else if (!HAS_VP9_DECODING_PROFILE(i965, profile) &&
-                   !HAS_VP9_ENCODING(i965) && !i965->wrapper_pdrvctx) {
+                   !HAS_VP9_ENCODING(i965) &&
+                   !HAS_LP_VP9_ENCODING(i965) &&
+                   !i965->wrapper_pdrvctx) {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         } else {
             va_status = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -952,6 +962,108 @@ i965_get_default_chroma_formats(VADriverContextP ctx, VAProfile profile,
     return chroma_formats;
 }
 
+static uint32_t
+i965_get_rc_attributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoint)
+{
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+
+    uint32_t rc_attribs = VA_ATTRIB_NOT_SUPPORTED;
+
+    if (entrypoint == VAEntrypointEncSlice) {
+
+        rc_attribs = VA_RC_CQP;
+
+        if (profile != VAProfileMPEG2Main &&
+            profile != VAProfileMPEG2Simple)
+            rc_attribs |= VA_RC_CBR;
+
+        if (profile == VAProfileVP8Version0_3 ||
+            profile == VAProfileHEVCMain)
+            rc_attribs |= VA_RC_VBR;
+
+        if (profile == VAProfileVP9Profile0)
+            rc_attribs = i965->codec_info->vp9_brc_mode;
+
+        if (profile == VAProfileH264ConstrainedBaseline ||
+            profile == VAProfileH264Main ||
+            profile == VAProfileH264High ||
+            profile == VAProfileH264MultiviewHigh ||
+            profile == VAProfileH264StereoHigh)
+            rc_attribs = i965->codec_info->h264_brc_mode;
+
+    } else if (entrypoint == VAEntrypointEncSliceLP) {
+
+        if (profile == VAProfileH264ConstrainedBaseline ||
+            profile == VAProfileH264Main ||
+            profile == VAProfileH264High ||
+            profile == VAProfileH264MultiviewHigh ||
+            profile == VAProfileH264StereoHigh)
+            rc_attribs = i965->codec_info->lp_h264_brc_mode;
+
+        else if (profile == VAProfileVP9Profile0)
+            rc_attribs = i965->codec_info->lp_vp9_brc_mode;
+
+    } else if (entrypoint == VAEntrypointFEI) {
+
+        if (profile == VAProfileH264ConstrainedBaseline ||
+            profile == VAProfileH264Main ||
+            profile == VAProfileH264High)
+            rc_attribs = VA_RC_CQP;
+
+    } else if (entrypoint == VAEntrypointEncPicture) {
+        if (profile == VAProfileJPEGBaseline)
+            rc_attribs = VA_RC_CQP;
+    }
+
+    return rc_attribs;
+}
+
+static uint32_t
+i965_get_enc_packed_attributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoint)
+{
+    uint32_t enc_packed_attribs = VA_ATTRIB_NOT_SUPPORTED;
+
+    if (entrypoint == VAEntrypointEncSlice ||
+        entrypoint == VAEntrypointEncSliceLP ||
+        entrypoint == VAEntrypointFEI) {
+
+        switch (profile) {
+        case VAProfileVP8Version0_3:
+            enc_packed_attribs = VA_ENC_PACKED_HEADER_NONE;
+            break;
+
+        case VAProfileMPEG2Simple:
+        case VAProfileMPEG2Main:
+            enc_packed_attribs = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
+            break;
+
+        case VAProfileH264ConstrainedBaseline:
+        case VAProfileH264Main:
+        case VAProfileH264High:
+        case VAProfileH264StereoHigh:
+        case VAProfileH264MultiviewHigh:
+        case VAProfileHEVCMain:
+        case VAProfileHEVCMain10:
+            enc_packed_attribs = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
+            enc_packed_attribs |= (VA_ENC_PACKED_HEADER_RAW_DATA | VA_ENC_PACKED_HEADER_SLICE);
+            break;
+
+        case VAProfileVP9Profile0:
+            enc_packed_attribs = VA_ENC_PACKED_HEADER_RAW_DATA;
+            break;
+
+        default:
+            break;
+        }
+
+    } else if (entrypoint == VAEntrypointEncPicture) {
+        if (profile == VAProfileJPEGBaseline)
+            enc_packed_attribs = VA_ENC_PACKED_HEADER_RAW_DATA;
+    }
+
+    return enc_packed_attribs;
+}
+
 VAStatus
 i965_GetConfigAttributes(VADriverContextP ctx,
                          VAProfile profile,
@@ -978,69 +1090,12 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribRateControl:
-            if (entrypoint == VAEntrypointEncSlice) {
-                attrib_list[i].value = VA_RC_CQP;
-
-                if (profile != VAProfileMPEG2Main &&
-                    profile != VAProfileMPEG2Simple)
-                    attrib_list[i].value |= VA_RC_CBR;
-
-                if (profile == VAProfileVP8Version0_3 ||
-                    profile == VAProfileVP9Profile0 ||
-                    profile == VAProfileHEVCMain)
-                    attrib_list[i].value |= VA_RC_VBR;
-
-                if (profile == VAProfileH264ConstrainedBaseline ||
-                    profile == VAProfileH264Main ||
-                    profile == VAProfileH264High)
-                    attrib_list[i].value = i965->codec_info->h264_brc_mode;
-
-                break;
-            } else if (entrypoint == VAEntrypointEncSliceLP) {
-                struct i965_driver_data * const i965 = i965_driver_data(ctx);
-
-                /* Support low power encoding for H.264 only by now */
-                if (profile == VAProfileH264ConstrainedBaseline ||
-                    profile == VAProfileH264Main ||
-                    profile == VAProfileH264High)
-                    attrib_list[i].value = i965->codec_info->lp_h264_brc_mode;
-                else
-                    attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
-            } else if (entrypoint == VAEntrypointFEI) {
-                /* Only CQP is supported in FEI Entrypoint */
-                if (profile == VAProfileH264ConstrainedBaseline ||
-                    profile == VAProfileH264Main ||
-                    profile == VAProfileH264High)
-                    attrib_list[i].value = VA_RC_CQP;
-                else
-                    attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
-            } else
-                attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
+            attrib_list[i].value = i965_get_rc_attributes(ctx, profile, entrypoint);
 
             break;
 
         case VAConfigAttribEncPackedHeaders:
-            if (entrypoint == VAEntrypointEncSlice ||
-                entrypoint == VAEntrypointEncSliceLP ||
-                entrypoint == VAEntrypointFEI) {
-                attrib_list[i].value = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
-                if (profile == VAProfileH264ConstrainedBaseline ||
-                    profile == VAProfileH264Main ||
-                    profile == VAProfileH264High ||
-                    profile == VAProfileH264StereoHigh ||
-                    profile == VAProfileH264MultiviewHigh ||
-                    profile == VAProfileHEVCMain ||
-                    profile == VAProfileHEVCMain10) {
-                    attrib_list[i].value |= (VA_ENC_PACKED_HEADER_RAW_DATA |
-                                             VA_ENC_PACKED_HEADER_SLICE);
-                } else if (profile == VAProfileVP9Profile0)
-                    attrib_list[i].value = VA_ENC_PACKED_HEADER_RAW_DATA;
-                break;
-            } else if (entrypoint == VAEntrypointEncPicture) {
-                if (profile == VAProfileJPEGBaseline)
-                    attrib_list[i].value = VA_ENC_PACKED_HEADER_RAW_DATA;
-            } else if (entrypoint == VAEntrypointStats)
-                attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
+            attrib_list[i].value = i965_get_enc_packed_attributes(ctx, profile, entrypoint);
 
             break;
 
@@ -1092,6 +1147,11 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 } else if (profile == VAProfileHEVCMain ||
                            profile == VAProfileHEVCMain10)
                     attrib_list[i].value = ENCODER_QUALITY_RANGE_HEVC;
+                else if (profile == VAProfileVP9Profile0 &&
+                         entrypoint == VAEntrypointEncSliceLP) {
+                    attrib_list[i].value = ENCODER_QUALITY_RANGE_VP9;
+                }
+
                 break;
             } else if (entrypoint == VAEntrypointStats)
                 attrib_list[i].value = VA_ATTRIB_NOT_SUPPORTED;
@@ -1112,7 +1172,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribDecSliceMode:
-            attrib_list[i].value = VA_DEC_SLICE_MODE_NORMAL;
+            if (entrypoint == VAEntrypointVLD)
+                attrib_list[i].value = VA_DEC_SLICE_MODE_NORMAL;
             break;
 
         case VAConfigAttribEncROI:
@@ -1358,28 +1419,25 @@ i965_CreateConfig(VADriverContextP ctx,
 
 
     if (vaStatus == VA_STATUS_SUCCESS) {
-        VAConfigAttrib attrib, *attrib_found;
-        attrib.type = VAConfigAttribRateControl;
-        attrib_found = i965_lookup_config_attribute(obj_config, attrib.type);
-        switch (profile) {
-        case VAProfileH264ConstrainedBaseline:
-        case VAProfileH264Main:
-        case VAProfileH264High:
-            if ((entrypoint == VAEntrypointEncSlice) && attrib_found &&
-                !(attrib_found->value & i965->codec_info->h264_brc_mode))
-                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
-            else if ((entrypoint == VAEntrypointEncSliceLP) && attrib_found &&
-                     !(attrib_found->value & i965->codec_info->lp_h264_brc_mode))
-                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
-            else if ((entrypoint == VAEntrypointFEI) && attrib_found &&
-                     !(attrib_found->value == VA_RC_CQP))
-                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
-            else if ((entrypoint == VAEntrypointStats) && attrib_found &&
-                     !(attrib_found->value == VA_RC_NONE))
-                vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
-            break;
-        default:
-            break;
+        VAConfigAttrib *attrib_found = i965_lookup_config_attribute(obj_config, VAConfigAttribRateControl);
+
+        if (attrib_found) {
+            uint32_t rc_attribs = i965_get_rc_attributes(ctx, profile, entrypoint);
+
+            if (!(attrib_found->value & rc_attribs))
+                vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
+        }
+    }
+
+    if (vaStatus == VA_STATUS_SUCCESS) {
+        VAConfigAttrib *attrib_found = i965_lookup_config_attribute(obj_config, VAConfigAttribEncPackedHeaders);
+
+        if (attrib_found) {
+            uint32_t enc_packed_attribs = i965_get_enc_packed_attributes(ctx, profile, entrypoint);
+
+            if (((enc_packed_attribs == VA_ENC_PACKED_HEADER_NONE) && attrib_found->value) ||
+                ((enc_packed_attribs != VA_ENC_PACKED_HEADER_NONE) && !(attrib_found->value & enc_packed_attribs)))
+                vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
         }
     }
 
@@ -1426,6 +1484,17 @@ i965_CreateConfig(VADriverContextP ctx,
 
         if (attrib.value != VA_ATTRIB_NOT_SUPPORTED)
             vaStatus = i965_append_config_attribute(obj_config, &attrib);
+    }
+
+    if (vaStatus == VA_STATUS_SUCCESS) {
+        VAConfigAttrib *attrib_found;
+
+        attrib_found = i965_lookup_config_attribute(obj_config, VAConfigAttribDecSliceMode);
+
+        if (attrib_found &&
+            (entrypoint != VAEntrypointVLD ||
+             attrib_found->value != VA_DEC_SLICE_MODE_NORMAL))
+            vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
     }
 
     if ((vaStatus == VA_STATUS_SUCCESS) &&
@@ -2479,11 +2548,15 @@ i965_CreateContext(VADriverContextP ctx,
     int i;
     int max_width;
     int max_height;
+    int min_width_height = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
 
     if (NULL == obj_config) {
         vaStatus = VA_STATUS_ERROR_INVALID_CONFIG;
         return vaStatus;
     }
+
+    if (obj_config->profile == VAProfileJPEGBaseline)
+        min_width_height = 1;
 
     max_resolution(i965, obj_config, &max_width, &max_height);
 
@@ -2491,6 +2564,17 @@ i965_CreateContext(VADriverContextP ctx,
         picture_height > max_height) {
         vaStatus = VA_STATUS_ERROR_RESOLUTION_NOT_SUPPORTED;
         return vaStatus;
+    }
+
+    if ((VAEntrypointEncSlice == obj_config->entrypoint) ||
+        (VAEntrypointEncPicture == obj_config->entrypoint) ||
+        (VAEntrypointEncSliceLP == obj_config->entrypoint) ||
+        (VAEntrypointFEI == obj_config->entrypoint)) {
+        if (picture_width < min_width_height ||
+            picture_height < min_width_height) {
+            vaStatus = VA_STATUS_ERROR_RESOLUTION_NOT_SUPPORTED;
+            return vaStatus;
+        }
     }
 
     /* Validate flag */
@@ -2637,6 +2721,7 @@ i965_CreateContext(VADriverContextP ctx,
         if (vaStatus == VA_STATUS_SUCCESS)
             obj_context->wrapper_context = wrapper_context;
     }
+
     /* Error recovery */
     if (VA_STATUS_SUCCESS != vaStatus) {
         i965_destroy_context(&i965->context_heap, (struct object_base *)obj_context);
@@ -6407,6 +6492,27 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
     attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
     attribs[i].value.value.i = max_height;
     i++;
+
+    if (obj_config->entrypoint == VAEntrypointEncSlice ||
+        obj_config->entrypoint == VAEntrypointEncSliceLP ||
+        obj_config->entrypoint == VAEntrypointEncPicture ||
+        obj_config->entrypoint == VAEntrypointFEI) {
+        attribs[i].type = VASurfaceAttribMinWidth;
+        attribs[i].value.type = VAGenericValueTypeInteger;
+        attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+        attribs[i].value.value.i = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
+        if (obj_config->profile == VAProfileJPEGBaseline)
+            attribs[i].value.value.i = 1;
+        i++;
+
+        attribs[i].type = VASurfaceAttribMinHeight;
+        attribs[i].value.type = VAGenericValueTypeInteger;
+        attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+        attribs[i].value.value.i = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
+        if (obj_config->profile == VAProfileJPEGBaseline)
+            attribs[i].value.value.i = 1;
+        i++;
+    }
 
     if (i > *num_attribs) {
         *num_attribs = i;
