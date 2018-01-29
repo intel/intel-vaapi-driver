@@ -1024,12 +1024,11 @@ intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
-    VAEncSequenceParameterBufferMPEG2 *seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = NULL;
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     int i = 0;
 
-    seq_param = NULL;
     if (encode_state->seq_param_ext &&
         encode_state->seq_param_ext->buffer)
         seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
