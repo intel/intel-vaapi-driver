@@ -1028,10 +1028,6 @@ i965_get_enc_packed_attributes(VADriverContextP ctx, VAProfile profile, VAEntryp
         entrypoint == VAEntrypointFEI) {
 
         switch (profile) {
-        case VAProfileVP8Version0_3:
-            enc_packed_attribs = VA_ENC_PACKED_HEADER_NONE;
-            break;
-
         case VAProfileMPEG2Simple:
         case VAProfileMPEG2Main:
             enc_packed_attribs = VA_ENC_PACKED_HEADER_SEQUENCE | VA_ENC_PACKED_HEADER_PICTURE | VA_ENC_PACKED_HEADER_MISC;
@@ -1435,8 +1431,7 @@ i965_CreateConfig(VADriverContextP ctx,
         if (attrib_found) {
             uint32_t enc_packed_attribs = i965_get_enc_packed_attributes(ctx, profile, entrypoint);
 
-            if (((enc_packed_attribs == VA_ENC_PACKED_HEADER_NONE) && attrib_found->value) ||
-                ((enc_packed_attribs != VA_ENC_PACKED_HEADER_NONE) && !(attrib_found->value & enc_packed_attribs)))
+            if (!(attrib_found->value & enc_packed_attribs))
                 vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
         }
     }
