@@ -29,6 +29,8 @@ SKL: Skylake
 BXT: Broxton
 KBL: Kabylake
 GLK: Gemini Lake
+CFL: Coffee Lake
+CNL: Cannolake
 
 Codecs
 ------
@@ -52,7 +54,7 @@ VP9 10bit      D       KBL+
 Requirements
 ------------
 
-libva >= 1.7.0
+libva >= 2.1.0
 
 Testing
 -------
