@@ -8676,6 +8676,8 @@ gen9_avc_preenc_update_parameters(VADriverContextP ctx,
             goto error;
         size = frame_mb_nums * FEI_AVC_MV_PREDICTOR_BUFFER_SIZE;
         obj_buffer = BUFFER(stat_param->mv_predictor);
+        if (!obj_buffer)
+            goto error;
         buffer_store = obj_buffer->buffer_store;
         if (buffer_store->bo->size < size)
             goto error;
@@ -8729,7 +8731,7 @@ gen9_avc_preenc_update_parameters(VADriverContextP ctx,
         }
     }
     /* mv data output buffer */
-    if (!stat_param_h264->disable_mv_output) {
+    if (!stat_param_h264->disable_mv_output && obj_buffer_mv) {
         size = frame_mb_nums * FEI_AVC_MV_DATA_BUFFER_SIZE;
         buffer_store = obj_buffer_mv->buffer_store;
         if (buffer_store->bo->size < size)
@@ -8741,7 +8743,7 @@ gen9_avc_preenc_update_parameters(VADriverContextP ctx,
             buffer_store->bo);
     }
     /* statistics output buffer */
-    if (!stat_param_h264->disable_statistics_output) {
+    if (!stat_param_h264->disable_statistics_output && obj_buffer_stat) {
         size = frame_mb_nums * PREENC_AVC_STATISTICS_BUFFER_SIZE;
         buffer_store = obj_buffer_stat->buffer_store;
         if (buffer_store->bo->size < size)
