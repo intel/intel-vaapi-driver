@@ -9,7 +9,9 @@ INTEL_BRC_CNL =			 	\
 	vp8_enc_genx_2.g10b		\
 	vp8_intra_distortion_genx_0.g10b\
 	vp8_mpu_genx_0.g10b		\
-	vp8_tpu_genx_0.g10b
+	vp8_tpu_genx_0.g10b		\
+	vp9_dys.g10b			\
+	vp9_vdenc_hme_vp9_streamin.g10b
 
 EXTRA_DIST = $(INTEL_BRC_CNL)
 
