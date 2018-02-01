@@ -126,5 +126,12 @@ EXTRA_DIST += \
 
 CLEANFILES = $(BUILT_SOURCES)
 
+DISTCLEANFILES = \
+	$(VERSION_FILE)	\
+	$(OLD_VERSION_FILE)	\
+	$(PKG_VERSION_FILE)	\
+	$(NEW_VERSION_FILE)	\
+	$(NULL)
+
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in
