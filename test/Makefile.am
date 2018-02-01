@@ -35,8 +35,7 @@ libgtest_la_CXXFLAGS =							\
 EXTRA_DIST =								\
 	gtest/docs							\
 	gtest/include							\
-	gtest/src/*.cc							\
-	gtest/src/*.h							\
+	gtest/src							\
 	gtest/README.md							\
 	gtest/LICENSE							\
 	$(NULL)
