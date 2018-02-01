@@ -1,5 +1,5 @@
-SRCDIR = $(top_srcdir)/src/shaders/post_processing/gen8
-VPATH = $(SRCDIR)
+G8A_DIR = $(top_srcdir)/src/shaders/post_processing/gen8
+VPATH = $(G8A_DIR) $(srcdir) $(builddir)
 
 INTEL_PP_PRE_G9B =		\
 	conv_p010.g9b           \
