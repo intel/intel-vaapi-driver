@@ -1,5 +1,3 @@
-AUTOMAKE_OPTIONS = foreign
-
 SUBDIRS = src
 
 if ENABLE_TESTS
