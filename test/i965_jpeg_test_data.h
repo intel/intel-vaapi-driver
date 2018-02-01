@@ -276,6 +276,8 @@ namespace Decode {
         typedef std::shared_ptr<TestPattern> Shared;
         typedef std::shared_ptr<const TestPattern> SharedConst;
 
+        virtual ~TestPattern() { }
+
         virtual const ByteData& decoded() const = 0;
         virtual PictureData::SharedConst encoded(unsigned) const = 0;
 
@@ -430,6 +432,8 @@ namespace Encode {
     public:
         typedef std::shared_ptr<TestInputCreator> Shared;
         typedef std::shared_ptr<const TestInputCreator> SharedConst;
+
+        virtual ~TestInputCreator() { }
 
         TestInput::Shared create(const unsigned) const;
 
