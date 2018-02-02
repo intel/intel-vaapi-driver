@@ -52,7 +52,7 @@ VP9 10bit      D       KBL+
 Requirements
 ------------
 
-libva >= 1.7.0
+libva >= 2.1.0
 
 Testing
 -------
