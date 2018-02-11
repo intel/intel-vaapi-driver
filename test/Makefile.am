@@ -11,7 +11,7 @@ AM_CPPFLAGS =								\
 	-DGTEST_HAS_TR1_TUPLE=1						\
 	-DPTHREADS							\
 	-DVA_DRIVERS_PATH="\"$(LIBVA_DRIVERS_PATH)\""			\
-	-DTEST_VA_DRIVERS_PATH="\"$(abs_top_srcdir)/src/.libs\""	\
+	-DTEST_VA_DRIVERS_PATH="\"$(abs_top_builddir)/src/.libs\""	\
 	-std=c++11							\
 	$(NULL)
 
@@ -35,8 +35,7 @@ libgtest_la_CXXFLAGS =							\
 EXTRA_DIST =								\
 	gtest/docs							\
 	gtest/include							\
-	gtest/src/*.cc							\
-	gtest/src/*.h							\
+	gtest/src							\
 	gtest/README.md							\
 	gtest/LICENSE							\
 	$(NULL)
@@ -85,7 +84,7 @@ test_i965_drv_video_LDFLAGS =						\
 	$(NULL)
 
 test_i965_drv_video_LDADD =						\
-	$(top_srcdir)/src/libi965_drv_video.la				\
+	$(top_builddir)/src/libi965_drv_video.la			\
 	libgtest.la							\
 	$(DRM_LIBS)							\
 	$(LIBVA_DEPS_LIBS)						\
@@ -94,6 +93,7 @@ test_i965_drv_video_LDADD =						\
 	$(NULL)
 
 test_i965_drv_video_CPPFLAGS =						\
+	-I$(top_srcdir)/src						\
 	$(DRM_CFLAGS)							\
 	$(LIBVA_DEPS_CFLAGS)						\
 	$(LIBVA_DRM_DEPS_CFLAGS)					\
