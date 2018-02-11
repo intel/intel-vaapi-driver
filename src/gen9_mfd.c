@@ -195,7 +195,8 @@ gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
     assert((codec == HCP_CODEC_HEVC) || (codec == HCP_CODEC_VP9));
 
     if (IS_KBL(i965->intel.device_info) ||
-        IS_GLK(i965->intel.device_info)) {
+        IS_GLK(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info)) {
         BEGIN_BCS_BATCH(batch, 6);
 
         OUT_BCS_BATCH(batch, HCP_PIPE_MODE_SELECT | (6 - 2));
@@ -218,6 +219,9 @@ gen9_hcpd_pipe_mode_select(VADriverContextP ctx,
         else
             OUT_BCS_BATCH(batch, 0);
 
+        OUT_BCS_BATCH(batch, 0);
+    } else if (IS_GEN10(i965->intel.device_info)) {
+        OUT_BCS_BATCH(batch, 0);
         OUT_BCS_BATCH(batch, 0);
     }
 
@@ -341,10 +345,71 @@ gen9_hcpd_ind_obj_base_addr_state(VADriverContextP ctx,
 
     OUT_BCS_BATCH(batch, HCP_IND_OBJ_BASE_ADDR_STATE | (14 - 2));
     OUT_BUFFER_MA_REFERENCE(slice_data_bo);        /* DW 1..3 */
-    OUT_BUFFER_NMA_REFERENCE(NULL);                /* DW 4..5, Upper Bound */
+    OUT_BCS_RELOC64(batch, slice_data_bo, I915_GEM_DOMAIN_RENDER, 0, ALIGN(slice_data_bo->size, 4096));
     OUT_BUFFER_MA_REFERENCE(NULL);                 /* DW 6..8, CU, ignored */
     OUT_BUFFER_MA_TARGET(NULL);                    /* DW 9..11, PAK-BSE, ignored */
     OUT_BUFFER_NMA_TARGET(NULL);                   /* DW 12..13, Upper Bound  */
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
+gen10_hcpd_ind_obj_base_addr_state(VADriverContextP ctx,
+                                   dri_bo *slice_data_bo,
+                                   struct gen9_hcpd_context *gen9_hcpd_context)
+{
+    struct intel_batchbuffer *batch = gen9_hcpd_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 29);
+
+    OUT_BCS_BATCH(batch, HCP_IND_OBJ_BASE_ADDR_STATE | (29 - 2));
+
+    /* DW1..5 indirect bitstream*/
+    OUT_RELOC64(batch,
+                slice_data_bo,
+                I915_GEM_DOMAIN_INSTRUCTION, 0,
+                0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_RELOC64(batch, slice_data_bo,
+                    I915_GEM_DOMAIN_RENDER,
+                    0, ALIGN(slice_data_bo->size, 4096));
+
+    /* DW 6..8 Indirect CU */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 9..13 Indirect PAK_PSE */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 14..16. Compressed_header */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 17..19 . Prob-counter Stream-out */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 20..22. Prob-delta stream-in */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 23..25. Tile Record */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+
+    /* DW 26..28. CU level statics buffer */
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
+    OUT_BCS_BATCH(batch, 0);
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -943,7 +1008,10 @@ gen9_hcpd_hevc_decode_picture(VADriverContextP ctx,
         slice_param = (VASliceParameterBufferHEVC *)decode_state->slice_params[j]->buffer;
         slice_data_bo = decode_state->slice_datas[j]->bo;
 
-        gen9_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
+        if (IS_GEN10(i965->intel.device_info))
+            gen10_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
+        else
+            gen9_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
 
         if (j == decode_state->num_slice_params - 1)
             next_slice_group_param = NULL;
@@ -1532,7 +1600,8 @@ gen9_hcpd_vp9_pic_state(VADriverContextP ctx,
                   segmentIDStreamOutEnable << 30 |
                   pic_param->pic_fields.bits.lossless_flag << 29 |
                   segmentation_temporal_update << 28 |
-                  pic_param->pic_fields.bits.segmentation_update_map << 27 |
+                  (pic_param->pic_fields.bits.segmentation_enabled &&
+                   pic_param->pic_fields.bits.segmentation_update_map) << 27 |
                   pic_param->pic_fields.bits.segmentation_enabled << 26   |
                   pic_param->sharpness_level << 23 |
                   pic_param->filter_level << 17 |
@@ -1735,7 +1804,11 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
     slice_data_bo = decode_state->slice_datas[0]->bo;
 
     gen9_hcpd_vp9_pipe_buf_addr_state(ctx, decode_state, gen9_hcpd_context);
-    gen9_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
+
+    if (IS_GEN10(i965->intel.device_info))
+        gen10_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
+    else
+        gen9_hcpd_ind_obj_base_addr_state(ctx, slice_data_bo, gen9_hcpd_context);
 
     //If segmentation is disabled, only SegParam[0] is valid,
     //all others should be populated with 0
@@ -1750,7 +1823,6 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
     }
 
     gen9_hcpd_vp9_pic_state(ctx, decode_state, gen9_hcpd_context);
-
     gen9_hcpd_vp9_bsd_object(ctx, pic_param, slice_param, gen9_hcpd_context);
 
     intel_batchbuffer_end_atomic(batch);

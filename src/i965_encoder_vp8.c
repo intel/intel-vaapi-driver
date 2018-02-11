@@ -1731,7 +1731,8 @@ i965_encoder_vp8_vme_init_mpu_tpu_buffer(VADriverContextP ctx,
     i965_unmap_gpe_resource(&vp8_context->pak_mpu_tpu_updated_token_probability_buffer);
 }
 
-#define ALLOC_VP8_RESOURCE_BUFFER(buffer, bufsize, des) {       \
+#define ALLOC_VP8_RESOURCE_BUFFER(buffer, bufsize, des)         \
+    do {                                                        \
         vp8_context->buffer.type = I965_GPE_RESOURCE_BUFFER;    \
         vp8_context->buffer.width = (bufsize);                  \
         vp8_context->buffer.height = 1;                         \
@@ -3623,7 +3624,7 @@ i965_encoder_vp8_vme_mbenc_add_surfaces(VADriverContextP ctx,
 
         i965_add_buffer_gpe_surface(ctx,
                                     gpe_context,
-                                    &vp8_context->reference_frame_mb_count_buffer ,
+                                    &vp8_context->reference_frame_mb_count_buffer,
                                     0,
                                     32, /* sizeof(unsigned int) * 8 */
                                     0,
@@ -5156,6 +5157,9 @@ gen8_encoder_vp8_context_init(VADriverContextP, struct intel_encoder_context *, 
 extern Bool
 gen9_encoder_vp8_context_init(VADriverContextP, struct intel_encoder_context *, struct i965_encoder_vp8_context *);
 
+extern Bool
+gen10_encoder_vp8_context_init(VADriverContextP, struct intel_encoder_context *, struct i965_encoder_vp8_context *);
+
 Bool
 i965_encoder_vp8_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *encoder_context)
 {
@@ -5173,6 +5177,8 @@ i965_encoder_vp8_vme_context_init(VADriverContextP ctx, struct intel_encoder_con
         gen8_encoder_vp8_context_init(ctx, encoder_context, vp8_context);
     else if (IS_GEN9(i965->intel.device_info)) {
         gen9_encoder_vp8_context_init(ctx, encoder_context, vp8_context);
+    } else if (IS_GEN10(i965->intel.device_info)) {
+        gen10_encoder_vp8_context_init(ctx, encoder_context, vp8_context);
     } else {
         free(vp8_context);
 

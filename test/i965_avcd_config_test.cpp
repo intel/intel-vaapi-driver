@@ -89,7 +89,21 @@ VAStatus HasMVCDecodeSupport()
     struct i965_driver_data *i965(*env);
     EXPECT_PTR(i965);
 
-    if (HAS_H264_MVC_DECODING(i965))
+    if (HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264MultiviewHigh))
+        return VA_STATUS_SUCCESS;
+
+    return H264MVCNotSupported();
+}
+
+VAStatus HasStereoCDecodeSupport()
+{
+    I965TestEnvironment *env(I965TestEnvironment::instance());
+    EXPECT_PTR(env);
+
+    struct i965_driver_data *i965(*env);
+    EXPECT_PTR(i965);
+
+    if (HAS_H264_MVC_DECODING_PROFILE(i965, VAProfileH264StereoHigh))
         return VA_STATUS_SUCCESS;
 
     return H264MVCNotSupported();
@@ -103,7 +117,7 @@ static const std::vector<ConfigTestInput> inputs = {
     { VAProfileH264MultiviewHigh, VAEntrypointVLD,
       &HasMVCDecodeSupport },
     { VAProfileH264StereoHigh, VAEntrypointVLD,
-      &HasMVCDecodeSupport },
+      &HasStereoCDecodeSupport },
 };
 
 INSTANTIATE_TEST_CASE_P(

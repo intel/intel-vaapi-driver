@@ -7,7 +7,9 @@
 *.loT
 *.bin
 *.pc
-*.g[4-7]s
+*.g[4-9]s
+*.gen[4-9].asm
+*.gen75.asm
 .deps
 .libs
 install-sh

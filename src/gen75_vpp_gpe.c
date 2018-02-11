@@ -586,7 +586,8 @@ vpp_gpe_process(VADriverContextP ctx,
     if (IS_HASWELL(i965->intel.device_info))
         return gen75_gpe_process(ctx, vpp_gpe_ctx);
     else if (IS_GEN8(i965->intel.device_info) ||
-             IS_GEN9(i965->intel.device_info))
+             IS_GEN9(i965->intel.device_info) ||
+             IS_GEN10(i965->intel.device_info))
         return gen8_gpe_process(ctx, vpp_gpe_ctx);
 
     return VA_STATUS_ERROR_UNIMPLEMENTED;
@@ -627,7 +628,8 @@ vpp_gpe_process_sharpening(VADriverContextP ctx,
         if (IS_HASWELL(i965->intel.device_info))
             vpp_kernels = gen75_vpp_sharpening_kernels;
         else if (IS_GEN8(i965->intel.device_info) ||
-                 IS_GEN9(i965->intel.device_info)) // TODO: build the sharpening kernel for GEN9
+                 IS_GEN9(i965->intel.device_info) ||
+                 IS_GEN10(i965->intel.device_info))
             vpp_kernels = gen8_vpp_sharpening_kernels;
         else
             return VA_STATUS_ERROR_UNIMPLEMENTED;
@@ -854,7 +856,8 @@ vpp_gpe_context_init(VADriverContextP ctx)
 
     assert(IS_HASWELL(i965->intel.device_info) ||
            IS_GEN8(i965->intel.device_info) ||
-           IS_GEN9(i965->intel.device_info));
+           IS_GEN9(i965->intel.device_info) ||
+           IS_GEN10(i965->intel.device_info));
 
     vpp_gpe_ctx->surface_tmp = VA_INVALID_ID;
     vpp_gpe_ctx->surface_tmp_object = NULL;
@@ -879,7 +882,8 @@ vpp_gpe_context_init(VADriverContextP ctx)
         gpe_ctx->idrt.entry_size = ALIGN(sizeof(struct gen6_interface_descriptor_data), 64);
 
     } else if (IS_GEN8(i965->intel.device_info) ||
-               IS_GEN9(i965->intel.device_info)) {
+               IS_GEN9(i965->intel.device_info) ||
+               IS_GEN10(i965->intel.device_info)) {
         vpp_gpe_ctx->gpe_context_init     = gen8_gpe_context_init;
         vpp_gpe_ctx->gpe_context_destroy  = gen8_gpe_context_destroy;
         vpp_gpe_ctx->gpe_load_kernels     = gen8_gpe_load_kernels;

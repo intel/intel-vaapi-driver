@@ -44,42 +44,6 @@
 extern int
 intel_avc_enc_slice_type_fixup(int slice_type);
 
-static const uint8_t buf_rate_adj_tab_i_lowdelay[72] = {
-    0,   0, -8, -12, -16, -20, -28, -36,
-    0,   0, -4,  -8, -12, -16, -24, -32,
-    4,   2,  0,  -1,  -3,  -8, -16, -24,
-    8,   4,  2,   0,  -1,  -4,  -8, -16,
-    20, 16,  4,   0,  -1,  -4,  -8, -16,
-    24, 20, 16,   8,   4,   0,  -4,  -8,
-    28, 24, 20,  16,   8,   4,   0,  -8,
-    32, 24, 20,  16,   8,   4,   0,  -4,
-    64, 48, 28,  20,   16, 12,   8,   4,
-};
-
-static const uint8_t buf_rate_adj_tab_p_lowdelay[72] = {
-    -8, -24, -32, -40, -44, -48, -52, -80,
-    -8, -16, -32, -40, -40, -44, -44, -56,
-    0,    0, -12, -20, -24, -28, -32, -36,
-    8,    4,   0,   0,  -8, -16, -24, -32,
-    32,  16,   8,   4,  -4,  -8, -16, -20,
-    36,  24,  16,   8,   4,  -2,  -4,  -8,
-    40,  36,  24,  20,  16,   8,   0,  -8,
-    48,  40,  28,  24,  20,  12,   0,  -4,
-    64,  48,  28,  20,  16,  12,   8,   4,
-};
-
-static const uint8_t buf_rate_adj_tab_b_lowdelay[72] = {
-    0,  -4, -8, -16, -24, -32, -40, -48,
-    1,   0, -4,  -8, -16, -24, -32, -40,
-    4,   2,  0,  -1,  -3,  -8, -16, -24,
-    8,   4,  2,   0,  -1,  -4,  -8, -16,
-    20, 16,  4,   0,  -1,  -4,  -8, -16,
-    24, 20, 16,   8,   4,   0,  -4,  -8,
-    28, 24, 20,  16,   8,   4,   0,  -8,
-    32, 24, 20,  16,   8,   4,   0,  -4,
-    64, 48, 28,  20,  16,  12,   8,   4,
-};
-
 static const int8_t dist_qp_adj_tab_i_vbr[81] = {
     +0,  0,  0,  0, 0, 3, 4, 6, 8,
     +0,  0,  0,  0, 0, 2, 3, 5, 7,
@@ -152,8 +116,7 @@ static const int8_t buf_rate_adj_tab_b_vbr[72] = {
     64, 48, 28,  20,  16,  12,   8,   4,
 };
 
-static const struct huc_brc_update_constant_data
-        gen9_brc_update_constant_data = {
+static const struct huc_brc_update_constant_data gen9_brc_update_constant_data = {
     .global_rate_qp_adj_tab_i = {
         48, 40, 32,  24,  16,   8,   0,  -8,
         40, 32, 24,  16,   8,   0,  -8, -16,
@@ -2364,9 +2327,14 @@ gen9_vdenc_mfx_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_co
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     int i;
 
-    BEGIN_BCS_BATCH(batch, 65);
+    if (IS_GEN10(i965->intel.device_info)) {
+        BEGIN_BCS_BATCH(batch, 68);
+        OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (68 - 2));
+    } else {
+        BEGIN_BCS_BATCH(batch, 65);
+        OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (65 - 2));
+    }
 
-    OUT_BCS_BATCH(batch, MFX_PIPE_BUF_ADDR_STATE | (65 - 2));
 
     /* the DW1-3 is for pre_deblocking */
     OUT_BUFFER_3DW(batch, vdenc_context->pre_deblocking_output_res.bo, 1, 0, 0);
@@ -2408,6 +2376,13 @@ gen9_vdenc_mfx_pipe_buf_addr_state(VADriverContextP ctx, struct intel_encoder_co
 
     /* the DW 62-64 is the 4x Down Scaling surface */
     OUT_BUFFER_3DW(batch, vdenc_context->scaled_4x_recon_surface_res.bo, 1, 0, 0);
+
+
+    if (IS_GEN10(i965->intel.device_info)) {
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -2717,6 +2692,102 @@ gen9_vdenc_vdenc_pipe_buf_addr_state(VADriverContextP ctx,
 }
 
 static void
+gen10_vdenc_vdenc_pipe_buf_addr_state(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
+    struct intel_batchbuffer *batch = encoder_context->base.batch;
+
+    BEGIN_BCS_BATCH(batch, 62);
+
+    OUT_BCS_BATCH(batch, VDENC_PIPE_BUF_ADDR_STATE | (62 - 2));
+
+    /* DW1-6 for DS FWD REF0/REF1 */
+    if (vdenc_context->list_ref_idx[0][0] != 0xFF)
+        OUT_BUFFER_3DW(batch, vdenc_context->list_scaled_4x_reference_res[vdenc_context->list_ref_idx[0][0]].bo,
+                       0, 0, 0);
+    else
+        OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    if (vdenc_context->list_ref_idx[0][1] != 0xFF)
+        OUT_BUFFER_3DW(batch, vdenc_context->list_scaled_4x_reference_res[vdenc_context->list_ref_idx[0][1]].bo,
+                       0, 0, 0);
+    else
+        OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW7-9 for DS BWD REF0. B-frame is not supported */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW10-12 for uncompressed input data */
+    OUT_BUFFER_3DW(batch, vdenc_context->uncompressed_input_surface_res.bo, 0, 0, 0);
+
+    /* DW13-DW15 for streamin data */
+    if (vdenc_context->vdenc_streamin_enable)
+        OUT_BUFFER_3DW(batch, vdenc_context->vdenc_streamin_res.bo, 0, 0, 0);
+    else
+        OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW16-DW18 for row scratch buffer */
+    OUT_BUFFER_3DW(batch, vdenc_context->vdenc_row_store_scratch_res.bo, 1, 0, 0);
+
+    /* DW19-DW21, Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW22-DW27 for FWD REF0/REF1 */
+    if (vdenc_context->list_ref_idx[0][0] != 0xFF)
+        OUT_BUFFER_3DW(batch, vdenc_context->list_reference_res[vdenc_context->list_ref_idx[0][0]].bo, 0, 0, 0);
+    else
+        OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    if (vdenc_context->list_ref_idx[0][1] != 0xFF)
+        OUT_BUFFER_3DW(batch, vdenc_context->list_reference_res[vdenc_context->list_ref_idx[0][1]].bo, 0, 0, 0);
+    else
+        OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    if (vdenc_context->list_ref_idx[0][2] != 0xFF)
+        OUT_BUFFER_3DW(batch, vdenc_context->list_reference_res[vdenc_context->list_ref_idx[0][2]].bo, 0, 0, 0);
+    else
+        OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW31-DW33 for BDW REF0. Ignored*/
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW34-DW36 for VDEnc statistics streamout */
+    OUT_BUFFER_3DW(batch, vdenc_context->vdenc_statistics_res.bo, 1, 0, 0);
+
+    /* DW37..DW39. Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW40..DW42. Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW43..DW45. Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW46..DW48. Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW49..DW51. Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW52..DW54. Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW55..DW57. Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW58..DW60. Not used */
+    OUT_BUFFER_3DW(batch, NULL, 0, 0, 0);
+
+    /* DW 61. Not used */
+    OUT_BCS_BATCH(batch, 0);
+
+    ADVANCE_BCS_BATCH(batch);
+}
+
+static void
 gen9_vdenc_vdenc_const_qpt_state(VADriverContextP ctx,
                                  struct encode_state *encode_state,
                                  struct intel_encoder_context *encoder_context)
@@ -2799,12 +2870,17 @@ gen95_vdenc_vdecn_weihgtsoffsets_state(VADriverContextP ctx,
                                        struct intel_encoder_context *encoder_context,
                                        VAEncSliceParameterBufferH264 *slice_param)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
 
-    BEGIN_BCS_BATCH(batch, 3);
-
-    OUT_BCS_BATCH(batch, VDENC_WEIGHTSOFFSETS_STATE | (3 - 2));
+    if (IS_GEN10(i965->intel.device_info)) {
+        BEGIN_BCS_BATCH(batch, 5);
+        OUT_BCS_BATCH(batch, VDENC_WEIGHTSOFFSETS_STATE | (5 - 2));
+    } else {
+        BEGIN_BCS_BATCH(batch, 3);
+        OUT_BCS_BATCH(batch, VDENC_WEIGHTSOFFSETS_STATE | (3 - 2));
+    }
 
     if (pic_param->pic_fields.bits.weighted_pred_flag == 1) {
         OUT_BCS_BATCH(batch, (slice_param->luma_offset_l0[1] << 24 |
@@ -2822,6 +2898,16 @@ gen95_vdenc_vdecn_weihgtsoffsets_state(VADriverContextP ctx,
                               1 << 0));
     }
 
+    if (IS_GEN10(i965->intel.device_info)) {
+        OUT_BCS_BATCH(batch, (0 << 24 |
+                              1 << 16 |
+                              0 << 8 |
+                              1 << 0));
+        OUT_BCS_BATCH(batch, (0 << 24 |
+                              1 << 16 |
+                              0 << 8 |
+                              1 << 0));
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -2833,6 +2919,7 @@ gen95_vdenc_vdenc_walker_state(VADriverContextP ctx,
                                VAEncSliceParameterBufferH264 *slice_param,
                                VAEncSliceParameterBufferH264 *next_slice_param)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     VAEncPictureParameterBufferH264 *pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
@@ -2861,14 +2948,25 @@ gen95_vdenc_vdenc_walker_state(VADriverContextP ctx,
     else
         luma_log2_weight_denom = 0;
 
-    BEGIN_BCS_BATCH(batch, 4);
+    if (IS_GEN10(i965->intel.device_info)) {
+        BEGIN_BCS_BATCH(batch, 6);
+        OUT_BCS_BATCH(batch, VDENC_WALKER_STATE | (6 - 2));
+    } else {
+        BEGIN_BCS_BATCH(batch, 4);
+        OUT_BCS_BATCH(batch, VDENC_WALKER_STATE | (4 - 2));
+    }
 
-    OUT_BCS_BATCH(batch, VDENC_WALKER_STATE | (4 - 2));
     OUT_BCS_BATCH(batch, (slice_hor_pos << 16 |
                           slice_ver_pos));
     OUT_BCS_BATCH(batch, (next_slice_hor_pos << 16 |
                           next_slice_ver_pos));
     OUT_BCS_BATCH(batch, luma_log2_weight_denom);
+
+    if (IS_GEN10(i965->intel.device_info)) {
+        /* Not used for VDENC H264 */
+        OUT_BCS_BATCH(batch, 0);
+        OUT_BCS_BATCH(batch, 0);
+    }
 
     ADVANCE_BCS_BATCH(batch);
 }
@@ -3001,7 +3099,8 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
 
         if (slice_index &&
             (IS_KBL(i965->intel.device_info) ||
-             IS_GLK(i965->intel.device_info))) {
+             IS_GLK(i965->intel.device_info) ||
+             IS_GEN10(i965->intel.device_info))) {
             saved_macroblock_address = slice_params->macroblock_address;
             slice_params->macroblock_address = 0;
         }
@@ -3015,7 +3114,8 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
 
         if (slice_index &&
             (IS_KBL(i965->intel.device_info) ||
-             IS_GLK(i965->intel.device_info))) {
+             IS_GLK(i965->intel.device_info) ||
+             IS_GEN10(i965->intel.device_info))) {
             slice_params->macroblock_address = saved_macroblock_address;
         }
 
@@ -3040,7 +3140,8 @@ gen9_vdenc_mfx_avc_insert_slice_packed_data(VADriverContextP ctx,
 
         if (slice_index &&
             (IS_KBL(i965->intel.device_info) ||
-             IS_GLK(i965->intel.device_info))) {
+             IS_GLK(i965->intel.device_info) ||
+             IS_GEN10(i965->intel.device_info))) {
             slice_header_index = (encode_state->slice_header_index[0] & SLICE_PACKED_DATA_INDEX_MASK);
         }
 
@@ -3557,6 +3658,7 @@ gen9_vdenc_mfx_vdenc_pipeline(VADriverContextP ctx,
                               struct encode_state *encode_state,
                               struct intel_encoder_context *encoder_context)
 {
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct gen9_vdenc_context *vdenc_context = encoder_context->mfc_context;
     struct intel_batchbuffer *batch = encoder_context->base.batch;
     struct gpe_mi_batch_buffer_start_parameter mi_batch_buffer_start_params;
@@ -3591,7 +3693,12 @@ gen9_vdenc_mfx_vdenc_pipeline(VADriverContextP ctx,
     gen9_vdenc_vdenc_src_surface_state(ctx, encoder_context, &vdenc_context->uncompressed_input_surface_res);
     gen9_vdenc_vdenc_ref_surface_state(ctx, encoder_context, &vdenc_context->recon_surface_res);
     gen9_vdenc_vdenc_ds_ref_surface_state(ctx, encoder_context, &vdenc_context->scaled_4x_recon_surface_res);
-    gen9_vdenc_vdenc_pipe_buf_addr_state(ctx, encode_state, encoder_context);
+
+    if (IS_GEN10(i965->intel.device_info))
+        gen10_vdenc_vdenc_pipe_buf_addr_state(ctx, encode_state, encoder_context);
+    else
+        gen9_vdenc_vdenc_pipe_buf_addr_state(ctx, encode_state, encoder_context);
+
     gen9_vdenc_vdenc_const_qpt_state(ctx, encode_state, encoder_context);
 
     if (!vdenc_context->brc_enabled) {
@@ -3905,7 +4012,8 @@ vdenc_hw_interfaces_init(VADriverContextP ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
 
     if (IS_KBL(i965->intel.device_info) ||
-        IS_GLK(i965->intel.device_info)) {
+        IS_GLK(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info)) {
         gen95_vdenc_hw_interfaces_init(ctx, encoder_context, vdenc_context);
     } else {
         gen9_vdenc_hw_interfaces_init(ctx, encoder_context, vdenc_context);

@@ -42,6 +42,7 @@
 
 #include "i965_post_processing.h"
 #include "i965_encoder_api.h"
+#include "i965_avc_encoder_common.h"
 
 static struct intel_fraction
 reduce_fraction(struct intel_fraction f)
@@ -823,6 +824,16 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus ret = VA_STATUS_SUCCESS;
+    int min_width_height = I965_MIN_CODEC_ENC_RESOLUTION_WIDTH_HEIGHT;
+
+    if (encoder_context->frame_width_in_pixel > 0 &&
+        encoder_context->frame_height_in_pixel > 0) {
+        if (profile == VAProfileJPEGBaseline)
+            min_width_height = 1;
+        if (encoder_context->frame_width_in_pixel < min_width_height ||
+            encoder_context->frame_height_in_pixel < min_width_height)
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+    }
 
     if (encode_state->misc_param[VAEncMiscParameterTypeQualityLevel][0] &&
         encode_state->misc_param[VAEncMiscParameterTypeQualityLevel][0]->buffer) {
@@ -837,8 +848,8 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
             case VAProfileH264High:
             case VAProfileH264MultiviewHigh:
             case VAProfileH264StereoHigh:
-                if (IS_SKL(i965->intel.device_info) ||
-                    IS_BXT(i965->intel.device_info))
+                if (IS_GEN9(i965->intel.device_info) ||
+                    IS_GEN10(i965->intel.device_info))
                     encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
                 break;
 
@@ -852,6 +863,8 @@ intel_encoder_check_misc_parameter(VADriverContextP ctx,
                 break;
             }
         } else if (encoder_context->quality_level > encoder_context->quality_range) {
+            i965_log_info(ctx, "VAEncMiscParameterBufferQualityLevel.quality_level (%d) out of range (max %d).\n",
+                          encoder_context->quality_level, encoder_context->quality_range);
             ret = VA_STATUS_ERROR_INVALID_PARAMETER;
             goto out;
         }
@@ -880,26 +893,41 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int i;
 
-    assert(!(pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID));
+    if (seq_param->level_idc != encoder_context->codec_level &&
+        !i965_avc_level_is_valid(seq_param->level_idc)) {
+        i965_log_info(ctx, "VAEncSequenceParameterBufferH264.level_idc (%d) does not appear to be valid.\n",
+                      seq_param->level_idc);
+        encoder_context->codec_level = seq_param->level_idc;
+        // Only print this the first time we see it, and continue anyway - this could be a correct future
+        // value or an unknown extension.
+    }
 
-    if (pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID)
+    if (pic_param->CurrPic.flags & VA_PICTURE_H264_INVALID) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferH264.CurrPic.flags (%#x) is invalid.\n",
+                      pic_param->CurrPic.flags);
         goto error;
+    }
 
     obj_surface = SURFACE(pic_param->CurrPic.picture_id);
-    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
-
-    if (!obj_surface)
+    if (!obj_surface) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferH264.CurrPic.picture_id (%#x) is not a valid surface.\n",
+                      pic_param->CurrPic.picture_id);
         goto error;
+    }
 
     encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
-    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
-
-    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferH264.coded_buf (%#x) is not a valid buffer.\n",
+                      pic_param->coded_buf);
         goto error;
+    }
 
-    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num)
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num) {
+        i965_log_info(ctx, "Too many slices in picture submission: %d, max supported is %d.\n",
+                      encode_state->num_slice_params_ext, encoder_context->max_slice_or_seg_num);
         goto error;
+    }
 
     encode_state->coded_buf_object = obj_buffer;
 
@@ -909,15 +937,12 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
             break;
         else {
             obj_surface = SURFACE(pic_param->ReferenceFrames[i].picture_id);
-            assert(obj_surface);
-
-            if (!obj_surface)
+            if (!obj_surface || !obj_surface->bo) {
+                i965_log_info(ctx, "VAEncPictureParameterBufferH264.ReferenceFrames[%d].picture_id (%#x)"
+                              " is not a valid surface.\n", i, pic_param->ReferenceFrames[i].picture_id);
                 goto error;
-
-            if (obj_surface->bo)
-                encode_state->reference_objects[i] = obj_surface;
-            else
-                encode_state->reference_objects[i] = NULL; /* FIXME: Warning or Error ??? */
+            }
+            encode_state->reference_objects[i] = obj_surface;
         }
     }
 
@@ -944,15 +969,69 @@ error:
 }
 
 static VAStatus
+intel_pre_encoder_check_avc_parameter(VADriverContextP ctx,
+                                      struct encode_state *encode_state,
+                                      struct intel_encoder_context *encoder_context)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct object_surface *obj_surface = NULL;
+    VAStatsStatisticsParameterH264 *stat_param_h264 = NULL;
+    VAStatsStatisticsParameter*stat_param = NULL;
+
+    if (!encode_state->stat_param_ext)
+        goto error;
+    stat_param_h264 =
+        (VAStatsStatisticsParameterH264 *) encode_state->stat_param_ext->buffer;
+    stat_param = (VAStatsStatisticsParameter *)(&stat_param_h264->stats_params);
+
+    if (stat_param->input.flags == VA_PICTURE_STATS_INVALID)
+        goto error;
+
+    obj_surface = SURFACE(encoder_context->input_yuv_surface);
+    if (!obj_surface)
+        goto error;
+
+#if 0
+    /* FeiPreEncFixme: Since the driver is doing internal CSC for non NV12
+      input surfaces, this check may fail here */
+    /* Make sure the same input yuv has been provided in vaBeginPicture()
+     * and VAStatsStatisticsParameter */
+    if (obj_surface != SURFACE(stat_param->input.picture_id))
+        goto error;
+#endif
+
+    /* There is no reconstructed object in preenc. Here we just assigning
+     * the input yuv object to reconstructed object pointer inorder
+     * to use the same encode code path later on */
+    encode_state->reconstructed_object = obj_surface;
+
+    encoder_context->frame_width_in_pixel = obj_surface->orig_width;
+    encoder_context->frame_height_in_pixel = obj_surface->orig_height;
+
+    /* PreEnc only supports maxium of 1 past and 1 future reference */
+    if (stat_param->num_past_references > 1 || stat_param->num_future_references > 1)
+        goto error;
+
+    return VA_STATUS_SUCCESS;
+error:
+    return VA_STATUS_ERROR_INVALID_PARAMETER;
+}
+
+static VAStatus
 intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
                                     struct encode_state *encode_state,
                                     struct intel_encoder_context *encoder_context)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAEncPictureParameterBufferMPEG2 *pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+    VAEncSequenceParameterBufferMPEG2 *seq_param = NULL;
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     int i = 0;
+
+    if (encode_state->seq_param_ext &&
+        encode_state->seq_param_ext->buffer)
+        seq_param = (VAEncSequenceParameterBufferMPEG2 *)encode_state->seq_param_ext->buffer;
 
     obj_surface = SURFACE(pic_param->reconstructed_picture);
     assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
@@ -1003,6 +1082,11 @@ intel_encoder_check_mpeg2_parameter(VADriverContextP ctx,
     for (; i < 16; i++)
         encode_state->reference_objects[i] = NULL;
 
+    if (seq_param) {
+        encoder_context->frame_width_in_pixel = seq_param->picture_width;
+        encoder_context->frame_height_in_pixel = seq_param->picture_height;
+    }
+
     return VA_STATUS_SUCCESS;
 
 error:
@@ -1028,6 +1112,9 @@ intel_encoder_check_jpeg_parameter(VADriverContextP ctx,
         goto error;
 
     encode_state->coded_buf_object = obj_buffer;
+
+    encoder_context->frame_width_in_pixel = pic_param->picture_width;
+    encoder_context->frame_height_in_pixel = pic_param->picture_height;
 
     return VA_STATUS_SUCCESS;
 
@@ -1128,26 +1215,32 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
         encode_state->seq_param_ext->buffer)
         seq_param = (VAEncSequenceParameterBufferHEVC *)(encode_state->seq_param_ext->buffer);
 
-    assert(!(pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID));
-
-    if (pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID)
+    if (pic_param->decoded_curr_pic.flags & VA_PICTURE_HEVC_INVALID) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.decoded_curr_pic.flags (%#x) is invalid.\n",
+                      pic_param->decoded_curr_pic.flags);
         goto error;
+    }
 
     obj_surface = SURFACE(pic_param->decoded_curr_pic.picture_id);
-    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
-
-    if (!obj_surface)
+    if (!obj_surface) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.decoded_curr_pic.picture_id (%#x) is not a valid surface.\n",
+                      pic_param->decoded_curr_pic.picture_id);
         goto error;
+    }
 
     encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
-    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
-
-    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
+    if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo) {
+        i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.coded_buf (%#x) is not a valid buffer.\n",
+                      pic_param->coded_buf);
         goto error;
+    }
 
-    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num)
+    if (encode_state->num_slice_params_ext > encoder_context->max_slice_or_seg_num) {
+        i965_log_info(ctx, "Too many slices in picture submission: %d, max supported is %d.\n",
+                      encode_state->num_slice_params_ext, encoder_context->max_slice_or_seg_num);
         goto error;
+    }
 
     encode_state->coded_buf_object = obj_buffer;
 
@@ -1157,15 +1250,12 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
             break;
         else {
             obj_surface = SURFACE(pic_param->reference_frames[i].picture_id);
-            assert(obj_surface);
-
-            if (!obj_surface)
+            if (!obj_surface || !obj_surface->bo) {
+                i965_log_info(ctx, "VAEncPictureParameterBufferHEVC.reference_frames[%d].picture_id (%#x)"
+                              " is not a valid surface.\n", i, pic_param->reference_frames[i].picture_id);
                 goto error;
-
-            if (obj_surface->bo)
-                encode_state->reference_objects[i] = obj_surface;
-            else
-                encode_state->reference_objects[i] = NULL; /* FIXME: Warning or Error ??? */
+            }
+            encode_state->reference_objects[i] = obj_surface;
         }
     }
 
@@ -1184,6 +1274,12 @@ intel_encoder_check_hevc_parameter(VADriverContextP ctx,
     }
 
     encoder_context->is_new_sequence = (pic_param->pic_fields.bits.idr_pic_flag && seq_param);
+
+    if (encoder_context->is_new_sequence) {
+        encoder_context->num_frames_in_sequence = 0;
+        encoder_context->frame_width_in_pixel = seq_param->pic_width_in_luma_samples;
+        encoder_context->frame_height_in_pixel = seq_param->pic_height_in_luma_samples;
+    }
 
     return VA_STATUS_SUCCESS;
 
@@ -1261,6 +1357,9 @@ intel_encoder_check_vp9_parameter(VADriverContextP ctx,
 
     encoder_context->is_new_sequence = (is_key_frame && seq_param);
 
+    encoder_context->frame_width_in_pixel = pic_param->frame_width_src;
+    encoder_context->frame_height_in_pixel = pic_param->frame_height_src;
+
     return VA_STATUS_SUCCESS;
 
 error:
@@ -1282,11 +1381,20 @@ intel_encoder_sanity_check_input(VADriverContextP ctx,
     case VAProfileH264High:
     case VAProfileH264MultiviewHigh:
     case VAProfileH264StereoHigh: {
-        vaStatus = intel_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
-        if (vaStatus != VA_STATUS_SUCCESS)
+        if (!encoder_context->preenc_enabled) {
+            vaStatus = intel_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
+            if (vaStatus != VA_STATUS_SUCCESS)
+                goto out;
+            vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+            break;
+        } else {
+            vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
+            if (vaStatus != VA_STATUS_SUCCESS)
+                goto out;
+
+            vaStatus = intel_pre_encoder_check_avc_parameter(ctx, encode_state, encoder_context);
             goto out;
-        vaStatus = intel_encoder_check_yuv_surface(ctx, profile, encode_state, encoder_context);
-        break;
+        }
     }
 
     case VAProfileMPEG2Simple:
@@ -1361,9 +1469,11 @@ intel_encoder_end_picture(VADriverContextP ctx,
 
     /* VME or PAK stages are separately invoked if middleware configured the corresponding
      * FEI modes through confgiruation attributes. On the other hand, ENC_PAK mode
-     * will invoke both VME and PAK similar to the non fei use case */
-    if (encoder_context->fei_enabled) {
-        if (encoder_context->fei_function_mode == VA_FEI_FUNCTION_ENC) {
+     * will invoke both VME and PAK similar to the non fei use case.
+     * PreEnc always invoke the VME */
+    if (encoder_context->fei_enabled || encoder_context->preenc_enabled) {
+        if ((encoder_context->fei_function_mode == VA_FEI_FUNCTION_ENC) ||
+            (encoder_context->preenc_enabled)) {
             if ((encoder_context->vme_context && encoder_context->vme_pipeline))
                 return encoder_context->vme_pipeline(ctx, profile, encode_state, encoder_context);
         } else if (encoder_context->fei_function_mode == VA_FEI_FUNCTION_PAK) {
@@ -1475,7 +1585,8 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
         if (obj_config->entrypoint == VAEntrypointEncSliceLP)
             encoder_context->quality_range = ENCODER_LP_QUALITY_RANGE;
-        else if (IS_GEN9(i965->intel.device_info)) {
+        else if (IS_GEN9(i965->intel.device_info) ||
+                 IS_GEN10(i965->intel.device_info)) {
             encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
             encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
         } else
@@ -1490,11 +1601,16 @@ intel_enc_hw_context_init(VADriverContextP ctx,
                     encoder_context->fei_function_mode = obj_config->attrib_list[i].value;
             }
         }
+
+        if (obj_config->entrypoint == VAEntrypointStats)
+            encoder_context->preenc_enabled = 1;
+
         break;
 
     case VAProfileH264StereoHigh:
     case VAProfileH264MultiviewHigh:
-        if (IS_GEN9(i965->intel.device_info)) {
+        if (IS_GEN9(i965->intel.device_info) ||
+            IS_GEN10(i965->intel.device_info)) {
             encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_AVC;
             encoder_context->quality_range = ENCODER_QUALITY_RANGE_AVC;
         }
@@ -1523,6 +1639,12 @@ intel_enc_hw_context_init(VADriverContextP ctx,
 
     case VAProfileVP9Profile0:
         encoder_context->codec = CODEC_VP9;
+
+        if (obj_config->entrypoint == VAEntrypointEncSliceLP) {
+            encoder_context->quality_level = ENCODER_DEFAULT_QUALITY_VP9;
+            encoder_context->quality_range = ENCODER_QUALITY_RANGE_VP9;
+        }
+
         break;
 
     default:

@@ -52,6 +52,8 @@
 #define MI_CONDITIONAL_BATCH_BUFFER_END         (CMD_MI | (0x36 << 23))
 #define   MI_COMPARE_MASK_MODE_ENANBLED                 (1 << 19)
 
+#define MI_COPY_MEM_MEM                         (CMD_MI | (0x2E << 23))
+
 #define XY_COLOR_BLT_CMD                        (CMD_2D | (0x50 << 22) | 0x04)
 #define XY_COLOR_BLT_WRITE_ALPHA                (1 << 21)
 #define XY_COLOR_BLT_WRITE_RGB                  (1 << 20)
@@ -238,5 +240,7 @@ struct intel_region {
                                          device_info->is_cfllake)
 
 #define IS_GLK(device_info)             (device_info->is_glklake)
+
+#define IS_GEN10(device_info)           (device_info->gen == 10)
 
 #endif /* _INTEL_DRIVER_H_ */

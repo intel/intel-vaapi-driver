@@ -748,7 +748,8 @@ gen8_gpe_set_surface2_state(VADriverContextP ctx,
 
     memset(ss, 0, sizeof(*ss));
     /* ss0 */
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         ss->ss5.surface_object_mocs = GEN9_CACHE_PTE;
 
     ss->ss6.base_addr = (uint32_t)obj_surface->bo->offset64;
@@ -810,7 +811,8 @@ gen8_gpe_set_media_rw_surface_state(VADriverContextP ctx,
 
     memset(ss, 0, sizeof(*ss));
     /* ss0 */
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         ss->ss1.surface_mocs = GEN9_CACHE_PTE;
 
     ss->ss0.surface_type = I965_SURFACE_2D;
@@ -844,7 +846,8 @@ gen8_gpe_set_media_chroma_surface_state(VADriverContextP ctx,
     cbcr_offset = obj_surface->height * obj_surface->width;
     memset(ss, 0, sizeof(*ss));
     /* ss0 */
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         ss->ss1.surface_mocs = GEN9_CACHE_PTE;
 
     ss->ss0.surface_type = I965_SURFACE_2D;
@@ -934,7 +937,8 @@ gen8_gpe_set_buffer_surface_state(VADriverContextP ctx,
     memset(ss, 0, sizeof(*ss));
     /* ss0 */
     ss->ss0.surface_type = I965_SURFACE_BUFFER;
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         ss->ss1.surface_mocs = GEN9_CACHE_PTE;
 
     /* ss1 */
@@ -2463,6 +2467,25 @@ gen8_gpe_mi_conditional_batch_buffer_end(VADriverContextP ctx,
 }
 
 void
+gen8_gpe_mi_copy_mem_mem(VADriverContextP ctx,
+                         struct intel_batchbuffer *batch,
+                         struct gpe_mi_copy_mem_parameter *param)
+{
+    __OUT_BATCH(batch, (MI_COPY_MEM_MEM |
+                        (0 << 22) |
+                        (0 << 21) |
+                        (5 - 2))); /* Always use PPGTT for src and dst */
+    __OUT_RELOC64(batch,
+                  param->dst_bo,
+                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                  param->dst_offset);
+    __OUT_RELOC64(batch,
+                  param->src_bo,
+                  I915_GEM_DOMAIN_RENDER, 0,
+                  param->src_offset);
+}
+
+void
 gen8_gpe_pipe_control(VADriverContextP ctx,
                       struct intel_batchbuffer *batch,
                       struct gpe_pipe_control_parameter *param)
@@ -2809,7 +2832,9 @@ i965_gpe_table_init(VADriverContextP ctx)
         gpe->mi_store_register_mem = gen8_gpe_mi_store_register_mem;
         gpe->mi_store_data_imm = gen8_gpe_mi_store_data_imm;
         gpe->mi_flush_dw = gen8_gpe_mi_flush_dw;
-    } else if (IS_GEN9(i965->intel.device_info)) {
+        gpe->mi_copy_mem_mem = gen8_gpe_mi_copy_mem_mem;
+    } else if (IS_GEN9(i965->intel.device_info) ||
+               IS_GEN10(i965->intel.device_info)) {
         gpe->context_init = gen8_gpe_context_init;
         gpe->context_destroy = gen8_gpe_context_destroy;
         gpe->context_add_surface = gen9_gpe_context_add_surface;
@@ -2831,6 +2856,7 @@ i965_gpe_table_init(VADriverContextP ctx)
         gpe->mi_store_register_mem = gen8_gpe_mi_store_register_mem;
         gpe->mi_store_data_imm = gen8_gpe_mi_store_data_imm;
         gpe->mi_flush_dw = gen8_gpe_mi_flush_dw;
+        gpe->mi_copy_mem_mem = gen8_gpe_mi_copy_mem_mem;
     } else {
         // TODO: for other platforms
     }

@@ -187,8 +187,10 @@ TEST(ObjectHeapTest, DataIntegrity)
         int id = object_heap_allocate(&heap);
         object_base_p base = object_heap_lookup(&heap, id);
         test_object_p object = (test_object_p)base;
-        object->i = std::rand();
-        values.push_back(object->i);
+        if (object) {
+            object->i = std::rand();
+            values.push_back(object->i);
+        }
         return object;
     };
 
@@ -198,7 +200,9 @@ TEST(ObjectHeapTest, DataIntegrity)
     ASSERT_EQ(objects.size(), values.size());
 
     auto validator = [&](test_object_p object) {
+        ASSERT_TRUE(object != NULL);
         object_base_p base = object_heap_lookup(&heap, object->base.id);
+        ASSERT_TRUE(base != NULL);
         EXPECT_TRUE(&object->base == base);
         EXPECT_EQ(object->base.id, base->id);
         test_object_p lo = (test_object_p)base;

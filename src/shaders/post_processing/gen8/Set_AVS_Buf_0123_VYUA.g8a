@@ -348,17 +348,17 @@
 	//Cr is returned on R-channel. 0
 	//Y is returned on G channel. 4
 	//Cb is returned on B channel. 8
-        mov (4) acc0.0<1>:w                 0x62EA:v                                //Subtract 6 from 0,4,8,12
-        add (4) acc0.0<1>:w                 acc0<4;4,1>:w       70:uw      //add 6 back
-        shl (4) r22.0<1>:w       acc0<4;4,1>:w       5:uw                //Convert to BYTE address.
+        mov (4) r22.0<1>:w                 0x62EA:v                                //Subtract 6 from 0,4,8,12
+        add (4) r22.0<1>:w                 r22.0<4;4,1>:w       70:uw      //add 6 back
+        shl (4) r22.0<1>:w       r22.0<4;4,1>:w       5:uw                //Convert to BYTE address.
 
     //OPT: wAVS_SU_SHUFFLE_PTR_0 and udAVS_SU_SHUFFLE_OFF_0 are sub-regs of same GRF. -rT
 
     //SU LAYOUT:(VYUAVYUA)
         //V = 0, Y = 2, U = 4, A = 6
-        mov (4) acc0.0<1>:w                 0x6420:v
-        add (4) acc0.0<1>:w                 acc0<4;4,1>:w       64:uw
-        shl (4) r18.0<1>:w  acc0<4;4,1>:w       5:uw                    { NoDDClr }     //Convert to BYTE address.
+        mov (4) r18.0<1>:w                 0x6420:v
+        add (4) r18.0<1>:w                 r18.0<4;4,1>:w       64:uw
+        shl (4) r18.0<1>:w  r18.0<4;4,1>:w       5:uw                    { NoDDClr }     //Convert to BYTE address.
 
         //OFFSET:
         mov (1)   r18.4<1>:ud      0x1000100:ud    { NoDDChk }

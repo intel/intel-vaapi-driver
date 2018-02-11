@@ -76,12 +76,40 @@ intel_10bit_8bit_scaling_post_processing(VADriverContextP   ctx,
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VAStatus va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    if (IS_GEN9(i965->intel.device_info))
+    if (IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         va_status = gen9_10bit_8bit_scaling_post_processing(ctx, pp_context,
                                                             src_surface,
                                                             src_rect,
                                                             dst_surface,
                                                             dst_rect);
+
+    return va_status;
+}
+
+static VAStatus
+intel_8bit_420_rgb32_scaling_post_processing(VADriverContextP   ctx,
+                                             struct i965_post_processing_context *pp_context,
+                                             struct i965_surface *src_surface,
+                                             VARectangle *src_rect,
+                                             struct i965_surface *dst_surface,
+                                             VARectangle *dst_rect)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    VAStatus va_status = VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    if (IS_GEN8(i965->intel.device_info))
+        va_status = gen8_8bit_420_rgb32_scaling_post_processing(ctx, pp_context,
+                                                                src_surface,
+                                                                src_rect,
+                                                                dst_surface,
+                                                                dst_rect);
+    else
+        va_status = gen9_8bit_420_rgb32_scaling_post_processing(ctx, pp_context,
+                                                                src_surface,
+                                                                src_rect,
+                                                                dst_surface,
+                                                                dst_rect);
 
     return va_status;
 }
@@ -125,18 +153,26 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
 #define SRC_YUV_PACKED   (1 << 3)
 #define DST_YUV_PACKED   (1 << 7)
 
-#define MASK_CSC         (0xFF)
+#define SRC_RGB32        (1 << 8)
+#define DST_RGB32        (1 << 12)
+
+#define MASK_CSC         (0xFFFF)
+
 #define SCALE_10BIT_10BIT_420   (SRC_10BIT_420 | DST_10BIT_420)
 #define SCALE_8BIT_8BIT_420     (SRC_8BIT_420 | DST_8BIT_420)
 #define SCALE_10BIT420_8BIT422  (SRC_10BIT_420 | DST_8BIT_422 | DST_YUV_PACKED)
 #define SCALE_10BIT420_8BIT420  (SRC_10BIT_420 | DST_8BIT_420)
+#define SCALE_8BIT_420_RGB32    (SRC_8BIT_420 | DST_RGB32)
 
     if (src_fourcc == VA_FOURCC_P010 ||
         src_fourcc == VA_FOURCC_I010)
         scale_flag |= SRC_10BIT_420;
 
     if (src_fourcc == VA_FOURCC_NV12 ||
-        src_fourcc == VA_FOURCC_I420)
+        src_fourcc == VA_FOURCC_I420 ||
+        src_fourcc == VA_FOURCC_IMC3 ||
+        src_fourcc == VA_FOURCC_YV12 ||
+        src_fourcc == VA_FOURCC_IMC1)
         scale_flag |= SRC_8BIT_420;
 
     if (src_fourcc == VA_FOURCC_YUY2 ||
@@ -148,7 +184,10 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
         scale_flag |= DST_10BIT_420;
 
     if (dst_fourcc == VA_FOURCC_NV12 ||
-        dst_fourcc == VA_FOURCC_I420)
+        dst_fourcc == VA_FOURCC_I420 ||
+        dst_fourcc == VA_FOURCC_IMC3 ||
+        dst_fourcc == VA_FOURCC_YV12 ||
+        dst_fourcc == VA_FOURCC_IMC1)
         scale_flag |= DST_8BIT_420;
 
     if (dst_fourcc == VA_FOURCC_YUY2 ||
@@ -158,6 +197,12 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
     if (dst_fourcc == VA_FOURCC_YUY2 ||
         dst_fourcc == VA_FOURCC_UYVY)
         scale_flag |= (DST_8BIT_422 | DST_YUV_PACKED);
+
+    if (dst_fourcc == VA_FOURCC_RGBX ||
+        dst_fourcc == VA_FOURCC_RGBA ||
+        dst_fourcc == VA_FOURCC_BGRX ||
+        dst_fourcc == VA_FOURCC_BGRA)
+        scale_flag |= DST_RGB32;
 
     /* If P010 is converted without resolution change,
      * fall back to VEBOX
@@ -214,6 +259,20 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
         status = intel_10bit_8bit_scaling_post_processing(ctx, pp_context,
                                                           (struct i965_surface *)src_surface, (VARectangle *)src_rect,
                                                           dst_surface, &aligned_dst_rect);
+    }
+
+    if (((scale_flag & MASK_CSC) == SCALE_8BIT_420_RGB32) &&
+        (pp_context->scaling_gpe_context_initialized & VPPGPE_8BIT_420_RGB32)) {
+        tmp_x = ALIGN_FLOOR(dst_rect->x, 4);
+        tmp_width = dst_rect->x + dst_rect->width - tmp_x;
+        aligned_dst_rect.x = tmp_x;
+        aligned_dst_rect.width = tmp_width;
+        aligned_dst_rect.y = dst_rect->y;
+        aligned_dst_rect.height = dst_rect->height;
+
+        status = intel_8bit_420_rgb32_scaling_post_processing(ctx, pp_context,
+                                                              (struct i965_surface *)src_surface, (VARectangle *)src_rect,
+                                                              dst_surface, &aligned_dst_rect);
     }
 
     return status;

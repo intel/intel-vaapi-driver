@@ -76,10 +76,38 @@ struct vdenc_avc_surface {
     struct object_surface *scaled_4x_surface_obj;
 };
 
+typedef struct vdenc_vp9_surface VDEncVP9Surface;
+struct vdenc_vp9_surface {
+    VADriverContextP ctx;
+    VASurfaceID scaled_4x_surface_id;
+    struct object_surface *scaled_4x_surface_obj;
+    VASurfaceID scaled_8x_surface_id;
+    struct object_surface *scaled_8x_surface_obj;
+    VASurfaceID scaled_16x_surface_id;
+    struct object_surface *scaled_16x_surface_obj;
+
+    VASurfaceID dys_surface_id;
+    struct object_surface *dys_surface_obj;
+    VASurfaceID dys_4x_surface_id;
+    struct object_surface *dys_4x_surface_obj;
+    VASurfaceID dys_8x_surface_id;
+    struct object_surface *dys_8x_surface_obj;
+    VASurfaceID dys_16x_surface_id;
+    struct object_surface *dys_16x_surface_obj;
+    int dys_frame_width;
+    int dys_frame_height;
+    int frame_width;
+    int frame_height;
+    unsigned int qp_value;
+    uint8_t dys_hme_flag;
+};
+
 extern void gen_free_hevc_surface(void **data);
 
 extern void gen_free_vp9_surface(void **data);
 
 extern void vdenc_free_avc_surface(void **data);
+
+extern void vdenc_free_vp9_surface(void **data);
 
 #endif /* INTEL_MEDIA_H */

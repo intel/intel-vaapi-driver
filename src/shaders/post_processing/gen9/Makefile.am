@@ -1,10 +1,11 @@
-SRCDIR = $(top_srcdir)/src/shaders/post_processing/gen8
-VPATH = $(SRCDIR)
+G8A_DIR = $(top_srcdir)/src/shaders/post_processing/gen8
+VPATH = $(G8A_DIR) $(srcdir) $(builddir)
 
 INTEL_PP_PRE_G9B =		\
 	conv_p010.g9b           \
 	conv_nv12.g9b		\
-	conv_10bit_8bit.g9b
+	conv_10bit_8bit.g9b	\
+	conv_8bit_420_rgb32.g9b
 
 INTEL_PP_G9B = \
 	pl2_to_pl2.g9b		\
@@ -72,6 +73,8 @@ $(INTEL_PP_GEN9_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G9A)
 endif
 
 CLEANFILES = $(INTEL_PP_GEN9_ASM)
+
+DISTCLEANFILES = $(TARGETS)
 
 EXTRA_DIST = \
 	$(INTEL_PP_G9B) \

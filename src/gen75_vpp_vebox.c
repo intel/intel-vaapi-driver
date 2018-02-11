@@ -242,7 +242,8 @@ void hsw_veb_dndi_table(VADriverContextP ctx, struct intel_vebox_context *proc_c
                    7);          // chr temp diff low
 
     if (IS_GEN8(i965->intel.device_info) ||
-        IS_GEN9(i965->intel.device_info))
+        IS_GEN9(i965->intel.device_info) ||
+        IS_GEN10(i965->intel.device_info))
         *p_table ++ = 0;         // parameters for hot pixel,
 }
 
@@ -1416,13 +1417,9 @@ VAStatus hsw_veb_pre_format_convert(VADriverContextP ctx,
 
     proc_ctx->format_convert_flags = 0;
 
-    if ((obj_surf_input == NULL) &&
-        (proc_ctx->pipeline_param->surface_region == NULL))
+    if ((obj_surf_input == NULL) || (obj_surf_output == NULL)) {
         ASSERT_RET(0, VA_STATUS_ERROR_INVALID_PARAMETER);
-
-    if ((obj_surf_output == NULL) &&
-        (proc_ctx->pipeline_param->output_region == NULL))
-        ASSERT_RET(0, VA_STATUS_ERROR_INVALID_PARAMETER);
+    }
 
     if (proc_ctx->pipeline_param->surface_region) {
         proc_ctx->width_input   = proc_ctx->pipeline_param->surface_region->width;
@@ -2258,7 +2255,7 @@ void skl_veb_state_table_setup(VADriverContextP ctx, struct intel_vebox_context 
         dri_bo *iecp_bo = proc_ctx->iecp_state_table.bo;
         dri_bo_map(iecp_bo, 1);
         proc_ctx->iecp_state_table.ptr = iecp_bo->virtual;
-        memset(proc_ctx->iecp_state_table.ptr, 0, 90 * 4);
+        memset(proc_ctx->iecp_state_table.ptr, 0, 2048); // Change the size to 2048 in case a large table used in the future
 
         hsw_veb_iecp_std_table(ctx, proc_ctx);
         hsw_veb_iecp_ace_table(ctx, proc_ctx);
@@ -2468,6 +2465,264 @@ gen9_vebox_process_picture(VADriverContextP ctx,
         skl_veb_surface_state(ctx, proc_ctx, INPUT_SURFACE);
         skl_veb_surface_state(ctx, proc_ctx, OUTPUT_SURFACE);
         bdw_veb_dndi_iecp_command(ctx, proc_ctx);
+        intel_batchbuffer_end_atomic(proc_ctx->batch);
+        intel_batchbuffer_flush(proc_ctx->batch);
+    }
+
+    status = hsw_veb_post_format_convert(ctx, proc_ctx);
+
+    return status;
+}
+
+void
+cnl_veb_state_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    struct intel_batchbuffer *batch = proc_ctx->batch;
+
+    BEGIN_VEB_BATCH(batch, 0x13);
+    OUT_VEB_BATCH(batch, VEB_STATE | (0x13 - 2));
+    OUT_VEB_BATCH(batch,
+                  0 << 25 |       // state surface control bits
+                  0 << 23 |       // reserved.
+                  0 << 22 |       // gamut expansion position
+                  0 << 15 |       // reserved.
+                  0 << 14 |       // single slice vebox enable
+                  0 << 13 |       // hot pixel filter enable
+                  0 << 12 |       // alpha plane enable
+                  0 << 11 |       // vignette enable
+                  0 << 10 |       // demosaic enable
+                  proc_ctx->current_output_type << 8  | // DI output frame
+                  1 << 7  |       // 444->422 downsample method
+                  1 << 6  |       // 422->420 downsample method
+                  proc_ctx->is_first_frame  << 5  |   // DN/DI first frame
+                  proc_ctx->is_di_enabled   << 4  |   // DI enable
+                  proc_ctx->is_dn_enabled   << 3  |   // DN enable
+                  proc_ctx->is_iecp_enabled << 2  |   // global IECP enabled
+                  0 << 1  |       // ColorGamutCompressionEnable
+                  0) ;            // ColorGamutExpansionEnable.
+
+    OUT_RELOC64(batch,
+                proc_ctx->dndi_state_table.bo,
+                I915_GEM_DOMAIN_INSTRUCTION, 0, 0); // DW 2-3
+
+    OUT_RELOC64(batch,
+                proc_ctx->iecp_state_table.bo,
+                I915_GEM_DOMAIN_INSTRUCTION, 0, 0); // DW 4-5
+
+    OUT_RELOC64(batch,
+                proc_ctx->gamut_state_table.bo,
+                I915_GEM_DOMAIN_INSTRUCTION, 0, 0); // DW 6-7
+
+    OUT_RELOC64(batch,
+                proc_ctx->vertex_state_table.bo,
+                I915_GEM_DOMAIN_INSTRUCTION, 0, 0); // DW 8-9
+
+    OUT_VEB_BATCH(batch, 0);/*caputre pipe state pointer*/
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, 0);/*lace lut table state pointer*/
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, 0);/*gamma correction values address*/
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, 0);
+    OUT_VEB_BATCH(batch, 0);
+    OUT_VEB_BATCH(batch, 0);
+
+
+    ADVANCE_VEB_BATCH(batch);
+}
+
+void cnl_veb_dndi_iecp_command(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    struct intel_batchbuffer *batch = proc_ctx->batch;
+    unsigned char frame_ctrl_bits = 0;
+    struct object_surface *obj_surface = proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface;
+    unsigned int width64 = ALIGN(proc_ctx->width_input, 64);
+
+    assert(obj_surface);
+    if (width64 > obj_surface->orig_width)
+        width64 = obj_surface->orig_width;
+
+    BEGIN_VEB_BATCH(batch, 0x18);
+    OUT_VEB_BATCH(batch, VEB_DNDI_IECP_STATE | (0x18 - 2));//DWord 0
+    OUT_VEB_BATCH(batch, (width64 - 1));
+
+    OUT_RELOC64(batch,
+                proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface->bo,
+                I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 2-3
+
+    OUT_RELOC64(batch,
+                proc_ctx->frame_store[FRAME_IN_PREVIOUS].obj_surface->bo,
+                I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 4-4
+
+    OUT_RELOC64(batch,
+                proc_ctx->frame_store[FRAME_IN_STMM].obj_surface->bo,
+                I915_GEM_DOMAIN_RENDER, 0, frame_ctrl_bits);//DWord 6-7
+
+    OUT_RELOC64(batch,
+                proc_ctx->frame_store[FRAME_OUT_STMM].obj_surface->bo,
+                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 8-9
+
+    OUT_RELOC64(batch,
+                proc_ctx->frame_store[FRAME_OUT_CURRENT_DN].obj_surface->bo,
+                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 10-11
+
+    OUT_RELOC64(batch,
+                proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface->bo,
+                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 12-13
+
+    OUT_RELOC64(batch,
+                proc_ctx->frame_store[FRAME_OUT_PREVIOUS].obj_surface->bo,
+                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 14-15
+
+    OUT_RELOC64(batch,
+                proc_ctx->frame_store[FRAME_OUT_STATISTIC].obj_surface->bo,
+                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, frame_ctrl_bits);//DWord 16-17
+
+    OUT_VEB_BATCH(batch, 0); //DWord 18
+    OUT_VEB_BATCH(batch, 0); //DWord 19
+
+    OUT_VEB_BATCH(batch, 0); //DWord 20
+    OUT_VEB_BATCH(batch, 0); //DWord 21
+    OUT_VEB_BATCH(batch, 0); //DWord 22
+    OUT_VEB_BATCH(batch, 0); //DWord 23
+
+    ADVANCE_VEB_BATCH(batch);
+}
+
+void cnl_veb_surface_state(VADriverContextP ctx, struct intel_vebox_context *proc_ctx, unsigned int is_output)
+{
+    struct intel_batchbuffer *batch = proc_ctx->batch;
+    unsigned int u_offset_y = 0, v_offset_y = 0;
+    unsigned int is_uv_interleaved = 0, tiling = 0, swizzle = 0;
+    unsigned int surface_format = PLANAR_420_8;
+    struct object_surface* obj_surf = NULL;
+    unsigned int surface_pitch = 0;
+    unsigned int half_pitch_chroma = 0;
+    unsigned int derived_pitch;
+
+    if (is_output) {
+        obj_surf = proc_ctx->frame_store[FRAME_OUT_CURRENT].obj_surface;
+    } else {
+        obj_surf = proc_ctx->frame_store[FRAME_IN_CURRENT].obj_surface;
+    }
+
+    assert(obj_surf->fourcc == VA_FOURCC_NV12 ||
+           obj_surf->fourcc == VA_FOURCC_YUY2 ||
+           obj_surf->fourcc == VA_FOURCC_AYUV ||
+           obj_surf->fourcc == VA_FOURCC_RGBA ||
+           obj_surf->fourcc == VA_FOURCC_P010);
+
+    if (obj_surf->fourcc == VA_FOURCC_NV12) {
+        surface_format = PLANAR_420_8;
+        surface_pitch = obj_surf->width;
+        is_uv_interleaved = 1;
+        half_pitch_chroma = 0;
+    } else if (obj_surf->fourcc == VA_FOURCC_YUY2) {
+        surface_format = YCRCB_NORMAL;
+        surface_pitch = obj_surf->width * 2;
+        is_uv_interleaved = 0;
+        half_pitch_chroma = 0;
+    } else if (obj_surf->fourcc == VA_FOURCC_AYUV) {
+        surface_format = PACKED_444A_8;
+        surface_pitch = obj_surf->width * 4;
+        is_uv_interleaved = 0;
+        half_pitch_chroma = 0;
+    } else if (obj_surf->fourcc == VA_FOURCC_RGBA) {
+        surface_format = R8G8B8A8_UNORM_SRGB;
+        surface_pitch = obj_surf->width * 4;
+        is_uv_interleaved = 0;
+        half_pitch_chroma = 0;
+    } else if (obj_surf->fourcc == VA_FOURCC_P010) {
+        surface_format = PLANAR_420_16;
+        surface_pitch = obj_surf->width;
+        is_uv_interleaved = 1;
+        half_pitch_chroma = 0;
+    }
+
+    derived_pitch = surface_pitch;
+
+    u_offset_y = obj_surf->y_cb_offset;
+    v_offset_y = obj_surf->y_cr_offset;
+
+    dri_bo_get_tiling(obj_surf->bo, &tiling, &swizzle);
+
+    BEGIN_VEB_BATCH(batch, 9);
+    OUT_VEB_BATCH(batch, VEB_SURFACE_STATE | (9 - 2));
+    OUT_VEB_BATCH(batch,
+                  0 << 1 |         // reserved
+                  is_output);      // surface indentification.
+
+    OUT_VEB_BATCH(batch,
+                  (obj_surf->orig_height - 1) << 18 |  // height . w3
+                  (obj_surf->orig_width - 1)  << 4  |  // width
+                  0);                             // reserve
+
+    OUT_VEB_BATCH(batch,
+                  surface_format      << 27  |  // surface format, YCbCr420. w4
+                  is_uv_interleaved   << 20  |  // interleave chrome , two seperate palar
+                  (surface_pitch - 1) << 3   |  // surface pitch, 64 align
+                  half_pitch_chroma   << 2   |  // half pitch for chrome
+                  !!tiling            << 1   |  // tiled surface, linear surface used
+                  (tiling == I915_TILING_Y));   // tiled walk, ignored when liner surface
+
+    OUT_VEB_BATCH(batch,
+                  0 << 16  |     // X offset for V(Cb)
+                  u_offset_y);   // Y offset for V(Cb)
+
+    OUT_VEB_BATCH(batch,
+                  0 << 16  |     // X offset for V(Cr)
+                  v_offset_y);   // Y offset for V(Cr)
+
+    OUT_VEB_BATCH(batch, 0);
+
+    OUT_VEB_BATCH(batch, derived_pitch - 1);
+
+    OUT_VEB_BATCH(batch, 0);
+
+    ADVANCE_VEB_BATCH(batch);
+}
+
+VAStatus
+gen10_vebox_process_picture(VADriverContextP ctx, struct intel_vebox_context *proc_ctx)
+{
+    VAStatus status;
+
+    status = gen75_vebox_init_pipe_params(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    status = gen75_vebox_init_filter_params(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    status = hsw_veb_pre_format_convert(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    status = gen75_vebox_ensure_surfaces(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    status = gen75_vebox_ensure_surfaces_storage(ctx, proc_ctx);
+    if (status != VA_STATUS_SUCCESS)
+        return status;
+
+    if (proc_ctx->filters_mask & VPP_SHARP_MASK) {
+        vpp_sharpness_filtering(ctx, proc_ctx);
+    } else if (proc_ctx->format_convert_flags & POST_COPY_CONVERT) {
+        assert(proc_ctx->is_second_field);
+        /* directly copy the saved frame in the second call */
+    } else {
+        intel_batchbuffer_start_atomic_veb(proc_ctx->batch, 0x1000);
+        intel_batchbuffer_emit_mi_flush(proc_ctx->batch);
+        skl_veb_state_table_setup(ctx, proc_ctx);
+        cnl_veb_state_command(ctx, proc_ctx);
+        cnl_veb_surface_state(ctx, proc_ctx, INPUT_SURFACE);
+        cnl_veb_surface_state(ctx, proc_ctx, OUTPUT_SURFACE);
+        cnl_veb_dndi_iecp_command(ctx, proc_ctx);
         intel_batchbuffer_end_atomic(proc_ctx->batch);
         intel_batchbuffer_flush(proc_ctx->batch);
     }

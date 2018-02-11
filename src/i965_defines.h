@@ -428,6 +428,7 @@
 #define HCP_IND_OBJ_BASE_ADDR_STATE             HCP(0x03)
 #define HCP_QM_STATE                            HCP(0x04)
 #define HCP_FQM_STATE                           HCP(0x05)
+#define HCP_RDOQ_STATE                          HCP(0x08)
 #define HCP_PIC_STATE                           HCP(0x10)
 #define HCP_TILE_STATE                          HCP(0x11)
 #define HCP_REF_IDX_STATE                       HCP(0x12)
@@ -910,8 +911,8 @@
 #define HEVC_SLICE_I                            2
 
 #define HCP_CODEC_HEVC                          0
-
 #define HCP_CODEC_VP9                           1
+
 #define HCP_VP9_KEY_FRAME                       0
 #define HCP_VP9_INTER_FRAME                     1
 #define HCP_VP9_PROFILE0                        0     /* 8 bit 420 only */
@@ -961,6 +962,7 @@
 #define VDENC_WALKER_STATE              VDENC(1, 0, 7)
 #define VDENC_WEIGHTSOFFSETS_STATE      VDENC(1, 0, 8)
 
+#define VDENC_CODEC_VP9                 1
 #define VDENC_CODEC_AVC                 2
 
 #define VDENC_SURFACE_YUV422            0
@@ -981,6 +983,9 @@
 #define MFC_IMAGE_STATUS_MASK_REG               0x128B4
 #define MFC_IMAGE_STATUS_CTRL_REG               0x128B8
 #define MFC_QP_STATUS_COUNT_REG                 0x128bc
+
+#define HCP_VP9_BITSTREAM_BYTECOUNT_FRAME_REG           0x1E9E0
+#define HCP_VP9_BITSTREAM_BYTECOUNT_FRAME_NO_HEADER_REG 0x1E9E4
 
 #define GEN9_CACHE_PTE                  0x02
 

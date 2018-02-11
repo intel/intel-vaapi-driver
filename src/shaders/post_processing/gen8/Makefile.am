@@ -16,7 +16,8 @@ INTEL_PP_PRE_G8B =		\
 	sharpening_h_blur.g8b	\
 	sharpening_unmask.g8b	\
 	sharpening_v_blur.g8b   \
-        conv_nv12.g8b
+	conv_nv12.g8b		\
+	conv_8bit_420_rgb32.g8b
 
 INTEL_PP_G8A = \
 	EOT.g8a				\
@@ -70,7 +71,9 @@ $(INTEL_PP_GEN8_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G8A)
 	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 8 $<
 endif
 
-CLEANFILES = $(INTEL_PP_GEN7_ASM)
+CLEANFILES = $(INTEL_PP_GEN7_ASM) $(INTEL_PP_GEN8_ASM)
+
+DISTCLEANFILES = $(TARGETS)
 
 EXTRA_DIST = \
 	$(INTEL_PP_ASM)	\

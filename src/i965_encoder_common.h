@@ -108,7 +108,8 @@ typedef enum _INTEL_GENERIC_ENC_OPERATION {
     INTEL_GENERIC_ENC_MBENC_WIDI,
     INTEL_GENERIC_ENC_WP,
     INTEL_GENERIC_ENC_SFD,                   // Static frame detection
-    INTEL_GENERIC_ENC_DYS
+    INTEL_GENERIC_ENC_DYS,
+    INTEL_GENERIC_ENC_PREPROC
 } INTEL_GENERIC_ENC_OPERATION;
 
 typedef enum _INTEL_MEDIA_STATE_TYPE {
@@ -309,6 +310,13 @@ struct generic_encoder_context {
         struct intel_encoder_context *encoder_context,
         void *param);
 
+    void (*pfn_set_curbe_preproc)(
+        VADriverContextP ctx,
+        struct encode_state *encode_state,
+        struct i965_gpe_context *gpe_context,
+        struct intel_encoder_context *encoder_context,
+        void *param);
+
     //surface set function pointer
     void (*pfn_send_scaling_surface)(
         VADriverContextP ctx,
@@ -360,6 +368,13 @@ struct generic_encoder_context {
         void *param);
 
     void (*pfn_send_wp_surface)(
+        VADriverContextP ctx,
+        struct encode_state *encode_state,
+        struct i965_gpe_context *gpe_context,
+        struct intel_encoder_context *encoder_context,
+        void *param);
+
+    void (*pfn_send_preproc_surface)(
         VADriverContextP ctx,
         struct encode_state *encode_state,
         struct i965_gpe_context *gpe_context,

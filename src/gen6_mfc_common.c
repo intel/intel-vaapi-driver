@@ -572,7 +572,6 @@ void intel_mfc_avc_pipeline_header_programing(VADriverContextP ctx,
 {
     struct gen6_mfc_context *mfc_context = encoder_context->mfc_context;
     int idx = va_enc_packed_type_to_idx(VAEncPackedHeaderH264_SPS);
-    unsigned int rate_control_mode = encoder_context->rate_control_mode;
     unsigned int skip_emul_byte_cnt;
 
     if (encode_state->packed_header_data[idx]) {
@@ -2106,6 +2105,8 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
     if (!vme_context->roi_enabled)
         return;
 
+    num_roi = encoder_context->brc.num_roi;
+
     if ((vme_context->saved_width_mbs !=  width_in_mbs) ||
         (vme_context->saved_height_mbs != height_in_mbs)) {
         free(vme_context->qp_per_mb);
@@ -2140,17 +2141,17 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
         for (j = num_roi; j ; j--) {
             int qp_delta, qp_clip;
 
-            col_start = encoder_context->brc.roi[i].left;
-            col_end = encoder_context->brc.roi[i].right;
-            row_start = encoder_context->brc.roi[i].top;
-            row_end = encoder_context->brc.roi[i].bottom;
+            col_start = encoder_context->brc.roi[j].left;
+            col_end = encoder_context->brc.roi[j].right;
+            row_start = encoder_context->brc.roi[j].top;
+            row_end = encoder_context->brc.roi[j].bottom;
 
             col_start = col_start / 16;
             col_end = (col_end + 15) / 16;
             row_start = row_start / 16;
             row_end = (row_end + 15) / 16;
 
-            qp_delta = encoder_context->brc.roi[i].value;
+            qp_delta = encoder_context->brc.roi[j].value;
             qp_clip = qp + qp_delta;
 
             BRC_CLIP(qp_clip, min_qp, 51);

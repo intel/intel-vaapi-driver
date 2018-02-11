@@ -414,6 +414,9 @@ gen9_hevc_enc_free_resources(struct encoder_vme_mfc_context *vme_context)
 
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
 
+    if (!priv_ctx)
+        return;
+
     i965_free_gpe_resource(&priv_ctx->res_brc_pic_states_write_buffer);
     i965_free_gpe_resource(&priv_ctx->res_brc_history_buffer);
     i965_free_gpe_resource(&priv_ctx->res_brc_intra_dist_buffer);
@@ -780,7 +783,7 @@ static void
 gen9_hevc_set_gpe_1d_surface(VADriverContextP ctx,
                              struct gen9_hevc_encoder_context *priv_ctx,
                              struct i965_gpe_context *gpe_context,
-                             enum GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
+                             GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
                              int bti_idx,
                              int is_raw_buffer,
                              int size,
@@ -809,7 +812,7 @@ static void
 gen9_hevc_set_gpe_2d_surface(VADriverContextP ctx,
                              struct gen9_hevc_encoder_context *priv_ctx,
                              struct i965_gpe_context *gpe_context,
-                             enum GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
+                             GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
                              int bti_idx,
                              int has_uv_surface,
                              int is_media_block_rw,
@@ -847,7 +850,7 @@ static void
 gen9_hevc_set_gpe_adv_surface(VADriverContextP ctx,
                               struct gen9_hevc_encoder_context *priv_ctx,
                               struct i965_gpe_context *gpe_context,
-                              enum GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
+                              GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
                               int bti_idx,
                               struct object_surface *surface_object)
 {
@@ -861,7 +864,7 @@ gen9_hevc_set_gpe_adv_surface(VADriverContextP ctx,
 
 static void
 gen9_hevc_add_gpe_surface(struct gen9_hevc_encoder_context *priv_ctx,
-                          enum GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
+                          GEN9_HEVC_ENC_SURFACE_TYPE surface_type,
                           struct i965_gpe_resource *gpe_buffer,
                           struct object_surface *surface_object)
 {
@@ -1242,7 +1245,7 @@ gen9_hevc_enc_init_parameters(VADriverContextP ctx,
         return VA_STATUS_ERROR_INVALID_PARAMETER;
 
     va_status = gen9_hevc_enc_check_parameters(ctx, encode_state, encoder_context);
-    if (va_status |= VA_STATUS_SUCCESS)
+    if (va_status != VA_STATUS_SUCCESS)
         return va_status;
 
     gen9_hevc_enc_init_seq_parameters(priv_ctx, generic_state, priv_state, seq_param);
@@ -4145,7 +4148,7 @@ gen9_hevc_set_control_region(VADriverContextP ctx,
             }
         } else {
             int cur_lcu_pel_y = region_start_table[GEN9_HEVC_ENC_REGION_START_Y_OFFSET +
-                                                   (k * priv_state->num_regions_in_slice)] << 5;
+                                                                                       (k * priv_state->num_regions_in_slice)] << 5;
             int ts_width = (priv_state->picture_width + 16) >> 5;
             int ts_height = height;
             int offset_y = -4 * ((ts_width + 1) >> 1);
