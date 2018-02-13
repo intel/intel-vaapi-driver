@@ -1432,8 +1432,21 @@ i965_CreateConfig(VADriverContextP ctx,
         if (attrib_found) {
             uint32_t enc_packed_attribs = i965_get_enc_packed_attributes(ctx, profile, entrypoint);
 
-            if (!(attrib_found->value & enc_packed_attribs))
+            if (enc_packed_attribs == VA_ATTRIB_NOT_SUPPORTED) {
+                i965_log_info(ctx, "vaCreateConfig: invalid EncPackedHeaders attribute %#x: "
+                              "packed headers are not supported.\n", attrib_found->value);
                 vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
+            } else if (attrib_found->value == 0) {
+                i965_log_info(ctx, "vaCreateConfig: setting the EncPackedHeaders attribute to zero to "
+                              "indicate that no packed headers will be used is deprecated.\n");
+            } else {
+                if (attrib_found->value & ~enc_packed_attribs) {
+                    i965_log_info(ctx, "vaCreateConfig: invalid EncPackedHeaders attribute %#x: "
+                                  "some packed headers are not supported (supported set %#x).\n",
+                                  attrib_found->value, enc_packed_attribs);
+                    vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
+                }
+            }
         }
     }
 
