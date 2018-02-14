@@ -63,6 +63,8 @@ vpp_surface_convert(VADriverContextP ctx,
 
 #define VA_STATUS_SUCCESS_1                     0xFFFFFFFE
 
+#define BIT_CAST(x) (((union{unsigned int a;int b:8;})x).b)
+
 static const uint32_t pp_null_gen5[][4] = {
 #include "shaders/post_processing/gen5_6/null.g4b.gen5"
 };
@@ -2806,7 +2808,7 @@ pp_nv12_avs_initialize(VADriverContextP ctx, struct i965_post_processing_context
     }
 
     /* Adaptive filter for all channels (DW4.15) */
-    sampler_8x8_state->coefficients[0].dw4.table_1x_filter_c1 = 1U << 7;
+    sampler_8x8_state->coefficients[0].dw4.table_1x_filter_c1 = BIT_CAST((1U << 7));
 
     sampler_8x8_state->dw136.default_sharpness_level =
         -avs_is_needed(pp_context->filter_flags);
@@ -3152,7 +3154,7 @@ gen7_pp_plx_avs_initialize(VADriverContextP ctx, struct i965_post_processing_con
         sampler_8x8_state->dw137.hsw.bypass_y_adaptive_filtering = 1;
         sampler_8x8_state->dw137.hsw.bypass_x_adaptive_filtering = 1;
     } else {
-        sampler_8x8_state->coefficients[0].dw4.table_1x_filter_c1 = 1U << 7;
+        sampler_8x8_state->coefficients[0].dw4.table_1x_filter_c1 = BIT_CAST((1U << 7));
         sampler_8x8_state->dw137.ilk.bypass_y_adaptive_filtering = 1;
         sampler_8x8_state->dw137.ilk.bypass_x_adaptive_filtering = 1;
     }
