@@ -1448,34 +1448,34 @@ i965_encoder_vp8_gpe_context_vfe_scoreboard_init(struct i965_gpe_context *gpe_co
     gpe_context->vfe_desc5.scoreboard0.enable = scoreboard_params->enable;
 
     // Scoreboard 0
-    gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0xF;
-    gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0x0;
+    gpe_context->vfe_desc6.scoreboard1.delta_x0 = -1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0;
 
     // Scoreboard 1
-    gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
-    gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0;
+    gpe_context->vfe_desc6.scoreboard1.delta_y1 = -1;
 
     // Scoreboard 2
-    gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0x1;
-    gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x2 = 1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y2 = -1;
 
     // Scoreboard 3
-    gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
-    gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x3 = -1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y3 = -1;
 
     // Scoreboard 4
-    gpe_context->vfe_desc7.scoreboard2.delta_x4 = 0xF;
-    gpe_context->vfe_desc7.scoreboard2.delta_y4 = 0x1;
+    gpe_context->vfe_desc7.scoreboard2.delta_x4 = -1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y4 = 1;
 
     // Scoreboard 5
-    gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0x0;
-    gpe_context->vfe_desc7.scoreboard2.delta_y5 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0;
+    gpe_context->vfe_desc7.scoreboard2.delta_y5 = -2;
     // Scoreboard 6
-    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0x1;
-    gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
     // Scoreboard 7
-    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0xF;
-    gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x6 = -1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
 }
 
 static void
