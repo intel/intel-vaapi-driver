@@ -1000,7 +1000,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_jbq_data_lcu32_surface);
     dw_width = ALIGN(hevc_state->frame_width, 64);
     dw_height = (ALIGN(hevc_state->frame_height, 64) >> 5) * 58;
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_jbq_data_lcu32_surface,
                                                   dw_width, dw_height, dw_width,
@@ -1115,7 +1114,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
     dw_width = ALIGN(dw_width, 64);
     dw_height = ALIGN(hevc_state->frame_height, 64) >> 4;
     dw_height = ALIGN(dw_height, 64);
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_brc_me_dist_surface,
                                                   dw_width, dw_height, dw_width,
@@ -1146,7 +1144,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_brc_intra_dist_surface);
     dw_width = ALIGN(hevc_state->frame_width_4x / 2, 64);
     dw_height = ALIGN(hevc_state->frame_height_4x / 4, 8) * 2;
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_brc_intra_dist_surface,
                                                   dw_width, dw_height, dw_width,
@@ -1188,7 +1185,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_brc_const_data_surface);
     dw_width = ALIGN(GEN10_HEVC_BRC_CONST_SURFACE_WIDTH, 64);
     dw_height = ALIGN(GEN10_HEVC_BRC_CONST_SURFACE_HEIGHT, 32);
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_brc_const_data_surface,
                                                   dw_width, dw_height, dw_width,
@@ -1213,7 +1209,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
 
     dw_width = ALIGN(dw_width, 64);
     dw_height = ALIGN(dw_height, 8);
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_brc_mb_qp_surface,
                                                   dw_width, dw_height, dw_width,
