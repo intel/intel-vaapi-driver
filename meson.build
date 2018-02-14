@@ -69,7 +69,7 @@ if get_option('with_x11') != 'no'
     version : libva_version,
     required : get_option('with_x11') == 'yes')
 
-  HAVE_X11 = libva_x11_dep.found()
+  WITH_X11 = libva_x11_dep.found()
 endif
 
 WITH_WAYLAND = false
