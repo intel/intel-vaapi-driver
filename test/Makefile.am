@@ -72,6 +72,7 @@ test_i965_drv_video_SOURCES =						\
 	i965_test_environment.cpp					\
 	i965_test_fixture.cpp						\
 	i965_test_image_utils.cpp					\
+	i965_config_packed_header_test.cpp				\
 	object_heap_test.cpp						\
 	test_main.cpp							\
 	$(NULL)
