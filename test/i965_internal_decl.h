@@ -30,6 +30,17 @@ extern "C" {
     #include "i965_drv_video.h"
     #include "i965_encoder.h"
 
+    extern VAStatus i965_QueryConfigProfiles(
+        VADriverContextP, VAProfile *, int *);
+
+    extern VAStatus i965_QueryConfigEntrypoints(
+        VADriverContextP, VAProfile,
+        VAEntrypoint *, int *);
+
+    extern VAStatus i965_GetConfigAttributes(
+        VADriverContextP, VAProfile, VAEntrypoint,
+        VAConfigAttrib *, int);
+
     extern VAStatus i965_CreateConfig(
         VADriverContextP, VAProfile, VAEntrypoint,
         VAConfigAttrib *, int, VAConfigID *);
