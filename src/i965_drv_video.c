@@ -978,7 +978,8 @@ i965_get_rc_attributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint ent
             rc_attribs |= VA_RC_CBR;
 
         if (profile == VAProfileVP8Version0_3 ||
-            profile == VAProfileHEVCMain)
+            profile == VAProfileHEVCMain ||
+            profile == VAProfileHEVCMain10)
             rc_attribs |= VA_RC_VBR;
 
         if (profile == VAProfileVP9Profile0)

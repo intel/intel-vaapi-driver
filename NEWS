@@ -1,5 +1,20 @@
-intel-vaapi-driver NEWS -- summary of changes.  2017-10-21
-Copyright (C) 2009-2017 Intel Corporation
+intel-vaapi-driver NEWS -- summary of changes.  2018-02-12
+Copyright (C) 2009-2018 Intel Corporation
+
+Version 2.1.0 - 12.Feb.2018
+* Bump version to 2.1.0
+* Add support for Cannolake (aka. CNL)
+  - Decoding: H.264/MPEG-2/VC-1/JPEG/VP8/HEVC/HEVC 10-bit/VP9/VP9 10-bit
+  - Encoding: H.264/MPEG-2/JPEG/VP8/VP9/HEVC/HEVC 10-bit/{VP9,AVC} low power
+  - VPP: CSC/scaling/NoiseReduction/Deinterlacing{Bob, MotionAdaptive, MotionCompensated}/ColorBalance/STD
+* Add support for VC1 interlaced video decoding
+* Add support for Stats/PreEnc on GEN9
+* Add support for vaExportSurfaceHandle()
+* Add new PCI IDs for CFL
+* Add mininum resolution query for encoder
+* Ehance the logging to provide informational messages
+* Fix VP9 brc issue on KBL
+* A lot of bug fixes
 
 Version 2.0.0 - 21.Oct.2017
 * Bump version to 2.0.0
