@@ -47,6 +47,9 @@ driver_libs = \
 	-lpthread -lm -ldl	\
 	$(DRM_LIBS)		\
 	$(NULL)
+if USE_DRI3
+driver_libs     += $(DRI3_LIBS)
+endif
 
 include Makefile.sources
 
