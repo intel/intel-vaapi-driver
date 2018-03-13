@@ -1760,6 +1760,7 @@ gen10_vdenc_vp9_allocate_resources(VADriverContextP ctx,
     uint32_t frame_width_in_sbs, frame_height_in_sbs, frame_size_in_sbs;
     unsigned int width, height, pitch, depth_factor = 1;
     char *pbuffer;
+    int allocate_flag;
 
     if (!vdenc_context->is_8bit)
         depth_factor = 2;
@@ -1935,41 +1936,53 @@ gen10_vdenc_vp9_allocate_resources(VADriverContextP ctx,
     height = vdenc_context->down_scaled_height_in_mb4x * 40;
     pitch = ALIGN(width, 128);
     i965_free_gpe_resource(&vdenc_context->s4x_memv_data_buffer_res);
-    i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                  &vdenc_context->s4x_memv_data_buffer_res,
-                                  width, height,
-                                  ALIGN(width, 64),
-                                  "VP9 4x MEMV data");
+    allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
+                                                  &vdenc_context->s4x_memv_data_buffer_res,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 4x MEMV data");
+
+    if (!allocate_flag)
+        goto failed_allocation;
 
     width = vdenc_context->down_scaled_width_in_mb4x * 8;
     height = vdenc_context->down_scaled_height_in_mb4x * 40;
     pitch = ALIGN(width, 128);
     i965_free_gpe_resource(&vdenc_context->s4x_memv_distortion_buffer_res);
-    i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                  &vdenc_context->s4x_memv_distortion_buffer_res,
-                                  width, height,
-                                  ALIGN(width, 64),
-                                  "VP9 4x MEMV distorion");
+    allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
+                                                  &vdenc_context->s4x_memv_distortion_buffer_res,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 4x MEMV distorion");
+
+    if (!allocate_flag)
+        goto failed_allocation;
 
     width = ALIGN(vdenc_context->down_scaled_width_in_mb16x * 32, 64);
     height = vdenc_context->down_scaled_height_in_mb16x * 40;
     pitch = ALIGN(width, 128);
     i965_free_gpe_resource(&vdenc_context->s16x_memv_data_buffer_res);
-    i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                  &vdenc_context->s16x_memv_data_buffer_res,
-                                  width, height,
-                                  pitch,
-                                  "VP9 16x MEMV data");
+    allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
+                                                  &vdenc_context->s16x_memv_data_buffer_res,
+                                                  width, height,
+                                                  pitch,
+                                                  "VP9 16x MEMV data");
+
+    if (!allocate_flag)
+        goto failed_allocation;
 
     width = vdenc_context->frame_width_in_mbs * 16;
     height = vdenc_context->frame_height_in_mbs * 8;
     pitch = ALIGN(width, 64);
     i965_free_gpe_resource(&vdenc_context->output_16x16_inter_modes_buffer_res);
-    i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                  &vdenc_context->output_16x16_inter_modes_buffer_res,
-                                  width, height,
-                                  ALIGN(width, 64),
-                                  "VP9 output inter_mode");
+    allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
+                                                  &vdenc_context->output_16x16_inter_modes_buffer_res,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 output inter_mode");
+
+    if (!allocate_flag)
+        goto failed_allocation;
 
     res_size = vdenc_context->frame_width_in_mbs * vdenc_context->frame_height_in_mbs * 16 * 4;
 
@@ -2080,6 +2093,9 @@ gen10_vdenc_vp9_allocate_resources(VADriverContextP ctx,
     vdenc_context->res_height = vdenc_context->frame_height;
 
     return VA_STATUS_SUCCESS;
+
+failed_allocation:
+    return VA_STATUS_ERROR_ALLOCATION_FAILED;
 }
 
 static VAStatus
