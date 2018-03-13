@@ -863,7 +863,7 @@ gen10_hevc_enc_init_lambda_param(struct gen10_hevc_enc_lambda_param *param,
             lambda_double = lambda_double * 16 + 0.5;
             lambda = (uint32_t)floor(lambda_double);
             lambda_double = (lambda_double > 0xffff) ? 0xffff : lambda_double;
-            lambda = CLAMP(0, 0xffff, lambda);
+            lambda = MIN(0xffff, lambda);
             param->lambda_inter[i][qp] = (uint16_t)lambda;
         }
     }
@@ -920,7 +920,7 @@ gen10_hevc_enc_hcp_set_qm_fqm_states(VADriverContextP ctx,
     uint8_t *real_qm;
     uint16_t *real_fqm;
     int comps, len;
-    int i , j, m;
+    int i, j, m;
 
     for (m = 0; m < 4; m++) {
         comps = (m == 3) ? 1 : 3;
