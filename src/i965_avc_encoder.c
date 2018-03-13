@@ -7874,7 +7874,8 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     avc_state->pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
 
     if (fei_enabled &&
-        encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl]) {
+        encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl][0] &&
+        encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl][0]->buffer) {
         fei_misc_param = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl][0]->buffer;
         avc_state->fei_framectl_param =
             (VAEncMiscParameterFEIFrameControlH264 *)fei_misc_param->data;
