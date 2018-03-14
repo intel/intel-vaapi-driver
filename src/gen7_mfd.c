@@ -2405,7 +2405,7 @@ gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
         else if (h1 == 2 && h2 == 1 && h3 == 1 &&
                  v1 == 2 && v2 == 2 && v3 == 2)
             chroma_type = GEN7_YUV422H_4Y;
-        else if (h2 == 2 && h2 == 2 && h3 == 2 &&
+        else if (h1 == 2 && h2 == 2 && h3 == 2 &&
                  v1 == 2 && v2 == 1 && v3 == 1)
             chroma_type = GEN7_YUV422V_4Y;
         else
