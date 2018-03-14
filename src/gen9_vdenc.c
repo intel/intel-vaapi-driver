@@ -1573,9 +1573,6 @@ gen9_vdenc_calculate_initial_qp(VADriverContextP ctx,
     qp = CLAMP(1, 51, qp);
     qp--;
 
-    if (qp < 0)
-        qp = 1;
-
     return qp;
 }
 
