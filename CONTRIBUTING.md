@@ -76,7 +76,11 @@ We accept github pull requests.
 
 Once you've finished making your changes push them to your fork and send the PR via the github UI.
 
-## Issue tracking
+## Reporting a security issue
+
+Please mail to secure-opensource@intel.com directly for security issue
+
+## Public issue tracking
 
 If you have a problem, please let us know.  IRC is a perfectly fine place
 to quickly informally bring something up, if you get a response.  The
@@ -84,14 +88,14 @@ to quickly informally bring something up, if you get a response.  The
 is a more durable communication channel.
 
 If it's a bug not already documented, by all means please [open an
-issue in github](https://github.com/01org/intel-vaapi-driver/issues/new) so we all get visibility
+issue in github](https://github.com/intel/intel-vaapi-driver/issues/new) so we all get visibility
 to the problem and can work towards a resolution.
 
 For feature requests we're also using github issues, with the label
 "enhancement".
 
 Our github bug/enhancement backlog and work queue are tracked in a
-[Intel vaapi driver waffle.io kanban](https://waffle.io/01org/intel-vaapi-driver).
+[Intel vaapi driver waffle.io kanban](https://waffle.io/intel/intel-vaapi-driver).
 
 ## Closing issues
 
