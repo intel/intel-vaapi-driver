@@ -2592,7 +2592,6 @@ gen9_avc_set_curbe_brc_init_reset(VADriverContextP ctx,
 
     //VUI
     if (seq_param->vui_parameters_present_flag && generic_state->internal_rate_mode != INTEL_BRC_AVBR) {
-        cmd->dw4.max_bit_rate = cmd->dw4.max_bit_rate;
         if (generic_state->internal_rate_mode == VA_RC_CBR) {
             cmd->dw3.average_bit_rate = cmd->dw4.max_bit_rate;
 
