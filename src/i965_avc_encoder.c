@@ -2225,9 +2225,7 @@ gen95_avc_calc_lambda_table(VADriverContextP ctx,
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state *)vme_context->private_enc_state;
-    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
     unsigned int value, inter, intra;
-    unsigned int rounding_value = 0;
     unsigned int size = 0;
     int i = 0;
     int col = 0;
@@ -2258,37 +2256,11 @@ gen95_avc_calc_lambda_table(VADriverContextP ctx,
             value = *(lambda_table + i * 2 + col);
             intra = value >> 16;
 
-            if (intra < GEN95_AVC_MAX_LAMBDA) {
-                if (intra == 0xfffa) {
-                    intra = 0xf000 + GEN95_AVC_DEFAULT_TRELLIS_QUANT_INTRA_ROUNDING;
-                }
-            }
-
             intra = intra << 16;
             inter = value & 0xffff;
 
             if (inter < GEN95_AVC_MAX_LAMBDA) {
-                if (inter == 0xffef) {
-                    if (generic_state->frame_type == SLICE_TYPE_P) {
-                        if (avc_state->rounding_inter_p == AVC_INVALID_ROUNDING_VALUE)
-                            rounding_value = gen9_avc_inter_rounding_p[generic_state->preset];
-                        else
-                            rounding_value = avc_state->rounding_inter_p;
-                    } else if (generic_state->frame_type == SLICE_TYPE_B) {
-                        if (pic_param->pic_fields.bits.reference_pic_flag) {
-                            if (avc_state->rounding_inter_b_ref == AVC_INVALID_ROUNDING_VALUE)
-                                rounding_value = gen9_avc_inter_rounding_b_ref[generic_state->preset];
-                            else
-                                rounding_value = avc_state->rounding_inter_b_ref;
-                        } else {
-                            if (avc_state->rounding_inter_b == AVC_INVALID_ROUNDING_VALUE)
-                                rounding_value = gen9_avc_inter_rounding_b[generic_state->preset];
-                            else
-                                rounding_value = avc_state->rounding_inter_b;
-                        }
-                    }
-                }
-                inter = 0xf000 + rounding_value;
+                inter = 0xf000;
             }
             *(lambda_table + i * 2 + col) = intra + inter;
         }
