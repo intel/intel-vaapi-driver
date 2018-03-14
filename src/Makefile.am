@@ -35,6 +35,7 @@ AM_CPPFLAGS = \
 driver_cflags = \
 	-Wall			\
 	-fvisibility=hidden	\
+	-fstack-protector	\
 	$(NULL)
 
 driver_ldflags = \
