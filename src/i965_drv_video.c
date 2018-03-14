@@ -6075,6 +6075,8 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
 
+            break;
+
         case VAProfileNone:
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
