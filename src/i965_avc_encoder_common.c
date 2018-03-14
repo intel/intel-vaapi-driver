@@ -140,9 +140,6 @@ i965_avc_calculate_initial_qp(struct avc_param * param)
     qp = CLAMP(1, 51, qp);
     qp--;
 
-    if (qp < 0)
-        qp = 1;
-
     return qp;
 }
 

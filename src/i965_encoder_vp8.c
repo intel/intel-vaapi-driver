@@ -3001,7 +3001,7 @@ i965_encoder_vp8_vme_me(VADriverContextP ctx,
 #define QUANT_INDEX(index, q_index, q_index_delta)                      \
     do {                                                                \
         index = quant_param->quantization_index[q_index] + quant_param->quantization_index_delta[q_index_delta]; \
-        index = CLAMP(0, MAX_QP_VP8, index);                            \
+        index = MIN(MAX_QP_VP8, index);                            \
     } while (0)
 
 static void
