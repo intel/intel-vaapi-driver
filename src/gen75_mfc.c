@@ -1204,11 +1204,7 @@ gen75_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     dri_bo_map(vme_context->vme_output.bo, 1);
     msg_ptr = (unsigned char *)vme_context->vme_output.bo->virtual;
 
-    if (is_intra) {
-        msg = (unsigned int *)(msg_ptr + pSliceParameter->macroblock_address * vme_context->vme_output.size_block);
-    } else {
-        msg = (unsigned int *)(msg_ptr + pSliceParameter->macroblock_address * vme_context->vme_output.size_block);
-    }
+    msg = (unsigned int *)(msg_ptr + pSliceParameter->macroblock_address * vme_context->vme_output.size_block);
 
     for (i = pSliceParameter->macroblock_address;
          i < pSliceParameter->macroblock_address + pSliceParameter->num_macroblocks; i++) {
