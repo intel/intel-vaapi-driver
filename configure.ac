@@ -22,9 +22,9 @@ m4_define([wayland_api_version], [1.11.0])
 AC_PREREQ([2.57])
 AC_INIT([intel_vaapi_driver],
         [intel_vaapi_driver_version],
-        [https://github.com/01org/intel-vaapi-driver/issues/new],
+        [https://github.com/intel/intel-vaapi-driver/issues/new],
         [intel-vaapi-driver],
-        [https://github.com/01org/intel-vaapi-driver])
+        [https://github.com/intel/intel-vaapi-driver])
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_INIT_AUTOMAKE([1.9 tar-ustar -Wno-portability foreign])
 
