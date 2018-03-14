@@ -809,7 +809,7 @@ gen6_mfc_avc_pipeline_slice_programing(VADriverContextP ctx,
     /* only support for 8-bit pixel bit-depth */
     assert(pSequenceParameter->bit_depth_luma_minus8 == 0);
     assert(pSequenceParameter->bit_depth_chroma_minus8 == 0);
-    assert(pPicParameter->pic_init_qp >= 0 && pPicParameter->pic_init_qp < 52);
+    assert(pPicParameter->pic_init_qp < 52);
     assert(qp >= 0 && qp < 52);
 
     gen6_mfc_avc_slice_state(ctx,

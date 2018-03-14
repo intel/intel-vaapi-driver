@@ -893,6 +893,9 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int i;
 
+    if (!seq_param)
+        goto error;
+
     if (seq_param->level_idc != encoder_context->codec_level &&
         !i965_avc_level_is_valid(seq_param->level_idc)) {
         i965_log_info(ctx, "VAEncSequenceParameterBufferH264.level_idc (%d) does not appear to be valid.\n",
@@ -954,7 +957,7 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
      * subsequent IDR unit, so idr_pic_flag can indicate the current frame is the start of a new
      * sequnce
      */
-    encoder_context->is_new_sequence = (pic_param->pic_fields.bits.idr_pic_flag && seq_param);
+    encoder_context->is_new_sequence = pic_param->pic_fields.bits.idr_pic_flag;
 
     if (encoder_context->is_new_sequence) {
         encoder_context->num_frames_in_sequence = 0;

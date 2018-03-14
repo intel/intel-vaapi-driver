@@ -6075,6 +6075,8 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
 
+            break;
+
         case VAProfileNone:
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
@@ -7346,13 +7348,13 @@ ensure_vendor_string(struct i965_driver_data *i965, const char *chipset)
     if (INTEL_DRIVER_PRE_VERSION > 0) {
         ret = snprintf(&i965->va_vendor[len], sizeof(i965->va_vendor) - len,
                        ".pre%d", INTEL_DRIVER_PRE_VERSION);
-        if (ret < 0 || ret >= sizeof(i965->va_vendor))
+        if (ret < 0 || ret >= (sizeof(i965->va_vendor) - len))
             goto error;
         len += ret;
 
         ret = snprintf(&i965->va_vendor[len], sizeof(i965->va_vendor) - len,
                        " (%s)", INTEL_DRIVER_GIT_VERSION);
-        if (ret < 0 || ret >= sizeof(i965->va_vendor))
+        if (ret < 0 || ret >= (sizeof(i965->va_vendor) - len))
             goto error;
         len += ret;
     }

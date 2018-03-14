@@ -4917,7 +4917,6 @@ i965_post_processing(
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     VASurfaceID out_surface_id = VA_INVALID_ID;
-    VASurfaceID tmp_id = VA_INVALID_ID;
 
     *has_done_scaling = 0;
 
@@ -4937,9 +4936,6 @@ i965_post_processing(
         pp_context->filter_flags = va_flags;
         if (avs_is_needed(va_flags)) {
             VARectangle tmp_dst_rect;
-
-            if (out_surface_id != VA_INVALID_ID)
-                tmp_id = out_surface_id;
 
             tmp_dst_rect.x = 0;
             tmp_dst_rect.y = 0;
@@ -4972,9 +4968,6 @@ i965_post_processing(
                                           &tmp_dst_rect,
                                           PP_NV12_AVS,
                                           NULL);
-
-            if (tmp_id != VA_INVALID_ID)
-                i965_DestroySurfaces(ctx, &tmp_id, 1);
 
             *has_done_scaling = 1;
             calibrated_rect->x = 0;
