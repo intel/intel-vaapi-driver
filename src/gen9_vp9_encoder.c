@@ -307,7 +307,7 @@ gen9_vp9_check_dys_surfaces(VADriverContextP ctx,
      * the expected, it is unnecessary to allocate it again
      */
     if (vp9_surface->dys_frame_width == surface_param->frame_width &&
-        vp9_surface->dys_frame_width == surface_param->frame_width)
+        vp9_surface->dys_frame_height == surface_param->frame_height)
         return VA_STATUS_SUCCESS;
 
     if (vp9_surface->dys_4x_surface_obj) {
@@ -2677,7 +2677,7 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
 
         if (vp9_state->hme_enabled) {
             dys_kernel_param.input_width = ALIGN((vp9_priv_surface->frame_width / 4), 16);
-            dys_kernel_param.input_width = ALIGN((vp9_priv_surface->frame_height / 4), 16);
+            dys_kernel_param.input_height = ALIGN((vp9_priv_surface->frame_height / 4), 16);
             dys_kernel_param.input_surface = vp9_priv_surface->scaled_4x_surface_obj;
 
             dys_kernel_param.output_width = vp9_state->frame_width_4x;

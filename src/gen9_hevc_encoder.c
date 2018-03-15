@@ -6570,7 +6570,11 @@ gen9_hevc_set_reflist(VADriverContextP ctx,
 
     for (i = 0; i < 16; i++) {
         frame_idx = -1;
-        obj_surface = SURFACE(ref_list[i].picture_id);
+        if (i < 15)
+            obj_surface = SURFACE(ref_list[i].picture_id);
+        else
+            obj_surface = NULL;
+
         if (i < MIN((num_ref_minus1 + 1), GEN9_MAX_REF_SURFACES) && obj_surface) {
             for (j = 0; j < GEN9_MAX_REF_SURFACES; j++) {
                 if (obj_surface == priv_ctx->reference_surfaces[j].obj_surface) {
