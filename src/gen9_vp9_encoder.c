@@ -2730,7 +2730,7 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
 
         if (vp9_state->hme_enabled) {
             dys_kernel_param.input_width = ALIGN((vp9_priv_surface->frame_width / 4), 16);
-            dys_kernel_param.input_width = ALIGN((vp9_priv_surface->frame_height / 4), 16);
+            dys_kernel_param.input_height = ALIGN((vp9_priv_surface->frame_height / 4), 16);
             dys_kernel_param.input_surface = vp9_priv_surface->scaled_4x_surface_obj;
 
             dys_kernel_param.output_width = vp9_state->frame_width_4x;
@@ -2783,7 +2783,7 @@ gen9_vp9_run_dys_refframes(VADriverContextP ctx,
 
         if (vp9_state->hme_enabled) {
             dys_kernel_param.input_width = ALIGN((vp9_priv_surface->frame_width / 4), 16);
-            dys_kernel_param.input_width = ALIGN((vp9_priv_surface->frame_height / 4), 16);
+            dys_kernel_param.input_height = ALIGN((vp9_priv_surface->frame_height / 4), 16);
             dys_kernel_param.input_surface = vp9_priv_surface->scaled_4x_surface_obj;
 
             dys_kernel_param.output_width = vp9_state->frame_width_4x;
