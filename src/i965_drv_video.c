@@ -7492,7 +7492,7 @@ i965_initialize_wrapper(VADriverContextP ctx, const char *driver_name)
         i965->wrapper_pdrvctx = wrapper_pdrvctx;
         return VA_STATUS_SUCCESS;
     } else {
-        fprintf(stderr, "Failed to wrapper %s%s\n", driver_name, DRIVER_EXTENSION);
+        fprintf(stdout, "Not using %s%s\n", driver_name, DRIVER_EXTENSION);
         free(vtable);
         free(wrapper_pdrvctx);
         return VA_STATUS_ERROR_OPERATION_FAILED;
