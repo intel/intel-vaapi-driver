@@ -45,7 +45,6 @@ noinst_PROGRAMS = test_i965_drv_video
 noinst_HEADERS =							\
 	i965_avce_test_common.h						\
 	i965_config_test.h						\
-	i965_internal_decl.h						\
 	i965_jpeg_test_data.h						\
 	i965_streamable.h						\
 	i965_test_environment.h						\

@@ -30,6 +30,7 @@
 #include <wayland-client.h>
 #include <wayland-drm-client-protocol.h>
 #include "intel_driver.h"
+#include "i965_internal_decl.h"
 #include "i965_output_wayland.h"
 #include "i965_drv_video.h"
 #include "i965_defines.h"
@@ -40,6 +41,9 @@
 /* Then fallback to plain libEGL.so.1 (which might not be mesa) */
 #define LIBEGL_NAME_FALLBACK    "libEGL.so.1"
 #define LIBWAYLAND_CLIENT_NAME  "libwayland-client.so.0"
+
+#define VPP_OUT_FOURCC VA_FOURCC_RGBX
+#define DEFAULT_RT_FORMAT VA_RT_FORMAT_RGB32
 
 typedef uint32_t (*wl_display_get_global_func)(struct wl_display *display,
                                                const char *interface, uint32_t version);
@@ -223,6 +227,34 @@ ensure_wl_output(VADriverContextP ctx)
     return true;
 }
 
+static uint8_t
+parse_fourcc_and_format(uint32_t fourcc, uint32_t *format)
+{
+    uint32_t tformat = VA_RT_FORMAT_YUV420;
+
+    switch(fourcc) {
+        case VA_FOURCC_YV12:
+        case VA_FOURCC_I420:
+        case VA_FOURCC_NV12:
+            tformat = VA_RT_FORMAT_YUV420;
+            break;
+        case VA_FOURCC_YUY2:
+            tformat = VA_RT_FORMAT_YUV422;
+            break;
+        case VA_FOURCC_RGBA:
+        case VA_FOURCC_RGBX:
+        case VA_FOURCC_BGRA:
+        case VA_FOURCC_BGRX:
+            tformat = VA_RT_FORMAT_RGB32;
+            break;
+        default:
+            return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+    }
+    if (format)
+        *format = tformat;
+    return 0;
+}
+
 /* Create planar/prime YUV buffer
  * Create a prime buffer if fd is not -1, otherwise a
  * planar buffer
@@ -273,11 +305,22 @@ va_GetSurfaceBufferWl(
 {
     struct VADriverVTableWayland * const vtable = ctx->vtable_wayland;
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
-    struct object_surface *obj_surface;
+    struct object_surface *obj_surface, *obj_surface_rgbx;
     struct wl_buffer *buffer;
     uint32_t name, drm_format;
     int offsets[3], pitches[3];
     int fd = -1;
+
+    static VASurfaceID out_surface_id = VA_INVALID_ID;
+    static VAContextID context_id = 0;
+    static VAConfigID config_id = 0;
+    static uint32_t in_format, out_format;
+    VAStatus va_status = VA_STATUS_SUCCESS;
+    VAConfigAttrib attrib;
+    VASurfaceAttrib surface_attrib;
+    VAProcPipelineParameterBuffer pipeline_param;
+    VARectangle surface_region, output_region;
+    VABufferID pipeline_param_buf_id = VA_INVALID_ID;
 
     obj_surface = SURFACE(surface);
     if (!obj_surface)
@@ -292,58 +335,137 @@ va_GetSurfaceBufferWl(
     if (!ensure_wl_output(ctx))
         return VA_STATUS_ERROR_INVALID_DISPLAY;
 
-    if (!vtable->has_prime_sharing || (drm_intel_bo_gem_export_to_prime(obj_surface->bo, &fd) != 0)) {
-        fd = -1;
+    parse_fourcc_and_format(obj_surface->fourcc, &in_format);
+    parse_fourcc_and_format(VPP_OUT_FOURCC, &out_format);
 
-        if (drm_intel_bo_flink(obj_surface->bo, &name) != 0)
+    if (DEFAULT_RT_FORMAT != in_format) {
+        //Create surface/config/context for VPP pipeline
+        //desired out format is RGB
+        attrib.type = VAConfigAttribRTFormat;
+
+        va_status = i965_GetConfigAttributes(ctx,
+                                        VAProfileNone,
+                                        VAEntrypointVideoProc,
+                                        &attrib,
+                                        1);
+        if (VA_STATUS_SUCCESS !=va_status) {
+            return VA_STATUS_ERROR_INVALID_CONFIG;
+        }
+        if (!(attrib.value & out_format)) {
+            return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+        }
+
+        va_status = i965_CreateConfig(ctx,
+                                VAProfileNone,
+                                VAEntrypointVideoProc,
+                                &attrib,
+                                1,
+                                &config_id);
+        if (VA_STATUS_SUCCESS !=va_status) {
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+        }
+
+        surface_attrib.type =  VASurfaceAttribPixelFormat;
+        surface_attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
+        surface_attrib.value.type = VAGenericValueTypeInteger;
+        surface_attrib.value.value.i = VPP_OUT_FOURCC;
+
+        va_status = i965_CreateSurfaces2(ctx,
+                                        out_format,
+                                        obj_surface->orig_width,
+                                        obj_surface->orig_height,
+                                        &out_surface_id,
+                                        1, &surface_attrib, 1);
+
+        if (VA_STATUS_SUCCESS !=va_status) {
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+        }
+
+        va_status = i965_CreateContext(ctx,
+                                    config_id,
+                                    obj_surface->orig_width,
+                                    obj_surface->orig_height,
+                                    VA_PROGRESSIVE,
+                                    &out_surface_id,
+                                    1,
+                                    &context_id);
+        if (VA_STATUS_SUCCESS !=va_status) {
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+        }
+
+        /* Fill pipeline buffer */
+        surface_region.x = 0;
+        surface_region.y = 0;
+        surface_region.width = obj_surface->orig_width;
+        surface_region.height = obj_surface->orig_height;
+        output_region.x = 0;
+        output_region.y = 0;
+        output_region.width = obj_surface->orig_width;
+        output_region.height = obj_surface->orig_height;
+
+        memset(&pipeline_param, 0, sizeof(pipeline_param));
+        pipeline_param.surface = surface;
+        pipeline_param.surface_region = &surface_region;
+        pipeline_param.output_region = &output_region;
+
+        va_status = i965_CreateBuffer(ctx,
+                                context_id,
+                                VAProcPipelineParameterBufferType,
+                                sizeof(pipeline_param),
+                                1,
+                                &pipeline_param,
+                                &pipeline_param_buf_id);
+        if (VA_STATUS_SUCCESS !=va_status) {
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+        }
+
+        va_status = i965_BeginPicture(ctx,
+                                context_id,
+                                out_surface_id);
+        if (VA_STATUS_SUCCESS !=va_status) {
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+        }
+
+        va_status = i965_RenderPicture(ctx,
+                                    context_id,
+                                    &pipeline_param_buf_id,
+                                    1);
+        if (VA_STATUS_SUCCESS !=va_status) {
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+        }
+
+        va_status = i965_EndPicture(ctx, context_id);
+        if (VA_STATUS_SUCCESS !=va_status) {
+            return VA_STATUS_ERROR_OPERATION_FAILED;
+        }
+
+        if (pipeline_param_buf_id != VA_INVALID_ID)
+            i965_DestroyBuffer(ctx,pipeline_param_buf_id);
+
+        obj_surface_rgbx = SURFACE(out_surface_id);
+        if (!obj_surface_rgbx)
             return VA_STATUS_ERROR_INVALID_SURFACE;
     }
 
-    switch (obj_surface->fourcc) {
-    case VA_FOURCC_NV12:
-        drm_format = WL_DRM_FORMAT_NV12;
-        offsets[0] = 0;
-        pitches[0] = obj_surface->width;
-        offsets[1] = obj_surface->width * obj_surface->y_cb_offset;
-        pitches[1] = obj_surface->cb_cr_pitch;
-        offsets[2] = 0;
-        pitches[2] = 0;
-        break;
-    case VA_FOURCC_YV12:
-    case VA_FOURCC_I420:
-    case VA_FOURCC_IMC1:
-    case VA_FOURCC_IMC3:
-    case VA_FOURCC_422H:
-    case VA_FOURCC_422V:
-    case VA_FOURCC_411P:
-    case VA_FOURCC_444P:
-        switch (obj_surface->subsampling) {
-        case SUBSAMPLE_YUV411:
-            drm_format = WL_DRM_FORMAT_YUV411;
-            break;
-        case SUBSAMPLE_YUV420:
-            drm_format = WL_DRM_FORMAT_YUV420;
-            break;
-        case SUBSAMPLE_YUV422H:
-        case SUBSAMPLE_YUV422V:
-            drm_format = WL_DRM_FORMAT_YUV422;
-            break;
-        case SUBSAMPLE_YUV444:
-            drm_format = WL_DRM_FORMAT_YUV444;
-            break;
-        default:
-            return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
-        }
-        offsets[0] = 0;
-        pitches[0] = obj_surface->width;
-        offsets[1] = obj_surface->width * obj_surface->y_cb_offset;
-        pitches[1] = obj_surface->cb_cr_pitch;
-        offsets[2] = obj_surface->width * obj_surface->y_cr_offset;
-        pitches[2] = obj_surface->cb_cr_pitch;
-        break;
-    default:
-        return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
+    if (DEFAULT_RT_FORMAT == in_format) {
+            obj_surface_rgbx = obj_surface;
     }
+
+    if (!vtable->has_prime_sharing ||
+            (drm_intel_bo_gem_export_to_prime(obj_surface_rgbx->bo, &fd) != 0)){
+            fd = -1;
+
+        if (drm_intel_bo_flink(obj_surface_rgbx->bo, &name) != 0)
+            return VA_STATUS_ERROR_INVALID_SURFACE;
+    }
+
+    drm_format = WL_DRM_FORMAT_XBGR8888;
+    offsets[0] = 0;
+    pitches[0] = obj_surface->orig_width * 4;
+    offsets[1] = obj_surface->orig_width * obj_surface->height;
+    pitches[1] = 0;
+    offsets[2] = 0;
+    pitches[2] = 0;
 
     buffer = create_prime_or_planar_buffer(
                  i965->wl_output,
@@ -363,6 +485,13 @@ va_GetSurfaceBufferWl(
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
     *out_buffer = buffer;
+
+    // Release resource
+    if (DEFAULT_RT_FORMAT != in_format) {
+        i965_DestroySurfaces(ctx, &out_surface_id, 1);
+        i965_DestroyContext(ctx, context_id);
+        i965_DestroyConfig(ctx, config_id);
+    }
     return VA_STATUS_SUCCESS;
 }
 

@@ -1897,7 +1897,7 @@ i965_suface_external_memory(VADriverContextP ctx,
     return VA_STATUS_SUCCESS;
 }
 
-static VAStatus
+VAStatus
 i965_CreateSurfaces2(
     VADriverContextP    ctx,
     unsigned int        format,

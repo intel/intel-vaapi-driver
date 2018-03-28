@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Intel Corporation. All Rights Reserved.
+ * Copyright (C) 2018 Intel Corporation. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -25,7 +25,10 @@
 #ifndef I965_INTERNAL_DECL_H
 #define I965_INTERNAL_DECL_H
 
+#ifdef __cplusplus
 extern "C" {
+#endif
+
     #include "sysdeps.h"
     #include "i965_drv_video.h"
     #include "i965_encoder.h"
@@ -70,9 +73,20 @@ extern "C" {
     extern VAStatus i965_SyncSurface(
         VADriverContextP, VASurfaceID);
 
+    extern VAStatus i965_GetConfigAttributes(
+        VADriverContextP, VAProfile, VAEntrypoint,
+        VAConfigAttrib *, int);
+
+    extern VAStatus i965_CreateSurfaces2(
+        VADriverContextP, unsigned int, unsigned int,
+        unsigned int, VASurfaceID*, unsigned int,
+        VASurfaceAttrib*, unsigned int);
+
     extern struct hw_codec_info *i965_get_codec_info(int);
     extern const struct intel_device_info *i965_get_device_info(int);
 
-} // extern "C"
+#ifdef __cplusplus
+} //extern "C"
+#endif
 
 #endif
