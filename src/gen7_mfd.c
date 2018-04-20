@@ -1874,12 +1874,17 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
         }
     }
 
-    if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPelBilinear ||
-        (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
-         pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPelBilinear))
-        interpolation_mode = 8 | pic_param->fast_uvmc_flag;
-    else
-        interpolation_mode = 0 | pic_param->fast_uvmc_flag;
+    if ((!pic_param->sequence_fields.bits.interlace ||
+         pic_param->picture_fields.bits.frame_coding_mode != 1) && /* Progressive or Field-Interlace */
+        (picture_type == GEN7_VC1_P_PICTURE ||
+         picture_type == GEN7_VC1_B_PICTURE)) {
+        if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPelBilinear ||
+            (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
+             pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPelBilinear))
+            interpolation_mode = 8 | pic_param->fast_uvmc_flag;
+        else
+            interpolation_mode = 0 | pic_param->fast_uvmc_flag;
+    }
 
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFD_VC1_LONG_PIC_STATE | (6 - 2));
