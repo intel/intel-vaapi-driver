@@ -1384,23 +1384,11 @@ void intel_vme_mpeg2_state_setup(VADriverContextP ctx,
     VAEncSliceParameterBufferMPEG2 *slice_param = NULL;
     VAEncPictureParameterBufferMPEG2 *pic_param = NULL;
     slice_param = (VAEncSliceParameterBufferMPEG2 *)encode_state->slice_params_ext[0]->buffer;
-
-    if (vme_context->mpeg2_level == MPEG2_LEVEL_LOW) {
-        mv_x = 512;
-        mv_y = 64;
-    } else if (vme_context->mpeg2_level == MPEG2_LEVEL_MAIN) {
-        mv_x = 1024;
-        mv_y = 128;
-    } else if (vme_context->mpeg2_level == MPEG2_LEVEL_HIGH) {
-        mv_x = 2048;
-        mv_y = 128;
-    } else {
-        WARN_ONCE("Incorrect Mpeg2 level setting!\n");
-        mv_x = 512;
-        mv_y = 64;
-    }
-
     pic_param = (VAEncPictureParameterBufferMPEG2 *)encode_state->pic_param_ext->buffer;
+
+    mv_x = 1 << (2 + pic_param->f_code[0][0]);
+    mv_y = 1 << (2 + pic_param->f_code[0][1]);
+
     if (pic_param->picture_type != VAEncPictureTypeIntra) {
         int qp, m_cost, j, mv_count;
         float   lambda, m_costf;
