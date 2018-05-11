@@ -1139,14 +1139,12 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
     int is_key_frame = !pic_param->pic_flags.bits.frame_type;
 
     obj_surface = SURFACE(pic_param->reconstructed_frame);
-    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
 
     if (!obj_surface)
         goto error;
 
     encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
-    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
 
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
         goto error;
@@ -1155,37 +1153,37 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
 
     if (!is_key_frame) {
 
-        if(!pic_param->ref_flags.bits.no_ref_last) {
-            assert(pic_param->ref_last_frame != VA_INVALID_SURFACE);
+        if (!pic_param->ref_flags.bits.no_ref_last) {
             obj_surface = SURFACE(pic_param->ref_last_frame);
-            assert(obj_surface && obj_surface->bo);
 
             if (!obj_surface || !obj_surface->bo)
                 goto error;
 
             encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
         }
 
-        if(!pic_param->ref_flags.bits.no_ref_gf) {
-            assert(pic_param->ref_gf_frame != VA_INVALID_SURFACE);
+        if (!pic_param->ref_flags.bits.no_ref_gf) {
             obj_surface = SURFACE(pic_param->ref_gf_frame);
-            assert(obj_surface && obj_surface->bo);
 
             if (!obj_surface || !obj_surface->bo)
                 goto error;
 
             encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
         }
 
-        if(!pic_param->ref_flags.bits.no_ref_arf) {
-            assert(pic_param->ref_arf_frame != VA_INVALID_SURFACE);
+        if (!pic_param->ref_flags.bits.no_ref_arf) {
             obj_surface = SURFACE(pic_param->ref_arf_frame);
-            assert(obj_surface && obj_surface->bo);
 
             if (!obj_surface || !obj_surface->bo)
                 goto error;
 
             encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
         }
     }
 
