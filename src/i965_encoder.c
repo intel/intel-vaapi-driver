@@ -1154,32 +1154,39 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
     encode_state->coded_buf_object = obj_buffer;
 
     if (!is_key_frame) {
-        assert(pic_param->ref_last_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_last_frame);
-        assert(obj_surface && obj_surface->bo);
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if(!pic_param->ref_flags.bits.no_ref_last) {
+            assert(pic_param->ref_last_frame != VA_INVALID_SURFACE);
+            obj_surface = SURFACE(pic_param->ref_last_frame);
+            assert(obj_surface && obj_surface->bo);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
 
-        assert(pic_param->ref_gf_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_gf_frame);
-        assert(obj_surface && obj_surface->bo);
+            encode_state->reference_objects[i++] = obj_surface;
+        }
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if(!pic_param->ref_flags.bits.no_ref_gf) {
+            assert(pic_param->ref_gf_frame != VA_INVALID_SURFACE);
+            obj_surface = SURFACE(pic_param->ref_gf_frame);
+            assert(obj_surface && obj_surface->bo);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
 
-        assert(pic_param->ref_arf_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_arf_frame);
-        assert(obj_surface && obj_surface->bo);
+            encode_state->reference_objects[i++] = obj_surface;
+        }
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if(!pic_param->ref_flags.bits.no_ref_arf) {
+            assert(pic_param->ref_arf_frame != VA_INVALID_SURFACE);
+            obj_surface = SURFACE(pic_param->ref_arf_frame);
+            assert(obj_surface && obj_surface->bo);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
+
+            encode_state->reference_objects[i++] = obj_surface;
+        }
     }
 
     for (; i < 16; i++)
