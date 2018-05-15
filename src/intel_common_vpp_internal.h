@@ -146,4 +146,12 @@ gen9_8bit_420_rgb32_scaling_post_processing(VADriverContextP   ctx,
                                             struct i965_surface *dst_surface,
                                             VARectangle *dst_rect);
 
+VAStatus
+gen9_p010_scaling_post_processing(VADriverContextP   ctx,
+                                  struct i965_post_processing_context *pp_context,
+                                  struct i965_surface *src_surface,
+                                  VARectangle *src_rect,
+                                  struct i965_surface *dst_surface,
+                                  VARectangle *dst_rect);
+
 #endif  // _INTEL_COMMON_VPP_INTERNAL_H_
