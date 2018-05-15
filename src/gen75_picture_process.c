@@ -113,81 +113,23 @@ gen8plus_vpp_clear_surface(VADriverContextP ctx,
                            struct object_surface *obj_surface,
                            unsigned int color)
 {
-    struct intel_batchbuffer *batch = pp_context->batch;
-    unsigned int blt_cmd, br13;
-    unsigned int tiling = 0, swizzle = 0;
-    int pitch;
     unsigned char y, u, v, a = 0;
-    int region_width, region_height;
 
-    /* Currently only support NV12 surface */
-    if (!obj_surface || obj_surface->fourcc != VA_FOURCC_NV12)
+    if (!obj_surface ||
+        !obj_surface->bo ||
+        !(color & 0xFF000000))
         return;
 
-    rgb_to_yuv(color, &y, &u, &v, &a);
-
-    if (a == 0)
-        return;
-
-    dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
-    blt_cmd = GEN8_XY_COLOR_BLT_CMD;
-    pitch = obj_surface->width;
-
-    if (tiling != I915_TILING_NONE) {
-        assert(tiling == I915_TILING_Y);
-        // blt_cmd |= XY_COLOR_BLT_DST_TILED;
-        // pitch >>= 2;
+    if (obj_surface->fourcc == VA_FOURCC_RGBA ||
+        obj_surface->fourcc == VA_FOURCC_RGBX ||
+        obj_surface->fourcc == VA_FOURCC_BGRA ||
+        obj_surface->fourcc == VA_FOURCC_BGRX)
+        intel_common_clear_surface(ctx, pp_context, obj_surface, color);
+    else {
+        rgb_to_yuv(color, &y, &u, &v, &a);
+        intel_common_clear_surface(ctx, pp_context, obj_surface,
+                                   a << 24 | y << 16 | v << 8 | u);
     }
-
-    br13 = 0xf0 << 16;
-    br13 |= BR13_8;
-    br13 |= pitch;
-
-    intel_batchbuffer_start_atomic_blt(batch, 56);
-    BEGIN_BLT_BATCH(batch, 14);
-
-    region_width = obj_surface->width;
-    region_height = obj_surface->height;
-
-    OUT_BATCH(batch, blt_cmd);
-    OUT_BATCH(batch, br13);
-    OUT_BATCH(batch,
-              0 << 16 |
-              0);
-    OUT_BATCH(batch,
-              region_height << 16 |
-              region_width);
-    OUT_RELOC64(batch, obj_surface->bo,
-                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                0);
-    OUT_BATCH(batch, y);
-
-    br13 = 0xf0 << 16;
-    br13 |= BR13_565;
-    br13 |= pitch;
-
-    region_width = obj_surface->width / 2;
-    region_height = obj_surface->height / 2;
-
-    if (tiling == I915_TILING_Y) {
-        region_height = ALIGN(obj_surface->height / 2, 32);
-    }
-
-    OUT_BATCH(batch, blt_cmd);
-    OUT_BATCH(batch, br13);
-    OUT_BATCH(batch,
-              0 << 16 |
-              0);
-    OUT_BATCH(batch,
-              region_height << 16 |
-              region_width);
-    OUT_RELOC64(batch, obj_surface->bo,
-                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                obj_surface->width * obj_surface->y_cb_offset);
-    OUT_BATCH(batch, v << 8 | u);
-
-    ADVANCE_BATCH(batch);
-    intel_batchbuffer_end_atomic(batch);
 }
 
 VAStatus
@@ -297,8 +239,7 @@ gen75_proc_picture(VADriverContextP ctx,
         assert(gpe_proc_ctx != NULL); // gpe_proc_ctx must be a non-NULL pointer
 
         if ((gpe_proc_ctx->pp_context.scaling_gpe_context_initialized & VPPGPE_8BIT_8BIT) &&
-            (obj_dst_surf->fourcc == VA_FOURCC_NV12) &&
-            pipeline_param->output_background_color)
+            (pipeline_param->output_background_color & 0xFF000000))
             gen8plus_vpp_clear_surface(ctx,
                                        &gpe_proc_ctx->pp_context,
                                        obj_dst_surf,
