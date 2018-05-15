@@ -1,0 +1,87 @@
+/*
+ * Copyright © 2018 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sub license, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the
+ * next paragraph) shall be included in all copies or substantial portions
+ * of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+ * IN NO EVENT SHALL PRECISION INSIGHT AND/OR ITS SUPPLIERS BE LIABLE FOR
+ * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Authors:
+ *    Xiang Haihao <haihao.xiang@intel.com>
+ *
+ */
+
+/*
+ * Registers
+ * g0           header
+ * g1-g3        static parameters (constant)
+ * g16-g24      payload for write message
+ */
+define(`ORIG',          `g0.4<2,2,1>UW')
+define(`ORIGX',         `g0.4<0,1,0>UW')
+define(`ORIGY',         `g0.6<0,1,0>UW')
+
+define(`ALPHA',         `g1.3<0,1,0>UB')
+/* Red */
+define(`R',             `g1.2<0,1,0>UB')
+/* Green */
+define(`G',             `g1.1<0,1,0>UB')
+/* Blue */
+define(`B',             `g1.0<0,1,0>UB')
+
+define(`RGBX_BTI',      `1')
+
+/* Thread header */
+mov(8)  g16.0<1>UD      g0.0<8,8,1>UD   {align1};
+
+/* RGBA/RGBX */
+shl(1)  g16.0<1>UD      ORIGX  6:w      {align1};
+shl(1)  g16.4<1>UD      ORIGY  4:w      {align1};
+
+/* 16x16 block */
+mov(1)  g16.8<1>UD      0x000f000fUD    {align1};
+
+mov(1)  g17.3<1>UB      ALPHA           {align1};
+mov(1)  g17.2<1>UB      B               {align1};
+mov(1)  g17.1<1>UB      G               {align1};
+mov(1)  g17.0<1>UB      R               {align1};
+mov(16) g17.0<1>UD      g17.0<0,1,0>UD  {align1 compr};
+mov(16) g19.0<1>UD      g17.0<0,1,0>UD  {align1 compr};
+mov(16) g21.0<1>UD      g17.0<0,1,0>UD  {align1 compr};
+mov(16) g23.0<1>UD      g17.0<0,1,0>UD  {align1 compr};
+/*
+ * write(p0, p1, p2, p3)
+ *   p0: binding table index
+ *   p1: message control, default is 0,
+ *   p2: message type, 10 is media_block_write
+ *   p3: cache type, 12 is data cache data port 1
+ */
+send(16) 16 acc0<1>UW null write(RGBX_BTI, 0, 10, 12) mlen 9 rlen 0 {align1};
+
+add(1)   g16.0<1>UD g16.0<0,1,0>UD 16:w {align1};
+send(16) 16 acc0<1>UW null write(RGBX_BTI, 0, 10, 12) mlen 9 rlen 0 {align1};
+
+add(1)   g16.0<1>UD g16.0<0,1,0>UD 16:w {align1};
+send(16) 16 acc0<1>UW null write(RGBX_BTI, 0, 10, 12) mlen 9 rlen 0 {align1};
+
+add(1)   g16.0<1>UD g16.0<0,1,0>UD 16:w {align1};
+send(16) 16 acc0<1>UW null write(RGBX_BTI, 0, 10, 12) mlen 9 rlen 0 {align1};
+
+/* EOT */
+mov(8)  g112.0<1>UD       g0.0<8,8,1>UD   {align1};
+send(16) 112 null<1>UW null thread_spawner(0, 0, 1) mlen 1 rlen 0 {align1 EOT};
