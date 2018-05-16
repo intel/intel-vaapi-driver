@@ -4373,8 +4373,8 @@ i965_encoder_vp8_vme_mpu_set_curbe(VADriverContextP ctx,
     pcmd->dw1.sharpness_level = pic_param->sharpness_level;
     pcmd->dw1.loop_filter_adjustment_on = pic_param->pic_flags.bits.loop_filter_adj_enable;
     pcmd->dw1.mb_no_coeffiscient_skip = pic_param->pic_flags.bits.mb_no_coeff_skip;
-    pcmd->dw1.golden_reference_copy_flag = pic_param->pic_flags.bits.copy_buffer_to_golden;
-    pcmd->dw1.alternate_reference_copy_flag = pic_param->pic_flags.bits.copy_buffer_to_alternate;
+    pcmd->dw1.golden_reference_copy_flag = ((pic_param->pic_flags.bits.refresh_golden_frame == 1) ? 3 : pic_param->pic_flags.bits.copy_buffer_to_golden);
+    pcmd->dw1.alternate_reference_copy_flag = ((pic_param->pic_flags.bits.refresh_alternate_frame == 1) ? 3 : pic_param->pic_flags.bits.copy_buffer_to_alternate);
     pcmd->dw1.last_frame_update = pic_param->pic_flags.bits.refresh_last;
     pcmd->dw1.sign_bias_golden = pic_param->pic_flags.bits.sign_bias_golden;
     pcmd->dw1.sign_bias_alt_ref = pic_param->pic_flags.bits.sign_bias_alternate;
