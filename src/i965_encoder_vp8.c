@@ -5935,7 +5935,6 @@ i965_encoder_vp8_pak_pipeline_prepare(VADriverContextP ctx,
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     struct i965_coded_buffer_segment *coded_buffer_segment;
-    VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     dri_bo *bo;
     int i;
 
@@ -5943,13 +5942,8 @@ i965_encoder_vp8_pak_pipeline_prepare(VADriverContextP ctx,
     obj_surface = encode_state->reconstructed_object;
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
-    if (pic_param->loop_filter_level[0] == 0) {
-        PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, obj_surface->bo, 1);
-        PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, NULL, 0);
-    } else {
-        PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, NULL, 0);
-        PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, obj_surface->bo, 1);
-    }
+    PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, obj_surface->bo, 1);
+    PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, obj_surface->bo, 1);
 
     /* set vp8 reference frames */
     for (i = 0; i < ARRAY_ELEMS(vp8_context->reference_surfaces); i++) {
