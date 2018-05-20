@@ -58,6 +58,7 @@
 struct gen7_vc1_surface {
     dri_bo *dmv_top;
     dri_bo *dmv_bottom;
+    int frame_coding_mode;
     int picture_type_top;
     int picture_type_bottom;
     int range_reduction_frame;
