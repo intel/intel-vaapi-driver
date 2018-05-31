@@ -1139,14 +1139,12 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
     int is_key_frame = !pic_param->pic_flags.bits.frame_type;
 
     obj_surface = SURFACE(pic_param->reconstructed_frame);
-    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
 
     if (!obj_surface)
         goto error;
 
     encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
-    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
 
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
         goto error;
@@ -1154,32 +1152,39 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
     encode_state->coded_buf_object = obj_buffer;
 
     if (!is_key_frame) {
-        assert(pic_param->ref_last_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_last_frame);
-        assert(obj_surface && obj_surface->bo);
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if (!pic_param->ref_flags.bits.no_ref_last) {
+            obj_surface = SURFACE(pic_param->ref_last_frame);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
 
-        assert(pic_param->ref_gf_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_gf_frame);
-        assert(obj_surface && obj_surface->bo);
+            encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
+        }
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if (!pic_param->ref_flags.bits.no_ref_gf) {
+            obj_surface = SURFACE(pic_param->ref_gf_frame);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
 
-        assert(pic_param->ref_arf_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_arf_frame);
-        assert(obj_surface && obj_surface->bo);
+            encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
+        }
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if (!pic_param->ref_flags.bits.no_ref_arf) {
+            obj_surface = SURFACE(pic_param->ref_arf_frame);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
+
+            encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
+        }
     }
 
     for (; i < 16; i++)
