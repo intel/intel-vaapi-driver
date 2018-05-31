@@ -81,8 +81,13 @@
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
+#include <va/va_version.h>
+
+#define VA_CAT_NX(A, B) __vaDriverInit_## A ## _ ## B
+#define VA_CAT(A, B) VA_CAT_NX(A, B)
+
 /* Define driver entry-point */
-#define VA_DRIVER_INIT_FUNC __vaDriverInit_0_33
+#define VA_DRIVER_INIT_FUNC VA_CAT(VA_MAJOR_VERSION, VA_MINOR_VERSION)
 
 /* Version number of package */
 #define VERSION "1.0.16.pre1"
