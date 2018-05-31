@@ -2918,7 +2918,7 @@ i965_create_buffer_internal(VADriverContextP ctx,
         else
             buffer_store->bo = dri_bo_alloc(i965->intel.bufmgr,
                                             "Buffer",
-                                            size * num_elements, 64);
+                                            size * num_elements + 1, 64);
         assert(buffer_store->bo);
 
         /* If the buffer is wrapped, the bo/buffer of buffer_store is bogus.
