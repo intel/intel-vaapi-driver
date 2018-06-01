@@ -67,6 +67,10 @@ static const uint32_t ps_subpic_kernel_static_gen9[][4] = {
 #include "shaders/render/exa_wm_write.g9b"
 };
 
+static const uint32_t ps_clear_kernel_static_gen9[][4] = {
+#include "shaders/render/exa_wm_src_affine.g9b"
+#include "shaders/render/exa_wm_clear.g9b"
+};
 
 #define SURFACE_STATE_PADDED_SIZE       SURFACE_STATE_PADDED_SIZE_GEN8
 
@@ -76,7 +80,8 @@ static const uint32_t ps_subpic_kernel_static_gen9[][4] = {
 enum {
     SF_KERNEL = 0,
     PS_KERNEL,
-    PS_SUBPIC_KERNEL
+    PS_SUBPIC_KERNEL,
+    PS_CLEAR_KERNEL
 };
 
 static struct i965_kernel render_kernels_gen9[] = {
@@ -100,6 +105,14 @@ static struct i965_kernel render_kernels_gen9[] = {
         PS_SUBPIC_KERNEL,
         ps_subpic_kernel_static_gen9,
         sizeof(ps_subpic_kernel_static_gen9),
+        NULL
+    },
+
+    {
+        "PS_CLEAR",
+        PS_CLEAR_KERNEL,
+        ps_clear_kernel_static_gen9,
+        sizeof(ps_clear_kernel_static_gen9),
         NULL
     }
 };
@@ -351,7 +364,8 @@ static void
 i965_fill_vertex_buffer(
     VADriverContextP ctx,
     float tex_coords[4], /* [(u1,v1);(u2,v2)] */
-    float vid_coords[4]  /* [(x1,y1);(x2,y2)] */
+    float vid_coords[4], /* [(x1,y1);(x2,y2)] */
+    int offset
 )
 {
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
@@ -384,7 +398,7 @@ i965_fill_vertex_buffer(
     vb[10] = vid_coords[X1];
     vb[11] = vid_coords[Y1];
 
-    dri_bo_subdata(i965->render_state.vb.vertex_buffer, 0, sizeof(vb), vb);
+    dri_bo_subdata(i965->render_state.vb.vertex_buffer, offset, sizeof(vb), vb);
 }
 
 static void
@@ -418,7 +432,7 @@ i965_subpic_render_upload_vertex(VADriverContextP ctx,
     vid_coords[2] = (float)(dst_rect.x + dst_rect.width);
     vid_coords[3] = (float)(dst_rect.y + dst_rect.height);
 
-    i965_fill_vertex_buffer(ctx, tex_coords, vid_coords);
+    i965_fill_vertex_buffer(ctx, tex_coords, vid_coords, 0);
 }
 
 static void
@@ -448,7 +462,24 @@ i965_render_upload_vertex(
     vid_coords[2] = vid_coords[0] + dst_rect->width;
     vid_coords[3] = vid_coords[1] + dst_rect->height;
 
-    i965_fill_vertex_buffer(ctx, tex_coords, vid_coords);
+    i965_fill_vertex_buffer(ctx, tex_coords, vid_coords, 0);
+
+    /*
+     * The vertices below are for background, and always set tex-coordinates
+     * although the tex-coordinates are not used in the the corresponding PS
+     * kernel.
+     */
+    tex_coords[0] = 0.0F;
+    tex_coords[1] = 0.0F;
+    tex_coords[2] = 1.0F;
+    tex_coords[3] = 1.0F;
+
+    vid_coords[0] = dest_region->x;
+    vid_coords[1] = dest_region->y;
+    vid_coords[2] = vid_coords[0] + dest_region->width;
+    vid_coords[3] = vid_coords[1] + dest_region->height;
+
+    i965_fill_vertex_buffer(ctx, tex_coords, vid_coords, 12 * sizeof(float));
 }
 
 static void
@@ -494,53 +525,6 @@ i965_render_upload_image_palette(
         OUT_BATCH(batch, (alpha << 24) | obj_image->palette[i]);
     ADVANCE_BATCH(batch);
 }
-
-static void
-gen9_clear_dest_region(VADriverContextP ctx)
-{
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
-    struct intel_batchbuffer *batch = i965->batch;
-    struct i965_render_state *render_state = &i965->render_state;
-    struct intel_region *dest_region = render_state->draw_region;
-    unsigned int blt_cmd, br13;
-    int pitch;
-
-    blt_cmd = GEN8_XY_COLOR_BLT_CMD;
-    br13 = 0xf0 << 16;
-    pitch = dest_region->pitch;
-
-    if (dest_region->cpp == 4) {
-        br13 |= BR13_8888;
-        blt_cmd |= (XY_COLOR_BLT_WRITE_RGB | XY_COLOR_BLT_WRITE_ALPHA);
-    } else {
-        assert(dest_region->cpp == 2);
-        br13 |= BR13_565;
-    }
-
-    if (dest_region->tiling != I915_TILING_NONE) {
-        blt_cmd |= XY_COLOR_BLT_DST_TILED;
-        pitch /= 4;
-    }
-
-    br13 |= pitch;
-
-    intel_batchbuffer_start_atomic_blt(batch, 24);
-    BEGIN_BLT_BATCH(batch, 7);
-
-    OUT_BATCH(batch, blt_cmd);
-    OUT_BATCH(batch, br13);
-    OUT_BATCH(batch, (dest_region->y << 16) | (dest_region->x));
-    OUT_BATCH(batch, ((dest_region->y + dest_region->height) << 16) |
-              (dest_region->x + dest_region->width));
-    OUT_RELOC(batch, dest_region->bo,
-              I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-              0);
-    OUT_BATCH(batch, 0x0);
-    OUT_BATCH(batch, 0x0);
-    ADVANCE_BATCH(batch);
-    intel_batchbuffer_end_atomic(batch);
-}
-
 
 /*
  * for GEN8
@@ -900,7 +884,7 @@ gen9_emit_cc_state_pointers(VADriverContextP ctx)
 }
 
 static void
-gen9_emit_vertices(VADriverContextP ctx)
+gen9_emit_vertices(VADriverContextP ctx, int offset)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965->batch;
@@ -913,7 +897,7 @@ gen9_emit_vertices(VADriverContextP ctx)
               (0 << GEN8_VB0_MOCS_SHIFT) |
               GEN7_VB0_ADDRESS_MODIFYENABLE |
               ((4 * 4) << VB0_BUFFER_PITCH_SHIFT));
-    OUT_RELOC(batch, render_state->vb.vertex_buffer, I915_GEM_DOMAIN_VERTEX, 0, 0);
+    OUT_RELOC(batch, render_state->vb.vertex_buffer, I915_GEM_DOMAIN_VERTEX, 0, offset);
     OUT_BATCH(batch, 0);
     OUT_BATCH(batch, 12 * 4);
     ADVANCE_BATCH(batch);
@@ -1405,7 +1389,8 @@ gen9_emit_wm_state(VADriverContextP ctx, int kernel)
               (GEN8_PSX_PIXEL_SHADER_VALID | GEN8_PSX_ATTRIBUTE_ENABLE));
     ADVANCE_BATCH(batch);
 
-    if (kernel == PS_KERNEL) {
+    if (kernel == PS_KERNEL ||
+        kernel == PS_CLEAR_KERNEL) {
         BEGIN_BATCH(batch, 2);
         OUT_BATCH(batch, GEN8_3DSTATE_PSBLEND | (2 - 2));
         OUT_BATCH(batch,
@@ -1594,7 +1579,7 @@ gen9_emit_drawing_rectangle(VADriverContextP ctx)
 }
 
 static void
-gen9_render_emit_states(VADriverContextP ctx, int kernel)
+gen9_render_emit_states(VADriverContextP ctx)
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct intel_batchbuffer *batch = i965->batch;
@@ -1613,11 +1598,43 @@ gen9_render_emit_states(VADriverContextP ctx, int kernel)
     gen9_emit_clip_state(ctx);
     gen9_emit_sf_state(ctx);
     gen9_emit_depth_stencil_state(ctx);
-    gen9_emit_wm_state(ctx, kernel);
     gen9_emit_depth_buffer_state(ctx);
     gen9_emit_drawing_rectangle(ctx);
     gen9_emit_vertex_element_state(ctx);
-    gen9_emit_vertices(ctx);
+    /* clear background */
+    gen9_emit_wm_state(ctx, PS_CLEAR_KERNEL);
+    gen9_emit_vertices(ctx, 12 * sizeof(float));
+    /* draw the image */
+    gen9_emit_wm_state(ctx, PS_KERNEL);
+    gen9_emit_vertices(ctx, 0);
+    intel_batchbuffer_end_atomic(batch);
+}
+
+static void
+gen9_subpicture_render_emit_states(VADriverContextP ctx)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_batchbuffer *batch = i965->batch;
+
+    intel_batchbuffer_start_atomic(batch, 0x1000);
+    intel_batchbuffer_emit_mi_flush(batch);
+    gen9_emit_invarient_states(ctx);
+    gen9_emit_state_base_address(ctx);
+    gen9_emit_viewport_state_pointers(ctx);
+    gen9_emit_urb(ctx);
+    gen9_emit_cc_state_pointers(ctx);
+    gen9_emit_sampler_state_pointers(ctx);
+    gen9_emit_wm_hz_op(ctx);
+    gen9_emit_bypass_state(ctx);
+    gen9_emit_vs_state(ctx);
+    gen9_emit_clip_state(ctx);
+    gen9_emit_sf_state(ctx);
+    gen9_emit_depth_stencil_state(ctx);
+    gen9_emit_wm_state(ctx, PS_SUBPIC_KERNEL);
+    gen9_emit_depth_buffer_state(ctx);
+    gen9_emit_drawing_rectangle(ctx);
+    gen9_emit_vertex_element_state(ctx);
+    gen9_emit_vertices(ctx, 0);
     intel_batchbuffer_end_atomic(batch);
 }
 
@@ -1635,8 +1652,7 @@ gen9_render_put_surface(
 
     gen9_render_initialize(ctx);
     gen9_render_setup_states(ctx, obj_surface, src_rect, dst_rect, flags);
-    gen9_clear_dest_region(ctx);
-    gen9_render_emit_states(ctx, PS_KERNEL);
+    gen9_render_emit_states(ctx);
     intel_batchbuffer_flush(batch);
 }
 
@@ -1737,7 +1753,7 @@ gen9_render_put_subpicture(
     assert(obj_subpic);
     gen9_render_initialize(ctx);
     gen9_subpicture_render_setup_states(ctx, obj_surface, src_rect, dst_rect);
-    gen9_render_emit_states(ctx, PS_SUBPIC_KERNEL);
+    gen9_subpicture_render_emit_states(ctx);
     i965_render_upload_image_palette(ctx, obj_subpic->obj_image, 0xff);
     intel_batchbuffer_flush(batch);
 }

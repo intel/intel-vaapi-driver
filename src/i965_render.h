@@ -31,7 +31,7 @@
 #define MAX_SAMPLERS            16
 #define MAX_RENDER_SURFACES     (MAX_SAMPLERS + 1)
 
-#define NUM_RENDER_KERNEL       3
+#define NUM_RENDER_KERNEL       4
 
 #define VA_SRC_COLOR_MASK       0x000000f0
 
@@ -73,7 +73,7 @@ struct i965_render_state {
 
     int pp_flag; /* 0: disable, 1: enable */
 
-    struct i965_kernel render_kernels[3];
+    struct i965_kernel render_kernels[NUM_RENDER_KERNEL];
 
     struct {
         dri_bo *bo;
