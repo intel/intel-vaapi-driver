@@ -161,7 +161,8 @@ static uint32_t float_to_uint(float f)
 enum {
     SF_KERNEL = 0,
     PS_KERNEL,
-    PS_SUBPIC_KERNEL
+    PS_SUBPIC_KERNEL,
+    PS_CLEAR_KERNEL
 };
 
 static struct i965_kernel render_kernels_gen4[] = {
@@ -186,6 +187,15 @@ static struct i965_kernel render_kernels_gen4[] = {
         ps_subpic_kernel_static,
         sizeof(ps_subpic_kernel_static),
         NULL
+    },
+
+    // Not used
+    {
+        "PS_CLEAR",
+        PS_CLEAR_KERNEL,
+        NULL,
+        0,
+        0
     }
 };
 
@@ -211,6 +221,15 @@ static struct i965_kernel render_kernels_gen5[] = {
         ps_subpic_kernel_static_gen5,
         sizeof(ps_subpic_kernel_static_gen5),
         NULL
+    },
+
+    // Not used
+    {
+        "PS_CLEAR",
+        PS_CLEAR_KERNEL,
+        NULL,
+        0,
+        0
     }
 };
 
@@ -236,6 +255,15 @@ static struct i965_kernel render_kernels_gen6[] = {
         ps_subpic_kernel_static_gen6,
         sizeof(ps_subpic_kernel_static_gen6),
         NULL
+    },
+
+    // Not used
+    {
+        "PS_CLEAR",
+        PS_CLEAR_KERNEL,
+        NULL,
+        0,
+        0
     }
 };
 
@@ -261,6 +289,15 @@ static struct i965_kernel render_kernels_gen7[] = {
         ps_subpic_kernel_static_gen7,
         sizeof(ps_subpic_kernel_static_gen7),
         NULL
+    },
+
+    // Not used
+    {
+        "PS_CLEAR",
+        PS_CLEAR_KERNEL,
+        NULL,
+        0,
+        0
     }
 };
 
@@ -286,6 +323,15 @@ static struct i965_kernel render_kernels_gen7_haswell[] = {
         ps_subpic_kernel_static_gen7,
         sizeof(ps_subpic_kernel_static_gen7),
         NULL
+    },
+
+    // Not used
+    {
+        "PS_CLEAR",
+        PS_CLEAR_KERNEL,
+        NULL,
+        0,
+        0
     }
 };
 
