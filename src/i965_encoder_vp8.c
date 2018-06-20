@@ -2087,6 +2087,19 @@ i965_encoder_vp8_get_picture_parameter(VADriverContextP ctx,
         vp8_context->ref_arf_frame = NULL;
     }
 
+    if (!is_intra) {
+        if (!vp8_context->ref_last_frame) {
+            if (vp8_context->ref_gf_frame)
+                vp8_context->ref_last_frame = vp8_context->ref_gf_frame;
+            else
+                vp8_context->ref_last_frame = vp8_context->ref_arf_frame;
+        }
+
+        if (!vp8_context->ref_gf_frame) {
+            vp8_context->ref_gf_frame = vp8_context->ref_arf_frame;
+        }
+    }
+
     vp8_context->brc_distortion_buffer_need_reset = 0;
 
     if (brc_enabled) {
@@ -5946,14 +5959,26 @@ i965_encoder_vp8_pak_pipeline_prepare(VADriverContextP ctx,
     PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, obj_surface->bo, 1);
 
     /* set vp8 reference frames */
-    for (i = 0; i < ARRAY_ELEMS(vp8_context->reference_surfaces); i++) {
-        obj_surface = encode_state->reference_objects[i];
+    if (vp8_context->ref_last_frame) {
+        PAK_REFERENCE_BO(vp8_context->reference_surfaces[0].bo, vp8_context->ref_last_frame->bo, 1);
+    } else {
+        PAK_REFERENCE_BO(vp8_context->reference_surfaces[0].bo, NULL, 0);
+    }
 
-        if (obj_surface && obj_surface->bo) {
-            PAK_REFERENCE_BO(vp8_context->reference_surfaces[i].bo, obj_surface->bo, 1);
-        } else {
-            PAK_REFERENCE_BO(vp8_context->reference_surfaces[i].bo, NULL, 0);
-        }
+    if (vp8_context->ref_gf_frame) {
+        PAK_REFERENCE_BO(vp8_context->reference_surfaces[1].bo, vp8_context->ref_gf_frame->bo, 1);
+    } else {
+        PAK_REFERENCE_BO(vp8_context->reference_surfaces[1].bo, NULL, 0);
+    }
+
+    if (vp8_context->ref_arf_frame) {
+        PAK_REFERENCE_BO(vp8_context->reference_surfaces[2].bo, vp8_context->ref_arf_frame->bo, 1);
+    } else {
+        PAK_REFERENCE_BO(vp8_context->reference_surfaces[2].bo, NULL, 0);
+    }
+
+    for (i = 3; i < ARRAY_ELEMS(vp8_context->reference_surfaces); i++) {
+        PAK_REFERENCE_BO(vp8_context->reference_surfaces[i].bo, NULL, 0);
     }
 
     /* input YUV surface */
