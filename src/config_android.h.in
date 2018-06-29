@@ -66,26 +66,43 @@
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "intel_driver"
 
-/* Define to the full name and version of this package. */
-#define PACKAGE_STRING "intel_driver 1.0.16.pre1"
-
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libva-driver-intel"
 
 /* Define to the home page for this package. */
 #define PACKAGE_URL ""
 
+#define VER_CAT_NX(A, B, C, D) A ## . ## B ## . ## C ## D
+#define VER_CAT(A, B, C, D) VER_CAT_NX(A, B, C, D)
+#define STRINGIZE_NX(A) #A
+#define STRINGIZE(A) STRINGIZE_NX(A)
+#if INTEL_DRIVER_PRE_VERSION > 0
+#define PRE_VER_CAT_NX(A) .pre ## A
+#define PRE_VER_CAT(A) PRE_VER_CAT_NX(A)
+#define INTEL_DRIVER_PRE_VER_SUFFIX PRE_VER_CAT(INTEL_DRIVER_PRE_VERSION)
+#else
+#define INTEL_DRIVER_PRE_VER_SUFFIX
+#endif
+
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.0.16.pre1"
+#define PACKAGE_VERSION STRINGIZE(VER_CAT(INTEL_DRIVER_MAJOR_VERSION, INTEL_DRIVER_MINOR_VERSION, INTEL_DRIVER_MICRO_VERSION, INTEL_DRIVER_PRE_VER_SUFFIX))
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING PACKAGE_NAME " " PACKAGE_VERSION
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
+#include <va/va_version.h>
+
+#define VA_CAT_NX(A, B) __vaDriverInit_## A ## _ ## B
+#define VA_CAT(A, B) VA_CAT_NX(A, B)
+
 /* Define driver entry-point */
-#define VA_DRIVER_INIT_FUNC __vaDriverInit_0_33
+#define VA_DRIVER_INIT_FUNC VA_CAT(VA_MAJOR_VERSION, VA_MINOR_VERSION)
 
 /* Version number of package */
-#define VERSION "1.0.16.pre1"
+#define VERSION PACKAGE_VERSION
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

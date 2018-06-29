@@ -1279,13 +1279,16 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribFEIFunctionType:
-            /* Supporing all possible modes of FEI */
-            attrib_list[i].value = VA_FEI_FUNCTION_ENC |
-                                   VA_FEI_FUNCTION_PAK | VA_FEI_FUNCTION_ENC_PAK;
+            if (entrypoint == VAEntrypointFEI) {
+                /* Supporting all possible modes of FEI */
+                attrib_list[i].value = VA_FEI_FUNCTION_ENC |
+                                       VA_FEI_FUNCTION_PAK | VA_FEI_FUNCTION_ENC_PAK;
+            }
             break;
 
         case VAConfigAttribFEIMVPredictors:
-            attrib_list[i].value = 4;
+            if (entrypoint == VAEntrypointFEI)
+                attrib_list[i].value = 4;
             break;
 
         case VAConfigAttribStats:
