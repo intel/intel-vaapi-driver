@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/intel/intel-vaapi-driver.svg?branch=master)](https://travis-ci.org/intel/intel-vaapi-driver)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/11612/badge.svg)](https://scan.coverity.com/projects/intel-intel-vaapi-driver)
 
-#Intel-vaapi-driver Project
+# Intel-vaapi-driver Project
 
 VA-API (Video Acceleration API) user mode driver for Intel GEN Graphics family
 
