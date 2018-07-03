@@ -1,5 +1,16 @@
-intel-vaapi-driver NEWS -- summary of changes.  2018-02-12
+intel-vaapi-driver NEWS -- summary of changes.  2018-07-xx
 Copyright (C) 2009-2018 Intel Corporation
+
+Version 2.2.0 - DD.Jul.2018
+* Bump version to 2.2.0
+* Add new PCI ID for KBL-Y
+* Add meson support
+* Fix for VC1 decoding issues
+* Fix VP8 encoding issues
+* Fix the over-run issue in HEVC encoding
+* Fix the max MV length in MPEG-2 encoding
+* Fix packed header mode
+* Fix building issue on Android
 
 Version 2.1.0 - 12.Feb.2018
 * Bump version to 2.1.0
