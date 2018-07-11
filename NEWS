@@ -1,7 +1,7 @@
-intel-vaapi-driver NEWS -- summary of changes.  2018-07-xx
+intel-vaapi-driver NEWS -- summary of changes.  2018-07-11
 Copyright (C) 2009-2018 Intel Corporation
 
-Version 2.2.0 - DD.Jul.2018
+Version 2.2.0 - 11.Jul.2018
 * Bump version to 2.2.0
 * Add new PCI ID for KBL-Y
 * Add meson support
