@@ -1279,13 +1279,16 @@ i965_GetConfigAttributes(VADriverContextP ctx,
             break;
 
         case VAConfigAttribFEIFunctionType:
-            /* Supporing all possible modes of FEI */
-            attrib_list[i].value = VA_FEI_FUNCTION_ENC |
-                                   VA_FEI_FUNCTION_PAK | VA_FEI_FUNCTION_ENC_PAK;
+            if (entrypoint == VAEntrypointFEI) {
+                /* Supporting all possible modes of FEI */
+                attrib_list[i].value = VA_FEI_FUNCTION_ENC |
+                                       VA_FEI_FUNCTION_PAK | VA_FEI_FUNCTION_ENC_PAK;
+            }
             break;
 
         case VAConfigAttribFEIMVPredictors:
-            attrib_list[i].value = 4;
+            if (entrypoint == VAEntrypointFEI)
+                attrib_list[i].value = 4;
             break;
 
         case VAConfigAttribStats:
@@ -1432,8 +1435,21 @@ i965_CreateConfig(VADriverContextP ctx,
         if (attrib_found) {
             uint32_t enc_packed_attribs = i965_get_enc_packed_attributes(ctx, profile, entrypoint);
 
-            if (!(attrib_found->value & enc_packed_attribs))
+            if (enc_packed_attribs == VA_ATTRIB_NOT_SUPPORTED) {
+                i965_log_info(ctx, "vaCreateConfig: invalid EncPackedHeaders attribute %#x: "
+                              "packed headers are not supported.\n", attrib_found->value);
                 vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
+            } else if (attrib_found->value == 0) {
+                i965_log_info(ctx, "vaCreateConfig: setting the EncPackedHeaders attribute to zero to "
+                              "indicate that no packed headers will be used is deprecated.\n");
+            } else {
+                if (attrib_found->value & ~enc_packed_attribs) {
+                    i965_log_info(ctx, "vaCreateConfig: invalid EncPackedHeaders attribute %#x: "
+                                  "some packed headers are not supported (supported set %#x).\n",
+                                  attrib_found->value, enc_packed_attribs);
+                    vaStatus = VA_STATUS_ERROR_INVALID_VALUE;
+                }
+            }
         }
     }
 
@@ -6075,6 +6091,8 @@ i965_QuerySurfaceAttributes(VADriverContextP ctx,
             attribs[i].value.value.i = VA_FOURCC_NV12;
             i++;
 
+            break;
+
         case VAProfileNone:
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
@@ -7346,13 +7364,13 @@ ensure_vendor_string(struct i965_driver_data *i965, const char *chipset)
     if (INTEL_DRIVER_PRE_VERSION > 0) {
         ret = snprintf(&i965->va_vendor[len], sizeof(i965->va_vendor) - len,
                        ".pre%d", INTEL_DRIVER_PRE_VERSION);
-        if (ret < 0 || ret >= sizeof(i965->va_vendor))
+        if (ret < 0 || ret >= (sizeof(i965->va_vendor) - len))
             goto error;
         len += ret;
 
         ret = snprintf(&i965->va_vendor[len], sizeof(i965->va_vendor) - len,
                        " (%s)", INTEL_DRIVER_GIT_VERSION);
-        if (ret < 0 || ret >= sizeof(i965->va_vendor))
+        if (ret < 0 || ret >= (sizeof(i965->va_vendor) - len))
             goto error;
         len += ret;
     }
@@ -7477,7 +7495,7 @@ i965_initialize_wrapper(VADriverContextP ctx, const char *driver_name)
         i965->wrapper_pdrvctx = wrapper_pdrvctx;
         return VA_STATUS_SUCCESS;
     } else {
-        fprintf(stderr, "Failed to wrapper %s%s\n", driver_name, DRIVER_EXTENSION);
+        fprintf(stdout, "Not using %s%s\n", driver_name, DRIVER_EXTENSION);
         free(vtable);
         free(wrapper_pdrvctx);
         return VA_STATUS_ERROR_OPERATION_FAILED;

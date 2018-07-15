@@ -1,8 +1,8 @@
-[![Stories in Ready](https://badge.waffle.io/01org/intel-vaapi-driver.png?label=ready&title=Ready)](http://waffle.io/01org/intel-vaapi-driver)
-[![Build Status](https://travis-ci.org/01org/intel-vaapi-driver.svg?branch=master)](https://travis-ci.org/01org/intel-vaapi-driver)
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/11612/badge.svg)](https://scan.coverity.com/projects/01org-intel-vaapi-driver)
+[![Stories in Ready](https://badge.waffle.io/intel/intel-vaapi-driver.png?label=ready&title=Ready)](http://waffle.io/intel/intel-vaapi-driver)
+[![Build Status](https://travis-ci.org/intel/intel-vaapi-driver.svg?branch=master)](https://travis-ci.org/intel/intel-vaapi-driver)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/11612/badge.svg)](https://scan.coverity.com/projects/intel-intel-vaapi-driver)
 
-#Intel-vaapi-driver Project
+# Intel-vaapi-driver Project
 
 VA-API (Video Acceleration API) user mode driver for Intel GEN Graphics family
 
@@ -17,10 +17,10 @@ commands to be sent to the i915 driver for exercising both hardware and shader f
 decode, encode, and processing.
 
 If you would like to contribute to intel-vaapi-driver, check our [Contributing
-guide](https://github.com/01org/intel-vaapi-driver/blob/master/CONTRIBUTING.md).
+guide](https://github.com/intel/intel-vaapi-driver/blob/master/CONTRIBUTING.md).
 
 We also recommend taking a look at the ['janitorial'
-bugs](https://github.com/01org/intel-vaapi-driver/issues?q=is%3Aopen+is%3Aissue+label%3AJanitorial)
+bugs](https://github.com/intel/intel-vaapi-driver/issues?q=is%3Aopen+is%3Aissue+label%3AJanitorial)
 in our list of open issues as these bugs can be solved without an
 extensive knowledge of intel-vaapi-driver.
 

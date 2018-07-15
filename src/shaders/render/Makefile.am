@@ -60,7 +60,8 @@ INTEL_G6B =				\
 	exa_wm_yuv_rgb.g6b
 
 INTEL_G7I = $(INTEL_G4I)		\
-	exa_wm_write.g7i
+	exa_wm_write.g7i		\
+	exa_wm_clear.g7i
 
 INTEL_G7A =				\
 	exa_wm_src_affine.g7a 		\
@@ -92,7 +93,8 @@ INTEL_G8A =				\
 	exa_wm_src_sample_argb.g8a 	\
 	exa_wm_yuv_color_balance.g8a	\
 	exa_wm_write.g8a 		\
-	exa_wm_yuv_rgb.g8a
+	exa_wm_yuv_rgb.g8a		\
+	exa_wm_clear.g8a
 
 INTEL_G8S = $(INTEL_G8A:%.g8a=%.g8s)
 
@@ -102,7 +104,8 @@ INTEL_G8B =				\
 	exa_wm_src_sample_argb.g8b 	\
 	exa_wm_yuv_color_balance.g8b	\
 	exa_wm_yuv_rgb.g8b		\
-	exa_wm_write.g8b 
+	exa_wm_write.g8b		\
+	exa_wm_clear.g8b
 
 INTEL_G9A =				\
 	exa_wm_src_affine.g9a 		\
@@ -110,7 +113,8 @@ INTEL_G9A =				\
 	exa_wm_src_sample_argb.g9a 	\
 	exa_wm_yuv_color_balance.g9a	\
 	exa_wm_write.g9a 		\
-	exa_wm_yuv_rgb.g9a
+	exa_wm_yuv_rgb.g9a		\
+	exa_wm_clear.g9a
 
 INTEL_G9I = $(INTEL_G4I)
 
@@ -122,7 +126,8 @@ INTEL_G9B =				\
 	exa_wm_src_sample_argb.g9b 	\
 	exa_wm_yuv_color_balance.g9b	\
 	exa_wm_yuv_rgb.g9b		\
-	exa_wm_write.g9b
+	exa_wm_write.g9b		\
+	exa_wm_clear.g9b
 
 TARGETS  =
 if HAVE_GEN4ASM
@@ -184,6 +189,8 @@ CLEANFILES = \
 	$(INTEL_G8S)		\
 	$(INTEL_G9S)		\
 	$(NULL)
+
+DISTCLEANFILES = $(TARGETS)
 
 EXTRA_DIST = \
 	$(INTEL_G4A)		\

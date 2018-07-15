@@ -1626,6 +1626,7 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
 
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VAPictureParameterBufferVC1 *)decode_state->pic_param->buffer;
+    gen7_vc1_current_surface = (struct gen7_vc1_surface *)(decode_state->render_object->private_data);
 
     if (!pic_param->sequence_fields.bits.interlace ||
         (pic_param->picture_fields.bits.frame_coding_mode < 2)) { /* Progressive or Frame-Interlace */
@@ -1698,8 +1699,6 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
     if (pic_param->sequence_fields.bits.profile == 1 && /* Main Profile */
         pic_param->sequence_fields.bits.rangered) {
         obj_surface = decode_state->reference_objects[0];
-
-        gen7_vc1_current_surface = (struct gen7_vc1_surface *)(decode_state->render_object->private_data);
 
         if (pic_param->forward_reference_picture != VA_INVALID_ID &&
             obj_surface)
@@ -1813,6 +1812,7 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
 
     assert(pic_param->picture_fields.bits.frame_coding_mode < 3);
 
+    gen7_vc1_current_surface->frame_coding_mode = pic_param->picture_fields.bits.frame_coding_mode;
     if (pic_param->sequence_fields.bits.interlace) {
         if (pic_param->picture_fields.bits.frame_coding_mode < 2)
             fcm = pic_param->picture_fields.bits.frame_coding_mode;
@@ -1826,7 +1826,6 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
         pic_param->picture_fields.bits.frame_coding_mode == 2) { /* Field-Interlace */
         if (picture_type == GEN7_VC1_I_PICTURE ||
              picture_type == GEN7_VC1_P_PICTURE) {
-            gen7_vc1_current_surface = (struct gen7_vc1_surface *)(decode_state->render_object->private_data);
 
             if (is_first_field)
                 gen7_vc1_current_surface->reference_distance = pic_param->reference_fields.bits.reference_distance;
@@ -1874,12 +1873,17 @@ gen7_mfd_vc1_pic_state(VADriverContextP ctx,
         }
     }
 
-    if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPelBilinear ||
-        (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
-         pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPelBilinear))
-        interpolation_mode = 8 | pic_param->fast_uvmc_flag;
-    else
-        interpolation_mode = 0 | pic_param->fast_uvmc_flag;
+    if ((!pic_param->sequence_fields.bits.interlace ||
+         pic_param->picture_fields.bits.frame_coding_mode != 1) && /* Progressive or Field-Interlace */
+        (picture_type == GEN7_VC1_P_PICTURE ||
+         picture_type == GEN7_VC1_B_PICTURE)) {
+        if (pic_param->mv_fields.bits.mv_mode == VAMvMode1MvHalfPelBilinear ||
+            (pic_param->mv_fields.bits.mv_mode == VAMvModeIntensityCompensation &&
+             pic_param->mv_fields.bits.mv_mode2 == VAMvMode1MvHalfPelBilinear))
+            interpolation_mode = 8 | pic_param->fast_uvmc_flag;
+        else
+            interpolation_mode = 0 | pic_param->fast_uvmc_flag;
+    }
 
     BEGIN_BCS_BATCH(batch, 6);
     OUT_BCS_BATCH(batch, MFD_VC1_LONG_PIC_STATE | (6 - 2));
@@ -1997,6 +2001,7 @@ gen7_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
                 lumscale1_double_fwd = gen7_vc1_top_surface->luma_scale_top[1];
                 lumshift1_double_fwd = gen7_vc1_top_surface->luma_shift_top[1];
             }
+            replication_mode |= !!gen7_vc1_top_surface->frame_coding_mode;
         }
 
         if (pic_param->sequence_fields.bits.interlace &&
@@ -2015,6 +2020,7 @@ gen7_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
                     lumscale2_double_fwd = gen7_vc1_bottom_surface->luma_scale_bottom[1];
                     lumshift2_double_fwd = gen7_vc1_bottom_surface->luma_shift_bottom[1];
                 }
+                replication_mode |= !!gen7_vc1_bottom_surface->frame_coding_mode << 2;
             }
         }
     }
@@ -2029,6 +2035,7 @@ gen7_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
             intensitycomp_single_bwd = !!gen7_vc1_top_surface->intensity_compensation_top;
             lumscale1_single_bwd = gen7_vc1_top_surface->luma_scale_top[0];
             lumshift1_single_bwd = gen7_vc1_top_surface->luma_shift_top[0];
+            replication_mode |= !!gen7_vc1_top_surface->frame_coding_mode << 1;
         }
 
         if (pic_param->sequence_fields.bits.interlace &&
@@ -2042,16 +2049,9 @@ gen7_mfd_vc1_pred_pipe_state(VADriverContextP ctx,
                 intensitycomp_single_bwd |= !!gen7_vc1_bottom_surface->intensity_compensation_bottom << 1;
                 lumscale2_single_bwd = gen7_vc1_bottom_surface->luma_scale_bottom[0];
                 lumshift2_single_bwd = gen7_vc1_bottom_surface->luma_shift_bottom[0];
+                replication_mode |= !!gen7_vc1_bottom_surface->frame_coding_mode << 3;
             }
         }
-    }
-
-    if (pic_param->sequence_fields.bits.interlace &&
-        pic_param->picture_fields.bits.frame_coding_mode > 0) { /* Frame-Interlace or Field-Interlace */
-        if (picture_type == GEN7_VC1_P_PICTURE)
-            replication_mode = 0x5;
-        else if (picture_type == GEN7_VC1_B_PICTURE)
-            replication_mode = 0xf;
     }
 
     BEGIN_BCS_BATCH(batch, 6);
@@ -2405,7 +2405,7 @@ gen7_mfd_jpeg_pic_state(VADriverContextP ctx,
         else if (h1 == 2 && h2 == 1 && h3 == 1 &&
                  v1 == 2 && v2 == 2 && v3 == 2)
             chroma_type = GEN7_YUV422H_4Y;
-        else if (h2 == 2 && h2 == 2 && h3 == 2 &&
+        else if (h1 == 2 && h2 == 2 && h3 == 2 &&
                  v1 == 2 && v2 == 1 && v3 == 1)
             chroma_type = GEN7_YUV422V_4Y;
         else

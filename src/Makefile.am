@@ -35,6 +35,7 @@ AM_CPPFLAGS = \
 driver_cflags = \
 	-Wall			\
 	-fvisibility=hidden	\
+	-fstack-protector	\
 	$(NULL)
 
 driver_ldflags = \
@@ -45,7 +46,7 @@ driver_ldflags = \
 
 driver_libs = \
 	-lpthread -lm -ldl	\
-	$(DRM_LIBS) -ldrm_intel	\
+	$(DRM_LIBS)		\
 	$(NULL)
 
 include Makefile.sources
@@ -76,7 +77,7 @@ if USE_WAYLAND
 source_c			+= i965_output_wayland.c
 source_h			+= i965_output_wayland.h
 source_h			+= $(protocol_source_h)
-driver_cflags			+= $(WAYLAND_CFLAGS) $(WAYLAND_CLIENT_CFLAGS)
+driver_cflags			+= $(WAYLAND_CLIENT_CFLAGS)
 endif
 
 # git version
@@ -125,6 +126,13 @@ EXTRA_DIST += \
 	$(NULL)
 
 CLEANFILES = $(BUILT_SOURCES)
+
+DISTCLEANFILES = \
+	$(VERSION_FILE)	\
+	$(OLD_VERSION_FILE)	\
+	$(PKG_VERSION_FILE)	\
+	$(NEW_VERSION_FILE)	\
+	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = Makefile.in config.h.in

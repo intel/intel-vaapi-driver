@@ -1448,34 +1448,34 @@ i965_encoder_vp8_gpe_context_vfe_scoreboard_init(struct i965_gpe_context *gpe_co
     gpe_context->vfe_desc5.scoreboard0.enable = scoreboard_params->enable;
 
     // Scoreboard 0
-    gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0xF;
-    gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0x0;
+    gpe_context->vfe_desc6.scoreboard1.delta_x0 = -1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0;
 
     // Scoreboard 1
-    gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
-    gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0;
+    gpe_context->vfe_desc6.scoreboard1.delta_y1 = -1;
 
     // Scoreboard 2
-    gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0x1;
-    gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x2 = 1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y2 = -1;
 
     // Scoreboard 3
-    gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
-    gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x3 = -1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y3 = -1;
 
     // Scoreboard 4
-    gpe_context->vfe_desc7.scoreboard2.delta_x4 = 0xF;
-    gpe_context->vfe_desc7.scoreboard2.delta_y4 = 0x1;
+    gpe_context->vfe_desc7.scoreboard2.delta_x4 = -1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y4 = 1;
 
     // Scoreboard 5
-    gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0x0;
-    gpe_context->vfe_desc7.scoreboard2.delta_y5 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0;
+    gpe_context->vfe_desc7.scoreboard2.delta_y5 = -2;
     // Scoreboard 6
-    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0x1;
-    gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
     // Scoreboard 7
-    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0xF;
-    gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x6 = -1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
 }
 
 static void
@@ -3001,7 +3001,7 @@ i965_encoder_vp8_vme_me(VADriverContextP ctx,
 #define QUANT_INDEX(index, q_index, q_index_delta)                      \
     do {                                                                \
         index = quant_param->quantization_index[q_index] + quant_param->quantization_index_delta[q_index_delta]; \
-        index = CLAMP(0, MAX_QP_VP8, index);                            \
+        index = MIN(MAX_QP_VP8, index);                            \
     } while (0)
 
 static void
@@ -4373,8 +4373,8 @@ i965_encoder_vp8_vme_mpu_set_curbe(VADriverContextP ctx,
     pcmd->dw1.sharpness_level = pic_param->sharpness_level;
     pcmd->dw1.loop_filter_adjustment_on = pic_param->pic_flags.bits.loop_filter_adj_enable;
     pcmd->dw1.mb_no_coeffiscient_skip = pic_param->pic_flags.bits.mb_no_coeff_skip;
-    pcmd->dw1.golden_reference_copy_flag = pic_param->pic_flags.bits.copy_buffer_to_golden;
-    pcmd->dw1.alternate_reference_copy_flag = pic_param->pic_flags.bits.copy_buffer_to_alternate;
+    pcmd->dw1.golden_reference_copy_flag = ((pic_param->pic_flags.bits.refresh_golden_frame == 1) ? 3 : pic_param->pic_flags.bits.copy_buffer_to_golden);
+    pcmd->dw1.alternate_reference_copy_flag = ((pic_param->pic_flags.bits.refresh_alternate_frame == 1) ? 3 : pic_param->pic_flags.bits.copy_buffer_to_alternate);
     pcmd->dw1.last_frame_update = pic_param->pic_flags.bits.refresh_last;
     pcmd->dw1.sign_bias_golden = pic_param->pic_flags.bits.sign_bias_golden;
     pcmd->dw1.sign_bias_alt_ref = pic_param->pic_flags.bits.sign_bias_alternate;
@@ -5935,7 +5935,6 @@ i965_encoder_vp8_pak_pipeline_prepare(VADriverContextP ctx,
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     struct i965_coded_buffer_segment *coded_buffer_segment;
-    VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     dri_bo *bo;
     int i;
 
@@ -5943,13 +5942,8 @@ i965_encoder_vp8_pak_pipeline_prepare(VADriverContextP ctx,
     obj_surface = encode_state->reconstructed_object;
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
-    if (pic_param->loop_filter_level[0] == 0) {
-        PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, obj_surface->bo, 1);
-        PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, NULL, 0);
-    } else {
-        PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, NULL, 0);
-        PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, obj_surface->bo, 1);
-    }
+    PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, obj_surface->bo, 1);
+    PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, obj_surface->bo, 1);
 
     /* set vp8 reference frames */
     for (i = 0; i < ARRAY_ELEMS(vp8_context->reference_surfaces); i++) {

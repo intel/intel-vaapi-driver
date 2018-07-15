@@ -1,8 +1,8 @@
 # intel-vaapi-driver package version number
 m4_define([intel_vaapi_driver_major_version], [2])
-m4_define([intel_vaapi_driver_minor_version], [1])
-m4_define([intel_vaapi_driver_micro_version], [0])
-m4_define([intel_vaapi_driver_pre_version],   [0])
+m4_define([intel_vaapi_driver_minor_version], [2])
+m4_define([intel_vaapi_driver_micro_version], [1])
+m4_define([intel_vaapi_driver_pre_version],   [1])
 m4_define([intel_vaapi_driver_version],
           [intel_vaapi_driver_major_version.intel_vaapi_driver_minor_version.intel_vaapi_driver_micro_version])
 m4_if(intel_vaapi_driver_pre_version, [0], [], [
@@ -22,11 +22,11 @@ m4_define([wayland_api_version], [1.11.0])
 AC_PREREQ([2.57])
 AC_INIT([intel_vaapi_driver],
         [intel_vaapi_driver_version],
-        [https://github.com/01org/intel-vaapi-driver/issues/new],
+        [https://github.com/intel/intel-vaapi-driver/issues/new],
         [intel-vaapi-driver],
-        [https://github.com/01org/intel-vaapi-driver])
+        [https://github.com/intel/intel-vaapi-driver])
 AC_CONFIG_SRCDIR([Makefile.am])
-AM_INIT_AUTOMAKE([1.9 tar-ustar])
+AM_INIT_AUTOMAKE([1.9 tar-ustar -Wno-portability foreign])
 
 AC_CONFIG_HEADERS([src/config.h])
 
@@ -46,11 +46,6 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])], [
     AM_DEFAULT_VERBOSITY=1
     AC_SUBST(AM_DEFAULT_VERBOSITY)
 ])
-
-AC_ARG_ENABLE(drm,
-    [AC_HELP_STRING([--enable-drm],
-                    [build with VA/DRM API support @<:@default=yes@:>@])],
-    [], [enable_drm="yes"])
 
 AC_ARG_ENABLE(x11,
     [AC_HELP_STRING([--enable-x11],
@@ -87,9 +82,13 @@ AC_CHECK_PROGS([PYTHON2], [python2 python])
 LIBVA_PACKAGE_VERSION=libva_package_version
 AC_SUBST(LIBVA_PACKAGE_VERSION)
 
+AC_SEARCH_LIBS([dlopen], [dl], [], [
+  AC_MSG_ERROR([unable to find the dlopen() function])
+])
+
 dnl Check for recent enough DRM
 LIBDRM_VERSION=libdrm_version
-PKG_CHECK_MODULES([DRM], [libdrm >= $LIBDRM_VERSION])
+PKG_CHECK_MODULES([DRM], [libdrm >= $LIBDRM_VERSION libdrm_intel])
 AC_SUBST(LIBDRM_VERSION)
 
 dnl Check for gen4asm
@@ -104,24 +103,12 @@ AC_PATH_PROG([GIT], [git])
 AM_CONDITIONAL([HAVE_GIT], [test -n "$GIT"])
 
 dnl Check for VA-API
-PKG_CHECK_MODULES(LIBVA_DEPS,     [libva >= va_api_version])
+PKG_CHECK_MODULES(LIBVA_DEPS, [libva >= va_api_version])
 
-dnl Check for VA/DRM API
-USE_DRM="$enable_drm"
-if test "$USE_DRM" = "yes"; then
-    PKG_CHECK_MODULES(LIBVA_DRM_DEPS, [libva-drm],
-      [AC_DEFINE([HAVE_VA_DRM], [1], [Defined to 1 if VA/DRM API is enabled])],
-      [USE_DRM="no"])
-
-    # Check for <drm_fourcc.h>
-    if test "$USE_DRM" = "yes"; then
-        saved_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $DRM_CFLAGS"
-        AC_CHECK_HEADERS([drm_fourcc.h], [:], [USE_DRM="no"])
-        CPPFLAGS="$saved_CPPFLAGS"
-    fi
+dnl Check for VA/DRM API only if tests are enabled
+if test "$enable_tests" = "yes"; then
+    PKG_CHECK_MODULES(LIBVA_DRM_DEPS, [libva-drm >= va_api_version])
 fi
-AM_CONDITIONAL(USE_DRM, test "$USE_DRM" = "yes")
 
 if test "$enable_hybrid_codec" = "yes"; then
     AC_DEFINE([HAVE_HYBRID_CODEC], [1], [Defined to 1 if hybrid codec is needed])
@@ -135,27 +122,14 @@ VA_MINOR_VERSION=`echo "$VA_VERSION" | cut -d'.' -f2`
 VA_MICRO_VERSION=`echo "$VA_VERSION" | cut -d'.' -f3`
 VA_VERSION_STR="$VA_VERSION"
 
-va_full_version_int=`expr ${VA_MAJOR_VERSION:-0} "*" 1000000 + \
-                          ${VA_MINOR_VERSION:-0} "*" 10000   + \
-                          ${VA_MICRO_VERSION:-0} "*" 100     + \
-                          0`
 VA_DRIVER_INIT_FUNC="__vaDriverInit_${VA_MAJOR_VERSION}_${VA_MINOR_VERSION}"
 AC_DEFINE_UNQUOTED([VA_DRIVER_INIT_FUNC], [$VA_DRIVER_INIT_FUNC],
     [Define driver entry-point])
 
-dnl Check for VA/DRM API
+dnl Check for VA/X11 API
 USE_X11="$enable_x11"
-
-dnl Check for X11
-if test "$enable_x11" = "yes"; then
-    USE_X11="yes"
-    PKG_CHECK_MODULES([X11],    [x11],    [:], [USE_X11="no"])
-    PKG_CHECK_MODULES([XEXT],   [xext],   [:], [USE_X11="no"])
-    PKG_CHECK_MODULES([XFIXES], [xfixes], [:], [USE_X11="no"])
-fi
-
 if test "$USE_X11" = "yes"; then
-    PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11],
+    PKG_CHECK_MODULES(LIBVA_X11_DEPS, [libva-x11 >= va_api_version],
       [AC_DEFINE([HAVE_VA_X11], [1], [Defined to 1 if VA/X11 API is enabled])],
       [USE_X11="no"])
 fi
@@ -173,41 +147,24 @@ fi
 AC_MSG_RESULT([$LIBVA_DRIVERS_PATH])
 AC_SUBST(LIBVA_DRIVERS_PATH)
 
-# Check for EGL
-if test "$enable_wayland" = "yes"; then
-    enable_egl="yes"
-fi
-
-USE_EGL="no"
-if test "$enable_egl" = "yes"; then
-    PKG_CHECK_MODULES([EGL], [egl], [USE_EGL="yes"], [USE_EGL="no"])
-    saved_CPPFLAGS="$CPPFLAGS"
-    saved_LIBS="$LIBS"
-    CPPFLAGS="$CPPFLAGS $EGL_CFLAGS"
-    LIBS="$LIBS $EGL_LIBS"
-    AC_CHECK_HEADERS([EGL/egl.h], [:], [USE_EGL="no"])
-    AC_CHECK_LIB([EGL], [eglGetDisplay], [:], [USE_EGL="no"])
-    CPPFLAGS="$saved_CPPFLAGS"
-    LIBS="$saved_LIBS"
-fi
-AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
-
 # Check for Wayland
 USE_WAYLAND="no"
 if test "$enable_wayland" = "yes"; then
-    PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland],
-        [USE_WAYLAND="yes"], [:])
-
+    PKG_CHECK_MODULES([LIBVA_WAYLAND_DEPS], [libva-wayland >= va_api_version],
+        [
+          PKG_CHECK_MODULES([WAYLAND_CLIENT],
+             [wayland-client >= wayland_api_version],
+             [
+                USE_WAYLAND="yes"
+                WAYLAND_PREFIX=`$PKG_CONFIG --variable=prefix wayland-client`
+                AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner],
+                    [USE_ WAYLAND="no"],
+                    [${WAYLAND_PREFIX}/bin$PATH_SEPARATOR$PATH])
+             ], [:])
+        ], [:])
     if test "$USE_WAYLAND" = "yes"; then
-
-        PKG_CHECK_MODULES([WAYLAND_CLIENT], [wayland-client >= wayland_api_version],
-        [INCLUDES="$INCLUDES $WAYLAND_CLIENT_CFLAGS"], [:])
-        WAYLAND_PREFIX=`$PKG_CONFIG --variable=prefix wayland-client`
-        AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner],,
-                     [${WAYLAND_PREFIX}/bin$PATH_SEPARATOR$PATH])
-
-        AC_DEFINE([HAVE_VA_WAYLAND], [1],
-                  [Defined to 1 if VA/Wayland API is enabled])
+      AC_DEFINE([HAVE_VA_WAYLAND], [1],
+        [Defined to 1 if VA/Wayland API is enabled])
     fi
 fi
 AM_CONDITIONAL(USE_WAYLAND, test "$USE_WAYLAND" = "yes")
@@ -238,8 +195,7 @@ AC_OUTPUT([
 ])
 
 dnl Print summary
-BACKENDS=""
-AS_IF([test "$USE_DRM" = "yes"], [BACKENDS="$BACKENDS drm"])
+BACKENDS="drm"
 AS_IF([test "$USE_X11" = "yes"], [BACKENDS="$BACKENDS x11"])
 AS_IF([test "$USE_WAYLAND" = "yes"], [BACKENDS="$BACKENDS wayland"])
 

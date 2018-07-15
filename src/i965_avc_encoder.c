@@ -1521,49 +1521,49 @@ gen9_init_vfe_scoreboard_avc(struct i965_gpe_context *gpe_context,
         gpe_context->vfe_desc5.scoreboard0.mask = 0x0F;
         gpe_context->vfe_desc5.scoreboard0.type = 1;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0x0;
-        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y0 = -1;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
-        gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xE;
+        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y1 = -2;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0x3;
+        gpe_context->vfe_desc6.scoreboard1.delta_x2 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 3;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0x1;
+        gpe_context->vfe_desc6.scoreboard1.delta_x3 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 1;
     } else {
         // Scoreboard 0
-        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0x0;
+        gpe_context->vfe_desc6.scoreboard1.delta_x0 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0;
 
         // Scoreboard 1
-        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
-        gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y1 = -1;
 
         // Scoreboard 2
-        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0x1;
-        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y2 = -1;
 
         // Scoreboard 3
-        gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x3 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y3 = -1;
 
         // Scoreboard 4
-        gpe_context->vfe_desc7.scoreboard2.delta_x4 = 0xF;
-        gpe_context->vfe_desc7.scoreboard2.delta_y4 = 0x1;
+        gpe_context->vfe_desc7.scoreboard2.delta_x4 = -1;
+        gpe_context->vfe_desc7.scoreboard2.delta_y4 = 1;
 
         // Scoreboard 5
-        gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0x0;
-        gpe_context->vfe_desc7.scoreboard2.delta_y5 = 0xE;
+        gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0;
+        gpe_context->vfe_desc7.scoreboard2.delta_y5 = -2;
 
         // Scoreboard 6
-        gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0x1;
-        gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+        gpe_context->vfe_desc7.scoreboard2.delta_x6 = 1;
+        gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
 
         // Scoreboard 7
-        gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0xF;
-        gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+        gpe_context->vfe_desc7.scoreboard2.delta_x6 = -1;
+        gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
     }
 }
 /*
@@ -2225,9 +2225,7 @@ gen95_avc_calc_lambda_table(VADriverContextP ctx,
     struct encoder_vme_mfc_context * vme_context = (struct encoder_vme_mfc_context *)encoder_context->vme_context;
     struct generic_enc_codec_state * generic_state = (struct generic_enc_codec_state *)vme_context->generic_enc_state;
     struct avc_enc_state * avc_state = (struct avc_enc_state *)vme_context->private_enc_state;
-    VAEncPictureParameterBufferH264  *pic_param = avc_state->pic_param;
     unsigned int value, inter, intra;
-    unsigned int rounding_value = 0;
     unsigned int size = 0;
     int i = 0;
     int col = 0;
@@ -2258,37 +2256,11 @@ gen95_avc_calc_lambda_table(VADriverContextP ctx,
             value = *(lambda_table + i * 2 + col);
             intra = value >> 16;
 
-            if (intra < GEN95_AVC_MAX_LAMBDA) {
-                if (intra == 0xfffa) {
-                    intra = 0xf000 + GEN95_AVC_DEFAULT_TRELLIS_QUANT_INTRA_ROUNDING;
-                }
-            }
-
             intra = intra << 16;
             inter = value & 0xffff;
 
             if (inter < GEN95_AVC_MAX_LAMBDA) {
-                if (inter == 0xffef) {
-                    if (generic_state->frame_type == SLICE_TYPE_P) {
-                        if (avc_state->rounding_inter_p == AVC_INVALID_ROUNDING_VALUE)
-                            rounding_value = gen9_avc_inter_rounding_p[generic_state->preset];
-                        else
-                            rounding_value = avc_state->rounding_inter_p;
-                    } else if (generic_state->frame_type == SLICE_TYPE_B) {
-                        if (pic_param->pic_fields.bits.reference_pic_flag) {
-                            if (avc_state->rounding_inter_b_ref == AVC_INVALID_ROUNDING_VALUE)
-                                rounding_value = gen9_avc_inter_rounding_b_ref[generic_state->preset];
-                            else
-                                rounding_value = avc_state->rounding_inter_b_ref;
-                        } else {
-                            if (avc_state->rounding_inter_b == AVC_INVALID_ROUNDING_VALUE)
-                                rounding_value = gen9_avc_inter_rounding_b[generic_state->preset];
-                            else
-                                rounding_value = avc_state->rounding_inter_b;
-                        }
-                    }
-                }
-                inter = 0xf000 + rounding_value;
+                inter = 0xf000;
             }
             *(lambda_table + i * 2 + col) = intra + inter;
         }
@@ -2592,7 +2564,6 @@ gen9_avc_set_curbe_brc_init_reset(VADriverContextP ctx,
 
     //VUI
     if (seq_param->vui_parameters_present_flag && generic_state->internal_rate_mode != INTEL_BRC_AVBR) {
-        cmd->dw4.max_bit_rate = cmd->dw4.max_bit_rate;
         if (generic_state->internal_rate_mode == VA_RC_CBR) {
             cmd->dw3.average_bit_rate = cmd->dw4.max_bit_rate;
 
@@ -7874,7 +7845,8 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     avc_state->pic_param = (VAEncPictureParameterBufferH264 *)encode_state->pic_param_ext->buffer;
 
     if (fei_enabled &&
-        encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl]) {
+        encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl][0] &&
+        encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl][0]->buffer) {
         fei_misc_param = (VAEncMiscParameterBuffer*)encode_state->misc_param[VAEncMiscParameterTypeFEIFrameControl][0]->buffer;
         avc_state->fei_framectl_param =
             (VAEncMiscParameterFEIFrameControlH264 *)fei_misc_param->data;
