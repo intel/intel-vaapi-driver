@@ -5119,7 +5119,7 @@ i965_encoder_vp8_vme_var_init(VADriverContextP ctx,
     vp8_context->brc_distortion_buffer_supported = 1;
     vp8_context->brc_constant_buffer_supported = 1;
     vp8_context->repak_supported = 1;
-    vp8_context->multiple_pass_brc_supported = 0;
+    vp8_context->multiple_pass_brc_supported = 1;
     vp8_context->is_first_frame = 1;
     vp8_context->is_first_two_frame = 1;
     vp8_context->gop_size = 30;
