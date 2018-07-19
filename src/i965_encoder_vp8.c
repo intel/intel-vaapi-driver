@@ -5502,6 +5502,7 @@ i965_encoder_vp8_pak_insert_batch_buffers(VADriverContextP ctx, struct intel_enc
     }
 
     batch_param.bo = vp8_context->mb_coded_buffer.bo;
+    batch_param.offset = 0;
     gpe->mi_batch_buffer_start(ctx, batch, &batch_param);
 }
 
