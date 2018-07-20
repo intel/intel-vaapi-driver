@@ -1367,12 +1367,6 @@ i965_encoder_vp8_read_pak_statistics(VADriverContextP ctx,
     mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFC_BITSTREAM_BYTECOUNT_FRAME_REG_OFFSET;
     gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
 
-    if (ipass == 0) {
-        mi_store_register_mem_param.offset = sizeof(unsigned int) * 4;
-        mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_CUMULATIVE_DQ_INDEX01_REG_OFFSET;
-        gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
-    }
-
     mi_store_register_mem_param.offset = sizeof(unsigned int) * 5;
     mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_DQ_INDEX_REG_OFFSET;
     gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
@@ -1380,6 +1374,12 @@ i965_encoder_vp8_read_pak_statistics(VADriverContextP ctx,
     mi_store_register_mem_param.offset = sizeof(unsigned int) * 6;
     mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_D_LOOP_FILTER_REG_OFFSET;
     gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
+
+    if (ipass == 0) {
+        mi_store_register_mem_param.offset = sizeof(unsigned int) * 4;
+        mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_CUMULATIVE_DQ_INDEX01_REG_OFFSET;
+        gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
+    }
 
     mi_store_register_mem_param.offset = sizeof(unsigned int) * 9;
     mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_CUMULATIVE_DQ_INDEX01_REG_OFFSET;
