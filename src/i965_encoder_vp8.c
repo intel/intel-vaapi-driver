@@ -2355,8 +2355,8 @@ i965_encoder_vp8_vme_brc_init_reset_set_curbe(VADriverContextP ctx,
     bps_ratio = input_bits_per_frame / ((double)(pcmd->dw2.buf_size_in_bits) / 30);
     bps_ratio = (bps_ratio < 0.1) ? 0.1 : (bps_ratio > 3.5) ? 3.5 : bps_ratio;
 
-    pcmd->dw9.frame_width_in_bytes = vp8_context->frame_width;
-    pcmd->dw10.frame_height_in_bytes = vp8_context->frame_height;
+    pcmd->dw9.frame_width_in_bytes = vp8_context->picture_width;
+    pcmd->dw10.frame_height_in_bytes = vp8_context->picture_height;
     pcmd->dw10.avbr_accuracy = 30;
     pcmd->dw11.avbr_convergence = 150;
     pcmd->dw11.min_qp = pic_param->clamp_qindex_low;
