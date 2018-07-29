@@ -35,8 +35,11 @@ AM_CPPFLAGS = \
 driver_cflags = \
 	-Wall			\
 	-fvisibility=hidden	\
-	-fstack-protector	\
 	$(NULL)
+
+if USE_SSP
+driver_cflags += -fstack-protector
+endif
 
 driver_ldflags = \
 	-avoid-version		\
