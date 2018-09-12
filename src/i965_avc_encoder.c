@@ -566,8 +566,6 @@ gen9_avc_update_misc_parameters(VADriverContextP ctx,
     /* brc */
     generic_state->max_bit_rate = (encoder_context->brc.bits_per_second[0] + 1000 - 1) / 1000;
 
-    generic_state->brc_need_reset = encoder_context->brc.need_reset;
-
     if (generic_state->internal_rate_mode == VA_RC_CBR) {
         generic_state->min_bit_rate = generic_state->max_bit_rate;
         generic_state->mb_brc_enabled = encoder_context->brc.mb_rate_control[0] == 1;
@@ -7883,6 +7881,8 @@ gen9_avc_update_parameters(VADriverContextP ctx,
         avc_state->transform_8x8_mode_enable = 0;
 
     /* rc init*/
+    generic_state->brc_need_reset = (generic_state->brc_inited && encoder_context->brc.need_reset);
+
     if (generic_state->brc_enabled && (!generic_state->brc_inited || generic_state->brc_need_reset)) {
         generic_state->target_bit_rate = ALIGN(seq_param->bits_per_second, 1000) / 1000;
         generic_state->init_vbv_buffer_fullness_in_bit = seq_param->bits_per_second;
@@ -7898,7 +7898,7 @@ gen9_avc_update_parameters(VADriverContextP ctx,
         generic_state->min_bit_rate = generic_state->target_bit_rate;
     }
 
-    if (generic_state->frame_type == SLICE_TYPE_I || generic_state->first_frame) {
+    if (generic_state->frame_type == SLICE_TYPE_I || generic_state->first_frame || generic_state->brc_need_reset) {
         gen9_avc_update_misc_parameters(ctx, encode_state, encoder_context);
     }
 
@@ -7908,7 +7908,7 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     }
     generic_state->kernel_mode = gen9_avc_kernel_mode[generic_state->preset];
 
-    if (!generic_state->brc_inited) {
+    if (!generic_state->brc_inited || generic_state->brc_need_reset) {
         generic_state->brc_init_reset_input_bits_per_frame = ((double)(generic_state->max_bit_rate * 1000) * 100) / generic_state->frames_per_100s;;
         generic_state->brc_init_current_target_buf_full_in_bits = generic_state->init_vbv_buffer_fullness_in_bit;
         generic_state->brc_init_reset_buf_size_in_bits = generic_state->vbv_buffer_size_in_bit;
