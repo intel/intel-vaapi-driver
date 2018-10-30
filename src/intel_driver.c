@@ -56,6 +56,51 @@ uint32_t g_intel_debug_option_flags = 0;
 #define LOCAL_I915_PARAM_EU_TOTAL 34
 #endif
 
+bool intel_batchbuffer_configure_watchdog(int fd, unsigned int gem_ctx_id, int flag)
+{
+    unsigned threshold[5];
+    int ring_flag;
+
+    ring_flag = flag & I915_EXEC_RING_MASK;
+
+    struct drm_i915_gem_context_param cp = {
+        .ctx_id = gem_ctx_id,
+        .param = LOCAL_I915_CONTEXT_PARAM_WATCHDOG,
+        .value = (uint64_t)&threshold,
+        .size = sizeof(threshold)
+    };
+
+    memset(threshold, 0, sizeof(threshold));
+
+    /* set watchdog threshold to VCS's engine only */
+    if (ring_flag == I915_EXEC_BSD || ring_flag == LOCAL_I915_EXEC_VCS2) {
+        threshold[VIDEO_DECODE_CLASS] = 1200;
+    }
+
+    if (drmIoctl(fd, DRM_IOCTL_I915_GEM_CONTEXT_SETPARAM, &cp))
+        return false;
+
+    return true;
+}
+
+bool kernel_has_gpu_watchdog_support(struct intel_driver_data *intel)
+{
+    struct drm_i915_gem_context_param cp;
+    uint32_t threshold[16];
+
+    memset(&cp, 0, sizeof(cp));
+    cp.ctx_id = intel->gem_ctx_id;
+    cp.param = LOCAL_I915_CONTEXT_PARAM_WATCHDOG;
+    memset(threshold, 0, sizeof(threshold));
+    cp.size = sizeof(threshold);
+    cp.value = (uint64_t)threshold;
+
+    if (drmIoctl(intel->fd, DRM_IOCTL_I915_GEM_CONTEXT_GETPARAM, &cp))
+        return false;
+
+    return true;
+}
+
 static Bool
 intel_driver_get_param(struct intel_driver_data *intel, int param, int *value)
 {

@@ -30,9 +30,9 @@
 #include <assert.h>
 
 #include "intel_batchbuffer.h"
+#include "i965_drv_video.h"
 
 #define MAX_BATCH_SIZE      0x400000
-
 
 #define LOCAL_I915_EXEC_BSD_MASK        (3<<13)
 #define LOCAL_I915_EXEC_BSD_DEFAULT     (0<<13) /* default ping-pong mode */
@@ -73,7 +73,6 @@ intel_batchbuffer_space(struct intel_batchbuffer *batch)
     return (batch->size - BATCH_RESERVED) - (batch->ptr - batch->map);
 }
 
-
 struct intel_batchbuffer *
 intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size)
 {
@@ -98,7 +97,7 @@ intel_batchbuffer_new(struct intel_driver_data *intel, int flag, int buffer_size
     assert(batch);
     batch->intel = intel;
     batch->flag = flag;
-    batch->run = drm_intel_bo_mrb_exec;
+    batch->run = drm_intel_gem_bo_fence_exec;
 
     if (IS_GEN6(intel->device_info) &&
         flag == I915_EXEC_RENDER)
@@ -130,6 +129,7 @@ void
 intel_batchbuffer_flush(struct intel_batchbuffer *batch)
 {
     unsigned int used = batch->ptr - batch->map;
+    int ring_flag = batch->flag & I915_EXEC_RING_MASK;
 
     if (used == 0) {
         return;
@@ -144,7 +144,16 @@ intel_batchbuffer_flush(struct intel_batchbuffer *batch)
     batch->ptr += 4;
     dri_bo_unmap(batch->buffer);
     used = batch->ptr - batch->map;
-    batch->run(batch->buffer, used, 0, 0, 0, batch->flag);
+
+    if (batch->intel->has_watchdog)
+        intel_batchbuffer_configure_watchdog(batch->intel->fd, batch->intel->gem_ctx_id, batch->flag);
+
+    /* FIXME: Add BSD2 ring on supported platforms */
+    if (ring_flag == I915_EXEC_BSD)
+        batch->flag |= LOCAL_I915_EXEC_BSD_RING0;
+
+    batch->run(batch->buffer, batch->intel->gem_context, used, -1, NULL, batch->flag);
+
     intel_batchbuffer_reset(batch, batch->size);
 }
 

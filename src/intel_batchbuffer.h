@@ -20,9 +20,13 @@ struct intel_batchbuffer {
     int emit_total;
     unsigned char *emit_start;
 
-    int (*run)(drm_intel_bo *bo, int used,
-               drm_clip_rect_t *cliprects, int num_cliprects,
-               int DR4, unsigned int ring_flag);
+    /* Media reset timeout for this buffer in ms */
+    unsigned long watchdog_threshold;
+
+    int (*run)(drm_intel_bo *bo,
+               drm_intel_context *ctx,
+               int used, int in_fence,
+               int *out_fence, unsigned int flags);
 
     /* Used for Sandybdrige workaround */
     dri_bo *wa_render_bo;

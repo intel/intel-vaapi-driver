@@ -547,6 +547,9 @@ struct i965_driver_data {
     VADisplayAttribute *saturation_attrib;
     VAContextID current_context_id;
 
+    drm_intel_bufmgr *bufmgr;
+    drm_intel_context *gem_context;
+
     /* VA/DRI (X11) specific data */
     struct va_dri_output *dri_output;
 

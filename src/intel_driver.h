@@ -111,6 +111,18 @@ extern uint32_t g_intel_debug_option_flags;
 #define VA_INTEL_DEBUG_OPTION_BENCH     (1 << 1)
 #define VA_INTEL_DEBUG_OPTION_DUMP_AUB  (1 << 2)
 
+#define LOCAL_I915_CONTEXT_PARAM_WATCHDOG 0x7
+#define LOCAL_I915_EXEC_VEBOX             (4<<0)
+#define LOCAL_I915_EXEC_VCS2              (5<<0)
+
+typedef enum _gen_gpu_class_engine {
+    RENDER_CLASS = 0,
+    VIDEO_DECODE_CLASS,
+    VIDEO_ENHANCEMENT_CLASS,
+    COPY_ENGINE_CLASS,
+    GEN_GPU_ENGINE_NUMBER
+} _gen_gpu_class_engine, *pgen_gpu_class_engine;
+
 #define ASSERT_RET(value, fail_ret) do {    \
         if (!(value)) {                     \
             if (g_intel_debug_option_flags & VA_INTEL_DEBUG_OPTION_ASSERT)       \
@@ -183,6 +195,8 @@ struct intel_driver_data {
     int locked;
 
     dri_bufmgr *bufmgr;
+    unsigned int gem_ctx_id;
+    drm_intel_context *gem_context;
 
     unsigned int has_exec2  : 1; /* Flag: has execbuffer2? */
     unsigned int has_bsd    : 1; /* Flag: has bitstream decoder for H.264? */
@@ -190,6 +204,7 @@ struct intel_driver_data {
     unsigned int has_vebox  : 1; /* Flag: has VEBOX unit */
     unsigned int has_bsd2   : 1; /* Flag: has the second BSD video ring unit */
     unsigned int has_huc    : 1; /* Flag: has a fully loaded HuC firmware? */
+    unsigned int has_watchdog : 1; /* Flag: whether kmd has GPU watchdog support? */
 
     int eu_total;
 
@@ -197,8 +212,16 @@ struct intel_driver_data {
     unsigned int mocs_state;
 };
 
+/* FIXME: this struct is currently private and part of libdrm */
+struct _drm_intel_context {
+    unsigned int ctx_id;
+    struct _drm_intel_bufmgr *bufmgr;
+};
+
 bool intel_driver_init(VADriverContextP ctx);
 void intel_driver_terminate(VADriverContextP ctx);
+bool intel_batchbuffer_configure_watchdog(int fd, unsigned int ctx_id, int flag);
+bool kernel_has_gpu_watchdog_support(struct intel_driver_data *intel);
 
 static INLINE struct intel_driver_data *
 intel_driver_data(VADriverContextP ctx)
@@ -242,5 +265,6 @@ struct intel_region {
 #define IS_GLK(device_info)             (device_info->is_glklake)
 
 #define IS_GEN10(device_info)           (device_info->gen == 10)
+
 
 #endif /* _INTEL_DRIVER_H_ */

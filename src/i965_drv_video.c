@@ -2553,6 +2553,7 @@ i965_CreateContext(VADriverContextP ctx,
                    VAContextID *context)                /* out */
 {
     struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct intel_driver_data *intel = intel_driver_data(ctx);
     struct object_config *obj_config = CONFIG(config_id);
     struct object_context *obj_context = NULL;
     VAConfigAttrib *attrib;
@@ -2742,6 +2743,15 @@ i965_CreateContext(VADriverContextP ctx,
 
     i965->current_context_id = contextID;
 
+    i965->bufmgr = drm_intel_bufmgr_gem_init(intel->fd, 4096);
+
+    i965->gem_context = drm_intel_gem_context_create(i965->bufmgr);
+    intel->gem_context = i965->gem_context;
+    intel->gem_ctx_id = i965->gem_context->ctx_id;
+
+    if (kernel_has_gpu_watchdog_support(&i965->intel))
+        i965->intel.has_watchdog = 1;
+
     return vaStatus;
 }
 
@@ -2765,6 +2775,10 @@ i965_DestroyContext(VADriverContextP ctx, VAContextID context)
 
         obj_context->wrapper_context = VA_INVALID_ID;
     }
+
+    drm_intel_gem_context_destroy(i965->gem_context);
+
+    i965->intel.has_watchdog = 0;
 
     i965_destroy_context(&i965->context_heap, (struct object_base *)obj_context);
 
