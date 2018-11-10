@@ -327,7 +327,9 @@ gen75_proc_picture(VADriverContextP ctx,
             proc_ctx->surface_render_output_object = stage1_dst_surf;
         }
 
-        gen75_vpp_vebox(ctx, proc_ctx);
+        status = gen75_vpp_vebox(ctx, proc_ctx);
+        if (status != VA_STATUS_SUCCESS)
+            goto error;
     }
 
     if ((vpp_stage3 == 1) && (vpp_stage2 == 1)) {
@@ -388,7 +390,9 @@ gen75_proc_picture(VADriverContextP ctx,
                 filter->type == VAProcFilterSkinToneEnhancement    ||
                 filter->type == VAProcFilterSharpening             ||
                 filter->type == VAProcFilterColorBalance) {
-                gen75_vpp_vebox(ctx, proc_ctx);
+                status = gen75_vpp_vebox(ctx, proc_ctx);
+                if (status != VA_STATUS_SUCCESS)
+                    goto error;
             }
         } else if (pipeline_param->num_filters >= 2) {
             unsigned int i = 0;
@@ -413,7 +417,9 @@ gen75_proc_picture(VADriverContextP ctx,
                     assert(0);
                 }
             }
-            gen75_vpp_vebox(ctx, proc_ctx);
+            status = gen75_vpp_vebox(ctx, proc_ctx);
+            if (status != VA_STATUS_SUCCESS)
+                goto error;
         }
     }
 
@@ -431,7 +437,9 @@ gen75_proc_picture(VADriverContextP ctx,
             proc_ctx->surface_render_output_object = obj_dst_surf;
         }
 
-        gen75_vpp_vebox(ctx, proc_ctx);
+        status = gen75_vpp_vebox(ctx, proc_ctx);
+        if (status != VA_STATUS_SUCCESS)
+            goto error;
     }
 
     if (num_tmp_surfaces)
