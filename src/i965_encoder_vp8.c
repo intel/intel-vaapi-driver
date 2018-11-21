@@ -1367,12 +1367,6 @@ i965_encoder_vp8_read_pak_statistics(VADriverContextP ctx,
     mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFC_BITSTREAM_BYTECOUNT_FRAME_REG_OFFSET;
     gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
 
-    if (ipass == 0) {
-        mi_store_register_mem_param.offset = sizeof(unsigned int) * 4;
-        mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_CUMULATIVE_DQ_INDEX01_REG_OFFSET;
-        gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
-    }
-
     mi_store_register_mem_param.offset = sizeof(unsigned int) * 5;
     mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_DQ_INDEX_REG_OFFSET;
     gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
@@ -1380,6 +1374,12 @@ i965_encoder_vp8_read_pak_statistics(VADriverContextP ctx,
     mi_store_register_mem_param.offset = sizeof(unsigned int) * 6;
     mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_D_LOOP_FILTER_REG_OFFSET;
     gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
+
+    if (ipass == 0) {
+        mi_store_register_mem_param.offset = sizeof(unsigned int) * 4;
+        mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_CUMULATIVE_DQ_INDEX01_REG_OFFSET;
+        gpe->mi_store_register_mem(ctx, batch, &mi_store_register_mem_param);
+    }
 
     mi_store_register_mem_param.offset = sizeof(unsigned int) * 9;
     mi_store_register_mem_param.mmio_offset = vp8_context->vdbox_mmio_base + VP8_MFX_BRC_CUMULATIVE_DQ_INDEX01_REG_OFFSET;
@@ -1448,34 +1448,34 @@ i965_encoder_vp8_gpe_context_vfe_scoreboard_init(struct i965_gpe_context *gpe_co
     gpe_context->vfe_desc5.scoreboard0.enable = scoreboard_params->enable;
 
     // Scoreboard 0
-    gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0xF;
-    gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0x0;
+    gpe_context->vfe_desc6.scoreboard1.delta_x0 = -1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0;
 
     // Scoreboard 1
-    gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
-    gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0;
+    gpe_context->vfe_desc6.scoreboard1.delta_y1 = -1;
 
     // Scoreboard 2
-    gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0x1;
-    gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x2 = 1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y2 = -1;
 
     // Scoreboard 3
-    gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
-    gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0xF;
+    gpe_context->vfe_desc6.scoreboard1.delta_x3 = -1;
+    gpe_context->vfe_desc6.scoreboard1.delta_y3 = -1;
 
     // Scoreboard 4
-    gpe_context->vfe_desc7.scoreboard2.delta_x4 = 0xF;
-    gpe_context->vfe_desc7.scoreboard2.delta_y4 = 0x1;
+    gpe_context->vfe_desc7.scoreboard2.delta_x4 = -1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y4 = 1;
 
     // Scoreboard 5
-    gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0x0;
-    gpe_context->vfe_desc7.scoreboard2.delta_y5 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0;
+    gpe_context->vfe_desc7.scoreboard2.delta_y5 = -2;
     // Scoreboard 6
-    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0x1;
-    gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
     // Scoreboard 7
-    gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0xF;
-    gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+    gpe_context->vfe_desc7.scoreboard2.delta_x6 = -1;
+    gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
 }
 
 static void
@@ -2355,8 +2355,8 @@ i965_encoder_vp8_vme_brc_init_reset_set_curbe(VADriverContextP ctx,
     bps_ratio = input_bits_per_frame / ((double)(pcmd->dw2.buf_size_in_bits) / 30);
     bps_ratio = (bps_ratio < 0.1) ? 0.1 : (bps_ratio > 3.5) ? 3.5 : bps_ratio;
 
-    pcmd->dw9.frame_width_in_bytes = vp8_context->frame_width;
-    pcmd->dw10.frame_height_in_bytes = vp8_context->frame_height;
+    pcmd->dw9.frame_width_in_bytes = vp8_context->picture_width;
+    pcmd->dw10.frame_height_in_bytes = vp8_context->picture_height;
     pcmd->dw10.avbr_accuracy = 30;
     pcmd->dw11.avbr_convergence = 150;
     pcmd->dw11.min_qp = pic_param->clamp_qindex_low;
@@ -3001,7 +3001,7 @@ i965_encoder_vp8_vme_me(VADriverContextP ctx,
 #define QUANT_INDEX(index, q_index, q_index_delta)                      \
     do {                                                                \
         index = quant_param->quantization_index[q_index] + quant_param->quantization_index_delta[q_index_delta]; \
-        index = CLAMP(0, MAX_QP_VP8, index);                            \
+        index = MIN(MAX_QP_VP8, index);                            \
     } while (0)
 
 static void
@@ -4373,8 +4373,8 @@ i965_encoder_vp8_vme_mpu_set_curbe(VADriverContextP ctx,
     pcmd->dw1.sharpness_level = pic_param->sharpness_level;
     pcmd->dw1.loop_filter_adjustment_on = pic_param->pic_flags.bits.loop_filter_adj_enable;
     pcmd->dw1.mb_no_coeffiscient_skip = pic_param->pic_flags.bits.mb_no_coeff_skip;
-    pcmd->dw1.golden_reference_copy_flag = pic_param->pic_flags.bits.copy_buffer_to_golden;
-    pcmd->dw1.alternate_reference_copy_flag = pic_param->pic_flags.bits.copy_buffer_to_alternate;
+    pcmd->dw1.golden_reference_copy_flag = ((pic_param->pic_flags.bits.refresh_golden_frame == 1) ? 3 : pic_param->pic_flags.bits.copy_buffer_to_golden);
+    pcmd->dw1.alternate_reference_copy_flag = ((pic_param->pic_flags.bits.refresh_alternate_frame == 1) ? 3 : pic_param->pic_flags.bits.copy_buffer_to_alternate);
     pcmd->dw1.last_frame_update = pic_param->pic_flags.bits.refresh_last;
     pcmd->dw1.sign_bias_golden = pic_param->pic_flags.bits.sign_bias_golden;
     pcmd->dw1.sign_bias_alt_ref = pic_param->pic_flags.bits.sign_bias_alternate;
@@ -5119,7 +5119,7 @@ i965_encoder_vp8_vme_var_init(VADriverContextP ctx,
     vp8_context->brc_distortion_buffer_supported = 1;
     vp8_context->brc_constant_buffer_supported = 1;
     vp8_context->repak_supported = 1;
-    vp8_context->multiple_pass_brc_supported = 0;
+    vp8_context->multiple_pass_brc_supported = 1;
     vp8_context->is_first_frame = 1;
     vp8_context->is_first_two_frame = 1;
     vp8_context->gop_size = 30;
@@ -5502,6 +5502,7 @@ i965_encoder_vp8_pak_insert_batch_buffers(VADriverContextP ctx, struct intel_enc
     }
 
     batch_param.bo = vp8_context->mb_coded_buffer.bo;
+    batch_param.offset = 0;
     gpe->mi_batch_buffer_start(ctx, batch, &batch_param);
 }
 
@@ -5935,7 +5936,6 @@ i965_encoder_vp8_pak_pipeline_prepare(VADriverContextP ctx,
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     struct i965_coded_buffer_segment *coded_buffer_segment;
-    VAEncPictureParameterBufferVP8 *pic_param = (VAEncPictureParameterBufferVP8 *)encode_state->pic_param_ext->buffer;
     dri_bo *bo;
     int i;
 
@@ -5943,13 +5943,8 @@ i965_encoder_vp8_pak_pipeline_prepare(VADriverContextP ctx,
     obj_surface = encode_state->reconstructed_object;
     i965_check_alloc_surface_bo(ctx, obj_surface, 1, VA_FOURCC_NV12, SUBSAMPLE_YUV420);
 
-    if (pic_param->loop_filter_level[0] == 0) {
-        PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, obj_surface->bo, 1);
-        PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, NULL, 0);
-    } else {
-        PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, NULL, 0);
-        PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, obj_surface->bo, 1);
-    }
+    PAK_REFERENCE_BO(vp8_context->pre_deblocking_output.bo, obj_surface->bo, 1);
+    PAK_REFERENCE_BO(vp8_context->post_deblocking_output.bo, obj_surface->bo, 1);
 
     /* set vp8 reference frames */
     for (i = 0; i < ARRAY_ELEMS(vp8_context->reference_surfaces); i++) {

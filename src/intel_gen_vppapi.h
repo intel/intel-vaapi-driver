@@ -37,15 +37,6 @@ struct i965_surface;
 struct i965_post_processing_context;
 */
 
-extern VAStatus
-gen9_p010_scaling_post_processing(
-    VADriverContextP   ctx,
-    struct i965_post_processing_context *pp_context,
-    struct i965_surface *src_surface,
-    VARectangle *src_rect,
-    struct i965_surface *dst_surface,
-    VARectangle *dst_rect);
-
 VAStatus
 intel_common_scaling_post_processing(VADriverContextP ctx,
                                      struct i965_post_processing_context *pp_context,
@@ -53,5 +44,11 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
                                      const VARectangle *src_rect,
                                      struct i965_surface *dst_surface,
                                      const VARectangle *dst_rect);
+
+void
+intel_common_clear_surface(VADriverContextP ctx,
+                           struct i965_post_processing_context *pp_context,
+                           const struct object_surface *obj_surface,
+                           unsigned int color);
 
 #endif  // _INTE_GEN_VPPAPI_H_

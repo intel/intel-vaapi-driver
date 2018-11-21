@@ -200,17 +200,17 @@ gen10_hevc_init_vfe_scoreboard(struct i965_gpe_context *gpe_context,
         gpe_context->vfe_desc7.dword = 0;
     } else {
         gpe_context->vfe_desc5.scoreboard0.mask = 0x7F;
-        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0x0;
+        gpe_context->vfe_desc6.scoreboard1.delta_x0 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x1 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y1 = -1;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0x0;
-        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y2 = -1;
 
         gpe_context->vfe_desc6.scoreboard1.delta_x3 = 1;
-        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_y3 = -1;
 
         gpe_context->vfe_desc7.scoreboard2.delta_x4 = 0;
         gpe_context->vfe_desc7.scoreboard2.delta_y4 = 0;
@@ -1000,7 +1000,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_jbq_data_lcu32_surface);
     dw_width = ALIGN(hevc_state->frame_width, 64);
     dw_height = (ALIGN(hevc_state->frame_height, 64) >> 5) * 58;
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_jbq_data_lcu32_surface,
                                                   dw_width, dw_height, dw_width,
@@ -1115,7 +1114,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
     dw_width = ALIGN(dw_width, 64);
     dw_height = ALIGN(hevc_state->frame_height, 64) >> 4;
     dw_height = ALIGN(dw_height, 64);
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_brc_me_dist_surface,
                                                   dw_width, dw_height, dw_width,
@@ -1146,7 +1144,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_brc_intra_dist_surface);
     dw_width = ALIGN(hevc_state->frame_width_4x / 2, 64);
     dw_height = ALIGN(hevc_state->frame_height_4x / 4, 8) * 2;
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_brc_intra_dist_surface,
                                                   dw_width, dw_height, dw_width,
@@ -1188,7 +1185,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
     i965_free_gpe_resource(&vme_context->res_brc_const_data_surface);
     dw_width = ALIGN(GEN10_HEVC_BRC_CONST_SURFACE_WIDTH, 64);
     dw_height = ALIGN(GEN10_HEVC_BRC_CONST_SURFACE_HEIGHT, 32);
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_brc_const_data_surface,
                                                   dw_width, dw_height, dw_width,
@@ -1213,7 +1209,6 @@ gen10_hevc_allocate_enc_resources(VADriverContextP ctx,
 
     dw_width = ALIGN(dw_width, 64);
     dw_height = ALIGN(dw_height, 8);
-    dw_width = dw_width;
     allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
                                                   &vme_context->res_brc_mb_qp_surface,
                                                   dw_width, dw_height, dw_width,
@@ -4549,17 +4544,17 @@ gen10_hevc_mbenc_init_walker_param(struct gen10_hevc_enc_state *hevc_state,
         hw_scoreboard->scoreboard0.enable = hevc_state->use_hw_scoreboard;
         hw_scoreboard->scoreboard0.type = hevc_state->use_hw_non_stalling_scoreboard;
 
-        hw_scoreboard->dw1.scoreboard1.delta_x0 = 0xF;
-        hw_scoreboard->dw1.scoreboard1.delta_y0 = 0x0;
+        hw_scoreboard->dw1.scoreboard1.delta_x0 = -1;
+        hw_scoreboard->dw1.scoreboard1.delta_y0 = 0;
 
-        hw_scoreboard->dw1.scoreboard1.delta_x1 = 0x0;
-        hw_scoreboard->dw1.scoreboard1.delta_y1 = 0xF;
+        hw_scoreboard->dw1.scoreboard1.delta_x1 = 0;
+        hw_scoreboard->dw1.scoreboard1.delta_y1 = -1;
 
         hw_scoreboard->dw1.scoreboard1.delta_x2 = 1;
-        hw_scoreboard->dw1.scoreboard1.delta_y2 = 0xF;
+        hw_scoreboard->dw1.scoreboard1.delta_y2 = -1;
 
-        hw_scoreboard->dw1.scoreboard1.delta_x3 = 0xF;
-        hw_scoreboard->dw1.scoreboard1.delta_y3 = 0xF;
+        hw_scoreboard->dw1.scoreboard1.delta_x3 = -1;
+        hw_scoreboard->dw1.scoreboard1.delta_y3 = -1;
 
         hw_scoreboard->dw2.scoreboard2.delta_x4 = 0;
         hw_scoreboard->dw2.scoreboard2.delta_y4 = 0;

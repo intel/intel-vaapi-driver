@@ -893,6 +893,9 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
     VAEncSequenceParameterBufferH264 *seq_param = (VAEncSequenceParameterBufferH264 *)encode_state->seq_param_ext->buffer;
     int i;
 
+    if (!seq_param)
+        goto error;
+
     if (seq_param->level_idc != encoder_context->codec_level &&
         !i965_avc_level_is_valid(seq_param->level_idc)) {
         i965_log_info(ctx, "VAEncSequenceParameterBufferH264.level_idc (%d) does not appear to be valid.\n",
@@ -954,7 +957,7 @@ intel_encoder_check_avc_parameter(VADriverContextP ctx,
      * subsequent IDR unit, so idr_pic_flag can indicate the current frame is the start of a new
      * sequnce
      */
-    encoder_context->is_new_sequence = (pic_param->pic_fields.bits.idr_pic_flag && seq_param);
+    encoder_context->is_new_sequence = pic_param->pic_fields.bits.idr_pic_flag;
 
     if (encoder_context->is_new_sequence) {
         encoder_context->num_frames_in_sequence = 0;
@@ -1136,14 +1139,12 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
     int is_key_frame = !pic_param->pic_flags.bits.frame_type;
 
     obj_surface = SURFACE(pic_param->reconstructed_frame);
-    assert(obj_surface); /* It is possible the store buffer isn't allocated yet */
 
     if (!obj_surface)
         goto error;
 
     encode_state->reconstructed_object = obj_surface;
     obj_buffer = BUFFER(pic_param->coded_buf);
-    assert(obj_buffer && obj_buffer->buffer_store && obj_buffer->buffer_store->bo);
 
     if (!obj_buffer || !obj_buffer->buffer_store || !obj_buffer->buffer_store->bo)
         goto error;
@@ -1151,32 +1152,39 @@ intel_encoder_check_vp8_parameter(VADriverContextP ctx,
     encode_state->coded_buf_object = obj_buffer;
 
     if (!is_key_frame) {
-        assert(pic_param->ref_last_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_last_frame);
-        assert(obj_surface && obj_surface->bo);
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if (!pic_param->ref_flags.bits.no_ref_last) {
+            obj_surface = SURFACE(pic_param->ref_last_frame);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
 
-        assert(pic_param->ref_gf_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_gf_frame);
-        assert(obj_surface && obj_surface->bo);
+            encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
+        }
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if (!pic_param->ref_flags.bits.no_ref_gf) {
+            obj_surface = SURFACE(pic_param->ref_gf_frame);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
 
-        assert(pic_param->ref_arf_frame != VA_INVALID_SURFACE);
-        obj_surface = SURFACE(pic_param->ref_arf_frame);
-        assert(obj_surface && obj_surface->bo);
+            encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
+        }
 
-        if (!obj_surface || !obj_surface->bo)
-            goto error;
+        if (!pic_param->ref_flags.bits.no_ref_arf) {
+            obj_surface = SURFACE(pic_param->ref_arf_frame);
 
-        encode_state->reference_objects[i++] = obj_surface;
+            if (!obj_surface || !obj_surface->bo)
+                goto error;
+
+            encode_state->reference_objects[i++] = obj_surface;
+        } else {
+            encode_state->reference_objects[i++] = NULL;
+        }
     }
 
     for (; i < 16; i++)

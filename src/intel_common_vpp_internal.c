@@ -277,3 +277,17 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
 
     return status;
 }
+
+void
+intel_common_clear_surface(VADriverContextP ctx,
+                           struct i965_post_processing_context *pp_context,
+                           const struct object_surface *obj_surface,
+                           unsigned int color)
+{
+    struct i965_driver_data *i965 = i965_driver_data(ctx);
+
+    if (IS_GEN8(i965->intel.device_info))
+        gen8_clear_surface(ctx, pp_context, obj_surface, color);
+    else
+        gen9_clear_surface(ctx, pp_context, obj_surface, color);
+}

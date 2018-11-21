@@ -29,6 +29,8 @@
 #ifndef _INTEL_COMMON_VPP_INTERNAL_H_
 #define _INTEL_COMMON_VPP_INTERNAL_H_
 
+struct object_surface;
+
 /* the below is defined for YUV420 format scaling */
 #define SRC_MSB         0x0001
 #define DST_MSB         0x0002
@@ -104,6 +106,12 @@ struct scaling_input_parameter {
     unsigned int reserved[8];
 };
 
+/* 4 Registers or 32 DWs */
+struct clear_input_parameter {
+    unsigned int color;     /* ayvu */
+    unsigned int reserved[31];
+};
+
 VAStatus
 gen9_yuv420p8_scaling_post_processing(
     VADriverContextP   ctx,
@@ -145,5 +153,25 @@ gen9_8bit_420_rgb32_scaling_post_processing(VADriverContextP   ctx,
                                             VARectangle *src_rect,
                                             struct i965_surface *dst_surface,
                                             VARectangle *dst_rect);
+
+VAStatus
+gen9_p010_scaling_post_processing(VADriverContextP   ctx,
+                                  struct i965_post_processing_context *pp_context,
+                                  struct i965_surface *src_surface,
+                                  VARectangle *src_rect,
+                                  struct i965_surface *dst_surface,
+                                  VARectangle *dst_rect);
+
+void
+gen8_clear_surface(VADriverContextP ctx,
+                   struct i965_post_processing_context *pp_context,
+                   const struct object_surface *obj_surface,
+                   unsigned int color);
+
+void
+gen9_clear_surface(VADriverContextP ctx,
+                   struct i965_post_processing_context *pp_context,
+                   const struct object_surface *obj_surface,
+                   unsigned int color);
 
 #endif  // _INTEL_COMMON_VPP_INTERNAL_H_

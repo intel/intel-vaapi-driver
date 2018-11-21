@@ -38,6 +38,21 @@ LOCAL_PROPRIETARY_MODULE := true
 
 intermediates := $(call local-generated-sources-dir)
 
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(intermediates)
+
+GEN := $(intermediates)/config_android.h
+$(GEN): SCRIPT := $(LOCAL_PATH)/../build/gen_version.sh
+$(GEN): PRIVATE_CUSTOM_TOOL = \
+	eval $$(sed -n "/^m4_define.*\(intel_vaapi_driver_.*_version\).*\[\([0-9]*\)\].*/s//\1=\2;/p" $(word 2,$^)); \
+	sed -e "s/\(define INTEL_DRIVER_MAJOR_VERSION\)\(.*\)/\1 $$intel_vaapi_driver_major_version/; \
+		s/\(define INTEL_DRIVER_MINOR_VERSION\)\(.*\)/\1 $$intel_vaapi_driver_minor_version/; \
+		s/\(define INTEL_DRIVER_MICRO_VERSION\)\(.*\)/\1 $$intel_vaapi_driver_micro_version/; \
+		s/\(define INTEL_DRIVER_PRE_VERSION\)\(.*\)/\1 $$intel_vaapi_driver_pre_version/" \
+		$< > $@
+$(GEN): $(intermediates)/%.h : $(LOCAL_PATH)/%.h.in $(LOCAL_PATH)/../configure.ac
+	$(transform-generated-source)
+LOCAL_GENERATED_SOURCES := $(GEN)
+
 GEN := $(intermediates)/intel_version.h
 $(GEN): $(LOCAL_PATH)/intel_version.h.in $(wildcard $(LOCAL_PATH)/../.git/logs/HEAD)
 	@echo "Generating: $@ <= git"; mkdir -p $(@D)

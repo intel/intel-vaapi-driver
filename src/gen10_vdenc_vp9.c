@@ -724,49 +724,49 @@ gen10_vdenc_vp9_gpe_context_vfe_scoreboard_init(struct i965_gpe_context *gpe_con
         gpe_context->vfe_desc5.scoreboard0.mask = 0x0F;
         gpe_context->vfe_desc5.scoreboard0.type = 1;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0x0;
-        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y0 = -1;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
-        gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xE;
+        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y1 = -2;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0x3;
+        gpe_context->vfe_desc6.scoreboard1.delta_x2 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 3;
 
-        gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0x1;
+        gpe_context->vfe_desc6.scoreboard1.delta_x3 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 1;
     } else {
         // Scoreboard 0
-        gpe_context->vfe_desc6.scoreboard1.delta_x0 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0x0;
+        gpe_context->vfe_desc6.scoreboard1.delta_x0 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y0 = 0;
 
         // Scoreboard 1
-        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0x0;
-        gpe_context->vfe_desc6.scoreboard1.delta_y1 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x1 = 0;
+        gpe_context->vfe_desc6.scoreboard1.delta_y1 = -1;
 
         // Scoreboard 2
-        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 0x1;
-        gpe_context->vfe_desc6.scoreboard1.delta_y2 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x2 = 1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y2 = -1;
 
         // Scoreboard 3
-        gpe_context->vfe_desc6.scoreboard1.delta_x3 = 0xF;
-        gpe_context->vfe_desc6.scoreboard1.delta_y3 = 0xF;
+        gpe_context->vfe_desc6.scoreboard1.delta_x3 = -1;
+        gpe_context->vfe_desc6.scoreboard1.delta_y3 = -1;
 
         // Scoreboard 4
-        gpe_context->vfe_desc7.scoreboard2.delta_x4 = 0xF;
-        gpe_context->vfe_desc7.scoreboard2.delta_y4 = 0x1;
+        gpe_context->vfe_desc7.scoreboard2.delta_x4 = -1;
+        gpe_context->vfe_desc7.scoreboard2.delta_y4 = 1;
 
         // Scoreboard 5
-        gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0x0;
-        gpe_context->vfe_desc7.scoreboard2.delta_y5 = 0xE;
+        gpe_context->vfe_desc7.scoreboard2.delta_x5 = 0;
+        gpe_context->vfe_desc7.scoreboard2.delta_y5 = -2;
 
         // Scoreboard 6
-        gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0x1;
-        gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+        gpe_context->vfe_desc7.scoreboard2.delta_x6 = 1;
+        gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
 
         // Scoreboard 7
-        gpe_context->vfe_desc7.scoreboard2.delta_x6 = 0xF;
-        gpe_context->vfe_desc7.scoreboard2.delta_y6 = 0xE;
+        gpe_context->vfe_desc7.scoreboard2.delta_x6 = -1;
+        gpe_context->vfe_desc7.scoreboard2.delta_y6 = -2;
     }
 }
 
@@ -1760,6 +1760,7 @@ gen10_vdenc_vp9_allocate_resources(VADriverContextP ctx,
     uint32_t frame_width_in_sbs, frame_height_in_sbs, frame_size_in_sbs;
     unsigned int width, height, pitch, depth_factor = 1;
     char *pbuffer;
+    int allocate_flag;
 
     if (!vdenc_context->is_8bit)
         depth_factor = 2;
@@ -1935,41 +1936,53 @@ gen10_vdenc_vp9_allocate_resources(VADriverContextP ctx,
     height = vdenc_context->down_scaled_height_in_mb4x * 40;
     pitch = ALIGN(width, 128);
     i965_free_gpe_resource(&vdenc_context->s4x_memv_data_buffer_res);
-    i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                  &vdenc_context->s4x_memv_data_buffer_res,
-                                  width, height,
-                                  ALIGN(width, 64),
-                                  "VP9 4x MEMV data");
+    allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
+                                                  &vdenc_context->s4x_memv_data_buffer_res,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 4x MEMV data");
+
+    if (!allocate_flag)
+        goto failed_allocation;
 
     width = vdenc_context->down_scaled_width_in_mb4x * 8;
     height = vdenc_context->down_scaled_height_in_mb4x * 40;
     pitch = ALIGN(width, 128);
     i965_free_gpe_resource(&vdenc_context->s4x_memv_distortion_buffer_res);
-    i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                  &vdenc_context->s4x_memv_distortion_buffer_res,
-                                  width, height,
-                                  ALIGN(width, 64),
-                                  "VP9 4x MEMV distorion");
+    allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
+                                                  &vdenc_context->s4x_memv_distortion_buffer_res,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 4x MEMV distorion");
+
+    if (!allocate_flag)
+        goto failed_allocation;
 
     width = ALIGN(vdenc_context->down_scaled_width_in_mb16x * 32, 64);
     height = vdenc_context->down_scaled_height_in_mb16x * 40;
     pitch = ALIGN(width, 128);
     i965_free_gpe_resource(&vdenc_context->s16x_memv_data_buffer_res);
-    i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                  &vdenc_context->s16x_memv_data_buffer_res,
-                                  width, height,
-                                  pitch,
-                                  "VP9 16x MEMV data");
+    allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
+                                                  &vdenc_context->s16x_memv_data_buffer_res,
+                                                  width, height,
+                                                  pitch,
+                                                  "VP9 16x MEMV data");
+
+    if (!allocate_flag)
+        goto failed_allocation;
 
     width = vdenc_context->frame_width_in_mbs * 16;
     height = vdenc_context->frame_height_in_mbs * 8;
     pitch = ALIGN(width, 64);
     i965_free_gpe_resource(&vdenc_context->output_16x16_inter_modes_buffer_res);
-    i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
-                                  &vdenc_context->output_16x16_inter_modes_buffer_res,
-                                  width, height,
-                                  ALIGN(width, 64),
-                                  "VP9 output inter_mode");
+    allocate_flag = i965_gpe_allocate_2d_resource(i965->intel.bufmgr,
+                                                  &vdenc_context->output_16x16_inter_modes_buffer_res,
+                                                  width, height,
+                                                  ALIGN(width, 64),
+                                                  "VP9 output inter_mode");
+
+    if (!allocate_flag)
+        goto failed_allocation;
 
     res_size = vdenc_context->frame_width_in_mbs * vdenc_context->frame_height_in_mbs * 16 * 4;
 
@@ -2080,6 +2093,9 @@ gen10_vdenc_vp9_allocate_resources(VADriverContextP ctx,
     vdenc_context->res_height = vdenc_context->frame_height;
 
     return VA_STATUS_SUCCESS;
+
+failed_allocation:
+    return VA_STATUS_ERROR_ALLOCATION_FAILED;
 }
 
 static VAStatus

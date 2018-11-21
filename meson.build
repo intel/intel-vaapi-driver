@@ -1,6 +1,6 @@
 project(
   'intel-vaapi-driver', 'c',
-  version : '2.1.1.1',
+  version : '2.2.1.1',
   meson_version : '>= 0.43.0',
   default_options : [ 'warning_level=1',
                       'buildtype=debugoptimized' ])
@@ -69,7 +69,7 @@ if get_option('with_x11') != 'no'
     version : libva_version,
     required : get_option('with_x11') == 'yes')
 
-  HAVE_X11 = libva_x11_dep.found()
+  WITH_X11 = libva_x11_dep.found()
 endif
 
 WITH_WAYLAND = false

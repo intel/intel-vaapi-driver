@@ -15,6 +15,12 @@ env:
 before_install:
   - test "${TRAVIS_BRANCH}" != 'coverity_scan' -o "${TRAVIS_JOB_NUMBER##*.}" = '1' || exit 0
   - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+  - |
+     sudo systemctl stop apt-daily.service &&
+     sudo systemctl kill --kill-who=all apt-daily.service &&
+     while ! (systemctl list-units --all apt-daily.service | fgrep -q dead) ; do
+       sleep 1
+     done
   - pip install --user cpp-coveralls
   - sudo apt-get -qq update
   - sudo apt-get install -y build-essential
@@ -36,13 +42,13 @@ before_install:
   - sudo apt-get install -y intel-gpu-tools
  
 install:
-  - git clone https://github.com/01org/libva.git
+  - git clone https://github.com/intel/libva.git
   - (cd libva && ./autogen.sh && ./configure --prefix=/usr && sudo make install)
 
 addons:
   coverity_scan:
     project:
-      name: "01org/intel-vaapi-driver"
+      name: "intel/intel-vaapi-driver"
       description: "Build submitted via Travis CI"
     notification_email: intel-media-security@lists.01.org
     build_command_prepend: "./autogen.sh; ./configure --prefix=/usr"
