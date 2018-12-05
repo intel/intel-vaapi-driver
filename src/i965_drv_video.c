@@ -2512,6 +2512,7 @@ i965_destroy_context(struct object_heap *heap, struct object_base *obj)
         i965_release_buffer_store(&obj_context->codec_state.decode.iq_matrix);
         i965_release_buffer_store(&obj_context->codec_state.decode.huffman_table);
         i965_release_buffer_store(&obj_context->codec_state.decode.bit_plane);
+        i965_release_buffer_store(&obj_context->codec_state.decode.probability_data);
 
         for (i = 0; i < obj_context->codec_state.decode.num_slice_params; i++)
             i965_release_buffer_store(&obj_context->codec_state.decode.slice_params[i]);

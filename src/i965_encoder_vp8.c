@@ -1237,6 +1237,8 @@ i965_encoder_vp8_free_surfaces(void **data)
         vp8_surface->scaled_16x_surface_id = VA_INVALID_SURFACE;
         vp8_surface->scaled_16x_surface_obj = NULL;
     }
+
+    free(vp8_surface);
 }
 
 static void
