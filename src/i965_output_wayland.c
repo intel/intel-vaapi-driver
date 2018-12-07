@@ -397,6 +397,7 @@ i965_output_wayland_init(VADriverContextP ctx)
     struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct dso_handle *dso_handle;
     struct wl_vtable *wl_vtable;
+    struct VADriverVTableWayland * const vtable = ctx->vtable_wayland;
 
     static const struct dso_symbol libegl_symbols[] = {
         {
@@ -465,25 +466,29 @@ i965_output_wayland_init(VADriverContextP ctx)
     if (!i965->wl_output)
         goto error;
 
-    i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME);
-    if (!i965->wl_output->libegl_handle) {
-        i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME_FALLBACK);
-        if (!i965->wl_output->libegl_handle)
+    wl_vtable = &i965->wl_output->vtable;
+
+    if (vtable->wl_interface)
+        wl_vtable->drm_interface = vtable->wl_interface;
+    else {
+        i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME);
+        if (!i965->wl_output->libegl_handle) {
+            i965->wl_output->libegl_handle = dso_open(LIBEGL_NAME_FALLBACK);
+            if (!i965->wl_output->libegl_handle)
+                goto error;
+        }
+
+        dso_handle = i965->wl_output->libegl_handle;
+        if (!dso_get_symbols(dso_handle, wl_vtable, sizeof(*wl_vtable),
+                             libegl_symbols))
             goto error;
     }
-
-    dso_handle = i965->wl_output->libegl_handle;
-    wl_vtable  = &i965->wl_output->vtable;
-    if (!dso_get_symbols(dso_handle, wl_vtable, sizeof(*wl_vtable),
-                         libegl_symbols))
-        goto error;
 
     i965->wl_output->libwl_client_handle = dso_open(LIBWAYLAND_CLIENT_NAME);
     if (!i965->wl_output->libwl_client_handle)
         goto error;
 
     dso_handle = i965->wl_output->libwl_client_handle;
-    wl_vtable  = &i965->wl_output->vtable;
     if (!dso_get_symbols(dso_handle, wl_vtable, sizeof(*wl_vtable),
                          libwl_client_symbols))
         goto error;
