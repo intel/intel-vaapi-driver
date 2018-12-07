@@ -7,6 +7,7 @@ Version 2.3.0 - DD.Nov.2018
 * Fix frame corruption when there are big MVs in VP8 encoding
 * Fix dynamically bitrate resetting in AVC encoding
 * Fix build errors when the toolchain doesn't support -fstack-protector
+* Fix memory leak issue
 * Make sure the achieved bitrate meet the requirement VP8 encoding
 * Optimize VPP on GEN8
 
