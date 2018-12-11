@@ -556,16 +556,19 @@ struct gen9_hevc_encoder_context {
     struct {
         struct object_surface *obj_surface;
         VASurfaceID surface_id;
+        dri_bo *obj_surface_bo;
     } uncompressed_picture_source;
 
     struct {
         struct object_surface *obj_surface;
         VASurfaceID surface_id;
+        dri_bo *obj_surface_bo;
     } reconstructed_object;
 
     struct {
         struct object_surface *obj_surface;
         VASurfaceID surface_id;
+        dri_bo *obj_surface_bo;
     } reference_surfaces[GEN9_MAX_REF_SURFACES];
 
     struct {

@@ -411,6 +411,7 @@ static void
 gen9_hevc_enc_free_resources(struct encoder_vme_mfc_context *vme_context)
 {
     struct gen9_hevc_encoder_context *priv_ctx = NULL;
+    int i;
 
     priv_ctx = (struct gen9_hevc_encoder_context *)vme_context->private_enc_ctx;
 
@@ -425,6 +426,8 @@ gen9_hevc_enc_free_resources(struct encoder_vme_mfc_context *vme_context)
     i965_free_gpe_resource(&priv_ctx->res_brc_constant_data_buffer);
 
     i965_free_gpe_resource(&priv_ctx->res_mb_code_surface);
+    i965_free_gpe_resource(&priv_ctx->res_min_distortion_buffer);
+    i965_free_gpe_resource(&priv_ctx->res_brc_mb_qp_buffer);
 
     // free VME buffers
     i965_free_gpe_resource(&priv_ctx->res_flatness_check_surface);
@@ -446,6 +449,7 @@ gen9_hevc_enc_free_resources(struct encoder_vme_mfc_context *vme_context)
     i965_free_gpe_resource(&priv_ctx->res_mvp_index_buffer);
     i965_free_gpe_resource(&priv_ctx->res_roi_buffer);
     i965_free_gpe_resource(&priv_ctx->res_mb_statistics_buffer);
+    i965_free_gpe_resource(&priv_ctx->res_slice_map_buffer);
 
     if (priv_ctx->scaled_2x_surface_obj) {
         i965_DestroySurfaces(priv_ctx->ctx, &priv_ctx->scaled_2x_surface_id, 1);
@@ -462,6 +466,12 @@ gen9_hevc_enc_free_resources(struct encoder_vme_mfc_context *vme_context)
     i965_free_gpe_resource(&priv_ctx->sao_line_buffer);
     i965_free_gpe_resource(&priv_ctx->sao_tile_line_buffer);
     i965_free_gpe_resource(&priv_ctx->sao_tile_column_buffer);
+    i965_free_gpe_resource(&priv_ctx->res_brc_pic_states_read_buffer);
+
+    for (i = 0; i < GEN9_MAX_MV_TEMPORAL_BUFFERS; i++) {
+        dri_bo_unreference(priv_ctx->mv_temporal_buffer[i].bo);
+        priv_ctx->mv_temporal_buffer[i].bo = NULL;
+    }
 
     priv_ctx->res_inited = 0;
 }
@@ -6315,9 +6325,8 @@ gen9_hevc_pak_add_pipe_buf_addr_state(VADriverContextP ctx,
     OUT_BUFFER_MA_TARGET(NULL);
 
     for (i = 0; i < GEN9_MAX_REF_SURFACES; i++) {
-        if (priv_ctx->reference_surfaces[i].obj_surface &&
-            priv_ctx->reference_surfaces[i].obj_surface->bo) {
-            bo = priv_ctx->reference_surfaces[i].obj_surface->bo;
+        if (priv_ctx->reference_surfaces[i].obj_surface_bo) {
+            bo = priv_ctx->reference_surfaces[i].obj_surface_bo;
 
             OUT_BUFFER_NMA_REFERENCE(bo);
         } else
@@ -6996,19 +7005,17 @@ gen9_hevc_pak_pipeline_prepare(VADriverContextP ctx,
     priv_state = (struct gen9_hevc_encoder_state *)pak_context->private_enc_state;
     pic_param = (VAEncPictureParameterBufferHEVC *)encode_state->pic_param_ext->buffer;
 
-    if (priv_ctx->uncompressed_picture_source.obj_surface &&
-        priv_ctx->uncompressed_picture_source.obj_surface->bo)
-        dri_bo_unreference(priv_ctx->uncompressed_picture_source.obj_surface->bo);
+    dri_bo_unreference(priv_ctx->uncompressed_picture_source.obj_surface_bo);
     priv_ctx->uncompressed_picture_source.obj_surface = encode_state->input_yuv_object;
     priv_ctx->uncompressed_picture_source.surface_id = encoder_context->input_yuv_surface;
-    dri_bo_reference(priv_ctx->uncompressed_picture_source.obj_surface->bo);
+    priv_ctx->uncompressed_picture_source.obj_surface_bo = encode_state->input_yuv_object->bo;
+    dri_bo_reference(priv_ctx->uncompressed_picture_source.obj_surface_bo);
 
-    if (priv_ctx->reconstructed_object.obj_surface &&
-        priv_ctx->reconstructed_object.obj_surface->bo)
-        dri_bo_unreference(priv_ctx->reconstructed_object.obj_surface->bo);
+    dri_bo_unreference(priv_ctx->reconstructed_object.obj_surface_bo);
     priv_ctx->reconstructed_object.obj_surface = encode_state->reconstructed_object;
     priv_ctx->reconstructed_object.surface_id = pic_param->decoded_curr_pic.picture_id;
-    dri_bo_reference(priv_ctx->reconstructed_object.obj_surface->bo);
+    priv_ctx->reconstructed_object.obj_surface_bo = encode_state->reconstructed_object->bo;
+    dri_bo_reference(priv_ctx->reconstructed_object.obj_surface_bo);
 
     surface_priv = (struct gen9_hevc_surface_priv *)encode_state->reconstructed_object->private_data;
     if (surface_priv) {
@@ -7023,12 +7030,11 @@ gen9_hevc_pak_pipeline_prepare(VADriverContextP ctx,
         for (i = 0; i < GEN9_MAX_REF_SURFACES; i++) {
             obj_surface = encode_state->reference_objects[i];
             if (obj_surface && obj_surface->bo) {
-                if (priv_ctx->reference_surfaces[i].obj_surface &&
-                    priv_ctx->reference_surfaces[i].obj_surface->bo)
-                    dri_bo_unreference(priv_ctx->reference_surfaces[i].obj_surface->bo);
+                dri_bo_unreference(priv_ctx->reference_surfaces[i].obj_surface_bo);
                 priv_ctx->reference_surfaces[i].obj_surface = obj_surface;
                 priv_ctx->reference_surfaces[i].surface_id = pic_param->reference_frames[i].picture_id;
-                dri_bo_reference(obj_surface->bo);
+                priv_ctx->reference_surfaces[i].obj_surface_bo = obj_surface->bo;
+                dri_bo_reference(priv_ctx->reference_surfaces[i].obj_surface_bo);
 
                 surface_priv = (struct gen9_hevc_surface_priv *) obj_surface->private_data;
                 if (surface_priv) {
@@ -7283,18 +7289,15 @@ gen9_hevc_pak_context_destroy(void *context)
     dri_bo_unreference(priv_ctx->indirect_pak_bse_object.bo);
     priv_ctx->indirect_pak_bse_object.bo = NULL;
 
-    if (priv_ctx->uncompressed_picture_source.obj_surface &&
-        priv_ctx->uncompressed_picture_source.obj_surface->bo)
-        i965_destroy_surface_storage(priv_ctx->uncompressed_picture_source.obj_surface);
+    dri_bo_unreference(priv_ctx->uncompressed_picture_source.obj_surface_bo);
+    priv_ctx->uncompressed_picture_source.obj_surface_bo = NULL;
+    dri_bo_unreference(priv_ctx->reconstructed_object.obj_surface_bo);
+    priv_ctx->reconstructed_object.obj_surface_bo = NULL;
 
-    if (priv_ctx->reconstructed_object.obj_surface &&
-        priv_ctx->reconstructed_object.obj_surface->bo)
-        i965_destroy_surface_storage(priv_ctx->reconstructed_object.obj_surface);
-
-    for (i = 0; i < GEN9_MAX_REF_SURFACES; i++)
-        if (priv_ctx->reference_surfaces[i].obj_surface &&
-            priv_ctx->reference_surfaces[i].obj_surface->bo)
-            i965_destroy_surface_storage(priv_ctx->reference_surfaces[i].obj_surface);
+    for (i = 0; i < GEN9_MAX_REF_SURFACES; i++) {
+        dri_bo_unreference(priv_ctx->reference_surfaces[i].obj_surface_bo);
+        priv_ctx->reference_surfaces[i].obj_surface_bo = NULL;
+    }
 }
 
 #define STATUS_IMPLEMENTATION_START
