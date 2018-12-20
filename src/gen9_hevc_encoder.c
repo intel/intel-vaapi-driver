@@ -1760,26 +1760,25 @@ gen9_hevc_brc_prepare(struct encode_state *encode_state,
             else
                 priv_state->lcu_brc_enabled = 0;
 
+            priv_state->max_bit_rate_in_kbs =
+                ALIGN(encoder_context->brc.bits_per_second[0], HEVC_BRC_KBPS) /
+                HEVC_BRC_KBPS;
+
             if (brc_method == HEVC_BRC_CBR) {
-                priv_state->target_bit_rate_in_kbs =
-                    ALIGN(encoder_context->brc.bits_per_second[0], HEVC_BRC_KBPS) /
-                    HEVC_BRC_KBPS;
-                priv_state->max_bit_rate_in_kbs = priv_state->target_bit_rate_in_kbs;
-                priv_state->min_bit_rate_in_kbs = priv_state->target_bit_rate_in_kbs;
+                priv_state->target_bit_rate_in_kbs = priv_state->max_bit_rate_in_kbs;
+                priv_state->min_bit_rate_in_kbs = priv_state->max_bit_rate_in_kbs;
             } else {
-                if (encoder_context->brc.target_percentage[0] > HEVC_BRC_MIN_TARGET_PERCENTAGE) {
-                    priv_state->target_bit_rate_in_kbs =
-                        ALIGN(encoder_context->brc.bits_per_second[0], HEVC_BRC_KBPS) /
-                        HEVC_BRC_KBPS;
-                    priv_state->max_bit_rate_in_kbs = priv_state->target_bit_rate_in_kbs;
-                    priv_state->min_bit_rate_in_kbs = priv_state->target_bit_rate_in_kbs *
+                if (encoder_context->brc.target_percentage[0] > HEVC_BRC_MIN_TARGET_PERCENTAGE)
+                    priv_state->min_bit_rate_in_kbs = priv_state->max_bit_rate_in_kbs *
                                                       (2 * encoder_context->brc.target_percentage[0] - 100) /
                                                       100;
-                    priv_state->target_bit_rate_in_kbs = priv_state->max_bit_rate_in_kbs *
-                                                         encoder_context->brc.target_percentage[0] / 100;
+                else
+                    priv_state->min_bit_rate_in_kbs = 0;
 
-                    brc_reset = 1;
-                }
+                priv_state->target_bit_rate_in_kbs = priv_state->max_bit_rate_in_kbs *
+                                                     encoder_context->brc.target_percentage[0] / 100;
+
+                brc_reset = 1;
             }
 
             if (encoder_context->brc.framerate[0].den)
