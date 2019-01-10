@@ -2744,13 +2744,17 @@ i965_CreateContext(VADriverContextP ctx,
     i965->current_context_id = contextID;
 
     i965->bufmgr = drm_intel_bufmgr_gem_init(intel->fd, 4096);
-
+    assert(i965->bufmgr);
     i965->gem_context = drm_intel_gem_context_create(i965->bufmgr);
+    assert(i965->gem_context);
     intel->gem_context = i965->gem_context;
     intel->gem_ctx_id = i965->gem_context->ctx_id;
 
     if (kernel_has_gpu_watchdog_support(&i965->intel))
         i965->intel.has_watchdog = 1;
+
+    if (i965->intel.has_watchdog)
+        set_watchdog_timer_threshold(&i965->intel, picture_width, picture_height);
 
     return vaStatus;
 }
@@ -2777,6 +2781,7 @@ i965_DestroyContext(VADriverContextP ctx, VAContextID context)
     }
 
     drm_intel_gem_context_destroy(i965->gem_context);
+    drm_intel_bufmgr_destroy(i965->bufmgr);
 
     i965->intel.has_watchdog = 0;
 

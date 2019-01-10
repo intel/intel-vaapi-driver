@@ -146,11 +146,17 @@ intel_batchbuffer_flush(struct intel_batchbuffer *batch)
     used = batch->ptr - batch->map;
 
     if (batch->intel->has_watchdog)
-        intel_batchbuffer_configure_watchdog(batch->intel->fd, batch->intel->gem_ctx_id, batch->flag);
+        intel_batchbuffer_configure_watchdog(batch->intel, batch->intel->gem_ctx_id, batch->flag);
 
-    /* FIXME: Add BSD2 ring on supported platforms */
-    if (ring_flag == I915_EXEC_BSD)
-        batch->flag |= LOCAL_I915_EXEC_BSD_RING0;
+    if (batch->intel->has_bsd2) {
+        if (ring_flag == I915_EXEC_BSD)
+            batch->flag |= LOCAL_I915_EXEC_BSD_RING0;
+        else if (ring_flag == (I915_EXEC_BSD_RING2 | I915_EXEC_BSD))
+            batch->flag |= LOCAL_I915_EXEC_BSD_RING1;
+    } else {
+        if (batch->flag == I915_EXEC_BSD)
+            batch->flag |= LOCAL_I915_EXEC_BSD_RING0;
+    }
 
     batch->run(batch->buffer, batch->intel->gem_context, used, -1, NULL, batch->flag);
 

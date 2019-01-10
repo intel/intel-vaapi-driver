@@ -56,7 +56,7 @@ uint32_t g_intel_debug_option_flags = 0;
 #define LOCAL_I915_PARAM_EU_TOTAL 34
 #endif
 
-bool intel_batchbuffer_configure_watchdog(int fd, unsigned int gem_ctx_id, int flag)
+bool intel_batchbuffer_configure_watchdog(struct intel_driver_data *intel, unsigned int gem_ctx_id, int flag)
 {
     unsigned threshold[5];
     int ring_flag;
@@ -73,11 +73,11 @@ bool intel_batchbuffer_configure_watchdog(int fd, unsigned int gem_ctx_id, int f
     memset(threshold, 0, sizeof(threshold));
 
     /* set watchdog threshold to VCS's engine only */
-    if (ring_flag == I915_EXEC_BSD || ring_flag == LOCAL_I915_EXEC_VCS2) {
-        threshold[VIDEO_DECODE_CLASS] = 1200;
+    if (ring_flag == I915_EXEC_BSD || ring_flag == (I915_EXEC_BSD_RING2 | I915_EXEC_BSD)) {
+        threshold[VIDEO_DECODE_CLASS] = intel->watchdog_threshold_in_ms * 1000;
     }
 
-    if (drmIoctl(fd, DRM_IOCTL_I915_GEM_CONTEXT_SETPARAM, &cp))
+    if (drmIoctl(intel->fd, DRM_IOCTL_I915_GEM_CONTEXT_SETPARAM, &cp))
         return false;
 
     return true;
@@ -97,6 +97,24 @@ bool kernel_has_gpu_watchdog_support(struct intel_driver_data *intel)
 
     if (drmIoctl(intel->fd, DRM_IOCTL_I915_GEM_CONTEXT_GETPARAM, &cp))
         return false;
+
+    return true;
+}
+
+bool set_watchdog_timer_threshold(struct intel_driver_data *intel, int picture_width, int picture_height)
+{
+    if (!intel)
+        return false;
+
+    if ((picture_width * picture_height) >= (7680 * 4320)) {
+        intel->watchdog_threshold_in_ms = MHW_MI_16K_WATCHDOG_THRESHOLD_IN_MS;
+    } else if ((picture_width * picture_height) >= (3840 * 2160)) {
+        intel->watchdog_threshold_in_ms = MHW_MI_8K_WATCHDOG_THRESHOLD_IN_MS;
+    } else if ((picture_width * picture_height) >= (1920 * 1080)) {
+        intel->watchdog_threshold_in_ms = MHW_MI_4K_WATCHDOG_THRESHOLD_IN_MS;
+    } else {
+        intel->watchdog_threshold_in_ms = MHW_MI_FHD_WATCHDOG_THRESHOLD_IN_MS;
+    }
 
     return true;
 }

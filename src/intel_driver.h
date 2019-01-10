@@ -112,8 +112,12 @@ extern uint32_t g_intel_debug_option_flags;
 #define VA_INTEL_DEBUG_OPTION_DUMP_AUB  (1 << 2)
 
 #define LOCAL_I915_CONTEXT_PARAM_WATCHDOG 0x7
-#define LOCAL_I915_EXEC_VEBOX             (4<<0)
 #define LOCAL_I915_EXEC_VCS2              (5<<0)
+
+#define MHW_MI_16K_WATCHDOG_THRESHOLD_IN_MS        2000
+#define MHW_MI_8K_WATCHDOG_THRESHOLD_IN_MS         500
+#define MHW_MI_4K_WATCHDOG_THRESHOLD_IN_MS         100
+#define MHW_MI_FHD_WATCHDOG_THRESHOLD_IN_MS        50
 
 typedef enum _gen_gpu_class_engine {
     RENDER_CLASS = 0,
@@ -197,6 +201,7 @@ struct intel_driver_data {
     dri_bufmgr *bufmgr;
     unsigned int gem_ctx_id;
     drm_intel_context *gem_context;
+    unsigned int watchdog_threshold_in_ms;
 
     unsigned int has_exec2  : 1; /* Flag: has execbuffer2? */
     unsigned int has_bsd    : 1; /* Flag: has bitstream decoder for H.264? */
@@ -215,13 +220,13 @@ struct intel_driver_data {
 /* FIXME: this struct is currently private and part of libdrm */
 struct _drm_intel_context {
     unsigned int ctx_id;
-    struct _drm_intel_bufmgr *bufmgr;
 };
 
 bool intel_driver_init(VADriverContextP ctx);
 void intel_driver_terminate(VADriverContextP ctx);
-bool intel_batchbuffer_configure_watchdog(int fd, unsigned int ctx_id, int flag);
+bool intel_batchbuffer_configure_watchdog(struct intel_driver_data *intel, unsigned int ctx_id, int flag);
 bool kernel_has_gpu_watchdog_support(struct intel_driver_data *intel);
+bool set_watchdog_timer_threshold(struct intel_driver_data *intel, int picture_width, int picture_height);
 
 static INLINE struct intel_driver_data *
 intel_driver_data(VADriverContextP ctx)

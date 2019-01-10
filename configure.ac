@@ -13,7 +13,7 @@ m4_append([intel_vaapi_driver_version], intel_vaapi_driver_pre_version, [.pre])
 m4_define([va_api_version], [1.1.0])
 
 # libdrm minimum version requirement
-m4_define([libdrm_version], [2.4.52])
+m4_define([libdrm_version], [2.4.75])
 
 # Wayland minimum version requirement
 # 1.11.0 for wl_proxy_create_wrapper
