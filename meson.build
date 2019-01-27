@@ -91,7 +91,7 @@ if get_option('with_wayland') != 'no'
     version : libva_version,
     required : get_option('with_wayland') == 'yes')
 
-  WITH_WAYLAND = wl_scanner.found() and libva_wayland_dep.found()
+  WITH_WAYLAND = wayland_client_dep.found() and libva_wayland_dep.found()
 endif
 
 subdir('src')
