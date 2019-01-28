@@ -81,17 +81,22 @@ if get_option('with_wayland') != 'no'
 
   if wayland_client_dep.found()
     prefix = wayland_client_dep.get_pkgconfig_variable('prefix')
-    wl_scanner = find_program(
-      'wayland-scanner',
-      join_paths(prefix, '/bin/wayland-scanner'))
+    wayland_scanner = join_paths(prefix, 'bin', 'wayland-scanner')
+  else
+    wayland_scanner = ''
   endif
+
+  wl_scanner = find_program('wayland-scanner', wayland_scanner,
+			    required : get_option('with_wayland') == 'yes')
 
   libva_wayland_dep = dependency(
     'libva-wayland',
     version : libva_version,
     required : get_option('with_wayland') == 'yes')
 
-  WITH_WAYLAND = wl_scanner.found() and libva_wayland_dep.found()
+  WITH_WAYLAND = (wayland_client_dep.found()
+		  and wl_scanner.found()
+		  and libva_wayland_dep.found())
 endif
 
 subdir('src')
