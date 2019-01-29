@@ -45,10 +45,4 @@ intel_common_scaling_post_processing(VADriverContextP ctx,
                                      struct i965_surface *dst_surface,
                                      const VARectangle *dst_rect);
 
-void
-intel_common_clear_surface(VADriverContextP ctx,
-                           struct i965_post_processing_context *pp_context,
-                           const struct object_surface *obj_surface,
-                           unsigned int color);
-
 #endif  // _INTE_GEN_VPPAPI_H_
