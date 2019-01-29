@@ -4791,15 +4791,6 @@ i965_vpp_clear_surface(VADriverContextP ctx,
     if (a == 0)
         return;
 
-    if (IS_GEN8(i965->intel.device_info) ||
-        IS_GEN9(i965->intel.device_info) ||
-        IS_GEN10(i965->intel.device_info)) {
-        intel_common_clear_surface(ctx, pp_context, obj_surface,
-                                   a << 24 | y << 16 | u << 8 | v);
-
-        return;
-    }
-
     dri_bo_get_tiling(obj_surface->bo, &tiling, &swizzle);
     blt_cmd = XY_COLOR_BLT_CMD;
     pitch = obj_surface->width;

@@ -21,15 +21,6 @@ INTEL_PP_G9B = \
 	pa_to_pa.g9b		\
 	$(NULL)
 
-INTEL_PP2_G9B = 		\
-	clear_bgrx.g9b		\
-	clear_pl2_8bit.g9b	\
-	clear_pl3_8bit.g9b	\
-	clear_rgbx.g9b		\
-	clear_yuy2.g9b		\
-	clear_uyvy.g9b		\
-	$(NULL)
-
 INTEL_PP_G8A = \
 	EOT.g8a				\
 	PL2_AVS_Buf_0.g8a		\
@@ -62,17 +53,14 @@ INTEL_PP_G9A = $(INTEL_PP_G8A)
 INTEL_PP_ASM = $(INTEL_PP_G9B:%.g9b=%.asm)
 INTEL_PP_GEN9_ASM = $(INTEL_PP_G9B:%.g9b=%.g9s)
 
-INTEL_PP2_GXA = $(INTEL_PP2_G9B:%.g9b=%.gxa)
-INTEL_PP2_GXS = $(INTEL_PP2_G9B:%.gxa=%.gxs)
-
 TARGETS  =
 if HAVE_GEN4ASM
-TARGETS += $(INTEL_PP_G9B) $(INTEL_PP2_G9B)
+TARGETS += $(INTEL_PP_G9B)
 endif
 
 all-local: $(TARGETS)
 
-SUFFIXES = .g9b .g9s .asm .gxa .gxs
+SUFFIXES = .g9b .g9s .asm
 
 if HAVE_GEN4ASM
 $(INTEL_PP_GEN9_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G9A)
@@ -82,23 +70,15 @@ $(INTEL_PP_GEN9_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G9A)
 	rm _pp0.$@
 .g9s.g9b:
 	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 9 $<
-
-.gxa.gxs:
-	$(AM_V_GEN)cpp -P $< > _tmp.$@ &&	\
-	m4 _tmp.$@ > $@	&&			\
-	rm _tmp.$@
-.gxs.g9b:
-	$(AM_V_GEN)$(GEN4ASM) -o $@ -g 9 $<
 endif
 
-CLEANFILES = $(INTEL_PP_GEN9_ASM) $(INTEL_PP2_GXS)
+CLEANFILES = $(INTEL_PP_GEN9_ASM)
 
 DISTCLEANFILES = $(TARGETS)
 
 EXTRA_DIST = \
 	$(INTEL_PP_G9B) \
 	$(INTEL_PP_PRE_G9B) \
-	$(INTEL_PP2_G9B) \
 	$(NULL)
 
 # Extra clean files so that maintainer-clean removes *everything*

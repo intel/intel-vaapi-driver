@@ -587,7 +587,6 @@ struct i965_post_processing_context {
 
 
     struct i965_gpe_context scaling_gpe_context;
-    struct i965_gpe_context clear_gpe_context;
 
 #define VPPGPE_8BIT_8BIT        (1 << 0)
 #define VPPGPE_8BIT_10BIT       (1 << 1)
@@ -596,7 +595,6 @@ struct i965_post_processing_context {
 #define VPPGPE_8BIT_420_RGB32   (1 << 4)
 
     unsigned int scaling_gpe_context_initialized;
-    unsigned int clear_gpe_context_initialized;
 };
 
 struct i965_proc_context {
