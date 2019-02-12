@@ -123,7 +123,9 @@ intel_driver_init(VADriverContextP ctx)
     intel->locked = 0;
     pthread_mutex_init(&intel->ctxmutex, NULL);
 
-    intel_memman_init(intel);
+    if (!intel_memman_init(intel))
+        return false;
+
     intel->device_id = drm_intel_bufmgr_gem_get_devid(intel->bufmgr);
     intel->device_info = i965_get_device_info(intel->device_id);
 
