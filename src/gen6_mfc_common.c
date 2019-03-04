@@ -2085,7 +2085,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
 
     vme_context->roi_enabled = 0;
     /* Restriction: Disable ROI when multi-slice is enabled */
-    if (!encoder_context->context_roi || (encode_state->num_slice_params_ext > 1))
+    if (encode_state->num_slice_params_ext > 1)
         return;
 
     vme_context->roi_enabled = !!encoder_context->brc.num_roi;
