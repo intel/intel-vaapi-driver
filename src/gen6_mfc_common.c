@@ -2126,7 +2126,7 @@ intel_h264_enc_roi_config(VADriverContextP ctx,
         memset(vme_context->qp_per_mb, qp, width_in_mbs * height_in_mbs);
 
 
-        for (j = num_roi; j ; j--) {
+        for (j = num_roi - 1; j >= 0; j--) {
             int qp_delta, qp_clip;
 
             col_start = encoder_context->brc.roi[j].left;
