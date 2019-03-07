@@ -2036,6 +2036,7 @@ Bool gen9_vme_context_init(VADriverContextP ctx, struct intel_encoder_context *e
     default:
         /* never get here */
         assert(0);
+        i965_kernel_num = 0;
 
         break;
     }
