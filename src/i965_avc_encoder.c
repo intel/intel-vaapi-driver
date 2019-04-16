@@ -7910,7 +7910,8 @@ gen9_avc_update_parameters(VADriverContextP ctx,
 
     if (!generic_state->brc_inited || generic_state->brc_need_reset) {
         generic_state->brc_init_reset_input_bits_per_frame = ((double)(generic_state->max_bit_rate * 1000) * 100) / generic_state->frames_per_100s;;
-        generic_state->brc_init_current_target_buf_full_in_bits = generic_state->init_vbv_buffer_fullness_in_bit;
+        if (!generic_state->brc_inited)
+            generic_state->brc_init_current_target_buf_full_in_bits = generic_state->init_vbv_buffer_fullness_in_bit;
         generic_state->brc_init_reset_buf_size_in_bits = generic_state->vbv_buffer_size_in_bit;
         generic_state->brc_target_size = generic_state->init_vbv_buffer_fullness_in_bit;
     }
