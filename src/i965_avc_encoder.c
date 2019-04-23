@@ -304,7 +304,7 @@ static const gen8_avc_frame_brc_update_curbe_data gen8_avc_frame_brc_update_curb
 
     //unsigned int 6
     {
-        0, 0, 0, 0
+        0, 0, 0, 0, 0, 0
     },
 
     //unsigned int 7
@@ -384,7 +384,7 @@ static const gen8_avc_frame_brc_update_curbe_data gen8_avc_frame_brc_update_curb
 
     //unsigned int 15
     {
-        0, 0
+        0, 0, 0
     },
 
     //unsigned int 16
@@ -395,6 +395,36 @@ static const gen8_avc_frame_brc_update_curbe_data gen8_avc_frame_brc_update_curb
     //unsigned int 17
     {
         0, 0
+    },
+
+    //unsigned int 18
+    {
+        0, 0
+    },
+
+    //unsigned int 19
+    {
+        0
+    },
+
+    //unsigned int 20
+    {
+        0
+    },
+
+    //unsigned int 21
+    {
+        0
+    },
+
+    //unsigned int 22
+    {
+        0
+    },
+
+    //unsigned int 23
+    {
+        0
     },
 };
 static const gen9_avc_frame_brc_update_curbe_data gen9_avc_frame_brc_update_curbe_init_data = {
@@ -554,6 +584,15 @@ static const gen9_avc_frame_brc_update_curbe_data gen9_avc_frame_brc_update_curb
 
 };
 
+static const gen8_avc_ipcm_threshold gen8_avc_ipcm_threshold_table[5] =
+{
+    { 2,    3000 },
+    { 4,    3600 },
+    { 6,    5000 },
+    { 10,   7500 },
+    { 18,   9000 },
+};
+
 static void
 gen9_avc_update_misc_parameters(VADriverContextP ctx,
                                 struct encode_state *encode_state,
@@ -657,6 +696,56 @@ intel_avc_get_kernel_header_and_size(void *pvbinary,
         pcurr_header = &pkh_table->mbenc_quality_I;
     } else if (operation == INTEL_GENERIC_ENC_WP) {
         pcurr_header = &pkh_table->wp;
+    } else if (operation == INTEL_GENERIC_ENC_SFD) {
+        pcurr_header = &pkh_table->static_detection;
+    } else {
+        return false;
+    }
+
+    pcurr_header += krnstate_idx;
+    ret_kernel->bin = (const BIN_PTR *)(bin_start + (pcurr_header->kernel_start_pointer << 6));
+
+    pnext_header = (pcurr_header + 1);
+    if (pnext_header < pinvalid_entry) {
+        next_krnoffset = pnext_header->kernel_start_pointer << 6;
+    }
+    ret_kernel->size = next_krnoffset - (pcurr_header->kernel_start_pointer << 6);
+
+    return true;
+}
+
+static bool
+gen8_avc_get_kernel_header_and_size(void *pvbinary,
+                                    int binary_size,
+                                    INTEL_GENERIC_ENC_OPERATION operation,
+                                    int krnstate_idx,
+                                    struct i965_kernel *ret_kernel)
+{
+    typedef uint32_t BIN_PTR[4];
+
+    char *bin_start;
+    gen8_avc_encoder_kernel_header      *pkh_table;
+    kernel_header          *pcurr_header, *pinvalid_entry, *pnext_header;
+    int next_krnoffset;
+
+    if (!pvbinary || !ret_kernel)
+        return false;
+
+    bin_start = (char *)pvbinary;
+    pkh_table = (gen8_avc_encoder_kernel_header *)pvbinary;
+    pinvalid_entry = &(pkh_table->static_detection) + 1;
+    next_krnoffset = binary_size;
+
+    if (operation == INTEL_GENERIC_ENC_SCALING4X) {
+        pcurr_header = &pkh_table->ply_dscale_ply;
+    } else if (operation == INTEL_GENERIC_ENC_SCALING2X) {
+        pcurr_header = &pkh_table->ply_2xdscale_ply;
+    } else if (operation == INTEL_GENERIC_ENC_ME) {
+        pcurr_header = &pkh_table->me_p;
+    } else if (operation == INTEL_GENERIC_ENC_BRC) {
+        pcurr_header = &pkh_table->frame_brc_init;
+    } else if (operation == INTEL_GENERIC_ENC_MBENC) {
+        pcurr_header = &pkh_table->mbenc_quality_I;
     } else if (operation == INTEL_GENERIC_ENC_SFD) {
         pcurr_header = &pkh_table->static_detection;
     } else {
@@ -2598,7 +2687,7 @@ gen9_avc_set_curbe_brc_init_reset(VADriverContextP ctx,
     cmd->dw11.avbr_convergence = generic_state->avbr_convergence;
 
     //frame bits
-    input_bits_per_frame = (double)(cmd->dw4.max_bit_rate) * (double)(cmd->dw7.frame_rate_d) / (double)(cmd->dw6.frame_rate_m);;
+    input_bits_per_frame = (double)(cmd->dw4.max_bit_rate) * (double)(cmd->dw7.frame_rate_d) / (double)(cmd->dw6.frame_rate_m);
 
     if (cmd->dw2.buf_size_in_bits == 0) {
         cmd->dw2.buf_size_in_bits = (unsigned int)(input_bits_per_frame * 4);
@@ -6775,34 +6864,29 @@ gen8_avc_set_curbe_mbenc(VADriverContextP ctx,
     unsigned int curbe_size = 0;
 
     unsigned int preset = generic_state->preset;
-    if (IS_GEN8(i965->intel.device_info)) {
-        cmd = (gen8_avc_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
-        if (!cmd)
-            return;
-        curbe_size = sizeof(gen8_avc_mbenc_curbe_data);
-        memset(cmd, 0, curbe_size);
 
-        if (mbenc_i_frame_dist_in_use) {
-            memcpy(cmd, gen8_avc_mbenc_curbe_i_frame_dist_init_data, curbe_size);
-        } else {
-            switch (generic_state->frame_type) {
-            case SLICE_TYPE_I:
-                memcpy(cmd, gen8_avc_mbenc_curbe_normal_i_frame_init_data, curbe_size);
-                break;
-            case SLICE_TYPE_P:
-                memcpy(cmd, gen8_avc_mbenc_curbe_normal_p_frame_init_data, curbe_size);
-                break;
-            case SLICE_TYPE_B:
-                memcpy(cmd, gen8_avc_mbenc_curbe_normal_b_frame_init_data, curbe_size);
-                break;
-            default:
-                assert(0);
-            }
-        }
-    } else {
-        assert(0);
-
+    cmd = (gen8_avc_mbenc_curbe_data *)i965_gpe_context_map_curbe(gpe_context);
+    if (!cmd)
         return;
+    curbe_size = sizeof(gen8_avc_mbenc_curbe_data);
+    memset(cmd, 0, curbe_size);
+
+    if (mbenc_i_frame_dist_in_use) {
+        memcpy(cmd, gen8_avc_mbenc_curbe_i_frame_dist_init_data, curbe_size);
+    } else {
+        switch (generic_state->frame_type) {
+        case SLICE_TYPE_I:
+            memcpy(cmd, gen8_avc_mbenc_curbe_normal_i_frame_init_data, curbe_size);
+            break;
+        case SLICE_TYPE_P:
+            memcpy(cmd, gen8_avc_mbenc_curbe_normal_p_frame_init_data, curbe_size);
+            break;
+        case SLICE_TYPE_B:
+            memcpy(cmd, gen8_avc_mbenc_curbe_normal_b_frame_init_data, curbe_size);
+            break;
+        default:
+            assert(0);
+        }
     }
 
     me_method = (generic_state->frame_type == SLICE_TYPE_B) ? gen9_avc_b_me_method[preset] : gen9_avc_p_me_method[preset];
@@ -6837,7 +6921,7 @@ gen8_avc_set_curbe_mbenc(VADriverContextP ctx,
     }
 
     if (avc_state->disable_sub_mb_partion)
-        cmd->dw3.sub_mb_part_mask = 0x7;
+        cmd->dw3.sub_mb_part_mask = 0x70;
 
     if (mbenc_i_frame_dist_in_use) {
         cmd->dw2.pitch_width = generic_state->downscaled_width_4x_in_mb;
@@ -6850,14 +6934,12 @@ gen8_avc_set_curbe_mbenc(VADriverContextP ctx,
         cmd->dw4.picture_height_minus1 = generic_state->frame_height_in_mbs - 1;
         cmd->dw5.slice_mb_height = (avc_state->arbitrary_num_mbs_in_slice) ? generic_state->frame_height_in_mbs : avc_state->slice_height;
 
-        {
-            memcpy(&(cmd->dw8), gen9_avc_mode_mv_cost_table[slice_type_kernel[generic_state->frame_type]][qp], 8 * sizeof(unsigned int));
-            if ((generic_state->frame_type == SLICE_TYPE_I) && avc_state->old_mode_cost_enable) {
-            } else if (avc_state->skip_bias_adjustment_enable) {
-                /* Load different MvCost for P picture when SkipBiasAdjustment is enabled
-                // No need to check for P picture as the flag is only enabled for P picture */
-                cmd->dw11.value = gen9_avc_mv_cost_p_skip_adjustment[qp];
-            }
+        memcpy(&(cmd->dw8), gen9_avc_mode_mv_cost_table[slice_type_kernel[generic_state->frame_type]][qp], 8 * sizeof(unsigned int));
+        if ((generic_state->frame_type == SLICE_TYPE_I) && avc_state->old_mode_cost_enable) {
+        } else if (avc_state->skip_bias_adjustment_enable) {
+            /* Load different MvCost for P picture when SkipBiasAdjustment is enabled
+            // No need to check for P picture as the flag is only enabled for P picture */
+            cmd->dw11.value = gen9_avc_mv_cost_p_skip_adjustment[qp];
         }
         table_idx = (generic_state->frame_type == SLICE_TYPE_B) ? 1 : 0;
         memcpy(&(cmd->dw16), table_enc_search_path[table_idx][me_method], 16 * sizeof(unsigned int));
@@ -6926,7 +7008,7 @@ gen8_avc_set_curbe_mbenc(VADriverContextP ctx,
     cmd->dw34.arbitray_num_mbs_per_slice = avc_state->arbitrary_num_mbs_in_slice;
     cmd->dw34.force_non_skip_check = avc_state->mb_disable_skip_map_enable;
 
-    if (cmd->dw34.force_non_skip_check) {
+    if (!cmd->dw34.force_non_skip_check) {
         cmd->dw34.disable_enc_skip_check = avc_state->skip_check_disable;
     }
 
@@ -7023,6 +7105,8 @@ gen8_avc_set_curbe_mbenc(VADriverContextP ctx,
         cmd->dw34.enable_global_motion_bias_adjustment = avc_state->global_motion_bias_adjustment_enable;
         if (avc_state->global_motion_bias_adjustment_enable)
             cmd->dw58.hme_mv_cost_scaling_factor = avc_state->hme_mv_cost_scaling_factor;
+
+        cmd->dw64.l1_list_ref0_pic_coding_type = 0; // always frame
     }
     avc_state->block_based_skip_enable = cmd->dw3.block_based_skip_enable;
 
@@ -7070,8 +7154,6 @@ gen8_avc_set_curbe_mbenc(VADriverContextP ctx,
         cmd->dw56.roi_4_x_right  = generic_state->roi[3].right;
         cmd->dw56.roi_4_y_bottom = generic_state->roi[3].bottom;
 
-        cmd->dw36.enable_cabac_work_around = 0;
-
         if (!generic_state->brc_enabled) {
             char tmp = 0;
             tmp = generic_state->roi[0].value;
@@ -7091,28 +7173,40 @@ gen8_avc_set_curbe_mbenc(VADriverContextP ctx,
         }
     }
 
-    cmd->dw65.mb_data_surf_index = GEN8_AVC_MBENC_MFC_AVC_PAK_OBJ_CM;
-    cmd->dw66.mv_data_surf_index =  GEN8_AVC_MBENC_IND_MV_DATA_CM;
-    cmd->dw67.i_dist_surf_index = GEN8_AVC_MBENC_BRC_DISTORTION_CM;
-    cmd->dw68.src_y_surf_index = GEN8_AVC_MBENC_CURR_Y_CM;
-    cmd->dw69.mb_specific_data_surf_index = GEN8_AVC_MBENC_MB_SPECIFIC_DATA_CM;
-    cmd->dw70.aux_vme_out_surf_index = GEN8_AVC_MBENC_AUX_VME_OUT_CM;
-    cmd->dw71.curr_ref_pic_sel_surf_index = GEN8_AVC_MBENC_REFPICSELECT_L0_CM;
-    cmd->dw72.hme_mv_pred_fwd_bwd_surf_index = GEN8_AVC_MBENC_MV_DATA_FROM_ME_CM;
-    cmd->dw73.hme_dist_surf_index = GEN8_AVC_MBENC_4xME_DISTORTION_CM;
-    cmd->dw74.slice_map_surf_index = GEN8_AVC_MBENC_SLICEMAP_DATA_CM;
-    cmd->dw75.fwd_frm_mb_data_surf_index = GEN8_AVC_MBENC_FWD_MB_DATA_CM;
-    cmd->dw76.fwd_frm_mv_surf_index = GEN8_AVC_MBENC_FWD_MV_DATA_CM;
-    cmd->dw77.mb_qp_buffer = GEN8_AVC_MBENC_MBQP_CM;
-    cmd->dw78.mb_brc_lut = GEN8_AVC_MBENC_MBBRC_CONST_DATA_CM;
-    cmd->dw79.vme_inter_prediction_surf_index = GEN8_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_CM;
-    cmd->dw80.vme_inter_prediction_mr_surf_index = GEN8_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_CM;
-    cmd->dw81.flatness_chk_surf_index = GEN8_AVC_MBENC_FLATNESS_CHECK_CM;
-    cmd->dw82.mad_surf_index = GEN8_AVC_MBENC_MAD_DATA_CM;
-    cmd->dw83.force_non_skip_mb_map_surface = GEN8_AVC_MBENC_FORCE_NONSKIP_MB_MAP_CM;
-    cmd->dw84.widi_wa_surf_index = GEN8_AVC_MBENC_WIDI_WA_DATA_CM;
-    cmd->dw85.brc_curbe_surf_index = GEN8_AVC_MBENC_BRC_CURBE_DATA_CM;
-    cmd->dw86.static_detection_cost_table_index = GEN8_AVC_MBENC_STATIC_FRAME_DETECTION_OUTPUT_CM;
+    //IPCM QP and threshold
+    cmd->dw65.ipcm_qp0 = gen8_avc_ipcm_threshold_table[0].qp;
+    cmd->dw65.ipcm_qp1 = gen8_avc_ipcm_threshold_table[1].qp;
+    cmd->dw65.ipcm_qp2 = gen8_avc_ipcm_threshold_table[2].qp;
+    cmd->dw65.ipcm_qp3 = gen8_avc_ipcm_threshold_table[3].qp;
+    cmd->dw66.ipcm_qp4 = gen8_avc_ipcm_threshold_table[4].qp;
+    cmd->dw66.ipcm_thresh0 = gen8_avc_ipcm_threshold_table[0].threshold;
+    cmd->dw67.ipcm_thresh1 = gen8_avc_ipcm_threshold_table[1].threshold;
+    cmd->dw67.ipcm_thresh2 = gen8_avc_ipcm_threshold_table[2].threshold;
+    cmd->dw68.ipcm_thresh3 = gen8_avc_ipcm_threshold_table[3].threshold;
+    cmd->dw68.ipcm_thresh4 = gen8_avc_ipcm_threshold_table[4].threshold;
+
+    cmd->dw73.mb_data_surf_index = GEN8_AVC_MBENC_MFC_AVC_PAK_OBJ_CM;
+    cmd->dw74.mv_data_surf_index =  GEN8_AVC_MBENC_IND_MV_DATA_CM;
+    cmd->dw75.i_dist_surf_index = GEN8_AVC_MBENC_BRC_DISTORTION_CM;
+    cmd->dw76.src_y_surf_index = GEN8_AVC_MBENC_CURR_Y_CM;
+    cmd->dw77.mb_specific_data_surf_index = GEN8_AVC_MBENC_MB_SPECIFIC_DATA_CM;
+    cmd->dw78.aux_vme_out_surf_index = GEN8_AVC_MBENC_AUX_VME_OUT_CM;
+    cmd->dw79.curr_ref_pic_sel_surf_index = GEN8_AVC_MBENC_REFPICSELECT_L0_CM;
+    cmd->dw80.hme_mv_pred_fwd_bwd_surf_index = GEN8_AVC_MBENC_MV_DATA_FROM_ME_CM;
+    cmd->dw81.hme_dist_surf_index = GEN8_AVC_MBENC_4xME_DISTORTION_CM;
+    cmd->dw82.slice_map_surf_index = GEN8_AVC_MBENC_SLICEMAP_DATA_CM;
+    cmd->dw83.fwd_frm_mb_data_surf_index = GEN8_AVC_MBENC_FWD_MB_DATA_CM;
+    cmd->dw84.fwd_frm_mv_surf_index = GEN8_AVC_MBENC_FWD_MV_DATA_CM;
+    cmd->dw85.mb_qp_buffer = GEN8_AVC_MBENC_MBQP_CM;
+    cmd->dw86.mb_brc_lut = GEN8_AVC_MBENC_MBBRC_CONST_DATA_CM;
+    cmd->dw87.vme_inter_prediction_surf_index = GEN8_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_0_CM;
+    cmd->dw88.vme_inter_prediction_mr_surf_index = GEN8_AVC_MBENC_VME_INTER_PRED_CURR_PIC_IDX_1_CM;
+    cmd->dw89.flatness_chk_surf_index = GEN8_AVC_MBENC_FLATNESS_CHECK_CM;
+    cmd->dw90.mad_surf_index = GEN8_AVC_MBENC_MAD_DATA_CM;
+    cmd->dw91.force_non_skip_mb_map_surface = GEN8_AVC_MBENC_FORCE_NONSKIP_MB_MAP_CM;
+    cmd->dw92.widi_wa_surf_index = GEN8_AVC_MBENC_WIDI_WA_DATA_CM;
+    cmd->dw93.brc_curbe_surf_index = GEN8_AVC_MBENC_BRC_CURBE_DATA_CM;
+    cmd->dw94.static_detection_cost_table_index = GEN8_AVC_MBENC_STATIC_FRAME_DETECTION_OUTPUT_CM;
 
     i965_gpe_context_unmap_curbe(gpe_context);
 
@@ -7284,6 +7378,7 @@ gen8_avc_set_curbe_brc_frame_update(VADriverContextP ctx,
     struct object_surface *obj_surface;
     struct gen9_surface_avc *avc_priv_surface;
     struct avc_param common_param;
+    VAEncSequenceParameterBufferH264 * seq_param = avc_state->seq_param;
 
     obj_surface = encode_state->reconstructed_object;
 
@@ -7345,6 +7440,9 @@ gen8_avc_set_curbe_brc_frame_update(VADriverContextP ctx,
         cmd->dw6.maximum_qp = 0 ;
     }
 
+    cmd->dw6.enable_force_to_skip = 1;
+    cmd->dw6.enable_sliding_window = 0;
+
     generic_state->brc_init_current_target_buf_full_in_bits += generic_state->brc_init_reset_input_bits_per_frame;
 
     if (generic_state->internal_rate_mode == INTEL_BRC_AVBR) {
@@ -7369,6 +7467,8 @@ gen8_avc_set_curbe_brc_frame_update(VADriverContextP ctx,
     common_param.frames_per_100s = generic_state->frames_per_100s;
     common_param.vbv_buffer_size_in_bit = generic_state->vbv_buffer_size_in_bit;
     common_param.target_bit_rate = generic_state->target_bit_rate;
+
+    cmd->dw19.user_max_frame = i965_avc_get_profile_level_max_frame(&common_param, seq_param->level_idc);
 
     i965_gpe_context_unmap_curbe(gpe_context);
 
@@ -7454,11 +7554,18 @@ gen9_avc_kernel_init_scaling(VADriverContextP ctx,
 
     memset(&common_kernel, 0, sizeof(common_kernel));
 
-    intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
-                                         generic_context->enc_kernel_size,
-                                         INTEL_GENERIC_ENC_SCALING2X,
-                                         0,
-                                         &common_kernel);
+    if (IS_GEN8(i965->intel.device_info))
+        gen8_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                            generic_context->enc_kernel_size,
+                                            INTEL_GENERIC_ENC_SCALING2X,
+                                            0,
+                                            &common_kernel);
+    else
+        intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                             generic_context->enc_kernel_size,
+                                             INTEL_GENERIC_ENC_SCALING2X,
+                                             0,
+                                             &common_kernel);
 
     gpe->load_kernels(ctx,
                       gpe_context,
@@ -7688,11 +7795,18 @@ gen9_avc_kernel_init_brc(VADriverContextP ctx,
 
         memset(&common_kernel, 0, sizeof(common_kernel));
 
-        intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
-                                             generic_context->enc_kernel_size,
-                                             INTEL_GENERIC_ENC_BRC,
-                                             i,
-                                             &common_kernel);
+        if (IS_GEN8(i965->intel.device_info))
+            gen8_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                                generic_context->enc_kernel_size,
+                                                INTEL_GENERIC_ENC_BRC,
+                                                i,
+                                                &common_kernel);
+        else
+            intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                                 generic_context->enc_kernel_size,
+                                                 INTEL_GENERIC_ENC_BRC,
+                                                 i,
+                                                 &common_kernel);
 
         gpe->load_kernels(ctx,
                           gpe_context,
@@ -7730,11 +7844,18 @@ gen9_avc_kernel_init_wp(VADriverContextP ctx,
 
     memset(&common_kernel, 0, sizeof(common_kernel));
 
-    intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
-                                         generic_context->enc_kernel_size,
-                                         INTEL_GENERIC_ENC_WP,
-                                         0,
-                                         &common_kernel);
+    if (IS_GEN8(i965->intel.device_info))
+        gen8_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                            generic_context->enc_kernel_size,
+                                            INTEL_GENERIC_ENC_WP,
+                                            0,
+                                            &common_kernel);
+    else
+        intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                             generic_context->enc_kernel_size,
+                                             INTEL_GENERIC_ENC_WP,
+                                             0,
+                                             &common_kernel);
 
     gpe->load_kernels(ctx,
                       gpe_context,
@@ -7771,11 +7892,18 @@ gen9_avc_kernel_init_sfd(VADriverContextP ctx,
 
     memset(&common_kernel, 0, sizeof(common_kernel));
 
-    intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
-                                         generic_context->enc_kernel_size,
-                                         INTEL_GENERIC_ENC_SFD,
-                                         0,
-                                         &common_kernel);
+    if (IS_GEN8(i965->intel.device_info))
+        gen8_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                            generic_context->enc_kernel_size,
+                                            INTEL_GENERIC_ENC_SFD,
+                                            0,
+                                            &common_kernel);
+    else
+        intel_avc_get_kernel_header_and_size((void *)(generic_context->enc_kernel_ptr),
+                                             generic_context->enc_kernel_size,
+                                             INTEL_GENERIC_ENC_SFD,
+                                             0,
+                                             &common_kernel);
 
     gpe->load_kernels(ctx,
                       gpe_context,
@@ -7909,7 +8037,7 @@ gen9_avc_update_parameters(VADriverContextP ctx,
     generic_state->kernel_mode = gen9_avc_kernel_mode[generic_state->preset];
 
     if (!generic_state->brc_inited || generic_state->brc_need_reset) {
-        generic_state->brc_init_reset_input_bits_per_frame = ((double)(generic_state->max_bit_rate * 1000) * 100) / generic_state->frames_per_100s;;
+        generic_state->brc_init_reset_input_bits_per_frame = ((double)(generic_state->max_bit_rate * 1000) * 100) / generic_state->frames_per_100s;
         if (!generic_state->brc_inited)
             generic_state->brc_init_current_target_buf_full_in_bits = generic_state->init_vbv_buffer_fullness_in_bit;
         generic_state->brc_init_reset_buf_size_in_bits = generic_state->vbv_buffer_size_in_bit;
@@ -8996,7 +9124,7 @@ gen8_avc_kernel_init(VADriverContextP ctx,
 
     generic_ctx->get_kernel_header_and_size = fei_enabled ?
                                               intel_avc_fei_get_kernel_header_and_size :
-                                              intel_avc_get_kernel_header_and_size ;
+                                              gen8_avc_get_kernel_header_and_size ;
     gen9_avc_kernel_init_scaling(ctx, generic_ctx, &avc_ctx->context_scaling, false);
     gen9_avc_kernel_init_brc(ctx, generic_ctx, &avc_ctx->context_brc);
     gen9_avc_kernel_init_me(ctx, generic_ctx, &avc_ctx->context_me, false);
