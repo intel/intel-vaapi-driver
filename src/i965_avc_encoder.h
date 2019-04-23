@@ -4533,8 +4533,8 @@ typedef struct _gen8_avc_mbenc_curbe_data {
         uint32_t reserved0: 1;
         uint32_t enable_intra_cost_scaling_for_static_frame: 1;
         uint32_t enable_intra_refresh: 1;
-        uint32_t enable_widi_wa_surf: 1;
-        uint32_t enable_widi_dirty_rect: 1;
+        uint32_t reserved1: 1;
+        uint32_t enable_dirty_rect: 1;
         uint32_t enable_cur_fld_idr: 1;
         uint32_t contrained_intra_pred_flag: 1;
         uint32_t field_parity_flag: 1;
@@ -4791,8 +4791,7 @@ typedef struct _gen8_avc_mbenc_curbe_data {
         uint32_t num_ref_idx_l0_minus_one: 8;
         uint32_t hme_combined_extra_sus: 8;
         uint32_t num_ref_idx_l1_minus_one: 8;
-        uint32_t enable_cabac_work_around: 1;
-        uint32_t reserved0: 3;
+        uint32_t reserved0: 4;
         uint32_t is_fwd_frame_short_term_ref: 1;
         uint32_t check_all_fractional_enable: 1;
         uint32_t hme_combine_overlap: 2;
@@ -4934,20 +4933,15 @@ typedef struct _gen8_avc_mbenc_curbe_data {
     } dw59;
 
     struct {
-        uint32_t cabac_wa_zone0_threshold: 16;
-        uint32_t cabac_wa_zone1_threshold: 16;
+        uint32_t reserved;
     } dw60;
 
     struct {
-        uint32_t cabac_wa_zone2_threshold: 16;
-        uint32_t cabac_wa_zone3_threshold: 16;
+        uint32_t reserved;
     } dw61;
 
     struct {
-        uint32_t cabac_wa_zone0_intra_min_qp: 8;
-        uint32_t cabac_wa_zone1_intra_min_qp: 8;
-        uint32_t cabac_wa_zone2_intra_min_qp: 8;
-        uint32_t cabac_wa_zone3_intra_min_qp: 8;
+        uint32_t reserved;
     } dw62;
 
     struct {
@@ -4955,100 +4949,140 @@ typedef struct _gen8_avc_mbenc_curbe_data {
     } dw63;
 
     struct {
-        uint32_t reserved;
+        uint32_t l1_list_ref0_pic_coding_type: 2; // 0-invalide, 1-tff, 2-invalid, 3-bff
+        uint32_t reserved: 30;
     } dw64;
 
     struct {
-        uint32_t mb_data_surf_index;
+        uint32_t ipcm_qp0: 8;
+        uint32_t ipcm_qp1: 8;
+        uint32_t ipcm_qp2: 8;
+        uint32_t ipcm_qp3: 8;
     } dw65;
 
     struct {
-        uint32_t mv_data_surf_index;
+        uint32_t ipcm_qp4: 8;
+        uint32_t reserved: 8;
+        uint32_t ipcm_thresh0: 16;
     } dw66;
 
     struct {
-        uint32_t i_dist_surf_index;
+        uint32_t ipcm_thresh1: 16;
+        uint32_t ipcm_thresh2: 16;
     } dw67;
 
     struct {
-        uint32_t src_y_surf_index;
+        uint32_t ipcm_thresh3: 16;
+        uint32_t ipcm_thresh4: 16;
     } dw68;
 
     struct {
-        uint32_t mb_specific_data_surf_index;
+        uint32_t bottom_field_offset_l1_ref0_mv;
     } dw69;
 
     struct {
-        uint32_t aux_vme_out_surf_index;
+        uint32_t bottom_field_offset_l1_ref0_mbcode;
     } dw70;
 
     struct {
-        uint32_t curr_ref_pic_sel_surf_index;
+        uint32_t reserved;
     } dw71;
 
     struct {
-        uint32_t hme_mv_pred_fwd_bwd_surf_index;
+        uint32_t reserved;
     } dw72;
 
     struct {
-        uint32_t hme_dist_surf_index;
+        uint32_t mb_data_surf_index;
     } dw73;
 
     struct {
-        uint32_t slice_map_surf_index;
+        uint32_t mv_data_surf_index;
     } dw74;
 
     struct {
-        uint32_t fwd_frm_mb_data_surf_index;
+        uint32_t i_dist_surf_index;
     } dw75;
 
     struct {
-        uint32_t fwd_frm_mv_surf_index;
+        uint32_t src_y_surf_index;
     } dw76;
 
     struct {
-        uint32_t mb_qp_buffer;
+        uint32_t mb_specific_data_surf_index;
     } dw77;
 
     struct {
-        uint32_t mb_brc_lut;
+        uint32_t aux_vme_out_surf_index;
     } dw78;
 
     struct {
-        uint32_t vme_inter_prediction_surf_index;
+        uint32_t curr_ref_pic_sel_surf_index;
     } dw79;
 
     struct {
-        uint32_t vme_inter_prediction_mr_surf_index;
+        uint32_t hme_mv_pred_fwd_bwd_surf_index;
     } dw80;
 
     struct {
-        uint32_t flatness_chk_surf_index;
+        uint32_t hme_dist_surf_index;
     } dw81;
 
     struct {
-        uint32_t mad_surf_index;
+        uint32_t slice_map_surf_index;
     } dw82;
 
     struct {
-        uint32_t force_non_skip_mb_map_surface;
+        uint32_t fwd_frm_mb_data_surf_index;
     } dw83;
 
     struct {
-        uint32_t widi_wa_surf_index;
+        uint32_t fwd_frm_mv_surf_index;
     } dw84;
 
     struct {
-        uint32_t brc_curbe_surf_index;
+        uint32_t mb_qp_buffer;
     } dw85;
 
     struct {
-        uint32_t static_detection_cost_table_index;
+        uint32_t mb_brc_lut;
     } dw86;
 
     struct {
-        uint32_t reserved0;
+        uint32_t vme_inter_prediction_surf_index;
     } dw87;
+
+    struct {
+        uint32_t vme_inter_prediction_mr_surf_index;
+    } dw88;
+
+    struct {
+        uint32_t flatness_chk_surf_index;
+    } dw89;
+
+    struct {
+        uint32_t mad_surf_index;
+    } dw90;
+
+    struct {
+        uint32_t force_non_skip_mb_map_surface;
+    } dw91;
+
+    struct {
+        uint32_t widi_wa_surf_index;
+    } dw92;
+
+    struct {
+        uint32_t brc_curbe_surf_index;
+    } dw93;
+
+    struct {
+        uint32_t static_detection_cost_table_index;
+    } dw94;
+
+    struct {
+        uint32_t reserved0;
+    } dw95;
 
 } gen8_avc_mbenc_curbe_data;
 
@@ -5086,7 +5120,9 @@ typedef struct _gen8_avc_frame_brc_update_curbe_data {
         uint32_t num_skip_frames: 8;
         uint32_t minimum_qp: 8;
         uint32_t maximum_qp: 8;
-        uint32_t widi_intra_refresh_mode: 8;
+        uint32_t enable_force_to_skip: 1;
+        uint32_t enable_sliding_window:1;
+        uint32_t reserved: 6;
     } dw6;
 
     struct {
@@ -5143,8 +5179,9 @@ typedef struct _gen8_avc_frame_brc_update_curbe_data {
     } dw14;
 
     struct {
-        uint32_t widi_qp_intra_resresh: 8;
-        uint32_t reserved0: 8;
+        uint32_t qp_intra_resresh: 8;
+        uint32_t intra_refresh_mode: 8;
+        uint32_t reserved: 16;
     } dw15;
 
     struct {
@@ -5156,6 +5193,31 @@ typedef struct _gen8_avc_frame_brc_update_curbe_data {
         uint32_t widi_intra_refresh_height: 16;
         uint32_t widi_intra_refresh_width: 16;
     } dw17;
+
+    struct {
+        uint32_t intra_refresh_off_frames: 16;
+        uint32_t reserved: 16;
+    } dw18;
+
+    struct {
+        uint32_t user_max_frame;
+    } dw19;
+
+    struct {
+        uint32_t reserved;
+    } dw20;
+
+    struct {
+        uint32_t reserved;
+    } dw21;
+
+    struct {
+        uint32_t reserved;
+    } dw22;
+
+    struct {
+        uint32_t reserved;
+    } dw23;
 } gen8_avc_frame_brc_update_curbe_data;
 
 typedef struct _gen8_avc_scaling4x_curbe_data {
@@ -5557,6 +5619,12 @@ typedef struct _gen8_avc_me_curbe_data {
         uint32_t reserved;
     } dw38;
 } gen8_avc_me_curbe_data;
+
+typedef struct _gen8_avc_ipcm_threshold
+{
+    uint8_t     qp;
+    uint16_t    threshold;
+} gen8_avc_ipcm_threshold;
 
 typedef enum _gen8_avc_binding_table_offset_me {
     GEN8_AVC_ME_MV_DATA_SURFACE_CM       = 0,

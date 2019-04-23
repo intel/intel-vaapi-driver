@@ -45,7 +45,7 @@
 #define GEN95_AVC_MAX_LAMBDA              0xEFFF
 #define GEN95_AVC_DEFAULT_TRELLIS_QUANT_INTRA_ROUNDING      5
 
-#define GEN8_AVC_MBENC_CURBE_SIZE  88
+#define GEN8_AVC_MBENC_CURBE_SIZE  96
 #define GEN8_AVC_ME_CURBE_SIZE  39
 
 extern const char gen9_avc_sfd_cost_table_p_frame[AVC_QP_MAX];
