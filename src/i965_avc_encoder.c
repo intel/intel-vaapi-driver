@@ -10310,7 +10310,7 @@ gen9_avc_pak_picture_level(VADriverContextP ctx,
             second_level_batch.offset = generic_state->curr_pak_pass * INTEL_AVC_IMAGE_STATE_CMD_SIZE;
         }
         second_level_batch.is_second_level = 1;
-        second_level_batch.bo = avc_ctx->res_brc_image_state_read_buffer.bo;
+        second_level_batch.bo = avc_ctx->res_brc_image_state_write_buffer.bo;
         gpe->mi_batch_buffer_start(ctx, batch, &second_level_batch);
     } else {
         /*generate a new image state */
