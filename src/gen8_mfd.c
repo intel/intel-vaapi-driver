@@ -3060,7 +3060,7 @@ gen8_mfd_jpeg_wa(VADriverContextP ctx,
 
 #endif
 
-void
+static void
 gen8_mfd_jpeg_decode_picture(VADriverContextP ctx,
                              struct decode_state *decode_state,
                              struct gen7_mfd_context *gen7_mfd_context)

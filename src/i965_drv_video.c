@@ -3116,12 +3116,12 @@ i965_MapBuffer(VADriverContextP ctx,
                     }
 
                     if (coded_buffer_segment->codec == CODEC_JPEG) {
-                        for (i = 0; i <  obj_buffer->size_element - header_offset - 1 - 0x1000; i++) {
-                            if ((buffer[i] == 0xFF) && (buffer[i + 1] == 0xD9)) {
-                                break;
-                            }
-                        }
-                        coded_buffer_segment->base.size = i + 2;
+                        int len = obj_buffer->size_element - header_offset - 1 - 0x1000;
+                        unsigned char *end_of_file_marker = memmem(buffer, len, "\xff\xd9", 2);
+                        if (end_of_file_marker == NULL)
+                            coded_buffer_segment->base.size = len + 2;
+                        else
+                            coded_buffer_segment->base.size = (end_of_file_marker - buffer) + 2;
                     } else if (coded_buffer_segment->codec != CODEC_VP8) {
                         /* vp8 coded buffer size can be told by vp8 internal statistics buffer,
                            so it don't need to traversal the coded buffer */
