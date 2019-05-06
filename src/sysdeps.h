@@ -37,10 +37,12 @@
 
 #endif /* ANDROID */
 
+#define _GNU_SOURCE 1
+#include <string.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <string.h>
 #include <stdint.h>
 #include <assert.h>
 
