@@ -1198,6 +1198,23 @@ vp9_update_probabilities(VADriverContextP ctx,
     assert(decode_state->pic_param && decode_state->pic_param->buffer);
     pic_param = (VADecPictureParameterBufferVP9 *)decode_state->pic_param->buffer;
 
+    //update vp9_frame_ctx according to frame_context_id
+    if (gen9_hcpd_context->last_frame.refresh_frame_context) {
+        void *pfc = (void *)&gen9_hcpd_context->vp9_frame_ctx[gen9_hcpd_context->last_frame.frame_context_idx];
+        void *pprob = NULL;
+
+        //update vp9_fc to frame_context
+        dri_bo_map(gen9_hcpd_context->last_frame.prob_buffer_bo, 1);
+        pprob = (void *)gen9_hcpd_context->last_frame.prob_buffer_bo->virtual;
+        if (gen9_hcpd_context->last_frame.frame_type == HCP_VP9_KEY_FRAME ||
+            gen9_hcpd_context->last_frame.intra_only)
+            memcpy(pfc, pprob, VP9_PROB_BUFFER_FIRST_PART_SIZE - VP9_PROB_BUFFER_KEY_INTER_SIZE);
+        else
+            memcpy(pfc, pprob, VP9_PROB_BUFFER_FIRST_PART_SIZE);
+
+        dri_bo_unmap(gen9_hcpd_context->last_frame.prob_buffer_bo);
+    }
+
     //first part buffer update: Case 1)Reset all 4 probablity buffers
     if ((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) || pic_param->pic_fields.bits.intra_only || pic_param->pic_fields.bits.error_resilient_mode) {
         if ((pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME) ||
@@ -1836,6 +1853,9 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
     gen9_hcpd_context->last_frame.refresh_frame_context = pic_param->pic_fields.bits.refresh_frame_context;
     gen9_hcpd_context->last_frame.frame_context_idx = pic_param->pic_fields.bits.frame_context_idx;
     gen9_hcpd_context->last_frame.intra_only = pic_param->pic_fields.bits.intra_only;
+    dri_bo_unreference(gen9_hcpd_context->last_frame.prob_buffer_bo);
+    gen9_hcpd_context->last_frame.prob_buffer_bo = gen9_hcpd_context->vp9_probability_buffer.bo;
+    dri_bo_reference(gen9_hcpd_context->last_frame.prob_buffer_bo);
 
     // switch mv buffer
     if (pic_param->pic_fields.bits.frame_type != HCP_VP9_KEY_FRAME) {
@@ -1853,23 +1873,6 @@ gen9_hcpd_vp9_decode_picture(VADriverContextP ctx,
 
 
     }
-    //update vp9_frame_ctx according to frame_context_id
-    if (pic_param->pic_fields.bits.refresh_frame_context) {
-        void *pfc = (void *)&gen9_hcpd_context->vp9_frame_ctx[pic_param->pic_fields.bits.frame_context_idx];
-        void *pprob = NULL;
-
-        //update vp9_fc to frame_context
-        dri_bo_map(gen9_hcpd_context->vp9_probability_buffer.bo, 1);
-        pprob = (void *)gen9_hcpd_context->vp9_probability_buffer.bo->virtual;
-        if (pic_param->pic_fields.bits.frame_type == HCP_VP9_KEY_FRAME ||
-            pic_param->pic_fields.bits.intra_only)
-            memcpy(pfc, pprob, VP9_PROB_BUFFER_FIRST_PART_SIZE - VP9_PROB_BUFFER_KEY_INTER_SIZE);
-        else
-            memcpy(pfc, pprob, VP9_PROB_BUFFER_FIRST_PART_SIZE);
-
-        dri_bo_unmap(gen9_hcpd_context->vp9_probability_buffer.bo);
-    }
-
 out:
     return vaStatus;
 }
@@ -1932,6 +1935,7 @@ gen9_hcpd_context_destroy(void *hw_context)
     FREE_GEN_BUFFER((&gen9_hcpd_context->vp9_segment_id_buffer));
     dri_bo_unreference(gen9_hcpd_context->vp9_mv_temporal_buffer_curr.bo);
     dri_bo_unreference(gen9_hcpd_context->vp9_mv_temporal_buffer_last.bo);
+    dri_bo_unreference(gen9_hcpd_context->last_frame.prob_buffer_bo);
 
     intel_batchbuffer_free(gen9_hcpd_context->base.batch);
     free(gen9_hcpd_context);
@@ -1957,6 +1961,7 @@ gen9_hcpd_vp9_context_init(VADriverContextP ctx,
     gen9_hcpd_context->last_frame.intra_only = 0;
     gen9_hcpd_context->last_frame.prob_buffer_saved_flag = 0;
     gen9_hcpd_context->last_frame.prob_buffer_restored_flag = 0;
+    gen9_hcpd_context->last_frame.prob_buffer_bo = NULL;
 
     //Super block in VP9 is 64x64
     gen9_hcpd_context->ctb_size = 64;

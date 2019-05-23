@@ -48,6 +48,7 @@ typedef struct vp9_frame_status {
     uint8_t intra_only;
     uint8_t prob_buffer_saved_flag;
     uint8_t prob_buffer_restored_flag;
+    dri_bo *prob_buffer_bo;
 } vp9_last_frame_status;
 
 typedef struct vp9_mv_temporal_buffer {
