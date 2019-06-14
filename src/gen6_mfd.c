@@ -1482,8 +1482,11 @@ gen6_mfd_vc1_pic_state(VADriverContextP ctx,
         loopfilter = pic_param->entrypoint_fields.bits.loopfilter;
     }
 
-    if (picture_type == GEN6_VC1_I_PICTURE || picture_type == GEN6_VC1_BI_PICTURE) /* I picture */
+    if (picture_type == GEN6_VC1_I_PICTURE || picture_type == GEN6_VC1_BI_PICTURE) { /* I picture */
         trans_ac_y = pic_param->transform_fields.bits.transform_ac_codingset_idx2;
+        if (pic_param->sequence_fields.bits.profile == 3) /* Advanced Profile */
+            ptype = GEN6_VC1_BI_PICTURE;
+    }
     else {
         trans_ac_y = pic_param->transform_fields.bits.transform_ac_codingset_idx1;
         /*
