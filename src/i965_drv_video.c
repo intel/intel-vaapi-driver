@@ -6700,6 +6700,7 @@ static uint32_t drm_format_of_separate_plane(uint32_t fourcc, int plane)
         switch (fourcc) {
         case VA_FOURCC_NV12:
         case VA_FOURCC_I420:
+        case VA_FOURCC_IMC3:
         case VA_FOURCC_YV12:
         case VA_FOURCC_YV16:
         case VA_FOURCC_Y800:
@@ -6731,6 +6732,7 @@ static uint32_t drm_format_of_separate_plane(uint32_t fourcc, int plane)
         case VA_FOURCC_NV12:
             return DRM_FORMAT_GR88;
         case VA_FOURCC_I420:
+        case VA_FOURCC_IMC3:          
         case VA_FOURCC_YV12:
         case VA_FOURCC_YV16:
             return DRM_FORMAT_R8;
@@ -6793,7 +6795,7 @@ i965_ExportSurfaceHandle(VADriverContextP ctx, VASurfaceID surface_id,
     const i965_fourcc_info *info;
     VADRMPRIMESurfaceDescriptor *desc;
     unsigned int tiling, swizzle;
-    uint32_t formats[4], pitch, height, offset;
+    uint32_t formats[4], pitch, height, offset, y_offset;
     int fd, p;
     int composite_object =
         flags & VA_EXPORT_SURFACE_COMPOSED_LAYERS;
@@ -6895,15 +6897,21 @@ i965_ExportSurfaceHandle(VADriverContextP ctx, VASurfaceID surface_id,
             if (p == 0) {
                 pitch  = obj_surface->width;
                 height = obj_surface->height;
+                if (obj_surface->y_cb_offset < obj_surface->y_cr_offset)
+                  y_offset = obj_surface->y_cb_offset;
+                else
+                  y_offset = obj_surface->y_cr_offset;
             } else {
+                y_offset = obj_surface->y_cr_offset - obj_surface->y_cb_offset;              
+                if (y_offset < 0)
+                  y_offset = -y_offset;
                 pitch  = obj_surface->cb_cr_pitch;
                 height = obj_surface->cb_cr_height;
             }
 
             desc->layers[p].offset[0] = offset;
             desc->layers[p].pitch[0]  = pitch;
-
-            offset += pitch * height;
+            offset += pitch * y_offset;
         }
     }
 
