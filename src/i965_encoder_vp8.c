@@ -4381,6 +4381,7 @@ i965_encoder_vp8_vme_mpu_set_curbe(VADriverContextP ctx,
     pcmd->dw1.sign_bias_golden = pic_param->pic_flags.bits.sign_bias_golden;
     pcmd->dw1.sign_bias_alt_ref = pic_param->pic_flags.bits.sign_bias_alternate;
     pcmd->dw1.refresh_entropy_p = pic_param->pic_flags.bits.refresh_entropy_probs;
+    pcmd->dw1.forced_lf_update_for_key_frame = pic_param->pic_flags.bits.forced_lf_adjustment;
 
     pcmd->dw2.loop_filter_level = pic_param->loop_filter_level[0];
     pcmd->dw2.qindex = quant_param->quantization_index[0];
