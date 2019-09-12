@@ -1147,6 +1147,8 @@ i965_GetConfigAttributes(VADriverContextP ctx,
                 else if (profile == VAProfileVP9Profile0 &&
                          entrypoint == VAEntrypointEncSliceLP) {
                     attrib_list[i].value = ENCODER_QUALITY_RANGE_VP9;
+                } else if (profile == VAProfileVP8Version0_3) {
+                    attrib_list[i].value = ENCODER_QUALITY_RANGE;
                 }
 
                 break;
