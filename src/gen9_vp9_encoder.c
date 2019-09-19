@@ -3587,6 +3587,7 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
     struct object_surface *obj_surface;
     struct object_buffer *obj_buffer;
     struct gen9_surface_vp9 *vp9_priv_surface;
+    bool need_brc_reset = false;
 
     vp9_state = (struct gen9_vp9_state *) encoder_context->enc_priv_state;
 
@@ -3715,7 +3716,13 @@ gen9_encode_vp9_check_parameter(VADriverContextP ctx,
         return VA_STATUS_ERROR_UNIMPLEMENTED;
 
     if (vp9_state->brc_enabled) {
-        if (vp9_state->first_frame || vp9_state->picture_coding_type == KEY_FRAME) {
+
+        if (encoder_context->rate_control_mode == VA_RC_CBR)
+            need_brc_reset = vp9_state->target_bit_rate != encoder_context->brc.bits_per_second[0] ? true : false;
+        else if (encoder_context->rate_control_mode == VA_RC_VBR)
+            need_brc_reset = vp9_state->max_bit_rate != encoder_context->brc.bits_per_second[0] ? true : false;
+
+        if (vp9_state->first_frame || vp9_state->picture_coding_type == KEY_FRAME || need_brc_reset) {
             vp9_state->brc_reset = encoder_context->brc.need_reset || vp9_state->first_frame;
 
             if (!encoder_context->brc.framerate[0].num || !encoder_context->brc.framerate[0].den ||
