@@ -287,6 +287,14 @@ i965_image_formats_map[I965_MAX_IMAGE_FORMATS + 1] = {
         I965_SURFACETYPE_YUV,
         { VA_FOURCC_P010, VA_LSB_FIRST, 24, }
     },
+    {
+        I965_SURFACETYPE_RGBA,
+        { VA_FOURCC_RGBA, VA_LSB_FIRST, 32, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 }
+    },
+    {
+        I965_SURFACETYPE_RGBA,
+        { VA_FOURCC_BGRA, VA_LSB_FIRST, 32, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 }
+    },
 };
 
 /* List of supported subpicture formats */

@@ -52,7 +52,7 @@
 #define I965_MAX_PROFILES                       20
 #define I965_MAX_ENTRYPOINTS                    7
 #define I965_MAX_CONFIG_ATTRIBUTES              32
-#define I965_MAX_IMAGE_FORMATS                  10
+#define I965_MAX_IMAGE_FORMATS                  12
 #define I965_MAX_SUBPIC_FORMATS                 6
 #define I965_MAX_SUBPIC_SUM                     4
 #define I965_MAX_SURFACE_ATTRIBUTES             32
