@@ -38,6 +38,7 @@ EXTRA_DIST =								\
 	gtest/src							\
 	gtest/README.md							\
 	gtest/LICENSE							\
+	meson.build							\
 	$(NULL)
 
 # test_i965_drv_video
