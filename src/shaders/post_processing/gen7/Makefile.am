@@ -86,7 +86,7 @@ if HAVE_GEN4ASM
 $(INTEL_PP_GEN7_ASM): $(INTEL_PP_ASM) $(INTEL_PP_G4A)
 .asm.g7s:
 	$(AM_V_GEN)cpp $< > _pp0.$@;		\
-	$(PYTHON2) $(top_srcdir)/src/shaders/gpp.py _pp0.$@ $@;	\
+	$(PYTHON3) $(top_srcdir)/src/shaders/gpp.py _pp0.$@ $@;	\
 	rm _pp0.$@
 .g7s.g7b:
 	$(AM_V_GEN)$(GEN4ASM) -a -o $@ -g 7 $<
