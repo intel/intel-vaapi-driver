@@ -64,7 +64,7 @@ class Block:
 		self.param_init = []
 		for ini in inits:
 			try:
-				val = eval(ini)
+				val = int(eval(ini))
 				self.param_init.append(val)
 			except:
 				raise Exception(self.__errmsg('non an exp: %s'%ini))
@@ -80,7 +80,7 @@ class Block:
 				self.param_op = cond[0]
 				limit = cond[1:]
 			try:
-				self.param_limit = eval(limit)
+				self.param_limit = int(eval(limit))
 			except:
 				raise Exception(self.__errmsg('non an exp: %s'%limit))
 		else:
@@ -172,13 +172,13 @@ def writeblocks(outfile, blocks):
 if __name__ == '__main__':
 	argc = len(sys.argv)
 	if argc == 1:
-		print >>sys.stderr, 'no input file'
+		print('no input file')
 		sys.exit(0)
 
 	try:
 		infile = open(sys.argv[1], 'r')
 	except IOError:
-		print >>sys.stderr, 'can not open %s' % sys.argv[1]
+		print('can not open %s' % sys.argv[1])
 		sys.exit(1)
 
 	if argc == 2:
@@ -187,7 +187,7 @@ if __name__ == '__main__':
 		try:
 			outfile = open(sys.argv[2], 'w')
 		except IOError:
-			print >>sys.stderr, 'can not write to %s' % sys.argv[2]
+			print('can not write to %s' % sys.argv[2])
 			sys.exit(1)
 
 	lines = readlines(infile)
