@@ -22,7 +22,7 @@
 
 SUBDIRS		= shaders
 DIST_SUBDIRS	= $(SUBDIRS)
-EXTRA_DIST	=
+EXTRA_DIST	= meson.build
 BUILT_SOURCES	=
 
 AM_CPPFLAGS = \
