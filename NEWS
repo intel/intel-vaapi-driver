@@ -1,5 +1,15 @@
-intel-vaapi-driver NEWS -- summary of changes.  2018-12-10
-Copyright (C) 2009-2018 Intel Corporation
+intel-vaapi-driver NEWS -- summary of changes.  2019-11-xx
+Copyright (C) 2009-2019 Intel Corporation
+
+Version 2.4.0 - DD.Dec.2019
+* Bump version to 2.4.0 for maintenance release
+* Fix the dependency on libEGL
+* Fix ROI support
+* Fix FD leaks on Wayland
+* Fix BRC setting
+* Fix VP8 encoder
+* Fix VP9 encoder
+* Fix meson build
 
 Version 2.3.0 - 10.Dec.2018
 * Bump version to 2.3.0
