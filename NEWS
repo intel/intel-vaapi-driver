@@ -1,7 +1,7 @@
-intel-vaapi-driver NEWS -- summary of changes.  2019-11-xx
+intel-vaapi-driver NEWS -- summary of changes.  2019-12-06
 Copyright (C) 2009-2019 Intel Corporation
 
-Version 2.4.0 - DD.Dec.2019
+Version 2.4.0 - 06.Dec.2019
 * Bump version to 2.4.0 for maintenance release
 * Fix the dependency on libEGL
 * Fix ROI support
