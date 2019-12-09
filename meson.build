@@ -19,7 +19,17 @@ if version_arr.length() == 4
 endif
 
 cc = meson.get_compiler('c')
-dl_dep = cc.find_library('dl')
+
+dl_check_code = '''
+#include <dlfcn.h>
+void func() { dlerror(); }
+'''
+dl_system_provided = cc.compiles(dl_check_code, name : 'dl system provided?')
+
+if not dl_system_provided
+  dl_dep = cc.find_library('dl')
+endif
+
 mathlib_dep = cc.find_library('m', required : false)
 
 git = find_program('git', required : false)

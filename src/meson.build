@@ -214,14 +214,18 @@ if thread_dep.found()
   cflags += [ '-DPTHREADS' ]
 endif
 
+
 shared_deps = [
-  dl_dep,
   mathlib_dep,
   thread_dep,
   libdrm_dep,
   libdrm_intel_dep,
   libva_dep,
 ]
+
+if not dl_system_provided
+  shared_deps += [ dl_dep ]
+endif
 
 if WITH_X11
   shared_deps += [ libva_x11_dep ]
