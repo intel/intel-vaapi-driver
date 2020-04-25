@@ -1593,7 +1593,10 @@ intel_vp9enc_construct_picstate_batchbuf(VADriverContextP ctx,
         *cmd_ptr++ = 0;
 
         /* dw31 */
-        *cmd_ptr++ = (0 << 30) | 1;
+        /* dw31 is for restricting the compressed frames minimum size
+         * and we don't impose any. */
+        *cmd_ptr++ = 0;
+
         /* dw32 */
         *cmd_ptr++ = vp9_state->frame_header.bit_offset_first_partition_size;
 
