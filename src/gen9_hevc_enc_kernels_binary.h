@@ -31,6 +31,6 @@
 
 #define GEN9_HEVC_ENC_KERNEL_SIZE 149296
 
-const unsigned int gen9_hevc_encoder_kernels[GEN9_HEVC_ENC_KERNEL_SIZE];
+extern const unsigned int gen9_hevc_encoder_kernels[GEN9_HEVC_ENC_KERNEL_SIZE];
 
 #endif
