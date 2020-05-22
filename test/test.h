@@ -147,7 +147,7 @@ public:
             status = "VA_STATUS_ERROR_HW_BUSY"; break;
         case VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE:
             status = "VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE"; break;
-        case VA_STATUS_ERROR_UNKNOWN:
+        case VAStatus(VA_STATUS_ERROR_UNKNOWN):
             status = "VA_STATUS_ERROR_UNKNOWN"; break;
         default:
             status = "Unknown VAStatus";
