@@ -1,7 +1,7 @@
 # intel-vaapi-driver package version number
 m4_define([intel_vaapi_driver_major_version], [2])
 m4_define([intel_vaapi_driver_minor_version], [4])
-m4_define([intel_vaapi_driver_micro_version], [0])
+m4_define([intel_vaapi_driver_micro_version], [1])
 m4_define([intel_vaapi_driver_pre_version],   [0])
 m4_define([intel_vaapi_driver_version],
           [intel_vaapi_driver_major_version.intel_vaapi_driver_minor_version.intel_vaapi_driver_micro_version])

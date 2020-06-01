@@ -1,5 +1,10 @@
-intel-vaapi-driver NEWS -- summary of changes.  2019-12-06
+intel-vaapi-driver NEWS -- summary of changes.  2020-06-01
 Copyright (C) 2009-2019 Intel Corporation
+
+Version 2.4.1 - 01.Jun.2020
+* Bump version to 2.4.1 for maintenance release
+* Fix compiler errors with gcc 10
+* Relax the compressed frames minimum size restriction for VP9 encoder
 
 Version 2.4.0 - 06.Dec.2019
 * Bump version to 2.4.0 for maintenance release
