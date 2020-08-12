@@ -731,19 +731,19 @@ gen9_pp_context_get_surface_conf(VADriverContextP ctx,
             fourcc == VA_FOURCC_BGRA) {
             /* nothing to do here */
         } else if (fourcc == VA_FOURCC_P010 || fourcc == VA_FOURCC_NV12) {
-            width[1] = width[0] / 2;
-            height[1] = height[0] / 2;
+            width[1] = ALIGN(width[0], 2) / 2;
+            height[1] = ALIGN(height[0], 2) / 2;
             pitch[1] = obj_surface->cb_cr_pitch;
             bo_offset[1] = obj_surface->width * obj_surface->y_cb_offset;
         } else if (fourcc == VA_FOURCC_YUY2 || fourcc == VA_FOURCC_UYVY) {
             /* nothing to do here */
         } else {
-            width[1] = width[0] / 2;
-            height[1] = height[0] / 2;
+            width[1] = ALIGN(width[0], 2) / 2;
+            height[1] = ALIGN(height[0], 2) / 2;
             pitch[1] = obj_surface->cb_cr_pitch;
             bo_offset[1] = obj_surface->width * obj_surface->y_cb_offset;
-            width[2] = width[0] / 2;
-            height[2] = height[0] / 2;
+            width[2] = ALIGN(width[0], 2) / 2;
+            height[2] = ALIGN(height[0], 2) / 2;
             pitch[2] = obj_surface->cb_cr_pitch;
             bo_offset[2] = obj_surface->width * obj_surface->y_cr_offset;
         }
@@ -764,8 +764,8 @@ gen9_pp_context_get_surface_conf(VADriverContextP ctx,
             fourcc == VA_FOURCC_BGRA) {
             /* nothing to do here */
         } else if (fourcc == VA_FOURCC_P010 || fourcc == VA_FOURCC_NV12) {
-            width[1] = width[0] / 2;
-            height[1] = height[0] / 2;
+            width[1] = ALIGN(width[0], 2) / 2;
+            height[1] = ALIGN(height[0], 2) / 2;
             pitch[1] = obj_image->image.pitches[1];
             bo_offset[1] = obj_image->image.offsets[1];
         } else if (fourcc == VA_FOURCC_YUY2 || fourcc == VA_FOURCC_UYVY) {
@@ -776,12 +776,12 @@ gen9_pp_context_get_surface_conf(VADriverContextP ctx,
             if (fourcc == VA_FOURCC_YV12 || fourcc == VA_FOURCC_IMC1)
                 u = 2, v = 1;
 
-            width[1] = width[0] / 2;
-            height[1] = height[0] / 2;
+            width[1] = ALIGN(width[0], 2) / 2;
+            height[1] = ALIGN(height[0], 2) / 2;
             pitch[1] = obj_image->image.pitches[u];
             bo_offset[1] = obj_image->image.offsets[u];
-            width[2] = width[0] / 2;
-            height[2] = height[0] / 2;
+            width[2] = ALIGN(width[0], 2) / 2;
+            height[2] = ALIGN(height[0], 2) / 2;
             pitch[2] = obj_image->image.pitches[v];
             bo_offset[2] = obj_image->image.offsets[v];
         }
