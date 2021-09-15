@@ -4471,6 +4471,20 @@ gen6_pp_states_setup(VADriverContextP ctx,
 }
 
 static void
+gen6_pp_multisample_state(VADriverContextP ctx,
+                          struct i965_post_processing_context *pp_context)
+{
+    struct intel_batchbuffer *batch = pp_context->batch;
+
+    BEGIN_BATCH(batch, 3);
+    OUT_BATCH(batch, CMD_PIPELINE_SELECT | PIPELINE_SELECT_3D);
+    OUT_BATCH(batch, GEN6_3DSTATE_MULTISAMPLE | (3 - 2));
+    OUT_BATCH(batch, GEN6_3DSTATE_MULTISAMPLE_PIXEL_LOCATION_CENTER |
+              GEN6_3DSTATE_MULTISAMPLE_NUMSAMPLES_1);
+    ADVANCE_BATCH(batch);
+}
+
+static void
 gen6_pp_pipeline_select(VADriverContextP ctx,
                         struct i965_post_processing_context *pp_context)
 {
@@ -4683,6 +4697,7 @@ gen6_pp_pipeline_setup(VADriverContextP ctx,
 
     intel_batchbuffer_start_atomic(batch, 0x1000);
     intel_batchbuffer_emit_mi_flush(batch);
+    gen6_pp_multisample_state(ctx, pp_context);
     gen6_pp_pipeline_select(ctx, pp_context);
     gen6_pp_state_base_address(ctx, pp_context);
     gen6_pp_vfe_state(ctx, pp_context);
