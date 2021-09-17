@@ -614,6 +614,8 @@ gen8_mfd_avc_slice_state(VADriverContextP ctx,
                          pic_param->seq_fields.bits.mb_adaptive_frame_field_flag);
     int first_mb_in_slice = 0, first_mb_in_next_slice = 0;
     int slice_type;
+    int num_surfaces = 0;
+    int i;
 
     if (slice_param->slice_type == SLICE_TYPE_I ||
         slice_param->slice_type == SLICE_TYPE_SI) {
@@ -638,6 +640,15 @@ gen8_mfd_avc_slice_state(VADriverContextP ctx,
     } else {
         num_ref_idx_l0 = slice_param->num_ref_idx_l0_active_minus1 + 1;
         num_ref_idx_l1 = slice_param->num_ref_idx_l1_active_minus1 + 1;
+    }
+
+    /* Don't bind a surface which doesn't exist, that crashes the GPU */
+    for (i = 0; i < ARRAY_ELEMS(gen7_mfd_context->reference_surface); i++)
+        if (gen7_mfd_context->reference_surface[i].surface_id != VA_INVALID_ID)
+            num_surfaces ++;
+    if (num_surfaces == 0) {
+        num_ref_idx_l0 = 0;
+        num_ref_idx_l1 = 0;
     }
 
     first_mb_in_slice = slice_param->first_mb_in_slice;
