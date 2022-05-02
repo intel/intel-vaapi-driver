@@ -20,13 +20,14 @@ config_file = configure_file(
   output : 'config.h',
   configuration : config_cfg)
 
+intel_driver_git_version = intel_vaapi_driver_version
 if git.found()
   git_version = run_command(
     git, '--git-dir', join_paths(meson.source_root(), '.git'),
-    'describe', '--tags')
-  intel_driver_git_version = git_version.stdout().strip()
-else
-  intel_driver_git_version = intel_vaapi_driver_version
+    'describe', '--tags', check: false)
+  if git_version.returncode() == 0
+    intel_driver_git_version = git_version.stdout().strip()
+  endif
 endif
 
 version_cfg = configuration_data()
