@@ -1065,9 +1065,37 @@ static void gen6_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *co
  * It is captured by /proc/cpuinfo and the space character is stripped.
  */
 const static char *gen7_cpu_hook_list[] =  {
+    "Intel(R)Celeron(R)CPUG1620T",
+    "Intel(R)Celeron(R)CPUG1630",
+    "Intel(R)Celeron(R)CPU1005M",
+    "Intel(R)Celeron(R)CPU1017U",
+    "Intel(R)Celeron(R)CPU1019Y",
+    "Intel(R)Celeron(R)CPU1000M",
     "Intel(R)Celeron(R)CPU1007U",
+    "Intel(R)Celeron(R)CPU1020E",
+    "Intel(R)Celeron(R)CPU1020M",
     "Intel(R)Celeron(R)CPU1037U",
+    "Intel(R)Celeron(R)CPU1047UE",
+    "Intel(R)Celeron(R)CPU927UE",
+    "Intel(R)Celeron(R)CPUG1610",
+    "Intel(R)Celeron(R)CPUG1610T",
+    "Intel(R)Celeron(R)CPUG1620",
+    "Intel(R)Pentium(R)CPU2020M",
+    "Intel(R)Pentium(R)CPU2030M",
+    "Intel(R)Pentium(R)CPU2117U",
+    "Intel(R)Pentium(R)CPU2127U",
+    "Intel(R)Pentium(R)CPU2129Y",
+    "Intel(R)Pentium(R)CPUA1018",
+    "Intel(R)Pentium(R)CPUG2010",
+    "Intel(R)Pentium(R)CPUG2020",
+    "Intel(R)Pentium(R)CPUG2020T",
+    "Intel(R)Pentium(R)CPUG2030",
+    "Intel(R)Pentium(R)CPUG2030T",
+    "Intel(R)Pentium(R)CPUG2100T",
+    "Intel(R)Pentium(R)CPUG2120",
+    "Intel(R)Pentium(R)CPUG2120T",
     "Intel(R)Pentium(R)CPUG2130",
+    "Intel(R)Pentium(R)CPUG2140",
 };
 
 static void gen7_hw_codec_preinit(VADriverContextP ctx, struct hw_codec_info *codec_info)
