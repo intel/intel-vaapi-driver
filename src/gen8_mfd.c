@@ -2561,7 +2561,7 @@ gen8_mfd_jpeg_qm_state(VADriverContextP ctx,
     assert(pic_param->num_components <= 3);
 
     for (index = 0; index < pic_param->num_components; index++) {
-        int id = pic_param->components[index].component_id - pic_param->components[0].component_id + 1;
+        unsigned char id = pic_param->components[index].component_id - pic_param->components[0].component_id + 1;
         int qm_type;
         unsigned char *qm = iq_matrix->quantiser_table[pic_param->components[index].quantiser_table_selector];
         unsigned char raster_qm[64];
@@ -2592,6 +2592,7 @@ gen8_mfd_jpeg_bsd_object(VADriverContextP ctx,
 {
     struct intel_batchbuffer *batch = gen7_mfd_context->base.batch;
     int scan_component_mask = 0;
+    unsigned char id;
     int i;
 
     assert(slice_param->num_components > 0);
@@ -2599,7 +2600,8 @@ gen8_mfd_jpeg_bsd_object(VADriverContextP ctx,
     assert(slice_param->num_components <= pic_param->num_components);
 
     for (i = 0; i < slice_param->num_components; i++) {
-        switch (slice_param->components[i].component_selector - pic_param->components[0].component_id + 1) {
+        id = slice_param->components[i].component_selector - pic_param->components[0].component_id + 1;
+        switch (id) {
         case 1:
             scan_component_mask |= (1 << 0);
             break;
