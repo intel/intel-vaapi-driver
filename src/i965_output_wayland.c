@@ -154,7 +154,7 @@ registry_handle_global(
     struct va_wl_output * const wl_output = i965->wl_output;
     struct wl_vtable * const wl_vtable = &wl_output->vtable;
 
-    if (strcmp(interface, "wl_drm") == 0) {
+    if (strcmp(interface, "wl_drm") == 0 && wl_vtable->drm_interface) {
         wl_output->wl_drm_name = name;
         wl_output->wl_drm = registry_bind(wl_vtable, wl_output->wl_registry,
                                           name, wl_vtable->drm_interface,
@@ -472,6 +472,7 @@ i965_output_wayland_init(VADriverContextP ctx)
 
     wl_vtable = &i965->wl_output->vtable;
 
+    /* drm_interface is optional */
     if (vtable->wl_interface)
         wl_vtable->drm_interface = vtable->wl_interface;
     else {
@@ -483,9 +484,8 @@ i965_output_wayland_init(VADriverContextP ctx)
         }
 
         dso_handle = i965->wl_output->libegl_handle;
-        if (!dso_get_symbols(dso_handle, wl_vtable, sizeof(*wl_vtable),
-                             libegl_symbols))
-            goto error;
+        dso_get_symbols(dso_handle, wl_vtable, sizeof(*wl_vtable),
+                        libegl_symbols);
     }
 
     i965->wl_output->libwl_client_handle = dso_open(LIBWAYLAND_CLIENT_NAME);
