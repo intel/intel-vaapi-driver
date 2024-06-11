@@ -7,10 +7,10 @@ config_cfg.set('INTEL_DRIVER_MICRO_VERSION', intel_vaapi_driver_micro_version)
 config_cfg.set('INTEL_DRIVER_PRE_VERSION', intel_vaapi_driver_pre_version)
 config_cfg.set10('HAVE_HYBRID_CODEC', get_option('enable_hybrid_codec'))
 if WITH_X11
-  config_cfg.set10('HAVE_VA_X11', 1)
+  config_cfg.set('HAVE_VA_X11', 1)
 endif
 if WITH_WAYLAND
-  config_cfg.set10('HAVE_VA_WAYLAND', 1)
+  config_cfg.set('HAVE_VA_WAYLAND', 1)
 endif
 if cc.has_function('log2f')
   config_cfg.set('HAVE_LOG2F', 1)
@@ -20,13 +20,14 @@ config_file = configure_file(
   output : 'config.h',
   configuration : config_cfg)
 
+intel_driver_git_version = intel_vaapi_driver_version
 if git.found()
   git_version = run_command(
     git, '--git-dir', join_paths(meson.source_root(), '.git'),
-    'describe', '--tags')
-  intel_driver_git_version = git_version.stdout().strip()
-else
-  intel_driver_git_version = intel_vaapi_driver_version
+    'describe', '--tags', check: false)
+  if git_version.returncode() == 0
+    intel_driver_git_version = git_version.stdout().strip()
+  endif
 endif
 
 version_cfg = configuration_data()
