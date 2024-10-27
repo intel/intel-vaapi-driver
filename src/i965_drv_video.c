@@ -6921,16 +6921,17 @@ i965_ExportSurfaceHandle(VADriverContextP ctx, VASurfaceID surface_id,
                 else
                   y_offset = obj_surface->y_cr_offset;
             } else {
-                y_offset = obj_surface->y_cr_offset - obj_surface->y_cb_offset;              
-                if (y_offset < 0)
-                  y_offset = -y_offset;
+                if (obj_surface->y_cb_offset < obj_surface->y_cr_offset)
+                  y_offset = obj_surface->y_cr_offset;
+                else
+                  y_offset = obj_surface->y_cb_offset;
                 pitch  = obj_surface->cb_cr_pitch;
                 height = obj_surface->cb_cr_height;
             }
 
             desc->layers[p].offset[0] = offset;
             desc->layers[p].pitch[0]  = pitch;
-            offset += pitch * y_offset;
+            offset = obj_surface->width * y_offset;
         }
     }
 
