@@ -18,6 +18,8 @@ encouraged to move to `Intel(R) Media Driver for VAAPI`<https://github.com/intel
 
 VA-API (Video Acceleration API) user mode driver for Intel GEN Graphics family
 
+**Note: This is an older driver, for Gen 8 and newer please use the [media-driver](https://github.com/intel/media-driver). This driver does support Gen 4 to Gen 10 GPUs, but is not being developed further.**
+
 VA-API is an open-source library and API specification, which
 provides access to graphics hardware acceleration capabilities
 for video processing. It consists of a main library and
